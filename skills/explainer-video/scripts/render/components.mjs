@@ -81,7 +81,7 @@ const CODE_VARS = {
 };
 const codeFrame = (p, f, rows, LH, surface) => ({
   html: `<div class="code rt" dir="ltr"><div class="bar">${esc(p.file ?? p.lang)}</div><div class="body">${rows}</div></div>`,
-  css: `.code { position: absolute; left: 0; top: 0; width: 1680px; box-sizing: border-box; ${paint(surface)} border: 2px solid var(--line); border-radius: 18px; overflow: hidden; ${Object.entries(
+  css: `.code { position: absolute; left: 0; top: 0; width: 100%; box-sizing: border-box; ${paint(surface)} border: 2px solid var(--line); border-radius: 18px; overflow: hidden; ${Object.entries(
     CODE_VARS,
   )
     .map(([k, v]) => `--code-${k}: var(--${v});`)
@@ -227,7 +227,7 @@ ${CALLOUT_CSS}`,
       p.steps.map((s) => s.label),
     );
     const gap = 96;
-    const box = { w: Math.floor((1680 - (n - 1) * gap) / n), h: 240 };
+    const box = { w: Math.floor((x.box.width - (n - 1) * gap) / n), h: 240 };
     const shapes = await x.sketch([
       ...p.steps.map((_, i) => ({ rect: [box.w, box.h], key: `node${i}` })),
       ...p.steps
@@ -275,7 +275,7 @@ ${CALLOUT_CSS}`,
   },
   panels: async (p, f, x) => {
     const n = p.items.length;
-    const box = { w: Math.floor((1680 - (n - 1) * 40) / n), h: 560 };
+    const box = { w: Math.floor((x.box.width - (n - 1) * 40) / n), h: 560 };
     const shapes = await x.sketch(
       p.items.map((_, i) => ({ rect: [box.w, box.h], key: `panel${i}` })),
     );

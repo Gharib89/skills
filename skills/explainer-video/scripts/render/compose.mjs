@@ -5,7 +5,7 @@
 // from the style profile as CSS custom properties; every font is a file beside
 // the page.
 import { COUNT_SECONDS } from "../lib/count.mjs";
-import { blursDepth, grammar, scale } from "../lib/style.mjs";
+import { blursDepth, floors, grammar, scale } from "../lib/style.mjs";
 import { RISE_PX, SPRING, settleTime } from "../lib/spring.mjs";
 import { splitLatin } from "../lib/terms.mjs";
 import { VISUALS, cameraCue, cueWord } from "../lib/visuals.mjs";
@@ -13,7 +13,7 @@ import { COMPONENTS, ITEMS, esc, seed } from "./components.mjs";
 import { faces, family } from "./faces.mjs";
 import { fragmentScript } from "./fragment-script.mjs";
 import { places, travels } from "./map.mjs";
-import { pushScript, seamScript } from "./seam-script.mjs";
+import { cameraFrame, pushScript, seamScript } from "./seam-script.mjs";
 import { texture } from "./texture.mjs";
 import { RISE, countScript, play } from "./tween-script.mjs";
 
@@ -87,6 +87,10 @@ async function sceneParts(
     !bans.includes("camera") &&
     !VISUALS[scene.visual.component].ownCamera;
   const box = contentBox(layout);
+  const frame = cameraFrame(box, camera.scale, floors(profile).layout.margin, {
+    width: W,
+    height: H,
+  });
   // A cue is a sentence number, or `{ at, on }`: with `on`, the time of the
   // phrase's first voiced word. `{ word }` is the scene's nth voiced word.
   const t = (c) => {
@@ -108,8 +112,12 @@ async function sceneParts(
     time: t,
     end: timing.duration,
     // The content box, for a component the composer lays out itself, and the
-    // frame's width, for one that runs off the frame's sides.
-    box,
+    // frame's width, for one that runs off the frame's sides. Under a push the
+    // box is as wide and tall as the push layer, so a row sized to it stays in
+    // the safe margin once scaled; its `left` and `top` stay the content
+    // box's, which only the components that draw their own camera (never
+    // pushed) read.
+    box: pushes ? { ...box, width: frame.width, height: frame.height } : box,
     frameWidth: W,
     // The scene's selector scope and the seconds its template runs (its slot),
     // for a component whose own script draws on the paused timeline `tl`.
@@ -229,7 +237,7 @@ async function sceneParts(
   return {
     html: `    <div class="content" dir="${dir}">${push === null ? c.html : `<div class="camera">${c.html}</div>`}</div>
     <style>
-${scope} .content { position: absolute; left: ${box.left}px; top: ${box.top}px; width: ${box.width}px; height: ${box.height}px; }${push === null ? "" : `\n${scope} .camera { width: 100%; height: 100%; }`}
+${scope} .content { position: absolute; left: ${box.left}px; top: ${box.top}px; width: ${box.width}px; height: ${box.height}px; }${push === null ? "" : `\n${scope} .camera { position: absolute; left: ${frame.left}px; top: ${frame.top}px; width: ${frame.width}px; height: ${frame.height}px; }`}
 ${css}
     </style>`,
     script: `      (function () {

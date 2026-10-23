@@ -279,6 +279,7 @@ function measureFrame() {
       fontPx: parseFloat(cs.fontSize) * scale,
       weight: +cs.fontWeight,
       inline: cs.display === "inline",
+      rows: [...el.getClientRects()].map((q) => [r1(q.top), r1(q.bottom)]),
       scrollW: el.scrollWidth,
       scrollH: el.scrollHeight,
       clientW: el.clientWidth,

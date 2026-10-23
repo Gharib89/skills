@@ -21,10 +21,16 @@ export const savedFrames = (scenes) =>
     };
   });
 
-// The scenes the layout gate judges on the real backend: the ones the fixture
-// marks `layout`.
-export const layoutIds = (fixture) =>
-  fixture.filter((p) => p.layout).map((p) => p.scene.id);
+// The compositions the layout gate judges on the real backend, which hold every
+// scene: a run's page has one reading direction for all its scenes, so the
+// fixture's English scenes and its Arabic ones (`dir: "rtl"`) each get a page
+// as a run in that language composes it.
+export const layoutRuns = (fixture) => {
+  const dirOf = (p) => p.dir ?? "ltr";
+  return [...new Set(fixture.map(dirOf))]
+    .toSorted()
+    .map((dir) => ({ dir, part: fixture.filter((p) => dirOf(p) === dir) }));
+};
 
 // The scenes whose numbers count up as they are said: stats and charts.
 export const countingIds = (fixture) =>

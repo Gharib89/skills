@@ -56,6 +56,26 @@ const SEAMS = {
   },
 };
 
+// The layer a push-in scales: the content box, narrowed about its centre until
+// it still sits inside the safe margin of `page` at the push's end scale, so
+// text at its edge stays inside the margin once the push settles, whichever way
+// it reads. `left` and `top` are its offset inside the content box.
+export function cameraFrame(box, scale, margin, page) {
+  const fit = (start, size, whole) => {
+    const mid = start + size / 2;
+    const room = Math.min(mid - margin * whole, whole * (1 - margin) - mid);
+    return Math.min(size, Math.floor((2 * room) / scale));
+  };
+  const width = fit(box.left, box.width, page.width);
+  const height = fit(box.top, box.height, page.height);
+  return {
+    left: (box.width - width) / 2,
+    top: (box.height - height) / 2,
+    width,
+    height,
+  };
+}
+
 // The script lines that play a scene's push-in on its `.camera`, a layer inside
 // `.content` so the seam, which moves `.content`, never fights it: from `at`
 // for `duration`, held at `scale` for the rest of the scene. The

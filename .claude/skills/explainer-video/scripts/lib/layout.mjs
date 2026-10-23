@@ -7,7 +7,7 @@
 // to `add(gate, time, what)`, `gate` `layout` or `contrast`.
 import { H, W } from "../render/compose.mjs";
 import { contrast } from "./style.mjs";
-import { ARABIC_SCRIPT, isLatin } from "./terms.mjs";
+import { ARABIC_LETTER, ARABIC_SCRIPT, isLatin } from "./terms.mjs";
 
 const ISOLATED = ["isolate", "isolate-override", "plaintext"];
 
@@ -22,9 +22,13 @@ const ISOLATED = ["isolate", "isolate-override", "plaintext"];
 function rtl(e, bad) {
   if (e.within === "ltr") return;
   if (ARABIC_SCRIPT.test(e.text)) {
-    if (e.dir !== "rtl") bad(`Arabic reads ${e.dir}`);
+    // Arabic-Indic digits alone have no strong direction, so their isolated
+    // `<bdi>` computes `ltr`, which is how a number reads in Arabic text, and
+    // they span less than the letters' ink: only a letter is held to either.
+    const letters = ARABIC_LETTER.test(e.text);
+    if (letters && e.dir !== "rtl") bad(`Arabic reads ${e.dir}`);
     if (/[A-Za-z]/.test(e.text)) bad("Latin run not isolated in");
-    if (e.lineH !== null && e.lineH < e.ink)
+    if (letters && e.lineH !== null && e.lineH < e.ink)
       bad(`line height ${e.lineH} under the ink ${e.ink} of ${e.face}`);
   } else if (e.within === "rtl" && isLatin(e.text)) {
     if (!ISOLATED.includes(e.bidi)) bad("Latin run not isolated");
@@ -38,6 +42,27 @@ function rtl(e, bad) {
 // running at `t`, and the layout gate judges a box only while it reads.
 export const readable = (e, t, moving) =>
   e.opacity >= 0.99 && !(e.blur > 1) && !moving(e.scene, t);
+
+// The place an element takes for the overlap check. An inline box is as tall
+// as its face's ascent and descent, which runs past the line it sits in when a
+// fallback face draws its glyphs (Arabic-Indic digits in a serif box) though
+// no ink does, so it takes its line box, centred on it. A line too short for
+// the ink of Arabic letters is `rtl`'s to flag. A box that wraps, or holds a
+// nested inline, is several fragments (`rows`, each one's top and bottom), so
+// it takes the line box centred on each, which a line's fragments share and a
+// wrapped box's first and last lines keep.
+function placed(e) {
+  if (!e.inline || e.lineH === null) return e.rect;
+  const half = (e.lineH * e.fontPx) / 2;
+  const mids = (e.rows ?? [[e.rect.top, e.rect.bottom]]).map(
+    ([top, bottom]) => (top + bottom) / 2,
+  );
+  return {
+    ...e.rect,
+    top: Math.max(e.rect.top, Math.min(...mids) - half),
+    bottom: Math.min(e.rect.bottom, Math.max(...mids) + half),
+  };
+}
 
 export function judge(checked, frames, floor, add, moving = () => false) {
   const { textPx, margin } = floor.layout;
@@ -94,7 +119,7 @@ export function judge(checked, frames, floor, add, moving = () => false) {
       if (outside(e.rect, safe, 0)) bad("outside the safe margin");
       rtl(e, bad);
       for (const o of shown.slice(i + 1))
-        if (overlap(e.rect, o.rect))
+        if (overlap(placed(e), placed(o)))
           add("layout", t, `"${e.text}" overlaps "${o.text}"`);
       const large = e.fontPx >= 24 || (e.fontPx >= 18.66 && e.weight >= 700);
       const need = floor.contrast[large ? "large" : "body"];

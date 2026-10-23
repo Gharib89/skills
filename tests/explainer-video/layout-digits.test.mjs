@@ -1,0 +1,160 @@
+// The layout gate's right to left reading rules on numerals (#947): Arabic-Indic
+// digits have no strong direction, so an isolated `<bdi>` of them computes `ltr`
+// (which is how a number reads inside Arabic text), and they span less than the
+// letters' ink. Only text holding an Arabic letter is held to the reading
+// direction and the ink floor; a Latin run is held to its own rules whatever
+// else the text holds. The element is as the probe reports it in real Chrome.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { judge } from "../../skills/explainer-video/scripts/lib/layout.mjs";
+import { floors } from "../../skills/explainer-video/scripts/lib/style.mjs";
+import { read, skill } from "./render-lib.mjs";
+
+const profile = JSON.parse(read(skill, "styles", "claude-code.json"));
+
+const box = (text, extra = {}) => ({
+  text,
+  words: 1,
+  scene: "s",
+  nth: 0,
+  line: null,
+  along: false,
+  rect: { left: 742.7, top: 374, right: 829.3, bottom: 498 },
+  fontPx: 112,
+  weight: 600,
+  inline: true,
+  scrollW: 0,
+  scrollH: 0,
+  clientW: 0,
+  clientH: 0,
+  opacity: 1,
+  blur: 0,
+  clip: null,
+  cut: false,
+  indent: null,
+  color: "#000000",
+  bg: "#ffffff",
+  dir: "ltr",
+  within: "rtl",
+  bidi: "isolate",
+  wrap: "nowrap",
+  lineH: 1,
+  face: "noto-naskh-arabic",
+  ink: 1.4,
+  ...extra,
+});
+
+const found = (...elements) => {
+  const out = [];
+  judge(
+    { layout: { findings: [] }, contrast: { findings: [] } },
+    [{ t: 1, elements, rootDir: [] }],
+    floors(profile),
+    (gate, _t, what) => gate === "layout" && out.push(what),
+  );
+  return out;
+};
+
+test("Arabic-Indic digits in an isolated ltr bdi at line height 1 pass the reading rules", () => {
+  assert.deepEqual(found(box("٤٠")), []);
+});
+
+test("Arabic letters still fail when they read ltr or sit under their ink", () => {
+  assert.deepEqual(found(box("ثانية", { inline: false, lineH: 1.6 })), [
+    'Arabic reads ltr "ثانية"',
+  ]);
+  assert.deepEqual(
+    found(box("ثانية", { inline: false, dir: "rtl", lineH: 1 })),
+    ['line height 1 under the ink 1.4 of noto-naskh-arabic "ثانية"'],
+  );
+});
+
+test("a Latin run beside Arabic digits is still held to the isolation rule", () => {
+  assert.deepEqual(found(box("٤٠ ms", { dir: "rtl" })), [
+    'Latin run not isolated in "٤٠ ms"',
+  ]);
+});
+
+// The stat's numeral and label as the real rtl page measures them (#947): the
+// numeral's inline box is its face's ascent and descent, 191 px at 112 px, and
+// runs 11 px into the label below its 112 px line, though no ink does.
+const stat = (lineH) => [
+  box("٤٠", {
+    dir: "rtl",
+    rect: { left: 719.1, top: 340, right: 825.5, bottom: 531 },
+    lineH,
+  }),
+  box("ثانية", {
+    inline: false,
+    dir: "rtl",
+    lineH: 1.6,
+    fontPx: 40,
+    rect: { left: 719.1, top: 520, right: 825.5, bottom: 584 },
+  }),
+];
+
+test("an inline numeral whose font box runs past its line does not overlap the label under it", () => {
+  assert.deepEqual(found(...stat(1)), []);
+});
+
+test("an inline box whose line itself reaches the label still overlaps it", () => {
+  assert.deepEqual(found(...stat(1.7)), ['"٤٠" overlaps "ثانية"']);
+});
+
+// An inline box of several fragments, `rows` their tops and bottoms as the
+// probe reports them, with a label whose top is given. Each fragment takes the
+// line box centred on it, so a box with a nested inline is as narrow as one
+// without, and a wrapped box keeps its first and last lines.
+const fragments = (lineH, fontPx, rows, labelTop) => {
+  const ltr = { within: "ltr", dir: "ltr" };
+  const top = Math.min(...rows.map((r) => r[0]));
+  const bottom = Math.max(...rows.map((r) => r[1]));
+  return [
+    box("two words", {
+      ...ltr,
+      rows,
+      lineH,
+      fontPx,
+      rect: { left: 719.1, top, right: 825.5, bottom },
+    }),
+    box("label", {
+      ...ltr,
+      inline: false,
+      lineH: 1.6,
+      fontPx: 40,
+      rect: { left: 719.1, top: labelTop, right: 825.5, bottom: labelTop + 64 },
+    }),
+  ];
+};
+const hit = ['"two words" overlaps "label"'];
+
+test("a one-line inline box with a nested inline is as narrow as one without", () => {
+  const rows = [
+    [340, 531],
+    [350, 520],
+    [340, 531],
+  ];
+  assert.deepEqual(found(...fragments(1, 112, rows, 520)), []);
+});
+
+// 191 px of face box at 112 px, line height 1: the line boxes run 379.5 to 603.5.
+const wrapped = [
+  [340, 531],
+  [452, 643],
+];
+
+test("a wrapped inline box keeps its last line, so a label in it overlaps", () => {
+  assert.deepEqual(found(...fragments(1, 112, wrapped, 590)), hit);
+});
+
+test("a wrapped inline box takes its last line box, not its face box", () => {
+  assert.deepEqual(found(...fragments(1, 112, wrapped, 615)), []);
+});
+
+test("a wrapped inline box whose line is taller than its face box keeps its whole rect", () => {
+  const rows = [
+    [340, 388],
+    [404, 452],
+  ];
+  assert.deepEqual(found(...fragments(1.6, 40, rows, 432)), hit);
+});

@@ -1,12 +1,12 @@
 // real-render.mjs saves a frame of every scene of the fixture and layout-checks
-// the ones the fixture marks `layout`: the lists come from the fixture's
-// scenes, so a scene added there gets a frame with no other edit (#937).
+// every scene: the lists come from the fixture's scenes, so a scene added there
+// gets a frame and a layout check with no other edit (#937, #947).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FIXTURE } from "../../skills/explainer-video/maintainer/real-render-fixture.mjs";
 import {
   countingIds,
-  layoutIds,
+  layoutRuns,
   savedFrames,
 } from "../../skills/explainer-video/maintainer/real-render-lists.mjs";
 
@@ -28,15 +28,17 @@ test("every fixture scene gets a saved frame, the custom scene included", () => 
   assert.ok(savedFrames(timeline).some((f) => f.id === "custom"));
 });
 
-test("a scene added to the fixture gets a saved frame with no other edit, and a layout check when it is marked", () => {
+test("a scene added to the fixture gets a saved frame and a layout check with no other edit", () => {
   const more = [
     ...FIXTURE,
-    { scene: { ...FIXTURE[0].scene, id: "extra" }, seconds: 2, layout: true },
-    { scene: { ...FIXTURE[0].scene, id: "plain" }, seconds: 2 },
+    { scene: { ...FIXTURE[0].scene, id: "extra" }, seconds: 2 },
   ];
   assert.ok(savedFrames(composed(more)).some((f) => f.id === "extra"));
-  assert.ok(layoutIds(more).includes("extra"));
-  assert.ok(!layoutIds(more).includes("plain"));
+  assert.ok(
+    layoutRuns(more).some(({ part }) =>
+      part.some((p) => p.scene.id === "extra"),
+    ),
+  );
 });
 
 test("the saved frame lies inside its scene, settled 3 s in or on its last frame when it is shorter", () => {
@@ -59,19 +61,30 @@ test("a short scene starting between frames is saved on its own last frame, not 
   );
 });
 
-test("the custom scene gets a layout check on the real backend, with the scenes checked before it (#947 widens it to every scene)", () => {
-  assert.deepEqual(layoutIds(FIXTURE), [
-    "diagram",
-    "custom",
-    "browser",
-    "arabic-browser",
-    "excerpt",
-    "arabic-excerpt",
-    "code-excerpt",
-    "stack",
-    "canvas",
-    "arabic-canvas",
-  ]);
+const laidOut = (fixture) =>
+  layoutRuns(fixture).flatMap(({ part }) => part.map((p) => p.scene.id));
+
+test("every fixture scene gets a layout check on the real backend, the custom scene included", () => {
+  assert.deepEqual(laidOut(FIXTURE).toSorted(), ids.toSorted());
+  assert.ok(laidOut(FIXTURE).includes("custom"));
+});
+
+test("the layout runs are one page a reading direction, as a run in that language composes it", () => {
+  const runs = layoutRuns(FIXTURE);
+  assert.deepEqual(
+    runs.map((r) => r.dir),
+    ["ltr", "rtl"],
+  );
+  for (const { dir, part } of runs)
+    for (const p of part) assert.equal(p.dir ?? "ltr", dir, p.scene.id);
+  const english = layoutRuns(FIXTURE.filter((p) => p.dir !== "rtl"));
+  assert.deepEqual(
+    english.map((r) => r.dir),
+    ["ltr"],
+  );
+  const odd = { ...FIXTURE[0], dir: "other" };
+  const run = layoutRuns([...FIXTURE, odd]).find((r) => r.dir === "other");
+  assert.deepEqual(run.part, [odd]);
 });
 
 test("the count-up scenes are the fixture's stats and charts, English and Arabic", () => {
