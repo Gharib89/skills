@@ -1,10 +1,8 @@
 // real-render.mjs saves a frame of, and layout-checks, every scene of the
-// fixture, and the product's determinism gate names the scenes that differ:
-// the lists come from the fixture's scenes, so a scene added there is covered
-// with no other edit (#937).
+// fixture: the lists come from the fixture's scenes, so a scene added there is
+// covered with no other edit (#937).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renderedDifferently } from "../../skills/explainer-video/scripts/gates/scene.mjs";
 import { FIXTURE } from "../../skills/explainer-video/maintainer/real-render-fixture.mjs";
 import {
   countingIds,
@@ -72,31 +70,4 @@ test("the count-up scenes are the fixture's stats and charts, English and Arabic
     "arabic-line",
     "arabic-stat",
   ]);
-});
-
-test("the gate's findings name each scene whose two renders differ, and none when they match", () => {
-  const found = (a, b) => ({
-    frame: 90,
-    t: 3,
-    a,
-    b,
-    files: ["x-a.png", "x-b.png"],
-  });
-  const plan = [
-    {
-      sc: { id: "one", start: 0 },
-      found: { determinism: found("aaa", "aaa") },
-    },
-    {
-      sc: { id: "two", start: 4 },
-      found: { determinism: found("aaa", "bbb") },
-    },
-  ];
-  const lines = renderedDifferently(plan);
-  assert.equal(lines.length, 1);
-  assert.match(
-    lines[0],
-    /^4\.00 s two: frame 90 \(3\.00 s\) renders differently twice/,
-  );
-  assert.deepEqual(renderedDifferently(plan.slice(0, 1)), []);
 });

@@ -12,6 +12,7 @@ import {
   gateRow,
   sectionOffsets,
 } from "../../skills/explainer-video/maintainer/real-render-gate.mjs";
+import { renderedDifferently } from "../../skills/explainer-video/scripts/gates/scene.mjs";
 import { loadStyle } from "../../skills/explainer-video/scripts/lib/style.mjs";
 
 const run = fs.mkdtempSync(path.join(os.tmpdir(), "real-render-gate-"));
@@ -75,12 +76,17 @@ test("the gate reads each scene's peak off the video and renders its frame twice
 test("a scene that draws WebGL has its two frames rendered on SwiftShader, the others not", async () => {
   const backend = stub();
   await gate(backend);
-  const [one, two] = [backend.calls.frame[0], backend.calls.frame[2]];
-  assert.ok(!one.software);
-  assert.equal(two.software, true);
+  const [one, two] = [
+    backend.calls.frame.slice(0, 2),
+    backend.calls.frame.slice(2),
+  ];
+  assert.ok(one.every((f) => !f.software));
+  assert.ok(two.length === 2 && two.every((f) => f.software === true));
 });
 
 test("in a video in sections the frame comes from the scene's section, on its own clock", async () => {
+  const inWhole = stub();
+  await gate(inWhole);
   const backend = stub();
   await gate(backend, {
     section: (id) => (id === "two" ? { dir: "/section-2", base: 4 } : null),
@@ -88,24 +94,55 @@ test("in a video in sections the frame comes from the scene's section, on its ow
   const [one, two] = [backend.calls.frame[0], backend.calls.frame[2]];
   assert.equal(one.comp, "/whole");
   assert.equal(two.comp, "/section-2");
-  assert.ok(
-    two.t < 1,
-    `${two.t} is the scene's frame less its section's start`,
+  assert.equal(
+    two.t.toFixed(3),
+    (inWhole.calls.frame[2].t - 4).toFixed(3),
+    "the scene's frame less its section's start",
   );
 });
 
-test("the row passes when every scene's two renders match and names the scene that differs", async () => {
+test("the row passes when every scene's two renders match and names the one scene that differs", async () => {
   const rows = [];
   const check = (name, ok, detail) => rows.push({ name, ok, detail });
-  gateRow("gate determinism", await gate(stub()), check);
-  gateRow("gate determinism", await gate(stub("/whole")), check);
+  const inSection = {
+    section: (id) => (id === "two" ? { dir: "/section-2", base: 4 } : null),
+  };
+  gateRow("gate determinism", await gate(stub(), inSection), check);
+  gateRow("gate determinism", await gate(stub("/section-2"), inSection), check);
   assert.equal(rows[0].ok, true);
   assert.match(rows[0].detail, /^0 of 2 scene\(s\) differ/);
   assert.equal(rows[1].ok, false);
   assert.match(
     rows[1].detail,
-    /first: 0\.00 s one: frame \d+ .* renders differently twice/,
+    /^1 of 2 scene\(s\) differ.*first: 4\.00 s two: frame \d+ .* renders differently twice/,
   );
+});
+
+test("the gate's findings name each scene whose two renders differ, and none when they match", () => {
+  const found = (a, b) => ({
+    frame: 90,
+    t: 3,
+    a,
+    b,
+    files: ["x-a.png", "x-b.png"],
+  });
+  const plan = [
+    {
+      sc: { id: "one", start: 0 },
+      found: { determinism: found("aaa", "aaa") },
+    },
+    {
+      sc: { id: "two", start: 4 },
+      found: { determinism: found("aaa", "bbb") },
+    },
+  ];
+  const lines = renderedDifferently(plan);
+  assert.equal(lines.length, 1);
+  assert.match(
+    lines[0],
+    /^4\.00 s two: frame 90 \(3\.00 s\) renders differently twice/,
+  );
+  assert.deepEqual(renderedDifferently(plan.slice(0, 1)), []);
 });
 
 // A section composition draws the whole video's frame at its own time plus its
