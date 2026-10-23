@@ -12,11 +12,12 @@ the command again.
 `node <skill>/scripts/parts/parts.mjs explainers/<slug> offer` prints the fewest
 parts that fit (`parts offer: 12 min is over 5: 3 parts of 4 + 4 + 4 min, or one
 long video in sections`) and the estimate of both shapes (`parts estimate:
-...`): the render and gates time of all parts and of the first, and of one long
-video. Narration time is not in it. At 5 minutes or less it prints `parts: no
-offer`: go on to Script. A decline made at this length prints `parts: declined
-earlier`: go on to Script. A plan on disk prints `parts: parts.json holds a part
-plan`: run `check`.
+...`): the render, gates and score time of all parts and of the first, and of
+one long video. Narration time is not in it, and a brief asking `ace-step` with
+no measured rate in the table is counted without a score, which the line says.
+At 5 minutes or less it prints `parts: no offer`: go on to Script. A decline
+made at this length prints `parts: declined earlier`: go on to Script. A plan on
+disk prints `parts: parts.json holds a part plan`: run `check`.
 
 Draft the plan from `outline.md` first: each part's title, focus, minutes and
 excerpts, as the next section writes it. Put the plan with both estimates to

@@ -36,37 +36,43 @@ function machine(extra = {}) {
 const stack3d = { EXPLAINER_VIDEO_FAKE_GPU: "7.5" };
 const read = (f) => JSON.parse(fs.readFileSync(f, "utf8"));
 
-test("calibration writes the four rates and the HyperFrames version it measured, and names that version in its output", () => {
+test("calibration writes the five rates and the HyperFrames version it measured, and names that version in its output", () => {
   const { table, calibrate } = machine(stack3d);
   const r = calibrate("--runs", "1");
   assert.equal(r.status, 0, r.stdout + r.stderr);
   const t = read(table);
   assert.equal(t.hyperframes, "9.9.9");
+  // no ace-step row on this machine: its rate is not written
   assert.deepEqual(Object.keys(t.rates), [
     "base",
     "texture",
     "live3d",
     "gates",
+    "score",
   ]);
   for (const v of Object.values(t.rates))
     assert.ok(Number.isFinite(v) && v >= 0, String(v));
   assert.match(
     r.stdout,
-    /^calibrate-render: HyperFrames 9\.9\.9: base \S+, texture \S+, live3d \S+, gates \S+ render s per video s$/m,
+    /^calibrate-render: HyperFrames 9\.9\.9: base \S+, texture \S+, live3d \S+, gates \S+, score \S+ render s per video s$/m,
   );
 });
 
-test("every timed run renders its video afresh, for a flat, a textured and a live 3D video", () => {
+test("every timed run renders its video afresh, for a flat, a textured, a scored and a live 3D video", () => {
   const { fx, calibrate } = machine(stack3d);
   const r = calibrate("--runs", "2");
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  // 3 videos x 2 runs: the render cache is cleared before each run, so the
+  // 4 videos x 2 runs: the render cache is cleared before each run, so the
   // timed work is the render, never a cache hit
   const videos = calls(fx).filter((c) => c.args.includes("looks"));
-  assert.equal(videos.length, 6, JSON.stringify(videos.map((c) => c.args)));
+  assert.equal(videos.length, 8, JSON.stringify(videos.map((c) => c.args)));
   assert.equal(
     (r.stdout.match(/^calibrate-render \w+ run \d\/2: /gm) ?? []).length,
-    6,
+    8,
+  );
+  assert.equal(
+    (r.stdout.match(/^calibrate-render scored run \d\/2: /gm) ?? []).length,
+    2,
   );
 });
 
@@ -74,8 +80,46 @@ test("every timed run cuts the critic's contact sheets afresh, so a rate carries
   const { fx, calibrate } = machine(stack3d);
   const r = calibrate("--runs", "2");
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  // one sheet per scene: 3 + 3 + 4 scenes over the three videos, in each of 2 runs
-  assert.equal(calls(fx, "sheet").length, 2 * (3 + 3 + 4));
+  // one sheet per scene: 3 + 3 + 3 + 4 scenes over the four videos, in each of 2 runs
+  assert.equal(calls(fx, "sheet").length, 2 * (3 + 3 + 3 + 4));
+});
+
+// The ace-step row as setup leaves it: its stamp in the folder the render
+// stage looks in for this machine's device.
+async function installAce(fx) {
+  const { catalogue, torchDevice } =
+    await import("../../skills/explainer-video/scripts/lib/tools.mjs");
+  const row = catalogue().find((r) => r.id === "ace-step");
+  const device = torchDevice(+stack3d.EXPLAINER_VIDEO_FAKE_GPU);
+  const d = dest(row, fx.dirs, device);
+  fs.mkdirSync(d, { recursive: true });
+  fs.writeFileSync(path.join(d, ".stamp"), "");
+}
+
+test("a machine without the ace-step row skips it by name, exits 0 and writes a table with no ace-step rate", () => {
+  const { fx, table, calibrate } = machine(stack3d);
+  const r = calibrate("--runs", "1");
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(
+    r.stdout,
+    /^calibrate-render: ace-step skipped: the ace-step row is not installed \(\/explainer-video setup, asking for ace-step\)$/m,
+  );
+  assert.ok(!("aceStep" in read(table).rates));
+  assert.equal(calls(fx, "aceStep").length, 0);
+});
+
+test("a machine with the ace-step row times it cold on every run and writes its rate", async () => {
+  const { fx, table, calibrate } = machine(stack3d);
+  await installAce(fx);
+  const r = calibrate("--runs", "2");
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  // the score cache is cleared before each run, so each one builds the music
+  assert.equal(calls(fx, "aceStep").length, 2);
+  const { aceStep } = read(table).rates;
+  assert.ok(Number.isFinite(aceStep) && aceStep >= 0, String(aceStep));
+  assert.doesNotMatch(r.stdout, /ace-step skipped/);
+  assert.match(r.stdout, /^calibrate-render acestep run 2\/2: /m);
+  assert.match(r.stdout, /, score \S+, aceStep \S+ render s per video s$/m);
 });
 
 test("the live 3D lines name the stack scene's seconds, so its rate can be recomputed from the output", () => {

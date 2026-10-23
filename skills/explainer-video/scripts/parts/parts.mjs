@@ -83,7 +83,10 @@ function proposal() {
   );
 }
 
-// Render and gates seconds as minutes to a tenth, for a video of `lengths`
+// What an estimate line says when ace-step has no measured rate in the table.
+const UNMEASURED = "ace-step is not measured, so its score is left out";
+
+// Render, gates and score seconds as minutes to a tenth, for a video of `lengths`
 // minutes rendered one video after another.
 function minutes(lengths) {
   // The style and rates readers throw their own refusals: a parts line says it.
@@ -97,13 +100,18 @@ function minutes(lengths) {
     fail(e.message);
   }
   const textured = texture.surface !== "flat" || texture.overlays.length > 0;
-  const each = lengths.map(
-    (m) =>
-      estimate([{ id: "all", seconds: m * 60 - HOLD }], rates, { textured })
-        .seconds,
+  const each = lengths.map((m) =>
+    estimate([{ id: "all", seconds: m * 60 - HOLD }], rates, {
+      textured,
+      score: brief.score,
+    }),
   );
   const r1 = (s) => Math.round((s / 60) * 10) / 10;
-  return { first: r1(each[0]), all: r1(each.reduce((a, b) => a + b, 0)) };
+  return {
+    first: r1(each[0].seconds),
+    all: r1(each.reduce((n, e) => n + e.seconds, 0)),
+    unmeasured: each[0].unmeasured,
+  };
 }
 
 // The plan's findings, one line each, against the brief and the pack.
@@ -362,7 +370,7 @@ if (cmd === "start") {
     JSON.stringify({ declined: true, length }) + "\n",
   );
   console.log(
-    `parts: declined, one long video in sections, first render about ${long.all} min`,
+    `parts: declined, one long video in sections, first render about ${long.all} min${long.unmeasured ? ` (${UNMEASURED})` : ""}`,
   );
 } else if (length <= LONG) {
   console.log(`parts: no offer, ${num(length)} min is within ${LONG}`);
@@ -378,6 +386,6 @@ if (cmd === "start") {
     `parts offer: ${num(length)} min is over ${LONG}: ${lengths.length} parts of ${lengths.map(num).join(" + ")} min, or one long video in sections`,
   );
   console.log(
-    `parts estimate: ${lengths.length} parts ${parts.all} min in all, the first after ${parts.first} min; one long video ${long.all} min (render and gates, not narration)`,
+    `parts estimate: ${lengths.length} parts ${parts.all} min in all, the first after ${parts.first} min; one long video ${long.all} min (render, gates and score, not narration${long.unmeasured ? `; ${UNMEASURED}` : ""})`,
   );
 }

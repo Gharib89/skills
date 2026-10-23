@@ -62,6 +62,18 @@ test("a rich card shows the seconds it adds, and a card with none to show says n
   assert.equal([...v.matchAll(/data-adds/g)].length, 1);
 });
 
+test("the estimate says ace-step is not measured only when the board marks it, and that the number leaves the score out", () => {
+  const note = (e) =>
+    estimate(P.view(session([withEstimate(e)]))).match(
+      /<span class="label">ace-step is not measured[^<]*<\/span>/,
+    )?.[0];
+  assert.match(
+    note({ aceStepUnmeasured: true }),
+    /ace-step is not measured, so this leaves its score out/,
+  );
+  assert.equal(note({ aceStepUnmeasured: false }), undefined);
+});
+
 test("a delivered board shows no estimate, the video being rendered", () => {
   assert.equal(
     estimate(P.view(session([sample("board-delivered")]))),
@@ -81,6 +93,7 @@ test("the page reads the estimate fields, all documented, and every sample carri
     "board.estimate.budget",
     "board.estimate.over",
     "board.estimate.hyperframes",
+    "board.estimate.aceStepUnmeasured",
     "board.scenes[].adds",
   ])
     assert.ok(seen.has(p), `page never reads ${p}`);
