@@ -39,7 +39,11 @@ import { captionFindings, cuesOf } from "./captions.mjs";
 import { sceneEvents } from "./events.mjs";
 import { source } from "./source.mjs";
 import { ALONG_SECONDS, readingFindings } from "./reading.mjs";
-import { fullestFrame, motionAndDeterminism } from "./scene.mjs";
+import {
+  fullestFrame,
+  motionAndDeterminism,
+  renderedDifferently,
+} from "./scene.mjs";
 import { cutSheets, readPrevKeys } from "./sheets.mjs";
 import { SCORES, KIND_LIST, checkVerdict } from "./verdict.mjs";
 
@@ -246,13 +250,7 @@ const summary = (ev, noun = "finding(s)") =>
 const layoutFindings = plan.flatMap((p) => p.found.layout);
 const contrastFindings = plan.flatMap((p) => p.found.contrast);
 const readingFound = plan.flatMap((p) => p.found.reading);
-// Led by the scene's start, as layout's lines are, with both renders' files.
-const differing = plan
-  .filter((p) => p.found.determinism.a !== p.found.determinism.b)
-  .map((p) => {
-    const d = p.found.determinism;
-    return `${p.sc.start.toFixed(2)} s ${p.sc.id}: frame ${d.frame} (${d.t.toFixed(2)} s) renders differently twice, sha256 ${d.a.slice(0, 12)} vs ${d.b.slice(0, 12)}: ${d.files.join(", ")}`;
-  });
+const differing = renderedDifferently(plan);
 const judged = {
   layout: [
     layoutFindings,

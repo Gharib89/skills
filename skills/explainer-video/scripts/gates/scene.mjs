@@ -26,6 +26,17 @@ export function fullestFrame(p, frames, moving) {
   return Math.round(fullestSample(samples) * FPS);
 }
 
+// The determinism gate's findings over `plan` (items of `{ sc, found }`): one
+// line per scene whose two renders differ, led by the scene's start as layout's
+// lines are, with both renders' files.
+export const renderedDifferently = (plan) =>
+  plan
+    .filter((p) => p.found.determinism.a !== p.found.determinism.b)
+    .map((p) => {
+      const d = p.found.determinism;
+      return `${p.sc.start.toFixed(2)} s ${p.sc.id}: frame ${d.frame} (${d.t.toFixed(2)} s) renders differently twice, sha256 ${d.a.slice(0, 12)} vs ${d.b.slice(0, 12)}: ${d.files.join(", ")}`;
+    });
+
 // Motion, then determinism on the frame it picks: the scene's peak-motion
 // frame outside every seam, rendered twice in two browsers and compared as
 // decoded pixels; and the scene's dead beats, read off its timeline from
