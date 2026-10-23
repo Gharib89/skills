@@ -27,7 +27,7 @@ repo writes: its source is `skills/<name>/`, and `.claude/skills/<name>/` is its
 derived copy, refreshed from it. Every other entry is installed from the
 upstream its `source` names, at the lock's `ref` (the skills ship composes come
 from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`), and lives
-only under `.claude/skills/`. The `hyperframes-*` entries
+only under `.claude/skills/`. The `hyperframes` and `hyperframes-cli` entries
 (`heygen-com/hyperframes`) are maintainer aids for building explainer-video
 components. Adding a skill this repo writes touches the sites in the checklist
 under `## Adding a skill this repo writes` in
