@@ -36,7 +36,7 @@ push_at() { g push -q -f origin "$1:refs/heads/fix/x"; }
 out=$(run 7 none 2>&1); rc=$?
 check_rc "merge without a head is a usage error" 2 "$rc"
 check "and names the head in its usage line" true \
-  "$(grep -qF 'usage: merge <pr> <issue|none> <head> [--worktree <path>, the feature checkout the main-checkout lookup and the base freshness check run from; teardown is cleanup, run after this]' <<<"$out" && echo true)"
+  "$(grep -qF 'usage: merge <pr> <issue|none> <head> [--worktree <path>, the feature checkout to run the main-checkout lookup and the base freshness check from, default the current directory; teardown is cleanup, run after this]' <<<"$out" && echo true)"
 
 reset; push_at "$A"; pr 1 open "$A"
 out=$(run 7 none "$C" 2>/dev/null); rc=$?

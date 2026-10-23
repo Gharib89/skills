@@ -27,9 +27,12 @@ call_start=$(date +%s)
 [ -n "$start" ] || { start=$call_start; deadline=$((start + timeout)); }
 # The ceiling bounds what a run may add to its request, so it counts from the
 # since instant where there is one, else from the window's start: counted from
-# the call, every fresh call on a stuck run opened a new ceiling (#952).
+# the window's start alone, which a fresh call resets, every fresh call on a
+# stuck run opened a new ceiling (#952).
 anchor=$start
-[ -z "$since" ] || anchor=$(jq -rn --arg s "$since" '$s | fromdateiso8601')
+if [ -n "$since" ]; then
+  anchor=$(jq -rn --arg s "$since" '$s | fromdateiso8601') || ship_tooling "cannot read the since instant: $since"
+fi
 key=on_head; [ -z "$since" ] || key=all
 readf=$(mktemp); SHIP_HTTP_STATUS_FILE=$(mktemp)
 trap 'rm -f "$readf" "$SHIP_HTTP_STATUS_FILE"' EXIT
@@ -189,7 +192,7 @@ while :; do
   fi
   # A window that closed on the previous head answered nothing on this one.
   ! $stale || done=false
-  waited=$(($(date +%s) - start)); aged=$(($(date +%s) - anchor))
+  now=$(date +%s); waited=$((now - start)); aged=$((now - anchor))
   run_status=$(jq -r 'if type == "object" then .status else "" end' <<<"$reviewer_run")
   # A run that ended any way but successfully ends the window with it, wherever
   # `--timeout` stands: no round is coming out of it, and the minutes left on the

@@ -76,7 +76,7 @@ activity() {
                    body: "@codex review", url: "https://example.invalid/r"}] + $c),
       pr_reactions: $p, request_reactions: $r}' > "$SHIP_FAKE/host_pr_native_activity.$n.json"
 }
-poll() { ( cd "$repo" && bash "${held:-$mech}" 7 --reviewer codex --since "$since" --timeout 0 --interval 1 "$@" ); }
+poll() { ( cd "$repo" && bash "${rebased:-$mech}" 7 --reviewer codex --since "$since" --timeout 0 --interval 1 "$@" ); }
 calls() { cat "$SHIP_FAKE/host_$1.n" 2>/dev/null || echo 0; }
 # An in-progress row: the probe's Completed row with its status cell replaced.
 sed 's/✅ \*\*Completed\*\*/⏳ **In progress**/' "$fx/summary-completed.md" > "$work/summary-progress.md"
@@ -86,17 +86,14 @@ sed 's/`9ffa460`/9ffa460/' "$fx/summary-completed.md" > "$work/summary-nosha.md"
 
 # The findings round, as #504 delivered it: 👀 and an in-progress row first,
 # then the formal review on the head. The 👀 holds the window past --timeout 0.
-# The ceiling counts from the request (#952), which the fixtures date
-# 2026-10-07, so the cases that hold run a copy of the mechanic whose ceiling is
-# that age plus the real one; the rest is the real mechanic.
-cp -R skills/ship/scripts "$work/held"
-sed -i.bak "s/^ceiling=1800\$/ceiling=\$((\$(date +%s) - $(jq -rn --arg s "$since" '$s | fromdateiso8601') + 1800))/" \
-  "$work/held/poll-pr.sh"
+# The fixtures date the request 2026-10-07, past the ceiling, so the cases that
+# hold run a ceiling_copy; the rest is the real mechanic.
+ceiling_copy "$work/rebased" "$since" 1800
 reset
 activity 1 eyes "c|summary-progress.md|2026-10-07T12:28:29Z"
 activity 2 "c|summary-completed.md|2026-10-07T12:28:29Z|2026-10-07T12:31:08Z"
 printf '%s\n' "$findings" > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(held=$work/held/poll-pr.sh poll --brief); rc=$?
+out=$(rebased=$work/rebased/poll-pr.sh poll --brief); rc=$?
 check "a findings round lands after the in-progress pass" '0 since null' \
   "$rc $(jq -r '.landed_by, .not_reviewed' <<<"$out" | xargs)"
 check "the in-progress pass held the window for a second read" 2 "$(calls pr_reviews)"
@@ -109,7 +106,7 @@ reset
 activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
 activity 2 "c|summary-completed.md|2026-10-07T12:28:29Z|2026-10-07T12:31:08Z"
 printf '%s\n' "$findings" > "$SHIP_FAKE/host_pr_reviews.2.json"
-out=$(held=$work/held/poll-pr.sh poll); rc=$?
+out=$(rebased=$work/rebased/poll-pr.sh poll); rc=$?
 check "an in-progress status row holds the window until the round" '0 since' \
   "$rc $(jq -r .landed_by <<<"$out")"
 
@@ -122,14 +119,21 @@ activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
 out=$(SHIP_CALL_CAP=3 poll); rc=$?
 check "a stuck status on a request past the ceiling is still-running" '1 still-running null null' \
   "$rc $(jq -r '.not_reviewed, .status, .cursor' <<<"$out" | xargs)"
-# A request inside the ceiling still holds the window to the call cap.
-recent=$(jq -rn 'now - 60 | floor | todate')
+# Either side of the ceiling, 30 s off: a request just inside it still holds
+# the window to the call cap, one just past it is graded at once.
+inside=$(jq -rn 'now - 1770 | floor | todate')
 reset
-activity 1 "c|summary-progress.md|$(jq -rn 'now - 50 | floor | todate')"
-out=$(SHIP_CALL_CAP=3 since=$recent poll); rc=$?
-check "a stuck status on a recent request still answers pending" '1 pending null' \
+activity 1 "c|summary-progress.md|$inside"
+out=$(SHIP_CALL_CAP=3 since=$inside poll); rc=$?
+check "a stuck status just inside the ceiling still answers pending" '1 pending null' \
   "$rc $(jq -r '.status, .not_reviewed' <<<"$out" | xargs)"
 check "and carries a cursor to resume it" true "$(jq '.cursor | type == "string"' <<<"$out")"
+past=$(jq -rn 'now - 1830 | floor | todate')
+reset
+activity 1 "c|summary-progress.md|$past"
+out=$(SHIP_CALL_CAP=3 since=$past poll); rc=$?
+check "a stuck status just past the ceiling is still-running" '1 still-running null' \
+  "$rc $(jq -r '.not_reviewed, .cursor' <<<"$out" | xargs)"
 
 # The clean round, as #505 delivered it: no formal review, an issue comment
 # naming the reviewed commit, then 👍 on the PR. It is a landed round.
