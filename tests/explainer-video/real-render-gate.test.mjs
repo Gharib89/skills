@@ -10,6 +10,7 @@ import path from "node:path";
 import {
   determinismGate,
   gateRow,
+  sectionOffsets,
 } from "../../skills/explainer-video/maintainer/real-render-gate.mjs";
 import { loadStyle } from "../../skills/explainer-video/scripts/lib/style.mjs";
 
@@ -105,4 +106,34 @@ test("the row passes when every scene's two renders match and names the scene th
     rows[1].detail,
     /first: 0\.00 s one: frame \d+ .* renders differently twice/,
   );
+});
+
+// A section composition draws the whole video's frame at its own time plus its
+// start, which `/section` has at 4 s; the whole composition draws its own time.
+const drawn = {
+  events: async () => ({}),
+  frame: async (comp, t, out) =>
+    fs.writeFileSync(out, (comp === "/section" ? t + 4 : t).toFixed(3)),
+  framePixels: async (file) => fs.readFileSync(file, "utf8"),
+};
+const planned = [
+  { sc: { id: "one" }, found: { determinism: { t: 1.2 } } },
+  { sc: { id: "two" }, found: { determinism: { t: 5.2 } } },
+];
+const offsets = (base) =>
+  sectionOffsets({
+    plan: planned,
+    section: (id) => (id === "two" ? { dir: "/section", base } : null),
+    whole: "/whole",
+    backend: drawn,
+    env: {},
+    work: run,
+  });
+
+test("a later section's gate frame is the whole composition's at the same time, and only a later section is compared", async () => {
+  assert.deepEqual(await offsets(4), [["two", true]]);
+});
+
+test("a section start shifted off the section's own goes red", async () => {
+  assert.deepEqual(await offsets(3.5), [["two", false]]);
 });

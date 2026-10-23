@@ -2,9 +2,10 @@
 // sections renders each section video only and joins the parts by stream copy;
 // the real tools must give it the whole render's frames, the captions on its
 // frames, one audio track and the chapter marks, and the product's determinism
-// gate must hold on it, each scene's frame drawn from its section (checks
-// `sections frames`, `sections captions`, `sections gate determinism`,
-// `sections audio` and `sections chapters`).
+// gate must hold on it, each scene's frame drawn from its section and a later
+// section's the whole composition's (checks `sections frames`, `sections
+// captions`, `sections gate determinism`, `sections gate frame`, `sections
+// audio` and `sections chapters`).
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -17,7 +18,11 @@ import {
   sectionOf,
   sectionsOf,
 } from "../scripts/render/sections.mjs";
-import { determinismGate, gateRow } from "./real-render-gate.mjs";
+import {
+  determinismGate,
+  gateRow,
+  sectionOffsets,
+} from "./real-render-gate.mjs";
 
 const title = (section, id, role, seconds, narration) => ({
   seconds,
@@ -164,21 +169,34 @@ export async function sectionChecks({
       path.join(run, ".cache", "sections", String(n)),
     );
   const [script, timeline] = [{ scenes }, { scenes: whole.scenes }];
-  gateRow(
-    "sections gate determinism",
-    await determinismGate({
-      scenes,
-      timeline: whole.scenes,
-      run,
-      mp4: joined,
-      comp: whole.comp,
-      raw: await backend.events(whole.comp, { env }),
-      section: (id) => sectionOf(run, script, timeline, id),
-      backend,
-      env,
-      profile,
-    }),
-    check,
+  const section = (id) => sectionOf(run, script, timeline, id);
+  const plan = await determinismGate({
+    scenes,
+    timeline: whole.scenes,
+    run,
+    mp4: joined,
+    comp: whole.comp,
+    raw: await backend.events(whole.comp, { env }),
+    section,
+    backend,
+    env,
+    profile,
+  });
+  gateRow("sections gate determinism", plan, check);
+  // The gate draws a frame twice from its section, so it cannot tell a wrong
+  // section start: that frame must be the whole composition's.
+  const offsets = await sectionOffsets({
+    plan,
+    section,
+    whole: whole.comp,
+    backend,
+    env,
+    work,
+  });
+  check(
+    "sections gate frame",
+    offsets.length > 0 && offsets.every(([, same]) => same),
+    `${offsets.map(([id, same]) => `${id}: ${same ? "same" : "DIFFERENT"}`).join(", ")} pixels as the whole composition at the gate's frame (same expected)`,
   );
 
   const audio = (f) =>
