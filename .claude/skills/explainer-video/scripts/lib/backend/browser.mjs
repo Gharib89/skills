@@ -140,6 +140,51 @@ function measureFrame() {
     right: r1(r.right),
     bottom: r1(r.bottom),
   });
+  // The part of `a` that `b` also covers: the box a clip by both leaves.
+  const meet = (a, b) => ({
+    left: Math.max(a.left, b.left),
+    top: Math.max(a.top, b.top),
+    right: Math.min(a.right, b.right),
+    bottom: Math.min(a.bottom, b.bottom),
+  });
+  // Whether a `clip-path` cuts into an element's boxes, as the browser's hit
+  // test says: a clipped-away point reaches neither the element nor anything in
+  // it, whatever shape the path is. Each line box of an inline element is
+  // tried, at its corners and centre, and only where the viewport and the
+  // `overflow` clips (`clip`) leave the page visible: a hit test misses outside
+  // the viewport, and it respects an `overflow` clip too, which `clipped`
+  // already reports. A hit test skips an element with `pointer-events: none`,
+  // which the video never shows, so the element answers to `auto`, important so
+  // that no rule's `!important` outranks it, for the test and is put back
+  // after, priority and all.
+  const cutByPath = (el, clip) => {
+    const view = { left: 0, top: 0, right: innerWidth, bottom: innerHeight };
+    const seen = clip ? meet(view, clip) : view;
+    const was = el.style.getPropertyValue("pointer-events");
+    const priority = el.style.getPropertyPriority("pointer-events");
+    el.style.setProperty("pointer-events", "auto", "important");
+    try {
+      return [...el.getClientRects()].some((r) =>
+        [0, 0.5, 1].some((fx) =>
+          [0, 0.5, 1].some((fy) => {
+            const x = r.left + 1 + (r.width - 2) * fx;
+            const y = r.top + 1 + (r.height - 2) * fy;
+            return (
+              r.width > 2 &&
+              r.height > 2 &&
+              x >= seen.left &&
+              y >= seen.top &&
+              x < seen.right &&
+              y < seen.bottom &&
+              !document.elementsFromPoint(x, y).some((hit) => el.contains(hit))
+            );
+          }),
+        ),
+      );
+    } finally {
+      el.style.setProperty("pointer-events", was, priority);
+    }
+  };
   const sub = '[data-composition-id]:not([data-composition-id="main"])';
   // The ink Arabic's letters span in an element's face and weight, in ems, as
   // canvas measures it once per face and weight: the least line height that
@@ -176,6 +221,7 @@ function measureFrame() {
     let opacity = 1;
     let blur = 0;
     let clip = null;
+    let clipPath = false;
     let bg;
     let solid = false;
     const layers = [];
@@ -186,14 +232,28 @@ function measureFrame() {
         blur,
         parseFloat(/blur\(([\d.]+)px\)/.exec(acs.filter)?.[1] ?? 0),
       );
-      if (!clip && a !== el && acs.overflow !== "visible")
-        clip = box(a.getBoundingClientRect());
+      // Every clipping ancestor cuts, so the box is where they all overlap.
+      if (a !== el && acs.overflow !== "visible") {
+        const b = box(a.getBoundingClientRect());
+        clip = clip ? meet(clip, b) : b;
+      }
+      if (acs.clipPath !== "none") clipPath = true;
       if (!solid) {
         const [r, g, b, al] = rgba(acs.backgroundColor);
         if (al > 0) layers.push([r, g, b, al]);
         solid = al === 1;
       }
     }
+    // A box that takes no pointer cannot be hit tested.
+    const cut = clipPath && cutByPath(el, clip);
+    // A code excerpt's line keeps its indent as plain text before the code's
+    // span: how many characters it has, and how far the code sits from the
+    // line's start in the frame.
+    const line = el.closest(".xcode .xs");
+    const lead =
+      line?.firstChild?.nodeType === 3
+        ? /^\s*/.exec(line.firstChild.textContent)[0].length
+        : 0;
     // The box's ground: each see-through layer (the glass surface) over the
     // ones behind it, down to the first opaque one, else white.
     const ground = layers.reduceRight(
@@ -226,6 +286,10 @@ function measureFrame() {
       opacity,
       blur,
       clip,
+      cut,
+      indent: lead
+        ? { want: lead, got: r1(r.left - line.getBoundingClientRect().left) }
+        : null,
       color: hex(cs.color),
       bg,
       // Reading direction: the element's own, the `dir` it sits in, how it

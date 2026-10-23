@@ -75,6 +75,28 @@ test("a title stacked on the kicker fails layout as an overlap, and passes on th
   assertGreen(fx, render(fx, SCRIPT));
 });
 
+test("a code line drawn flush left fails layout as a lost indent, and passes on the fix", () => {
+  const fx = fixture();
+  assertRed(
+    fx,
+    render(fx, titled("unindented")),
+    "layout",
+    'indent lost, 2 leading spaces "Issue to unindented request"',
+  );
+  assertGreen(fx, render(fx, SCRIPT));
+});
+
+test("a title cut by a clip-path edge fails layout, and passes on the fix", () => {
+  const fx = fixture();
+  assertRed(
+    fx,
+    render(fx, titled("cutpath")),
+    "layout",
+    'clipped by clip-path "Issue to cutpath request"',
+  );
+  assertGreen(fx, render(fx, SCRIPT));
+});
+
 test("a contrast error from HyperFrames' check fails contrast", () => {
   const fx = fixture();
   const r = render(fx, SCRIPT, {

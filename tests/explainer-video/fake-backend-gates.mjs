@@ -202,6 +202,8 @@ export async function probe(dir, times) {
           clientH: 48,
           opacity: fading(text, t - start),
           clip: clipped ? { ...rect, right: 1000 } : null,
+          cut: /\bcutpath\b/.test(text),
+          indent: /\bunindented\b/.test(text) ? { want: 2, got: 0 } : null,
           color: /\bdim\b/.test(text)
             ? "#c8c8c0"
             : /\bsmall\b/.test(text)
