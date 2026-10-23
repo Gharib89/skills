@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.53.1 (2026-10-23)
+
+### Bug Fixes
+
+- **explainer-video**: Real-render runs the product's determinism gate and frames every fixture
+  scene ([#949](https://github.com/Gharib89/skills/pull/949),
+  [`ed7436e`](https://github.com/Gharib89/skills/commit/ed7436ec75b7363e83b1298e3035b0fd7666271f))
+
+
 ## v0.53.0 (2026-10-23)
 
 ### Features
