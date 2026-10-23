@@ -1,7 +1,8 @@
 // The layout and contrast verdicts on a composition's sampled frames, shared by
 // the gates stage and the style card: HyperFrames' check findings, then the
 // house probe's text elements judged against the run's floors (text size,
-// overflow, clip, the safe margin, overlap, and contrast by text size), and
+// overflow, clip and clip-path, a code line's indent, the safe margin, overlap,
+// and contrast by text size), and
 // right to left text against its reading rules (below). Each defect is handed
 // to `add(gate, time, what)`, `gate` `layout` or `contrast`.
 import { H, W } from "../render/compose.mjs";
@@ -87,6 +88,9 @@ export function judge(checked, frames, floor, add, moving = () => false) {
       )
         bad(`overflow ${e.scrollW}x${e.scrollH} in ${e.clientW}x${e.clientH}`);
       if (e.clip && outside(e.rect, e.clip, 1)) bad("clipped");
+      if (e.cut) bad("clipped by clip-path");
+      if (e.indent && e.indent.got < 1)
+        bad(`indent lost, ${e.indent.want} leading spaces`);
       if (outside(e.rect, safe, 0)) bad("outside the safe margin");
       rtl(e, bad);
       for (const o of shown.slice(i + 1))
