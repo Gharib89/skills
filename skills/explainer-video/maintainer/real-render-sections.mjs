@@ -1,11 +1,12 @@
 // Maintainer only: the sections checks of maintainer/real-render.mjs. A video in
 // sections renders each section video only and joins the parts by stream copy;
 // the real tools must give it the whole render's frames, the captions on its
-// frames, one audio track and the chapter marks, and the determinism gate's
-// frame from a later section must be the whole composition's (checks `sections
-// frames`, `sections captions`, `sections gate frame`, `sections audio` and
-// `sections chapters`).
+// frames, one audio track and the chapter marks, and the product's determinism
+// gate must hold on it, each scene's frame drawn from its section (checks
+// `sections frames`, `sections captions`, `sections gate determinism`,
+// `sections audio` and `sections chapters`).
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { meanDiff } from "../scripts/lib/motion.mjs";
 import { FPS } from "../scripts/render/compose.mjs";
@@ -13,8 +14,10 @@ import {
   chapterCheck,
   chaptersOf,
   joinSections,
+  sectionOf,
   sectionsOf,
 } from "../scripts/render/sections.mjs";
+import { determinismGate, gateRow } from "./real-render-gate.mjs";
 
 const title = (section, id, role, seconds, narration) => ({
   seconds,
@@ -88,6 +91,7 @@ export async function sectionChecks({
   backend,
   work,
   env,
+  profile,
 }) {
   const extra = (part, audio) => (timeline) => ({
     audio,
@@ -149,33 +153,32 @@ export async function sectionChecks({
     `caption bands of ${apart.length} sections: ${apart.map((x) => `${x.inked ? "inked" : "flat"} diff ${x.diff.toFixed(1)}`).join(", ")} (inked, diff <= 12 expected)`,
   );
 
-  // The determinism gate renders a scene's frame from its section's composition
-  // at the scene's time less the section's start: in a later section that frame
-  // must be the whole composition's at the scene's time. The time is the middle
-  // of a frame: a start written to 6 decimals sits a microsecond off its frame,
-  // and a seek on a frame's edge lands on the frame before in one composition
-  // and not in the other.
-  const shot = async (comp, t, name) => {
-    const png = path.join(work, `sections-${name}.png`);
-    await backend.frame(comp, +t.toFixed(6), png, { env });
-    return backend.framePixels(png);
-  };
-  const offsets = [];
-  for (const [i, n] of numbers.entries()) {
-    if (!i) continue;
-    const k = SECTIONED.findIndex((p) => p.scene.section === n);
-    const t = whole.scenes[k + 1].start + 0.5 + 0.5 / FPS;
-    const base = whole.scenes[k].start;
-    offsets.push([
-      n,
-      (await shot(whole.comp, t, `whole-${n}`)) ===
-        (await shot(parts[i].comp, t - base, `part-${n}`)),
-    ]);
-  }
-  check(
-    "sections gate frame",
-    offsets.every(([, same]) => same),
-    `section ${offsets.map(([n, same]) => `${n}: ${same ? "same" : "DIFFERENT"}`).join(", ")} pixels as the whole composition at the scene's time (same expected)`,
+  // The product's determinism gate over the joined video: each scene's frame
+  // comes from its section's composition at the scene's time less the section's
+  // start, found where the product's `sectionOf` looks.
+  const run = path.join(work, "sections-run");
+  fs.mkdirSync(path.join(run, ".cache", "sections"), { recursive: true });
+  for (const [i, n] of numbers.entries())
+    fs.symlinkSync(
+      parts[i].comp,
+      path.join(run, ".cache", "sections", String(n)),
+    );
+  const [script, timeline] = [{ scenes }, { scenes: whole.scenes }];
+  gateRow(
+    "sections gate determinism",
+    await determinismGate({
+      scenes,
+      timeline: whole.scenes,
+      run,
+      mp4: joined,
+      comp: whole.comp,
+      raw: await backend.events(whole.comp, { env }),
+      section: (id) => sectionOf(run, script, timeline, id),
+      backend,
+      env,
+      profile,
+    }),
+    check,
   );
 
   const audio = (f) =>

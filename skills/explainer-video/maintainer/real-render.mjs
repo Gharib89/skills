@@ -48,6 +48,8 @@ import { joinNarration } from "../scripts/render/narration.mjs";
 import { seamPlan, slot } from "../scripts/render/seams.mjs";
 import { describe, differing, keepHashLists } from "./real-render-compare.mjs";
 import { FIXTURE } from "./real-render-fixture.mjs";
+import { determinismGate, gateRow } from "./real-render-gate.mjs";
+import { countingIds, layoutIds, savedFrames } from "./real-render-lists.mjs";
 import {
   RASTER_FLAGS,
   headlessShell,
@@ -280,6 +282,23 @@ check(
 // the same, and so does each scene after: an exit and an entry window for each
 // of the fixture's scene changes.
 const raw = await backend.events(whole.comp, { env });
+// The product's determinism gate on the real backend, over every scene of the
+// first whole render: the peak-motion frame seeked twice.
+gateRow(
+  "gate determinism",
+  await determinismGate({
+    scenes: FIXTURE.map((p) => p.scene),
+    timeline: whole.scenes,
+    run: work,
+    mp4: videos["whole-1"],
+    comp: whole.comp,
+    raw,
+    backend,
+    env,
+    profile,
+  }),
+  check,
+);
 // A frame of a WebGL scene is seeked on SwiftShader, as the gate does; every
 // other scene's, as before.
 const seek = async (t, n, software = false, comp = whole.comp) => {
@@ -337,11 +356,10 @@ check(
 );
 
 // A number counts up as a function of time: each stat scene's frame 0.45 s into
-// the first count, seeked twice, matches byte for byte, differs from the frame
-// once the count has settled, and the same frame at the same time is saved for
-// a look (`REAL_RENDER_FRAMES=<dir>` keeps the settled and mid-count frames).
+// the first count, seeked twice, matches byte for byte and differs from the
+// frame once the count has settled.
 const counting = [];
-for (const id of ["numbers", "arabic-stat", "bars", "arabic-line"]) {
+for (const id of countingIds(FIXTURE)) {
   const start = whole.scenes.find((s) => s.id === id).start;
   const mid = +(start + 1.0 + 0.45).toFixed(3);
   const done = +(start + 3.0).toFixed(3);
@@ -349,13 +367,6 @@ for (const id of ["numbers", "arabic-stat", "bars", "arabic-line"]) {
   const b = await seek(mid, "count-b");
   const settled = await seek(done, "count-done");
   counting.push([id, a.equals(b), !a.equals(settled)]);
-  if (process.env.REAL_RENDER_FRAMES) {
-    fs.mkdirSync(process.env.REAL_RENDER_FRAMES, { recursive: true });
-    fs.writeFileSync(
-      path.join(process.env.REAL_RENDER_FRAMES, `${id}.png`),
-      settled,
-    );
-  }
 }
 check(
   "count-up",
@@ -402,23 +413,12 @@ const excerpts = sceneOf("excerpt");
 const stacks = sceneOf("stack3d");
 await timeChecks({ whole, seek, check, browsers, excerpts, stacks });
 
-// The layout gate over the largest diagram's samples, each browser page's, each
-// excerpt's (the longest one's reading is what the sizes were set for) and each
-// stack3d scene's, as the gates stage takes them: its text inside the safe
-// area, none clipped, small or stacked.
-const largest = diagrams.toSorted(
-  (a, b) => b.visual.props.nodes.length - a.visual.props.nodes.length,
-)[0].id;
+// The layout gate over every fixture scene's samples, as the gates stage takes
+// them: its text inside the safe area, none clipped, small or stacked.
 const { times: eventTimes, moving } = sceneEvents(raw, whole.scenes);
 const laid = [];
 const reads = [];
-for (const id of [
-  largest,
-  ...browsers.map((s) => s.id),
-  ...excerpts.map((s) => s.id),
-  ...stacks.map((s) => s.id),
-  ...tours.map((s) => s.id),
-]) {
+for (const id of layoutIds(FIXTURE)) {
   const sc = whole.scenes.find((s) => s.id === id);
   const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
   const findings = [];
@@ -469,30 +469,20 @@ check(
     .join(" | "),
 );
 
-// With REAL_RENDER_FRAMES set, save each timeline, compare, diagram, browser and
-// excerpt scene's settled frame (3 s in) for a human to check the reading order;
-// nothing asserts it.
-if (process.env.REAL_RENDER_FRAMES)
-  for (const id of [
-    "timeline",
-    "arabic-timeline",
-    "arabic-compare",
-    ...diagrams.map((s) => s.id),
-    ...browsers.map((s) => s.id),
-    ...excerpts.map((s) => s.id),
-    ...stacks.map((s) => s.id),
-    ...tours.map((s) => s.id),
-  ]) {
-    const start = whole.scenes.find((s) => s.id === id).start;
+// With REAL_RENDER_FRAMES set, save every scene's settled frame (3 s in) for a
+// human to check the reading order; nothing asserts it.
+if (process.env.REAL_RENDER_FRAMES) {
+  fs.mkdirSync(process.env.REAL_RENDER_FRAMES, { recursive: true });
+  for (const { id, t } of savedFrames(whole.scenes))
     fs.writeFileSync(
       path.join(process.env.REAL_RENDER_FRAMES, `${id}.png`),
       await seek(
-        +(start + 3.0).toFixed(3),
+        t,
         id,
         stacks.some((s) => s.id === id),
       ),
     );
-  }
+}
 
 // What the critic reads of motion, off the real timeline and the real video:
 // every scene's tweens, the push-in's or the tour's among them and exactly one
@@ -557,6 +547,7 @@ await sectionChecks({
   backend,
   work,
   env,
+  profile,
 });
 
 process.exit(failed ? 1 : 0);
