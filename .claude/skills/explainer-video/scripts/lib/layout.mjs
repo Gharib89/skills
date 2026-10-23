@@ -87,6 +87,9 @@ export function judge(checked, frames, floor, add, moving = () => false) {
       )
         bad(`overflow ${e.scrollW}x${e.scrollH} in ${e.clientW}x${e.clientH}`);
       if (e.clip && outside(e.rect, e.clip, 1)) bad("clipped");
+      if (e.cut) bad("clipped by clip-path");
+      if (e.indent && e.indent.want > 0 && e.indent.got < 1)
+        bad(`indent lost, ${e.indent.want} leading spaces`);
       if (outside(e.rect, safe, 0)) bad("outside the safe margin");
       rtl(e, bad);
       for (const o of shown.slice(i + 1))
