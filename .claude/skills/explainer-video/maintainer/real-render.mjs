@@ -26,11 +26,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { sceneEvents } from "../scripts/gates/events.mjs";
-import { readingFindings } from "../scripts/gates/reading.mjs";
 import { HOLD } from "../scripts/lib/length.mjs";
-import { judge } from "../scripts/lib/layout.mjs";
-import { sampleTimes, seamStripStart } from "../scripts/lib/motion.mjs";
-import { floors, loadStyle, typeRoles } from "../scripts/lib/style.mjs";
+import { seamStripStart } from "../scripts/lib/motion.mjs";
+import { loadStyle, typeRoles } from "../scripts/lib/style.mjs";
 import { VISUALS, drawsWebgl } from "../scripts/lib/visuals.mjs";
 import {
   catalogue,
@@ -49,7 +47,8 @@ import { seamPlan, slot } from "../scripts/render/seams.mjs";
 import { describe, differing, keepHashLists } from "./real-render-compare.mjs";
 import { FIXTURE } from "./real-render-fixture.mjs";
 import { determinismGate, gateRow } from "./real-render-gate.mjs";
-import { countingIds, layoutIds, savedFrames } from "./real-render-lists.mjs";
+import { layoutFindings } from "./real-render-layout.mjs";
+import { countingIds, layoutRuns, savedFrames } from "./real-render-lists.mjs";
 import {
   RASTER_FLAGS,
   headlessShell,
@@ -413,44 +412,22 @@ const excerpts = sceneOf("excerpt");
 const stacks = sceneOf("stack3d");
 await timeChecks({ whole, seek, check, browsers, excerpts, stacks });
 
-// The layout gate over the samples of each scene the fixture marks `layout`, as
-// the gates stage takes them: its text inside the safe area, none clipped,
-// small or stacked.
-const { times: eventTimes, moving } = sceneEvents(raw, whole.scenes);
+// The layout gate over every fixture scene, each on a page of its own reading
+// direction (real-render-layout.mjs).
 const laid = [];
 const reads = [];
-for (const id of layoutIds(FIXTURE)) {
-  const sc = whole.scenes.find((s) => s.id === id);
-  const times = sampleTimes({ ...sc, fps: FPS, events: eventTimes });
-  const findings = [];
-  const frames = await backend.probe(whole.comp, times, { env });
-  judge(
-    await backend.check(whole.comp, times, { env }),
-    frames,
-    floors(profile),
-    // a finding is the scene's while its time is, as the gates stage files it
-    (gate, t, what) => {
-      if (
-        gate === "layout" &&
-        t >= sc.start - 1e-6 &&
-        t < sc.start + sc.duration - 1e-6
-      )
-        findings.push(`${t.toFixed(2)} s: ${what}`);
-    },
-    moving,
-  );
-  laid.push([id, times.length, [...new Set(findings)]]);
-  // Each sentence of an excerpt is one reading box (`data-line`), judged on its
-  // words as the gates stage judges a scene's text.
-  if (excerpts.some((s) => s.id === id))
-    reads.push([
-      id,
-      readingFindings(
-        { sc, times, end: sc.start + sc.duration },
-        frames,
-        moving,
-      ),
-    ]);
+for (const { dir, part } of layoutRuns(FIXTURE)) {
+  const run = await compose(`layout-${dir}`, part, true, { dir });
+  const found = await layoutFindings({
+    run,
+    raw: await backend.events(run.comp, { env }),
+    excerpts: excerpts.map((s) => s.id),
+    backend,
+    env,
+    profile,
+  });
+  laid.push(...found.laid);
+  reads.push(...found.reads);
 }
 check(
   "layout",

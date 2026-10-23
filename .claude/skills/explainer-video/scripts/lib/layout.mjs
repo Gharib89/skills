@@ -7,7 +7,7 @@
 // to `add(gate, time, what)`, `gate` `layout` or `contrast`.
 import { H, W } from "../render/compose.mjs";
 import { contrast } from "./style.mjs";
-import { ARABIC_SCRIPT, isLatin } from "./terms.mjs";
+import { ARABIC_LETTER, ARABIC_SCRIPT, isLatin } from "./terms.mjs";
 
 const ISOLATED = ["isolate", "isolate-override", "plaintext"];
 
@@ -22,9 +22,13 @@ const ISOLATED = ["isolate", "isolate-override", "plaintext"];
 function rtl(e, bad) {
   if (e.within === "ltr") return;
   if (ARABIC_SCRIPT.test(e.text)) {
-    if (e.dir !== "rtl") bad(`Arabic reads ${e.dir}`);
+    // Arabic-Indic digits alone have no strong direction, so their isolated
+    // `<bdi>` computes `ltr`, which is how a number reads in Arabic text, and
+    // they span less than the letters' ink: only a letter is held to either.
+    const letters = ARABIC_LETTER.test(e.text);
+    if (letters && e.dir !== "rtl") bad(`Arabic reads ${e.dir}`);
     if (/[A-Za-z]/.test(e.text)) bad("Latin run not isolated in");
-    if (e.lineH !== null && e.lineH < e.ink)
+    if (letters && e.lineH !== null && e.lineH < e.ink)
       bad(`line height ${e.lineH} under the ink ${e.ink} of ${e.face}`);
   } else if (e.within === "rtl" && isLatin(e.text)) {
     if (!ISOLATED.includes(e.bidi)) bad("Latin run not isolated");
