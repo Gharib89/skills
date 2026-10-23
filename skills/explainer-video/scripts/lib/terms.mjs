@@ -30,6 +30,9 @@ export function wholeWords(text, rtl) {
 
 export const ARABIC_SCRIPT = /\p{Script=Arabic}/u;
 
+// An Arabic letter: Arabic-Indic digits are in the script but are no letter.
+export const ARABIC_LETTER = /(?=\p{Script=Arabic})\p{L}/u;
+
 // A narration's `{written|spoken}` pair: the term as captioned, then as said.
 export const BRACES = /\{([^|}]*)\|([^}]*)\}/g;
 
