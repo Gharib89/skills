@@ -150,11 +150,16 @@ function measureFrame() {
   // Whether a `clip-path` cuts into an element's boxes, as the browser's hit
   // test says: a clipped-away point reaches neither the element nor anything in
   // it, whatever shape the path is. Each line box of an inline element is
-  // tried, at its corners and centre, inside the viewport only. A hit test
-  // skips an element with `pointer-events: none`, which the video never shows,
-  // so the element answers to `auto`, important so that no rule's `!important`
-  // outranks it, for the test and is put back after, priority and all.
-  const cutByPath = (el) => {
+  // tried, at its corners and centre, and only where the viewport and the
+  // `overflow` clips (`clip`) leave the page visible: a hit test misses outside
+  // the viewport, and it respects an `overflow` clip too, which `clipped`
+  // already reports. A hit test skips an element with `pointer-events: none`,
+  // which the video never shows, so the element answers to `auto`, important so
+  // that no rule's `!important` outranks it, for the test and is put back
+  // after, priority and all.
+  const cutByPath = (el, clip) => {
+    const view = { left: 0, top: 0, right: innerWidth, bottom: innerHeight };
+    const seen = clip ? meet(view, clip) : view;
     const was = el.style.getPropertyValue("pointer-events");
     const priority = el.style.getPropertyPriority("pointer-events");
     el.style.setProperty("pointer-events", "auto", "important");
@@ -167,8 +172,10 @@ function measureFrame() {
             return (
               r.width > 2 &&
               r.height > 2 &&
-              x < innerWidth &&
-              y < innerHeight &&
+              x >= seen.left &&
+              y >= seen.top &&
+              x < seen.right &&
+              y < seen.bottom &&
               !document.elementsFromPoint(x, y).some((hit) => el.contains(hit))
             );
           }),
@@ -238,7 +245,7 @@ function measureFrame() {
       }
     }
     // A box that takes no pointer cannot be hit tested.
-    const cut = clipPath && cutByPath(el);
+    const cut = clipPath && cutByPath(el, clip);
     // A code excerpt's line keeps its indent as plain text before the code's
     // span: how many characters it has, and how far the code sits from the
     // line's start in the frame.

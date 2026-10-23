@@ -47,15 +47,20 @@ const CARDS = `<div class="clip-a"><div class="card ok">Inside the clip</div></d
 <div class="clip-b"><div class="card wide">Cut by clip-path</div></div>
 <div class="clip-c"><div class="card wide">Cut with pointer events off</div></div>
 <div class="clip-d"><div class="card ok">Inside, pointer events off and important</div></div>
+<div class="clip-e"><div class="card ok">Off the left edge under a clip</div></div>
+<div class="clip-f"><div class="over-f"><div class="card wide">Cut by overflow under a clip</div></div></div>
 <div class="outer-a"><div class="inner-a"><div class="card ok">Inside both clips</div></div></div>
 <div class="outer-b"><div class="inner-b"><div class="mid"><div class="card wide">Cut by the outer clip</div></div></div></div>
 <style>
-.clip-a, .clip-b, .clip-c, .clip-d, .outer-a, .outer-b { position: absolute; left: 160px; width: 700px; height: 90px; }
+.clip-a, .clip-b, .clip-c, .clip-d, .clip-e, .clip-f, .outer-a, .outer-b { position: absolute; left: 160px; width: 700px; height: 90px; }
 .clip-a { top: 160px; clip-path: inset(0); }
 .clip-b { top: 300px; clip-path: inset(0 100px 0 0); }
 .clip-c { top: 720px; clip-path: inset(0 100px 0 0); pointer-events: none; }
 .clip-d { left: 900px; top: 160px; clip-path: inset(0); }
 .clip-d .card { pointer-events: none !important; }
+.clip-e { left: -100px; top: 860px; clip-path: inset(0); }
+.clip-f { left: 900px; top: 300px; clip-path: inset(0); }
+.over-f { position: absolute; inset: 0 200px 0 0; overflow: hidden; }
 .outer-a { top: 440px; overflow: hidden; }
 .outer-b { top: 580px; width: 500px; overflow: hidden; }
 .inner-a { position: absolute; inset: 0; overflow: hidden; }
@@ -145,9 +150,11 @@ test(
   async () => {
     const found = await findings(SCENES.cards);
     assert.deepEqual(found.toSorted(), [
+      'clipped "Cut by overflow under a clip"',
       'clipped "Cut by the outer clip"',
       'clipped by clip-path "Cut by clip-path"',
       'clipped by clip-path "Cut with pointer events off"',
+      'outside the safe margin "Off the left edge under a clip"',
     ]);
   },
 );
