@@ -119,10 +119,13 @@ activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
 out=$(SHIP_CALL_CAP=3 poll); rc=$?
 check "a stuck status on a request past the ceiling is still-running" '1 still-running null null' \
   "$rc $(jq -r '.not_reviewed, .status, .cursor' <<<"$out" | xargs)"
-# Either side of the ceiling, 30 s off, on a clock the case controls: a `date`
-# stub whose every `+%s` reads one second past the last, from the instant
-# clock() sets. A request just inside the ceiling still holds the window to the
-# call cap; one just past it is graded at once.
+# The ceiling's last tick, on a clock the case controls: a `date` stub whose
+# every `+%s` reads one second past the last, from the instant clock() sets.
+# The poll's third read (the call's start, the pass's start, then `now`) is the
+# one the ceiling is checked on, so clock 1796 decides at 1799 s, inside the
+# ceiling, and holds the window to the call cap, and clock 1797 decides at
+# exactly 1800 s and grades the run at once. A shift in the read count breaks
+# the pair rather than passing it.
 mkdir -p "$work/bin"
 cat > "$work/bin/date" <<'STUB'
 #!/usr/bin/env bash
@@ -134,16 +137,16 @@ clock() { echo $(($(jq -rn --arg s "$since" '$s | fromdateiso8601') + $1)) > "$w
 staged() { PATH="$work/bin:$PATH" CLOCK=$work/clock SHIP_CALL_CAP=3 poll; }
 reset
 activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
-clock 1770
+clock 1796
 out=$(staged); rc=$?
-check "a stuck status just inside the ceiling still answers pending" '1 pending null' \
+check "a stuck status a second inside the ceiling still answers pending" '1 pending null' \
   "$rc $(jq -r '.status, .not_reviewed' <<<"$out" | xargs)"
 check "and carries a cursor to resume it" true "$(jq '.cursor | type == "string"' <<<"$out")"
 reset
 activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
-clock 1830
+clock 1797
 out=$(staged); rc=$?
-check "a stuck status just past the ceiling is still-running" '1 still-running null null' \
+check "a stuck status on the ceiling's exact tick is still-running" '1 still-running null null' \
   "$rc $(jq -r '.not_reviewed, .status, .cursor' <<<"$out" | xargs)"
 
 # The clean round, as #505 delivered it: no formal review, an issue comment
