@@ -9,7 +9,16 @@ import path from "node:path";
 import { SCRIPT, STACK3D } from "./scene-file.mjs";
 import { userDirs } from "../../skills/explainer-video/scripts/lib/paths.mjs";
 import { dest } from "../../skills/explainer-video/scripts/lib/tools.mjs";
-import { board, doc, fixture, ok, prep, skill, temps } from "./board-lib.mjs";
+import {
+  board,
+  doc,
+  fixture,
+  ok,
+  prep,
+  run,
+  skill,
+  temps,
+} from "./board-lib.mjs";
 
 const table = JSON.parse(
   fs.readFileSync(path.join(skill, "render-rates.json"), "utf8"),
@@ -43,12 +52,13 @@ function stackFixture() {
 
 test("the rates table names the HyperFrames version it was measured on and a rate of 0 or more for each cost", () => {
   assert.match(table.hyperframes, /^\d+\.\d+\.\d+$/);
-  assert.deepEqual(Object.keys(table.rates).sort(), [
-    "base",
-    "gates",
-    "live3d",
-    "texture",
-  ]);
+  // the ace-step rate is there only where a machine with that row calibrated it
+  assert.deepEqual(
+    Object.keys(table.rates)
+      .filter((k) => k !== "aceStep")
+      .sort(),
+    ["base", "gates", "live3d", "score", "texture"],
+  );
   // the calibrator clamps a noisy delta to 0, so 0 is a valid measurement
   for (const v of Object.values(table.rates))
     assert.ok(Number.isFinite(v) && v >= 0, String(v));
@@ -61,9 +71,14 @@ test("the board document carries the estimate worked from the table over the car
   const d = doc(fx, 1);
   // the voiced seconds and the one second the render holds the last frame
   const video = d.scenes.reduce((n, c) => n + c.seconds, 0) + 1;
-  const { base, gates, texture } = table.rates;
-  // claude-code plays the default texture, and no scene draws WebGL
-  assert.equal(d.estimate.seconds, r1(video * (base + gates + texture)));
+  const { base, gates, texture, score } = table.rates;
+  // claude-code plays the default texture, no scene draws WebGL, and a run with
+  // no brief yet has the brief's default score, on
+  assert.equal(
+    d.estimate.seconds,
+    r1(video * (base + gates + texture + score)),
+  );
+  assert.equal(d.estimate.aceStepUnmeasured, false);
   assert.equal(d.estimate.budget, r1(video * 5));
   assert.equal(d.estimate.over, false);
   assert.equal(d.estimate.hyperframes, table.hyperframes);
@@ -89,7 +104,7 @@ function textured(texture) {
 }
 
 test("a style pays the texture rate for a surface other than flat even with no overlay, and none for a flat one", () => {
-  const { base, gates, texture } = table.rates;
+  const { base, gates, texture, score } = table.rates;
   const seconds = (surface) => {
     const fx = textured({ surface, overlays: [] });
     prep(fx);
@@ -101,11 +116,11 @@ test("a style pays the texture rate for a surface other than flat even with no o
     ];
   };
   const [video, flat] = seconds("flat");
-  assert.equal(flat, r1(video * (base + gates)));
+  assert.equal(flat, r1(video * (base + gates + score)));
   for (const surface of ["glass", "sketch"])
     assert.equal(
       seconds(surface)[1],
-      r1(video * (base + gates + texture)),
+      r1(video * (base + gates + texture + score)),
       surface,
     );
 });
@@ -148,4 +163,52 @@ test("a live 3D card adds its voiced seconds at the live 3D rate", () => {
   const [c] = doc(fx, 1).scenes;
   assert.equal(c.adds, r1(c.seconds * table.rates.live3d));
   assert.ok(c.adds > 0);
+});
+
+// The board estimate of a run whose brief asks `mode`, from a copy of the skill
+// whose table is the shipped one with `rates` laid over it.
+function scored(mode, rates = {}) {
+  const fx = fixture();
+  prep(fx);
+  ok(run(fx, "brief/brief.mjs", [`score=${mode}`]), "brief");
+  const copy = fs.mkdtempSync(path.join(os.tmpdir(), "explainer-score-"));
+  temps.push(copy);
+  fs.cpSync(skill, copy, { recursive: true });
+  const t = { ...table, rates: { ...table.rates, ...rates } };
+  fs.writeFileSync(path.join(copy, "render-rates.json"), JSON.stringify(t));
+  const r = spawnSync(
+    process.execPath,
+    [path.join(copy, "scripts", "storyboard", "board.mjs"), fx.dir, "build"],
+    { env: fx.env, encoding: "utf8" },
+  );
+  ok({ code: r.status, out: r.stdout, err: r.stderr }, "build");
+  return doc(fx, 1).estimate;
+}
+
+test("a brief's score mode sets what the board estimate adds: the synthesised rate for on, nothing for off", () => {
+  const { base, gates, texture, score } = table.rates;
+  const on = scored("on");
+  const off = scored("off");
+  // the same cards under both, so the video's seconds are the one number
+  const video = on.budget / 5;
+  assert.equal(on.seconds, r1(video * (base + gates + texture + score)));
+  assert.equal(off.seconds, r1(video * (base + gates + texture)));
+  assert.equal(on.aceStepUnmeasured, false);
+  assert.equal(off.aceStepUnmeasured, false);
+});
+
+test("an ace-step brief adds the table's ace-step rate when it holds one", () => {
+  const { base, gates, texture } = table.rates;
+  const e = scored("ace-step", { aceStep: 2 });
+  const video = e.budget / 5;
+  assert.equal(e.seconds, r1(video * (base + gates + texture + 2)));
+  assert.equal(e.aceStepUnmeasured, false);
+});
+
+test("an ace-step brief with no rate in the table is estimated without a score and marked not measured", () => {
+  const { base, gates, texture } = table.rates;
+  const e = scored("ace-step", { aceStep: undefined });
+  const video = e.budget / 5;
+  assert.equal(e.seconds, r1(video * (base + gates + texture)));
+  assert.equal(e.aceStepUnmeasured, true);
 });

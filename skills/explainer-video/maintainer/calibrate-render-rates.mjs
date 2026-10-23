@@ -6,37 +6,54 @@
 //   (from the skill folder)
 //
 // Needs every stage row installed (`node scripts/setup.mjs install`) and, for
-// the live 3D video, an NVIDIA card. Three videos are made through the stage
+// the live 3D video, an NVIDIA card. Four videos are made through the stage
 // scripts, never through a stand-in, on this machine's real render path: a flat
-// one (a style with no texture), the same scenes in the default texture, and
-// those with a `stack3d` scene added. Each is composed, voiced and stilled once
-// (not timed), then timed `--runs` times (default 3), the median kept. A timed
-// run clears the render, gates and critic caches and runs render.mjs, which
-// renders the video and gates it cold, cutting the critic's contact sheets; a
-// second render.mjs run on the cached video, the gates cache cleared again,
-// times the gates alone. Render seconds are the first run less the second. The
-// brief's `score` is off (the estimate leaves the score out). The rates, in
-// render seconds per video second:
+// one (a style with no texture), the same scenes in the default texture, the
+// textured ones with the synthesised score on, and the textured scenes with a
+// `stack3d` scene added. A fifth, with the `ace-step` score, is made only where
+// the `ace-step` row is installed; without it the calibrator prints a skip line
+// naming the row and writes the table with no `aceStep` rate. Each is composed,
+// voiced and stilled once (not timed), then timed `--runs` times (default 3),
+// the median kept. A timed run clears the render, gates, critic and score
+// caches and runs render.mjs, which renders the video and gates it cold,
+// cutting the critic's contact sheets and building the score the brief asks
+// for; a second render.mjs run on the cached video, the gates cache cleared
+// again, times the gates alone. Render seconds are the first run less the
+// second. The brief's `score` is off except in the scored and `ace-step`
+// videos. The rates, in render seconds per video second:
 //   base     flat render / flat video s
 //   texture  textured render / textured video s, less base
 //   live3d   (live3d render - textured render / textured video s * live3d video
 //            s) / the stack scene's voiced s (voice.json, not the timeline's
 //            duration, which adds the closing hold)
 //   gates    textured gates / textured video s
+//   score    scored render / scored video s, less textured render / textured
+//            video s
+//   aceStep  the same for the `ace-step` video, on this machine's device (CPU
+//            or GPU, as the render stage picks it)
 // stdout, per timed run:
 //   calibrate-render <video> run <i>/<n>: render <s> s, gates <s> s over <s> s
 //   of video
 // the live 3D video's lines end `, <s> s of it the stack scene`, its voiced
-// seconds, the divisor of its rate. Then the values written:
+// seconds, the divisor of its rate. Without the `ace-step` row:
+//   calibrate-render: ace-step skipped: the ace-step row is not installed
+//   (/explainer-video setup, asking for ace-step)
+// Then the values written, `aceStep <r>` last where it was measured:
 //   calibrate-render: HyperFrames <version>: base <r>, texture <r>, live3d <r>,
-//   gates <r> render s per video s
+//   gates <r>, score <r> render s per video s
 // exit:   0 written · 1 a stage failed or rendered nothing, the table left
 //         alone · 2 usage
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { dest, skill } from "../scripts/lib/tools.mjs";
+import {
+  catalogue,
+  dest,
+  loadBackend,
+  skill,
+  torchDevice,
+} from "../scripts/lib/tools.mjs";
 
 const args = process.argv.slice(2);
 let runs = 3;
@@ -151,10 +168,31 @@ function stage(name, run, ...rest) {
 const median = (xs) => [...xs].sort((a, b) => a - b)[(xs.length - 1) >> 1];
 const r2 = (x) => Math.round(x * 100) / 100;
 
+// The ace-step video is made only where the row render.mjs asks for is installed.
+const aceRow = catalogue().find((r) => r.id === "ace-step");
+const device = torchDevice(await (await loadBackend()).computeCapability());
+const aceHere = fs.existsSync(
+  path.join(dest(aceRow, undefined, device), ".stamp"),
+);
+if (!aceHere)
+  console.log(
+    "calibrate-render: ace-step skipped: the ace-step row is not installed (/explainer-video setup, asking for ace-step)",
+  );
 const videos = [
   { name: "flat", style: "calibrate-flat", scenes: SCENES },
   { name: "textured", style: "claude-code", scenes: SCENES },
+  { name: "scored", style: "claude-code", scenes: SCENES, score: "on" },
   { name: "live3d", style: "claude-code", scenes: SCENES + STACK },
+  ...(aceHere
+    ? [
+        {
+          name: "acestep",
+          style: "claude-code",
+          scenes: SCENES,
+          score: "ace-step",
+        },
+      ]
+    : []),
 ];
 // Compose, voice and still each video, none of it timed.
 for (const v of videos) {
@@ -167,9 +205,9 @@ for (const v of videos) {
   for (const [script, ...rest] of [
     ["script/compile.mjs"],
     // the voice stage holds a brief's length, which a short fixture misses, so
-    // the brief that turns the score off comes after it
+    // the brief that sets the score comes after it
     ["voice/voice.mjs"],
-    ["brief/brief.mjs", "score=off"],
+    ["brief/brief.mjs", `score=${v.score ?? "off"}`],
     ["render/render.mjs", "--stills"],
   ]) {
     const r = stage(script, v.run, ...rest);
@@ -202,9 +240,10 @@ function measure(v) {
   const render = [];
   const gates = [];
   for (let i = 1; i <= runs; i++) {
-    // the critic's contact sheets are cut by the first render's gates, a cost
-    // the first render pays and the cached second one does not
-    caches("render", "gates", "critic");
+    // the critic's contact sheets are cut by the first render's gates, and the
+    // score is built by the first render, a cost the first render pays and the
+    // cached second one does not
+    caches("render", "gates", "critic", "score");
     // A gate left red by the critic still pending exits 1 after the video is
     // made; the video is what counts, and its absence is the failure.
     const first = stage("render/render.mjs", v.run);
@@ -226,7 +265,7 @@ function measure(v) {
 }
 for (const v of videos) Object.assign(v, measure(v));
 
-const [flat, textured, live3d] = videos;
+const [flat, textured, scored, live3d, ace] = videos;
 const rates = {
   base: flat.render / flat.video,
   texture: textured.render / textured.video - flat.render / flat.video,
@@ -234,6 +273,10 @@ const rates = {
     (live3d.render - (textured.render / textured.video) * live3d.video) /
     live3d.stack,
   gates: textured.gates / textured.video,
+  score: scored.render / scored.video - textured.render / textured.video,
+  ...(ace && {
+    aceStep: ace.render / ace.video - textured.render / textured.video,
+  }),
 };
 // A delta below zero is noise between runs, not a render that costs less.
 for (const k in rates) rates[k] = r2(Math.max(0, rates[k]));

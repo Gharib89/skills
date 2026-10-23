@@ -424,6 +424,7 @@ try {
   fail(e.message);
 }
 const { texture } = grammar(style);
+const brief = maybe(at("brief.json"));
 const estimated = estimate(
   cards.map((c, i) => ({
     id: c.id,
@@ -433,11 +434,13 @@ const estimated = estimate(
   table.rates,
   // Textured is what the calibrator's flat style lacks: a surface other than
   // flat, or any overlay.
-  { textured: texture.surface !== "flat" || texture.overlays.length > 0 },
+  {
+    textured: texture.surface !== "flat" || texture.overlays.length > 0,
+    score: brief?.score,
+  },
 );
 for (const c of cards) if (c.rich) c.adds = estimated.adds[c.id];
 
-const brief = maybe(at("brief.json"));
 const pack = maybe(at("excerpts.json"));
 const doc = {
   version: prev + 1,
@@ -450,6 +453,7 @@ const doc = {
     budget: estimated.budget,
     over: estimated.over,
     hyperframes: table.hyperframes,
+    aceStepUnmeasured: estimated.unmeasured,
   },
   brief: Object.entries(brief ?? {}).map(([knob, v]) => ({
     knob,
