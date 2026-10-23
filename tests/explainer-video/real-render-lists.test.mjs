@@ -48,6 +48,15 @@ test("the saved frame lies inside its scene, settled 3 s in or on its last frame
   ]);
 });
 
+test("a short scene starting between frames is saved on its own last frame, not the one before", () => {
+  // 4.333333 + 1.433333 ends at 5.766666 s, so its last frame is 172, shown from
+  // 5.7333 s: 5.733 would seek frame 171.
+  assert.deepEqual(
+    savedFrames([{ id: "merge", start: 4.333333, duration: 1.433333 }]),
+    [{ id: "merge", t: 5.734 }],
+  );
+});
+
 test("the custom scene gets a layout check on the real backend, with the scenes checked before it (#947 widens it to every scene)", () => {
   assert.deepEqual(layoutIds(FIXTURE), [
     "diagram",
