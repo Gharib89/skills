@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.52.0 (2026-10-23)
+
+### Features
+
+- **explainer-video**: Count the brief's score in the render estimate
+  ([#946](https://github.com/Gharib89/skills/pull/946),
+  [`1fe9594`](https://github.com/Gharib89/skills/commit/1fe9594889b04dcab79a07fdbf14be698e3bfafe))
+
+
 ## v0.51.1 (2026-10-22)
 
 ### Bug Fixes
