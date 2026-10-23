@@ -1,8 +1,7 @@
 // The scenes maintainer/real-render.mjs renders: scene ids and component
 // visuals as the compile stage writes them, each with its narration's seconds,
 // not whole frames, so the padding is exercised. A slice adding a component
-// adds its scenes here. `layout: true` marks a scene real-render layout-checks
-// on the real backend (#947 widens it to every scene).
+// adds its scenes here; real-render saves a frame of each and layout-checks it.
 export const FIXTURE = [
   {
     scene: {
@@ -261,7 +260,6 @@ export const FIXTURE = [
       },
     },
     seconds: 3.4,
-    layout: true,
   },
   {
     dir: "rtl",
@@ -318,7 +316,6 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
       },
     },
     seconds: 3.4,
-    layout: true,
   },
   // A browser page: the cursor moves, text is typed a whole word at a time and
   // a button is clicked, each on its sentence's cue (the first sentence's is
@@ -349,7 +346,6 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
       },
     },
     seconds: 3.4,
-    layout: true,
   },
   {
     dir: "rtl",
@@ -382,7 +378,6 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
       },
     },
     seconds: 3.4,
-    layout: true,
   },
   // A cited excerpt, the longest the gates are held to: a sentence lit on its
   // cue with the rest dimmed, and two chips popping in as the narration cites
@@ -433,7 +428,6 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
     // Long enough to read its longest sentence (28 words at 0.3 s a word) once
     // the document has settled, which is what the reading gate asks of it.
     seconds: 11,
-    layout: true,
   },
   // The same in Arabic: right to left in whole-word spans, an English term one
   // word, the source line left to right.
@@ -470,7 +464,6 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
       },
     },
     seconds: 6,
-    layout: true,
   },
   // A code excerpt, lit by line, which stays left to right.
   {
@@ -499,7 +492,6 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
       },
     },
     seconds: 4,
-    layout: true,
   },
   // Lit layers drawn by Three.js, each dropping in on its sentence's cue.
   {
@@ -520,7 +512,6 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
       },
     },
     seconds: 3.4,
-    layout: true,
   },
   // Cards on a map the camera tours: it lands on each at its cue (0.2, 1.0 and
   // 1.8 s here) and ends on the overview, and the same map right to left.
@@ -546,7 +537,6 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
       },
     },
     seconds: 8,
-    layout: true,
   },
   {
     dir: "rtl",
@@ -567,6 +557,5 @@ tl.to($(".badge"), { opacity: 1, duration: 0.25 }, cue("badge"));
       },
     },
     seconds: 8,
-    layout: true,
   },
 ];
