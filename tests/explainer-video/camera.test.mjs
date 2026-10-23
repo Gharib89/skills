@@ -5,6 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { checkScenes } from "../../skills/explainer-video/scripts/lib/allowed.mjs";
 import {
+  floors,
   grammar,
   validate,
 } from "../../skills/explainer-video/scripts/lib/style.mjs";
@@ -13,7 +14,11 @@ import {
   cameraCue,
   checkVisual,
 } from "../../skills/explainer-video/scripts/lib/visuals.mjs";
-import { sceneFile } from "../../skills/explainer-video/scripts/render/compose.mjs";
+import {
+  H,
+  W,
+  sceneFile,
+} from "../../skills/explainer-video/scripts/render/compose.mjs";
 import { SCRIPT } from "./scene-file.mjs";
 import { fixture, profiled, read, skill, stage } from "./render-lib.mjs";
 
@@ -189,16 +194,57 @@ test("a settled push-in keeps the camera layer inside the safe margin, at every 
         );
         const r = settled(html, scale);
         const why = `${layout} at ${scale}, ${dir}`;
-        assert.ok(r.left >= 96 - 1e-6, `${why}: left ${r.left}`);
-        assert.ok(r.right <= 1824 + 1e-6, `${why}: right ${r.right}`);
-        assert.ok(r.top >= 54 - 1e-6, `${why}: top ${r.top}`);
-        assert.ok(r.bottom <= 1026 + 1e-6, `${why}: bottom ${r.bottom}`);
+        const m = floors(claude).layout.margin;
+        assert.ok(r.left >= m * W - 1e-6, `${why}: left ${r.left}`);
+        assert.ok(r.right <= W * (1 - m) + 1e-6, `${why}: right ${r.right}`);
+        assert.ok(r.top >= m * H - 1e-6, `${why}: top ${r.top}`);
+        assert.ok(r.bottom <= H * (1 - m) + 1e-6, `${why}: bottom ${r.bottom}`);
       }
 });
 
 test("a push-in that already fits the margin keeps the whole content box's height", async () => {
-  // claude-code draws the open layout: 772 px tall, 856 px of room at 1.06
-  assert.match(await drawn(cards()), /\.camera \{[^}]*height: 772px/);
+  // The open layout's 772 px has 856 px of room at 1.06.
+  const html = await drawn(cards());
+  const height = (sel) =>
+    html.match(new RegExp(`${sel} \\{[^}]*height: (\\d+)px`))[1];
+  assert.equal(height("\\.camera"), height("\\.content"));
+});
+
+test("a row, panel or code frame is sized to the push layer, so it keeps the margin once pushed", async () => {
+  const at = (n, make) => Array.from({ length: n }, (_, i) => make(i + 1));
+  const visuals = {
+    flow: { steps: at(3, (k) => ({ at: k, label: `Step ${k}` })) },
+    panels: { items: at(3, (k) => ({ at: k, title: `P${k}`, body: "body" })) },
+    code: { lang: "js", code: "a\nb" },
+  };
+  const gap = { flow: 96, panels: 40 };
+  const part = { flow: "node", panels: "panel" };
+  for (const [component, props] of Object.entries(visuals)) {
+    const html = await sceneFile(
+      { id: "a", narration: said, visual: { component, props } },
+      timing,
+      odd({ camera: { scale: 1.12 } }),
+      {
+        backend: {
+          highlight: async (code) =>
+            code.split("\n").map((l) => [{ text: l, color: "#000" }]),
+        },
+        seam: {},
+      },
+    );
+    const layer = +html.match(/\.camera \{[^}]*width: (\d+)px/)[1];
+    assert.ok(layer < 1680, `${component}: the layer is narrowed to ${layer}`);
+    if (component === "code") assert.match(html, /\.code \{[^}]*width: 100%/);
+    else {
+      const w = +html.match(
+        new RegExp(`\\.${part[component]} \\{[^}]*?width: (\\d+)px`),
+      )[1];
+      assert.ok(
+        3 * w + 2 * gap[component] <= layer,
+        `${component}: 3 x ${w} in ${layer}`,
+      );
+    }
+  }
 });
 
 test("a camera key moves the push to its cue, an `on` phrase to its first spoken word", async () => {
