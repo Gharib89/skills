@@ -150,6 +150,57 @@ test("a scene with no camera key pushes in to land on its last item's cue", asyn
   assert.match(html, /<div class="camera">/);
 });
 
+// The page rect of a scene's `.camera` with its push settled: its css box in
+// the page, scaled by `scale` about its centre. A camera rule with no px box
+// is the whole content box.
+const settled = (html, scale) => {
+  const rule = (sel) => html.match(new RegExp(`${sel} \\{([^}]*)\\}`))[1];
+  const px = (css, key, whole) =>
+    +(css.match(new RegExp(`(?:^|[ ;])${key}: (-?[\\d.]+)px`))?.[1] ?? whole);
+  const content = rule("\\.content");
+  const box = {
+    left: px(content, "left"),
+    top: px(content, "top"),
+    width: px(content, "width"),
+    height: px(content, "height"),
+  };
+  const cam = rule("\\.camera");
+  const w = px(cam, "width", box.width);
+  const h = px(cam, "height", box.height);
+  const cx = box.left + px(cam, "left", 0) + w / 2;
+  const cy = box.top + px(cam, "top", 0) + h / 2;
+  return {
+    left: cx - (w / 2) * scale,
+    right: cx + (w / 2) * scale,
+    top: cy - (h / 2) * scale,
+    bottom: cy + (h / 2) * scale,
+  };
+};
+
+test("a settled push-in keeps the camera layer inside the safe margin, at every scale, layout and direction", async () => {
+  for (const layout of ["bands", "open"])
+    for (const scale of [1.03, 1.06, 1.12])
+      for (const dir of ["ltr", "rtl"]) {
+        const html = await sceneFile(
+          { id: "a", narration: said, visual: cards() },
+          timing,
+          odd({ layout, camera: { scale } }),
+          { backend: {}, seam: {}, dir },
+        );
+        const r = settled(html, scale);
+        const why = `${layout} at ${scale}, ${dir}`;
+        assert.ok(r.left >= 96 - 1e-6, `${why}: left ${r.left}`);
+        assert.ok(r.right <= 1824 + 1e-6, `${why}: right ${r.right}`);
+        assert.ok(r.top >= 54 - 1e-6, `${why}: top ${r.top}`);
+        assert.ok(r.bottom <= 1026 + 1e-6, `${why}: bottom ${r.bottom}`);
+      }
+});
+
+test("a push-in that already fits the margin keeps the whole content box's height", async () => {
+  // claude-code draws the open layout: 772 px tall, 856 px of room at 1.06
+  assert.match(await drawn(cards()), /\.camera \{[^}]*height: 772px/);
+});
+
 test("a camera key moves the push to its cue, an `on` phrase to its first spoken word", async () => {
   const at2 = await drawn(cards({ camera: { at: 2 } }));
   assert.deepEqual(labels(at2), [
