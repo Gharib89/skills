@@ -43,6 +43,23 @@ function rtl(e, bad) {
 export const readable = (e, t, moving) =>
   e.opacity >= 0.99 && !(e.blur > 1) && !moving(e.scene, t);
 
+// The place an element takes for the overlap check. An inline box is as tall
+// as its face's ascent and descent, which runs past the line it sits in when a
+// fallback face draws its glyphs (Arabic-Indic digits in a serif box) though
+// no ink does, so it takes its line box, centred on it. A line too short for
+// the ink of Arabic letters is `rtl`'s to flag.
+function placed(e) {
+  if (!e.inline || e.lineH === null) return e.rect;
+  const { top, bottom } = e.rect;
+  const mid = (top + bottom) / 2;
+  const half = (e.lineH * e.fontPx) / 2;
+  return {
+    ...e.rect,
+    top: Math.max(top, mid - half),
+    bottom: Math.min(bottom, mid + half),
+  };
+}
+
 export function judge(checked, frames, floor, add, moving = () => false) {
   const { textPx, margin } = floor.layout;
   // A check finding names its text and sample time only: it is held back when
@@ -98,7 +115,7 @@ export function judge(checked, frames, floor, add, moving = () => false) {
       if (outside(e.rect, safe, 0)) bad("outside the safe margin");
       rtl(e, bad);
       for (const o of shown.slice(i + 1))
-        if (overlap(e.rect, o.rect))
+        if (overlap(placed(e), placed(o)))
           add("layout", t, `"${e.text}" overlaps "${o.text}"`);
       const large = e.fontPx >= 24 || (e.fontPx >= 18.66 && e.weight >= 700);
       const need = floor.contrast[large ? "large" : "body"];

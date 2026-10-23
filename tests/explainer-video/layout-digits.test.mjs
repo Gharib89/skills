@@ -74,3 +74,29 @@ test("a Latin run beside Arabic digits is still held to the isolation rule", () 
     'Latin run not isolated in "٤٠ ms"',
   ]);
 });
+
+// The stat's numeral and label as the real rtl page measures them (#947): the
+// numeral's inline box is its face's ascent and descent, 191 px at 112 px, and
+// runs 11 px into the label below its 112 px line, though no ink does.
+const stat = (lineH) => [
+  box("٤٠", {
+    dir: "rtl",
+    rect: { left: 719.1, top: 340, right: 825.5, bottom: 531 },
+    lineH,
+  }),
+  box("ثانية", {
+    inline: false,
+    dir: "rtl",
+    lineH: 1.6,
+    fontPx: 40,
+    rect: { left: 719.1, top: 520, right: 825.5, bottom: 584 },
+  }),
+];
+
+test("an inline numeral whose font box runs past its line does not overlap the label under it", () => {
+  assert.deepEqual(found(...stat(1)), []);
+});
+
+test("an inline box whose line itself reaches the label still overlaps it", () => {
+  assert.deepEqual(found(...stat(1.7)), ['"٤٠" overlaps "ثانية"']);
+});
