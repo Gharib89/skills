@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.50.2 (2026-10-23)
+
+### Bug Fixes
+
+- **ship**: Poll-pr counts the reviewer-run ceiling from the request
+  ([#953](https://github.com/Gharib89/skills/pull/953),
+  [`c0d358b`](https://github.com/Gharib89/skills/commit/c0d358b84b4afdd644ed3818d5e2d67211b55eba))
+
+
 ## v0.50.1 (2026-10-22)
 
 ### Bug Fixes
