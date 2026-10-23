@@ -27,14 +27,16 @@ test("every fixture scene gets a saved frame, the custom scene included", () => 
   assert.ok(savedFrames(timeline).some((f) => f.id === "custom"));
 });
 
-test("a scene added to the fixture gets a saved frame, a layout check and no other edit", () => {
+test("a scene added to the fixture gets a saved frame with no other edit, and a layout check when it is marked", () => {
   const more = [
     ...FIXTURE,
-    { scene: { ...FIXTURE[0].scene, id: "extra" }, seconds: 2 },
+    { scene: { ...FIXTURE[0].scene, id: "extra" }, seconds: 2, layout: true },
+    { scene: { ...FIXTURE[0].scene, id: "plain" }, seconds: 2 },
   ];
   const longer = [...timeline, { id: "extra", start: 100, duration: 2 }];
   assert.ok(savedFrames(longer).some((f) => f.id === "extra"));
   assert.ok(layoutIds(more).includes("extra"));
+  assert.ok(!layoutIds(more).includes("plain"));
 });
 
 test("the saved frame lies inside its scene, settled 3 s in or on its last frame when it is shorter", () => {
@@ -48,9 +50,19 @@ test("the saved frame lies inside its scene, settled 3 s in or on its last frame
   ]);
 });
 
-test("the custom scene gets a layout check on the real backend", () => {
-  assert.ok(layoutIds(FIXTURE).includes("custom"));
-  assert.deepEqual(layoutIds(FIXTURE), ids);
+test("the custom scene gets a layout check on the real backend, with the scenes checked before it (#947 widens it to every scene)", () => {
+  assert.deepEqual(layoutIds(FIXTURE), [
+    "diagram",
+    "custom",
+    "browser",
+    "arabic-browser",
+    "excerpt",
+    "arabic-excerpt",
+    "code-excerpt",
+    "stack",
+    "canvas",
+    "arabic-canvas",
+  ]);
 });
 
 test("the count-up scenes are the fixture's stats and charts, English and Arabic", () => {

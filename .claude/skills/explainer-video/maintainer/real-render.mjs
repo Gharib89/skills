@@ -413,8 +413,9 @@ const excerpts = sceneOf("excerpt");
 const stacks = sceneOf("stack3d");
 await timeChecks({ whole, seek, check, browsers, excerpts, stacks });
 
-// The layout gate over every fixture scene's samples, as the gates stage takes
-// them: its text inside the safe area, none clipped, small or stacked.
+// The layout gate over the samples of each scene the fixture marks `layout`, as
+// the gates stage takes them: its text inside the safe area, none clipped,
+// small or stacked.
 const { times: eventTimes, moving } = sceneEvents(raw, whole.scenes);
 const laid = [];
 const reads = [];

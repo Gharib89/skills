@@ -15,8 +15,10 @@ export const savedFrames = (scenes) =>
     t: +(start + Math.min(SETTLED, duration - 1 / FPS)).toFixed(3),
   }));
 
-// The scenes the layout gate judges on the real backend: all of them.
-export const layoutIds = (fixture) => fixture.map((p) => p.scene.id);
+// The scenes the layout gate judges on the real backend: the ones the fixture
+// marks `layout`.
+export const layoutIds = (fixture) =>
+  fixture.filter((p) => p.layout).map((p) => p.scene.id);
 
 // The scenes whose numbers count up as they are said: stats and charts.
 export const countingIds = (fixture) =>
