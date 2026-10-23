@@ -132,8 +132,8 @@ past=$(jq -rn 'now - 1830 | floor | todate')
 reset
 activity 1 "c|summary-progress.md|$past"
 out=$(SHIP_CALL_CAP=3 since=$past poll); rc=$?
-check "a stuck status just past the ceiling is still-running" '1 still-running null' \
-  "$rc $(jq -r '.not_reviewed, .cursor' <<<"$out" | xargs)"
+check "a stuck status just past the ceiling is still-running" '1 still-running null null' \
+  "$rc $(jq -r '.not_reviewed, .status, .cursor' <<<"$out" | xargs)"
 
 # The clean round, as #505 delivered it: no formal review, an issue comment
 # naming the reviewed commit, then 👍 on the PR. It is a landed round.

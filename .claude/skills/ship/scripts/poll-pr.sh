@@ -80,9 +80,9 @@
 # bound on what the run may add, so a `--timeout` past it is the caller's own
 # window, which the run then extends by nothing. The ceiling counts from the
 # request the poll reads (`--since`, the cursor's, or the host's), else from the
-# window's start, never from the call. So a fresh call on a run stuck past it
-# grades `still-running` once its `--timeout` is spent, rather than opening a
-# new ceiling (#952). A run that concluded successfully buys one more
+# window's start, which a fresh call resets. So a fresh call with a since, on a
+# run stuck past it, grades `still-running` once its `--timeout` is spent,
+# rather than opening a new ceiling (#952). A run that concluded successfully buys one more
 # interval for the row to appear; one that concluded any other way closes the
 # window there and then, whatever `--timeout` had left, carrying its URL. A run
 # still live when the ceiling closes is reported as it stands, status and URL:
