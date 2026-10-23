@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.53.0 (2026-10-23)
+
+### Features
+
+- **explainer-video**: Layout gate sees lost code indents and clip-path clipping
+  ([#948](https://github.com/Gharib89/skills/pull/948),
+  [`5beb656`](https://github.com/Gharib89/skills/commit/5beb656a62dcbec4608c85856c1bea8921f42914))
+
+
 ## v0.52.1 (2026-10-23)
 
 ### Bug Fixes
