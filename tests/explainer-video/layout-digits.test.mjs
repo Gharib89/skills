@@ -100,3 +100,26 @@ test("an inline numeral whose font box runs past its line does not overlap the l
 test("an inline box whose line itself reaches the label still overlaps it", () => {
   assert.deepEqual(found(...stat(1.7)), ['"٤٠" overlaps "ثانية"']);
 });
+
+// A wrapped inline box: two lines at line height 1 and a 191 px face box are
+// 112 + 191 px tall, and its last line reaches the label below. Held to the
+// middle line, it would miss the label.
+test("a wrapped inline box keeps its rect, so its last line still overlaps the label", () => {
+  const ltr = { within: "ltr", dir: "ltr" };
+  assert.deepEqual(
+    found(
+      box("two words", {
+        ...ltr,
+        rect: { left: 719.1, top: 340, right: 825.5, bottom: 643 },
+      }),
+      box("label", {
+        ...ltr,
+        inline: false,
+        lineH: 1.6,
+        fontPx: 40,
+        rect: { left: 719.1, top: 600, right: 825.5, bottom: 664 },
+      }),
+    ),
+    ['"two words" overlaps "label"'],
+  );
+});

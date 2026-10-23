@@ -47,12 +47,15 @@ export const readable = (e, t, moving) =>
 // as its face's ascent and descent, which runs past the line it sits in when a
 // fallback face draws its glyphs (Arabic-Indic digits in a serif box) though
 // no ink does, so it takes its line box, centred on it. A line too short for
-// the ink of Arabic letters is `rtl`'s to flag.
+// the ink of Arabic letters is `rtl`'s to flag. A box that wraps spans its
+// lines, each as tall as the face's box, so one at least two line boxes tall
+// keeps its rect: its first and last lines are not the middle one.
 function placed(e) {
   if (!e.inline || e.lineH === null) return e.rect;
   const { top, bottom } = e.rect;
   const mid = (top + bottom) / 2;
   const half = (e.lineH * e.fontPx) / 2;
+  if (bottom - top >= 4 * half) return e.rect;
   return {
     ...e.rect,
     top: Math.max(top, mid - half),
