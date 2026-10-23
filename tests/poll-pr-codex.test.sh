@@ -107,6 +107,24 @@ out=$(poll); rc=$?
 check "an in-progress status row holds the window until the round" '0 since' \
   "$rc $(jq -r .landed_by <<<"$out")"
 
+# The ceiling counts from the request, not the call (#952): a fresh call, no
+# cursor, on a request already past the ceiling whose status still reads in
+# progress grades the round still-running at once instead of opening a new
+# window and answering pending at the call cap.
+reset
+activity 1 "c|summary-progress.md|2026-10-07T12:28:29Z"
+out=$(SHIP_CALL_CAP=3 poll); rc=$?
+check "a stuck status on a request past the ceiling is still-running" '1 still-running null null' \
+  "$rc $(jq -r '.not_reviewed, .status, .cursor' <<<"$out" | xargs)"
+# A request inside the ceiling still holds the window to the call cap.
+recent=$(jq -rn 'now - 60 | floor | todate')
+reset
+activity 1 "c|summary-progress.md|$(jq -rn 'now - 50 | floor | todate')"
+out=$(SHIP_CALL_CAP=3 since=$recent poll); rc=$?
+check "a stuck status on a recent request still answers pending" '1 pending null' \
+  "$rc $(jq -r '.status, .not_reviewed' <<<"$out" | xargs)"
+check "and carries a cursor to resume it" true "$(jq '.cursor | type == "string"' <<<"$out")"
+
 # The clean round, as #505 delivered it: no formal review, an issue comment
 # naming the reviewed commit, then 👍 on the PR. It is a landed round.
 clean_head=7e1ab20b3c610e03bb4d968237f5a567815917d6
