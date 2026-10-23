@@ -83,6 +83,9 @@ function proposal() {
   );
 }
 
+// What an estimate line says when ace-step has no measured rate in the table.
+const UNMEASURED = "ace-step is not measured, so its score is left out";
+
 // Render, gates and score seconds as minutes to a tenth, for a video of `lengths`
 // minutes rendered one video after another.
 function minutes(lengths) {
@@ -367,7 +370,7 @@ if (cmd === "start") {
     JSON.stringify({ declined: true, length }) + "\n",
   );
   console.log(
-    `parts: declined, one long video in sections, first render about ${long.all} min`,
+    `parts: declined, one long video in sections, first render about ${long.all} min${long.unmeasured ? ` (${UNMEASURED})` : ""}`,
   );
 } else if (length <= LONG) {
   console.log(`parts: no offer, ${num(length)} min is within ${LONG}`);
@@ -383,6 +386,6 @@ if (cmd === "start") {
     `parts offer: ${num(length)} min is over ${LONG}: ${lengths.length} parts of ${lengths.map(num).join(" + ")} min, or one long video in sections`,
   );
   console.log(
-    `parts estimate: ${lengths.length} parts ${parts.all} min in all, the first after ${parts.first} min; one long video ${long.all} min (render, gates and score, not narration${long.unmeasured ? "; ace-step is not measured, so its score is left out" : ""})`,
+    `parts estimate: ${lengths.length} parts ${parts.all} min in all, the first after ${parts.first} min; one long video ${long.all} min (render, gates and score, not narration${long.unmeasured ? `; ${UNMEASURED}` : ""})`,
   );
 }

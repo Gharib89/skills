@@ -78,6 +78,23 @@ test("the estimate counts the score the brief asks for: none for off, and for ac
       "; ace-step is not measured, so its score is left out",
     );
   else ends(line("ace-step"), cost(720, rates.aceStep));
+  // a decline prints the same estimate, so it carries the same note
+  const declined = (score) =>
+    parts(fixture({ length: 12, brief: [`score=${score}`] }), "decline").out;
+  assert.equal(
+    declined("off"),
+    `parts: declined, one long video in sections, first render about ${cost(720, 0)} min\n`,
+  );
+  if (rates.aceStep === undefined)
+    assert.equal(
+      declined("ace-step"),
+      `parts: declined, one long video in sections, first render about ${cost(720, 0)} min (ace-step is not measured, so its score is left out)\n`,
+    );
+  else
+    assert.equal(
+      declined("ace-step"),
+      `parts: declined, one long video in sections, first render about ${cost(720, rates.aceStep)} min\n`,
+    );
 });
 
 test("the fewest parts take each at most 5 minutes and at least 2", () => {
