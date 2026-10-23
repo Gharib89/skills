@@ -38,8 +38,9 @@
 // error `text_box_overflow`; `tiny` is 12 px; `dim` is #c8c8c0; `small` is 20 px
 // in the palette's accent; `edge` sits at
 // left 40, inside the safe margin; `cutpath` is cut by a clip-path edge;
-// `unindented` is a code line drawn flush left that has 2 leading spaces; `stacked` starts halfway down the element
-// before it, so the two overlap; `flaky` renders differently every time frame
+// `unindented` is a code line drawn flush left that has 2 leading spaces;
+// `stacked` starts halfway down the element before it, so the two overlap;
+// `flaky` renders differently every time frame
 // draws it; `fading` is mid-reveal until EXPLAINER_VIDEO_FAKE_FADE_END scene
 // seconds. EXPLAINER_VIDEO_FAKE_BLANK=1 makes probe find no text at all, and
 // EXPLAINER_VIDEO_FAKE_EVENTS (scene id to {ends, tweens, seams, camera}) is what

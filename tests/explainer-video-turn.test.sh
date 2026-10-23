@@ -25,8 +25,9 @@ handed() {
 }
 all=$(for f in tests/explainer-video/*.test.mjs; do printf '%s\n' "${f##*/}"; done)
 # What --turn leaves out: the gates and render pipeline files, the three files
-# that run the real ffmpeg and the one that starts real Chrome. The rest of the suite runs on the canned backend or
-# on stubs, so a turn costs no other run's quiet window.
+# that run the real ffmpeg and the one that starts real Chrome. The rest of the
+# suite runs on the canned backend or on stubs, so a turn costs no other run's
+# quiet window.
 skip='^(gates-.*|render-.*|style-motion-real|motion-real|backend-concat|layout-real)\.test\.mjs$'
 
 check "the bare call hands node every test file" "$all" "$(handed)"
@@ -80,7 +81,7 @@ check "a source only the source tests reach selects them alone" \
 tests/explainer-video/source-page.test.mjs
 tests/explainer-video/source-repo.test.mjs" "$(sel skills/explainer-video/scripts/source/pack.mjs)"
 check "a selection never reaches a skipped file" "" \
-  "$(sel skills/explainer-video/scripts/render/render.mjs skills/explainer-video/scripts/style/measure.mjs skills/explainer-video/scripts/lib/backend.mjs | grep -E '/(gates-|render-|style-motion-real|motion-real|backend-concat)')"
+  "$(sel skills/explainer-video/scripts/render/render.mjs skills/explainer-video/scripts/style/measure.mjs skills/explainer-video/scripts/lib/backend.mjs | grep -E '/(gates-|render-|style-motion-real|motion-real|backend-concat|layout-real)')"
 check "files are read relative to the caller's directory" "$terms" \
   "$(cd skills/explainer-video && sel scripts/lib/terms.mjs)"
 check "a path through .. names the file it reaches" tests/explainer-video/terms.test.mjs \
