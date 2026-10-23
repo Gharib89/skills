@@ -10,11 +10,14 @@ import {
   savedFrames,
 } from "../../skills/explainer-video/maintainer/real-render-lists.mjs";
 
-const timeline = FIXTURE.map(({ scene, seconds }, i) => ({
-  id: scene.id,
-  start: i * 4,
-  duration: seconds,
-}));
+// The composed timeline of a fixture: one scene after another.
+const composed = (fixture) =>
+  fixture.map(({ scene, seconds }, i) => ({
+    id: scene.id,
+    start: i * 4,
+    duration: seconds,
+  }));
+const timeline = composed(FIXTURE);
 const ids = FIXTURE.map((p) => p.scene.id);
 
 test("every fixture scene gets a saved frame, the custom scene included", () => {
@@ -31,8 +34,7 @@ test("a scene added to the fixture gets a saved frame with no other edit, and a 
     { scene: { ...FIXTURE[0].scene, id: "extra" }, seconds: 2, layout: true },
     { scene: { ...FIXTURE[0].scene, id: "plain" }, seconds: 2 },
   ];
-  const longer = [...timeline, { id: "extra", start: 100, duration: 2 }];
-  assert.ok(savedFrames(longer).some((f) => f.id === "extra"));
+  assert.ok(savedFrames(composed(more)).some((f) => f.id === "extra"));
   assert.ok(layoutIds(more).includes("extra"));
   assert.ok(!layoutIds(more).includes("plain"));
 });
