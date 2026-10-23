@@ -1,6 +1,7 @@
 // Maintainer only: how real-render.mjs's determinism row reads two more renders
 // against the first, and what a failing row keeps.
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 // For each of `others`, the frame hashes against `a`'s: `at`, the indexes of
@@ -30,9 +31,13 @@ export const describe = (diffs) =>
     .join(" and ");
 
 // Writes each render's frame hashes, `{ name: [hash...] }`, to
-// `<dir>/real-render-determinism-<name>.framemd5` (`dir` made if need be);
+// `<dir>/real-render-determinism-<name>.framemd5` (`dir` made if need be, else
+// a new folder under the temp one, so a second failing run overwrites nothing);
 // returns the paths.
-export function keepHashLists(lists, dir) {
+export function keepHashLists(
+  lists,
+  dir = fs.mkdtempSync(path.join(os.tmpdir(), "real-render-determinism-")),
+) {
   fs.mkdirSync(dir, { recursive: true });
   return Object.entries(lists).map(([name, hashes]) => {
     const file = path.join(dir, `real-render-determinism-${name}.framemd5`);

@@ -61,6 +61,15 @@ test("a render that differs only inside the first's frames reads as a range, a s
   );
 });
 
+test("with no folder named, each call keeps its lists in a new one, so a second failing run overwrites nothing", () => {
+  const [first] = keepHashLists({ "whole-1": ["a"] });
+  const [second] = keepHashLists({ "whole-1": ["b"] });
+  assert.notEqual(path.dirname(first), path.dirname(second));
+  assert.equal(fs.readFileSync(first, "utf8"), "a");
+  assert.equal(fs.readFileSync(second, "utf8"), "b");
+  assert.ok(path.dirname(first).startsWith(os.tmpdir()));
+});
+
 test("the frame hash lists are kept in a folder made for them", () => {
   const dir = path.join(
     fs.mkdtempSync(path.join(os.tmpdir(), "compare-test-")),

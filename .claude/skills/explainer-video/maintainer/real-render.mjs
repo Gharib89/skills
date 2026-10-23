@@ -256,13 +256,13 @@ check(
   `${a.length} frames rendered, the composer's grid is ${whole.frames}`,
 );
 const differs = differing(a, others);
-// A failing row keeps the renders' hash lists in REAL_RENDER_FRAMES, else the
+// A failing row keeps the renders' hash lists in REAL_RENDER_FRAMES, else a new
 // temp folder.
 const kept = differs.every(({ n }) => n === 0)
   ? ""
   : keepHashLists(
       Object.fromEntries(wholes.map((n, i) => [n, hashLists[i]])),
-      process.env.REAL_RENDER_FRAMES ?? os.tmpdir(),
+      process.env.REAL_RENDER_FRAMES,
     ).join(", ");
 check(
   "determinism",
