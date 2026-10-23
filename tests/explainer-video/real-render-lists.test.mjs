@@ -1,6 +1,6 @@
-// real-render.mjs saves a frame of, and layout-checks, every scene of the
-// fixture: the lists come from the fixture's scenes, so a scene added there is
-// covered with no other edit (#937).
+// real-render.mjs saves a frame of every scene of the fixture and layout-checks
+// the ones the fixture marks `layout`: the lists come from the fixture's
+// scenes, so a scene added there gets a frame with no other edit (#937).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FIXTURE } from "../../skills/explainer-video/maintainer/real-render-fixture.mjs";
