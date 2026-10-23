@@ -54,7 +54,7 @@ const CARDS = `<div class="clip-a"><div class="card ok">Inside the clip</div></d
 .clip-a { top: 160px; clip-path: inset(0); }
 .clip-b { top: 300px; clip-path: inset(0 100px 0 0); }
 .clip-c { top: 720px; clip-path: inset(0 100px 0 0); pointer-events: none; }
-.clip-d { top: 860px; clip-path: inset(0); }
+.clip-d { left: 900px; top: 160px; clip-path: inset(0); }
 .clip-d .card { pointer-events: none !important; }
 .outer-a { top: 440px; overflow: hidden; }
 .outer-b { top: 580px; width: 500px; overflow: hidden; }
