@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.52.1 (2026-10-23)
+
+### Bug Fixes
+
+- **explainer-video**: Real-render renders through raster flags and names the differing frames
+  ([#945](https://github.com/Gharib89/skills/pull/945),
+  [`81210d6`](https://github.com/Gharib89/skills/commit/81210d6db89590324ad33775a556edc5a5a57c4f))
+
+
 ## v0.52.0 (2026-10-23)
 
 ### Features

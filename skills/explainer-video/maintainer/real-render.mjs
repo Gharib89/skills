@@ -16,7 +16,9 @@
 // match by chance), and the halves split it after `HALF` scenes: the first
 // without the hold, the second with it. A three-section fixture
 // (real-render-sections.mjs) is rendered whole and by section, joined and muxed
-// as render.mjs does.
+// as render.mjs does. Renders run through a raster-flag headless shell
+// (real-render-shell.mjs); a failing determinism row names the differing
+// frames and keeps their hash lists (real-render-compare.mjs).
 // stdout: `real-render <check>: pass|fail: <detail>` per check
 // exit:   0 every check passed · 1 a check failed · 2 a tool row is missing
 import { spawnSync } from "node:child_process";
@@ -44,7 +46,13 @@ import { FPS, sceneFile, videoPage } from "../scripts/render/compose.mjs";
 import { gridScenes, written } from "../scripts/render/grid.mjs";
 import { joinNarration } from "../scripts/render/narration.mjs";
 import { seamPlan, slot } from "../scripts/render/seams.mjs";
+import { describe, differing, keepHashLists } from "./real-render-compare.mjs";
 import { FIXTURE } from "./real-render-fixture.mjs";
+import {
+  RASTER_FLAGS,
+  headlessShell,
+  shellWith,
+} from "./real-render-shell.mjs";
 import { sectionChecks } from "./real-render-sections.mjs";
 import { mapChecks } from "./real-render-map.mjs";
 import { cameraLeftOut } from "./real-render-motion.mjs";
@@ -72,6 +80,18 @@ const work = fs.mkdtempSync(path.join(os.tmpdir(), "real-render-"));
 process.on("exit", () => fs.rmSync(work, { recursive: true, force: true }));
 const backend = await loadBackend();
 const env = hyperframesEnv();
+// The renders run through a headless shell with raster flags (#917).
+let shell;
+try {
+  shell = headlessShell(env.HOME);
+} catch (e) {
+  console.error(`real-render: ${e.message}: run /explainer-video setup`);
+  process.exit(2);
+}
+const renderEnv = {
+  ...env,
+  PRODUCER_HEADLESS_SHELL_PATH: shellWith(work, RASTER_FLAGS, shell),
+};
 const profile = loadStyle(work, "claude-code");
 const fontRows = [
   ...new Set(typeRoles("ar").map((r) => profile.type[r].font)),
@@ -199,7 +219,7 @@ const render = async (comp, out) =>
       ...["--fps", String(FPS)],
       ...["--workers", "3", "--quality", "looks", "-o", out],
     ],
-    { cwd: comp, env },
+    { cwd: comp, env: renderEnv },
   )) === 0;
 
 // The video stream's frames as `framemd5` lists them, one line a frame.
@@ -230,21 +250,27 @@ for (const [name, c, n] of [
   }
 }
 
-const [a, ...others] = ["whole-1", "whole-2", "whole-3"].map((n) =>
-  framemd5(videos[n]),
-);
+const wholes = ["whole-1", "whole-2", "whole-3"];
+const hashLists = wholes.map((n) => framemd5(videos[n]));
+const [a, ...others] = hashLists;
 check(
   "frame grid",
   a.length === whole.frames,
   `${a.length} frames rendered, the composer's grid is ${whole.frames}`,
 );
-const differing = others.map(
-  (b) => a.filter((l, i) => l !== b[i]).length + Math.abs(a.length - b.length),
-);
+const differs = differing(a, others);
+// A failing row keeps the renders' hash lists in REAL_RENDER_FRAMES, else a new
+// temp folder.
+const kept = differs.every(({ n }) => n === 0)
+  ? ""
+  : keepHashLists(
+      Object.fromEntries(wholes.map((n, i) => [n, hashLists[i]])),
+      process.env.REAL_RENDER_FRAMES,
+    ).join(", ");
 check(
   "determinism",
-  differing.every((n) => n === 0),
-  `${differing.join(" and ")} differing frames of ${a.length} against the first, in two more renders`,
+  differs.every(({ n }) => n === 0),
+  `${describe(differs)} differing frames of ${a.length} against the first, in two more renders${kept && `; hash lists: ${kept}`}`,
 );
 
 // Each seam window's first, middle and last frames, seeked twice in browsers
