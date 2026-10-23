@@ -81,13 +81,16 @@ process.on("exit", () => fs.rmSync(work, { recursive: true, force: true }));
 const backend = await loadBackend();
 const env = hyperframesEnv();
 // The renders run through a headless shell with raster flags (#917).
+let shell;
+try {
+  shell = headlessShell(env.HOME);
+} catch (e) {
+  console.error(`real-render: ${e.message}: run /explainer-video setup`);
+  process.exit(2);
+}
 const renderEnv = {
   ...env,
-  PRODUCER_HEADLESS_SHELL_PATH: shellWith(
-    work,
-    RASTER_FLAGS,
-    headlessShell(env.HOME),
-  ),
+  PRODUCER_HEADLESS_SHELL_PATH: shellWith(work, RASTER_FLAGS, shell),
 };
 const profile = loadStyle(work, "claude-code");
 const fontRows = [
