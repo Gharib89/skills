@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.53.2 (2026-10-23)
+
+### Bug Fixes
+
+- **explainer-video**: Audit the real-render layout findings and check every fixture scene
+  ([#950](https://github.com/Gharib89/skills/pull/950),
+  [`6e7875f`](https://github.com/Gharib89/skills/commit/6e7875f3c234700a5c584015a615094a77aece1a))
+
+
 ## v0.53.1 (2026-10-23)
 
 ### Bug Fixes
