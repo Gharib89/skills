@@ -25,13 +25,12 @@ export const savedFrames = (scenes) =>
 // scene: a run's page has one reading direction for all its scenes, so the
 // fixture's English scenes and its Arabic ones (`dir: "rtl"`) each get a page
 // as a run in that language composes it.
-export const layoutRuns = (fixture) =>
-  ["ltr", "rtl"]
-    .map((dir) => ({
-      dir,
-      part: fixture.filter((p) => (p.dir ?? "ltr") === dir),
-    }))
-    .filter(({ part }) => part.length);
+export const layoutRuns = (fixture) => {
+  const dirOf = (p) => p.dir ?? "ltr";
+  return [...new Set(fixture.map(dirOf))]
+    .toSorted()
+    .map((dir) => ({ dir, part: fixture.filter((p) => dirOf(p) === dir) }));
+};
 
 // The scenes whose numbers count up as they are said: stats and charts.
 export const countingIds = (fixture) =>

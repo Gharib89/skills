@@ -82,6 +82,8 @@ test("the layout runs are one page a reading direction, as a run in that languag
     english.map((r) => r.dir),
     ["ltr"],
   );
+  const other = [...FIXTURE, { ...FIXTURE[0], dir: "other" }];
+  assert.ok(layoutRuns(other).some((r) => r.dir === "other"));
 });
 
 test("the count-up scenes are the fixture's stats and charts, English and Arabic", () => {
