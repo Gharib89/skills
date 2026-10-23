@@ -183,6 +183,7 @@ const settled = (html, scale) => {
 };
 
 test("a settled push-in keeps the camera layer inside the safe margin, at every scale, layout and direction", async () => {
+  const m = floors(claude).layout.margin;
   for (const layout of ["bands", "open"])
     for (const scale of [1.03, 1.06, 1.12])
       for (const dir of ["ltr", "rtl"]) {
@@ -194,7 +195,6 @@ test("a settled push-in keeps the camera layer inside the safe margin, at every 
         );
         const r = settled(html, scale);
         const why = `${layout} at ${scale}, ${dir}`;
-        const m = floors(claude).layout.margin;
         assert.ok(r.left >= m * W - 1e-6, `${why}: left ${r.left}`);
         assert.ok(r.right <= W * (1 - m) + 1e-6, `${why}: right ${r.right}`);
         assert.ok(r.top >= m * H - 1e-6, `${why}: top ${r.top}`);
@@ -210,7 +210,7 @@ test("a push-in that already fits the margin keeps the whole content box's heigh
   assert.equal(height("\\.camera"), height("\\.content"));
 });
 
-test("a row, panel or code frame is sized to the push layer, so it keeps the margin once pushed", async () => {
+test("a row, panel or code frame is sized to the push layer's width, not a literal 1680 px", async () => {
   const at = (n, make) => Array.from({ length: n }, (_, i) => make(i + 1));
   const visuals = {
     flow: { steps: at(3, (k) => ({ at: k, label: `Step ${k}` })) },

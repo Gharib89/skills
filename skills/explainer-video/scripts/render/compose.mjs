@@ -115,7 +115,14 @@ async function sceneParts(
     // push layer's size under a push, so a row sized to it stays in the safe
     // margin once scaled), and the frame's width, for one that runs off the
     // frame's sides.
-    box: pushes ? { ...box, width: frame.width, height: frame.height } : box,
+    box: pushes
+      ? {
+          left: box.left + frame.left,
+          top: box.top + frame.top,
+          width: frame.width,
+          height: frame.height,
+        }
+      : box,
     frameWidth: W,
     // The scene's selector scope and the seconds its template runs (its slot),
     // for a component whose own script draws on the paused timeline `tl`.
