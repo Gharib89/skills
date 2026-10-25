@@ -7,21 +7,27 @@
 # none was recorded. A heading naming criteria whose section holds top-level list
 # lines and no checkbox, an empty one included, gives those lines instead, up to
 # the next heading at its level or above, since issues here often state criteria
-# as plain bullets (#958); a checkbox elsewhere (a task list) does not displace them.
+# as plain bullets (#958). Where one does, each criteria section gives its own
+# kind, checkboxes or plain lines, and a checkbox outside every criteria section
+# (a task list) is no criterion.
 criteria_entries() { # criteria_entries <text>
   ship_unfenced "$1" | awk '
     function rest(t) { t = substr($0, RLENGTH + 1); sub(/[[:space:]]+$/, "", t); return t }
+    function close_section(i) {
+      if (np && !boxes) { for (i = 1; i <= np; i++) out[++no] = plain[i]; found = 1 }
+      level = np = boxes = 0 }
     match($0, /^[[:space:]]*([-*+]|[0-9]+[.)])[[:space:]]+\[[ xX]\]([[:space:]]+|$)/) {
       if (level) boxes++
-      t = rest(); if (t != "") box[++nb] = t
+      t = rest(); if (t != "") { box[++nb] = t; if (level) out[++no] = t }
       next }
     match($0, /^#+[[:space:]]/) {
-      if (level && RLENGTH - 1 <= level) level = 0
+      if (level && RLENGTH - 1 <= level) close_section()
       if (!level && tolower($0) ~ /criteria/) level = RLENGTH - 1
       next }
     level && match($0, /^([-*+]|[0-9]+[.)])[[:space:]]+/) { t = rest(); if (t != "") plain[++np] = t }
     END {
-      if (np && !boxes) for (i = 1; i <= np; i++) printf "- %d: %s\n", i, plain[i]
+      close_section()
+      if (found) for (i = 1; i <= no; i++) printf "- %d: %s\n", i, out[i]
       else for (i = 1; i <= nb; i++) printf "- %d: %s\n", i, box[i] }'
 }
 

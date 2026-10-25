@@ -78,7 +78,8 @@ takes that text as a heredoc, so the issue's own words never pass a file or a
 pipe, and records each checkbox line (`-`, `*`, `+` or a numbered item) as an
 entry under the Run file's `## Criteria`, `- <n>: <text>`. A heading naming
 criteria (`## Acceptance criteria`) whose list holds no checkbox gives its
-top-level list lines instead, whatever checkboxes sit elsewhere, so pass the
+top-level list lines instead; each criteria heading then gives its own kind,
+and a checkbox under no criteria heading (a task list) is none. So pass the
 text with its headings, and where that list holds a checkbox, write each
 criterion a brief or comment adds as a checkbox too.
 Text yielding none writes no section and

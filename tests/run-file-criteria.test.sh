@@ -112,6 +112,11 @@ check "a checkbox outside the criteria heading does not displace its plain list"
   "$(awk '/^## Criteria/ { f = 1; next } /^## / { f = 0 } f && /^- /' "$run")"
 check "and the warning names a checkbox with no text" true \
   "$(if grep -Fq 'no checkbox with text' "$tmp/err"; then echo true; else echo false; fi)"
+run=$(printf '%s\n' '## Acceptance criteria' '- preserve account data' '## Additional criteria' '- [ ] send email' \
+  | bash "$m" init crit-n --scratchpad "$tmp/init" --criteria - | jq -r .run_file)
+check "each criteria heading picks checkboxes or plain lines on its own" '- 1: preserve account data
+- 2: send email' \
+  "$(awk '/^## Criteria/ { f = 1; next } /^## / { f = 0 } f && /^- /' "$run")"
 # Only a Markdown heading opens a criteria list: none of these near misses does.
 run=$(printf '%s\n' 'Acceptance criteria:' '- after a plain line' '##Criteria' '- after no space' \
   '> ## Criteria' '- after a quoted heading' '    ## Criteria' '- after an indented one' \
