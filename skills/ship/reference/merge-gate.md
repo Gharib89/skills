@@ -137,7 +137,7 @@ human should read the title that will land.
 
 ## Unmet criteria
 
-An **unmet criterion** is any checkbox criterion the run did not meet: one
+An **unmet criterion** is any issue criterion the run did not meet: one
 asking for a host action no mechanic performs, which stays verbatim in the issue
 ([implement.md](implement.md#phase-1-a-criterion-no-mechanic-can-perform)), or
 one the run could not prove. Each carries `Criterion <n>: not met: <reason>` in
