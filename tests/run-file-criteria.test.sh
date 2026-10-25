@@ -58,8 +58,50 @@ check "init puts the criteria before the design and plan" \
   true "$(awk '/^## Criteria/ { c = NR } /^## Design and plan/ { d = NR } END { print (c > 0 && c < d) ? "true" : "false" }' "$run")"
 run=$(printf '%s\n' '- [ ] from stdin' | bash "$m" init crit-b --scratchpad "$tmp/init" --criteria - | jq -r .run_file)
 check "init reads the criteria text from stdin on -" '- 1: from stdin' "$(grep '^- 1: ' "$run")"
-run=$(printf '%s\n' 'no boxes at all' | bash "$m" init crit-c --scratchpad "$tmp/init" --criteria - | jq -r .run_file)
+out=$(printf '%s\n' 'no boxes at all' | bash "$m" init crit-c --scratchpad "$tmp/init" --criteria - 2>"$tmp/err"); rc=$?
+run=$(jq -r .run_file <<<"$out")
 check "init writes no Criteria section when the text has no checkbox" 0 "$(grep -c '^## Criteria' "$run")"
+check_rc "init with criteria text that yields none still succeeds" 0 "$rc"
+check "and warns, naming the way to record criteria by hand" true \
+  "$(if grep -Fq 'run-file note Criteria' "$tmp/err"; then echo true; else echo false; fi)"
+check "and its answer counts zero criteria" 0 "$(jq -r .criteria <<<"$out")"
+# With no checkbox, the top-level list lines under a criteria heading are the
+# criteria (#958): issues here state them as plain bullets.
+cat > "$tmp/plain.md" <<'BODY'
+## Problem
+
+- a plain bullet outside a criteria heading
+
+## Acceptance criteria
+
+- first plain
+  - nested, not top-level
+2. second, numbered
+
+### a deeper heading stays inside
+
+* third, starred
+
+## Out of scope
+
+- after the next heading at the same level
+BODY
+out=$(bash "$m" init crit-h --scratchpad "$tmp/init" --criteria "$tmp/plain.md" 2>"$tmp/err")
+run=$(jq -r .run_file <<<"$out")
+check "init records the plain list lines under a criteria heading in order" \
+  '- 1: first plain
+- 2: second, numbered
+- 3: third, starred' \
+  "$(awk '/^## Criteria/ { f = 1; next } /^## / { f = 0 } f && /^- /' "$run")"
+check "and its answer counts them" 3 "$(jq -r .criteria <<<"$out")"
+check "and draws no warning" "" "$(cat "$tmp/err")"
+run=$(printf '%s\n' '```' '## Acceptance criteria' '' '- first' '- second' '```' \
+  | bash "$m" init crit-i --scratchpad "$tmp/init" --criteria - 2>/dev/null | jq -r .run_file)
+check "a fenced criteria block records nothing" 0 "$(grep -c '^## Criteria' "$run")"
+run=$(printf '%s\n' '## Success Criteria' '- [ ] the box' '- the plain bullet' \
+  | bash "$m" init crit-j --scratchpad "$tmp/init" --criteria - | jq -r .run_file)
+check "text with a checkbox records only the checkboxes" '- 1: the box' \
+  "$(awk '/^## Criteria/ { f = 1; next } /^## / { f = 0 } f && /^- /' "$run")"
 check "init without --criteria answers with the keys it always did" 'id,items,mirror,opened,run_file,scratch' \
   "$(bash "$m" init crit-d --scratchpad "$tmp/init" | jq -r 'keys | join(",")')"
 out=$(bash "$m" init crit-e --scratchpad "$tmp/init" --criteria "$tmp/missing.md" 2>&1); rc=$?
@@ -73,7 +115,7 @@ check "init names the null criteria text" true \
   "$(if grep -Fq 'the criteria text is null' <<<"$out"; then echo true; else echo false; fi)"
 check "init leaves no record behind null criteria text" false "$(if [ -e "$tmp/init/ship-crit-f" ]; then echo true; else echo false; fi)"
 for empty in '' '   '; do
-  run=$(printf '%s\n' "$empty" | bash "$m" init crit-g --scratchpad "$tmp/init" --rebuild --criteria - | jq -r .run_file)
+  run=$(printf '%s\n' "$empty" | bash "$m" init crit-g --scratchpad "$tmp/init" --rebuild --criteria - 2>/dev/null | jq -r .run_file)
   check "init records no criteria for an empty issue body [$empty]" 0 "$(grep -c '^## Criteria' "$run")"
 done
 
@@ -154,6 +196,12 @@ held 'a met line inside a fence' 'criterion 3: no line'
 # No Criteria section is the run before this record existed: judged as it always was.
 base; change_run '/^## Criteria/,/^- 3: /d; /^Criterion [123]: /d'
 clean 'a run with no Criteria section'
+# A `Criterion <n>:` line with no `- <n>:` entry is still judged (#958): an init
+# that recorded no entries must not let a not-met line pass.
+base; change_run '/^- [123]: /d; /^Criterion [23]: /d; s/^Criterion 1: met: .*/Criterion 1: not met: post-merge step outstanding/'
+held 'a not-met line with no entry' 'criterion 1: not met: post-merge step outstanding'
+base; change_run '/^- [123]: /d; /^Criterion [23]: /d'
+clean 'a met line with no entry'
 
 # --- a re-raised declined finding -------------------------------------------------
 base; change_run 's/^Round: primary 1: .*/Round: primary 1: one finding declined\nRound: primary 2: re-raised declined: the retry guard, no new finding/'

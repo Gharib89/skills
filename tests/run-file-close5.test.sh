@@ -200,16 +200,32 @@ call gate summary 7 --file "$rf"
 check_rc "no Criteria beside an issue with checkboxes: exits 1" 1 "$status"
 check "clean is false" false "$(jq -r .clean <<<"$out")"
 check "it names the issue, the count and the way to record them" \
-  'criteria: the Run file has no ## Criteria but issue #9 has 2 checkboxes; record each with `run-file note Criteria <text>`' \
+  'criteria: the Run file has no ## Criteria but issue #9 has 2 criteria; record each with `run-file note Criteria <text>`' \
   "$(jq -r '.held_by[]' <<<"$out")"
-check "the Clean gate held by line carries it" yes "$(has 'issue #9 has 2 checkboxes' "$(jq -r .clean_gate_held_by_line <<<"$out")")"
-check "the reasons reach stderr as gate clean's do" yes "$(has 'issue #9 has 2 checkboxes' "$(cat "$tmp/err")")"
+check "the Clean gate held by line carries it" yes "$(has 'issue #9 has 2 criteria' "$(jq -r .clean_gate_held_by_line <<<"$out")")"
+check "the reasons reach stderr as gate clean's do" yes "$(has 'issue #9 has 2 criteria' "$(cat "$tmp/err")")"
 check "the Unmet criteria line still says unverified" yes "$(has 'unverified: the Run file has no ## Criteria' "$(jq -r .unmet_criteria_line <<<"$out")")"
 
 printf '%s\n' '## What' '- plain bullet, no box' > "$tmp/issue-body"
 rf=$(numbered 91)
 call gate summary 7 --file "$rf"
 check_rc "an issue with no checkboxes holds nothing" 0 "$status"
+
+# Plain bullets under a criteria heading are criteria too (#958).
+printf '%s\n' '## Acceptance criteria' '- first' '- second' > "$tmp/issue-body"
+rf=$(numbered 94)
+call gate summary 7 --file "$rf"
+check_rc "no Criteria beside an issue with plain criteria bullets: exits 1" 1 "$status"
+check "it counts the plain bullets" yes "$(has 'issue #94 has 2 criteria' "$(jq -r .clean_gate_held_by_line <<<"$out")")"
+
+# A not-met `Criterion <n>:` line with no entry, the section `note` created (#958).
+rf=$(numbered 95)
+bash "$bin/run-file.sh" note Criteria 'Criterion 1: not met: post-merge step outstanding' --file "$rf" >/dev/null
+call gate summary 7 --file "$rf"
+check_rc "an orphan not-met criterion line: exits 1" 1 "$status"
+check "clean is false" false "$(jq -r .clean <<<"$out")"
+check "it is listed as unmet, its entry text unknown" 'criterion 1 (?): not met: post-merge step outstanding' \
+  "$(jq -r '.unmet_criteria[]' <<<"$out")"
 
 printf '%s\n' '- [ ] first' > "$tmp/issue-body"
 : > "$tmp/read-issue.calls"
@@ -240,7 +256,7 @@ warn() { # warn <args>...: init from the fixture repo, its stderr in $tmp/err
 warn 31 --from-profile
 check_rc "init still succeeds without --criteria" 0 "$status"
 check "a numbered issue with checkboxes and no --criteria draws a warning naming the flag" yes \
-  "$(has 'issue #31 has 2 checkboxes but --criteria was not passed' "$(cat "$tmp/err")")"
+  "$(has 'issue #31 has 2 criteria but --criteria was not passed' "$(cat "$tmp/err")")"
 check "the warning says to re-run the same init with the flags added" yes \
   "$(has 'run the same init again with `--criteria -` and `--rebuild` added' "$(cat "$tmp/err")")"
 check "the warning prints no shortened init line to paste" no "$(has 'run-file init 31 --criteria' "$(cat "$tmp/err")")"

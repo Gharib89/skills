@@ -37,6 +37,9 @@ init)
     # `null` is what a failed read of the issue body gives; an empty body is a real read.
     [ "$text" != null ] || ship_tooling "the criteria text is null: a failed read of the issue body"
     criteria=$(criteria_entries "$text") || ship_tooling "cannot read the criteria text"
+    # Text that yields nothing leaves the gate nothing to judge, so it is said (#958).
+    [ -n "$criteria" ] \
+      || printf 'run-file init: the --criteria text holds no criteria (no checkbox, and no list under a heading naming criteria): record each with `run-file note Criteria <text>`\n' >&2
   fi
   # The profile fills the slots a flag did not: the flag is the run's own word
   # for this run, the profile the repo's standing one.
@@ -60,13 +63,13 @@ init)
     pf=$(ship_profile_legs "$profile" | join_names)
     case " $given " in *" legs "*) ;; *) legs=${pf:-None.} ;; esac
   fi
-  # A numbered issue's checkboxes are criteria the gate holds on, and a run that
+  # A numbered issue's criteria are ones the gate holds on, and a run that
   # never passed them reaches its merge gate unjudged (#933). The profile names
   # the host the issue is read from, so a bare init reads none; a failed read
   # warns of nothing, since init needs no host.
   if [ "$from_profile" = true ] && [ -z "$criteria_src" ] && [[ $id =~ ^[1-9][0-9]*$ ]]; then
     cb=$(issue_checkboxes "$id") && [ "$cb" -gt 0 ] \
-      && printf 'run-file init: issue #%s has %s checkboxes but --criteria was not passed: record each with `run-file note Criteria <text>`, or run the same init again with `--criteria -` and `--rebuild` added, the issue body on stdin\n' "$id" "$cb" >&2
+      && printf 'run-file init: issue #%s has %s criteria but --criteria was not passed: record each with `run-file note Criteria <text>`, or run the same init again with `--criteria -` and `--rebuild` added, the issue body on stdin\n' "$id" "$cb" >&2
   fi
   resolve_root
   reject_stamp_tail --tripwires "$tripwires"
@@ -144,8 +147,10 @@ EOSTATES
 $states
 EOAPPLY
   printf '%s\n' "$items" | jq -Rs --arg f "$file" --arg i "$id" --arg s "$scratch" --argjson auto "$auto" \
+    --arg src "$criteria_src" --arg crit "$criteria" \
     '{run_file: $f, id: $i, scratch: $s, items: (split("\n") | map(select(. != "")))}
-     + if $auto then {opened: 0, mirror: "in_progress"} else {} end'
+     + if $auto then {opened: 0, mirror: "in_progress"} else {} end
+     + if $src != "" then {criteria: ($crit | split("\n") | map(select(. != "")) | length)} else {} end'
   ;;
 open)
   phase_arg "${1:-}"; n=$1; shift

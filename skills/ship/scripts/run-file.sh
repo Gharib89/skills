@@ -59,14 +59,17 @@
 # `--criteria <file|->` takes the issue's spec text (`-` is stdin; the text
 # `null`, a failed read, is refused) and records each of its checkbox lines
 # (`-`, `*`, `+` or numbered) outside a fence as `- <n>: <text>` under
-# `## Criteria`, the full set a run owes. The run attests each as
-# `Criterion <n>: met: <proof>` or `Criterion <n>: not met: <reason>` (the last
-# such line deciding, a line anywhere in the file like `Stop:`), and `gate clean`
-# holds on any criterion not met or with no line. No checkbox, or no flag, writes
-# no section and the gate judges nothing of the kind. An init on an issue number
-# with `--from-profile` and no `--criteria` reads the issue and, where it holds
-# checkboxes, warns on stderr naming the flag; `gate summary` holds the same run
-# (`criteria: the Run file has no ## Criteria but issue #<n> has <k> checkboxes`).
+# `## Criteria`, the full set a run owes; with no checkbox, its top-level list
+# lines under a heading naming criteria, to the next heading at that level or
+# above. The run attests each as `Criterion <n>: met: <proof>` or
+# `Criterion <n>: not met: <reason>` (the last such line deciding, a line
+# anywhere in the file like `Stop:`), and `gate clean` holds on any criterion,
+# entry or not, not met or with no line. No criteria writes no section and warns
+# naming `run-file note Criteria`; the answer counts them as `criteria`. An init
+# on an issue number with `--from-profile` and no `--criteria` reads the issue
+# and, where it holds criteria, warns on stderr naming the flag; `gate summary`
+# holds the same run
+# (`criteria: the Run file has no ## Criteria but issue #<n> has <k> criteria`).
 # Below the checklist it writes sections the run fills: `Verification results`
 # where `--from-profile` took the names from the profile's headings, or
 # `--verifications` names a comma list of name-shaped words (one
