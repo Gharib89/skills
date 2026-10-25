@@ -79,7 +79,8 @@ pipe, and records each checkbox line (`-`, `*`, `+` or a numbered item) as an
 entry under the Run file's `## Criteria`, `- <n>: <text>`. Text with no
 checkbox gives its top-level list lines under a heading naming criteria
 (`## Acceptance criteria`) instead, so pass the text with its headings, and
-where it holds any checkbox, write each criterion it adds as a checkbox too.
+where the text holds any checkbox, write each criterion a brief adds as a
+checkbox too.
 Text yielding none writes no section and
 warns: record each criterion with `run-file note Criteria <text>`. It refuses
 the text `null`. Phase 0 reuses this read. A free-text run has no issue and
