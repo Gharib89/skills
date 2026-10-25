@@ -71,7 +71,7 @@ jobs:
           fi
           jq -r .table "$t/drift.json" > "$t/table.md"
           if [ -z "$n" ]; then
-            kind=$(jq -er 'if (.drift | length) > 0 then "enhancement" else "chore" end' "$t/plan.json")
+            kind=$(jq -er 'if (.drift | arrays | length) > 0 then "enhancement" else "chore" end' "$t/plan.json")
             { printf '## Drift\n\n'; cat "$t/table.md"; printf '\n## Moving the pins\n\n'
               echo "A Ship run moves these pins by the \"In a Ship run\" section of update-skills' SKILL.md."
             } > "$t/body.md"

@@ -52,5 +52,7 @@ check "only others rows file no enhancement" "" "$(grep -o -- '--label enhanceme
 out=$(create_call '{"mode":"source","drift":'"$drift"',"others":'"$others"'}')
 check "a drift row files the issue as enhancement" "--label enhancement" "$(grep -o -- '--label enhancement' <<<"$out")"
 check "a drift row files no chore" "" "$(grep -o -- '--label chore' <<<"$out")"
+out=$(create_call '{"mode":"source","others":'"$others"'}')
+check "a plan with no drift array fails the step, filing nothing" "step failed" "$out"
 
 finish
