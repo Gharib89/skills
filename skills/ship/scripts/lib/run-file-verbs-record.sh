@@ -68,8 +68,8 @@ init)
   # the host the issue is read from, so a bare init reads none; a failed read
   # warns of nothing, since init needs no host.
   if [ "$from_profile" = true ] && [ -z "$criteria_src" ] && [[ $id =~ ^[1-9][0-9]*$ ]]; then
-    cb=$(issue_checkboxes "$id") && [ "$cb" -gt 0 ] \
-      && printf 'run-file init: issue #%s has %s criteria but --criteria was not passed: record each with `run-file note Criteria <text>`, or run the same init again with `--criteria -` and `--rebuild` added, the issue body on stdin\n' "$id" "$cb" >&2
+    count=$(issue_criteria "$id") && [ "$count" -gt 0 ] \
+      && printf 'run-file init: issue #%s has %s criteria but --criteria was not passed: record each with `run-file note Criteria <text>`, or run the same init again with `--criteria -` and `--rebuild` added, the issue body on stdin\n' "$id" "$count" >&2
   fi
   resolve_root
   reject_stamp_tail --tripwires "$tripwires"

@@ -208,7 +208,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
 # Run file, and the head `read-pr` returns. Neither is the caller's to supply,
 # so the summary cannot claim what the gate never read (#894).
 gate_summary() { # gate_summary <pr>, with file already parsed
-  local pr=$1 ci_file pull answer rc lines entries recorded=false id boxes
+  local pr=$1 ci_file pull answer rc lines entries recorded=false id count
   ci_file="$(dirname "$file")/ci-wait.json"
   # Exit 2, not the exit 1 of a held gate: a read that failed is no verdict.
   [ -f "$ci_file" ] || ship_tooling "no saved ci-wait answer at $ci_file: run \`ci-wait $pr\` and save its output there, then re-run"
@@ -229,9 +229,9 @@ gate_summary() { # gate_summary <pr>, with file already parsed
   # has no issue to read.
   id=$(basename "$(dirname "$file")"); id=${id#ship-}
   if [ "$recorded" = false ] && [[ $id =~ ^[1-9][0-9]*$ ]]; then
-    boxes=$(issue_checkboxes "$id") || ship_tooling "cannot read issue $id to check for checkboxes: run \`read-issue $id\` and fix what it reports, then re-run"
-    if [ "$boxes" -gt 0 ]; then
-      answer=$(jq --arg h "criteria: the Run file has no ## Criteria but issue #$id has $boxes criteria; record each with \`run-file note Criteria <text>\`" \
+    count=$(issue_criteria "$id") || ship_tooling "cannot read issue $id to count its criteria: run \`read-issue $id\` and fix what it reports, then re-run"
+    if [ "$count" -gt 0 ]; then
+      answer=$(jq --arg h "criteria: the Run file has no ## Criteria but issue #$id has $count criteria; record each with \`run-file note Criteria <text>\`" \
         '.clean = false | .held_by += [$h]' <<<"$answer") || ship_tooling "cannot add the criteria hold"
       rc=1
     fi

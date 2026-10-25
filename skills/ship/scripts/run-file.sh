@@ -63,9 +63,9 @@
 # lines under a heading naming criteria, to the next heading at that level or
 # above. The run attests each as `Criterion <n>: met: <proof>` or
 # `Criterion <n>: not met: <reason>` (the last such line deciding, a line
-# anywhere in the file like `Stop:`), and `gate clean` holds on any criterion,
-# entry or not, not met or with no line. No criteria writes no section and warns
-# naming `run-file note Criteria`; the answer counts them as `criteria`. An init
+# anywhere in the file like `Stop:`); `gate clean` holds on an entry with no
+# line and on any `<n>`, entry or not, whose last line is not met. No criteria
+# writes no section and warns naming `run-file note Criteria`. An init
 # on an issue number with `--from-profile` and no `--criteria` reads the issue
 # and, where it holds criteria, warns on stderr naming the flag; `gate summary`
 # holds the same run
@@ -185,6 +185,7 @@
 #
 # stdout: one JSON object per call
 #   init: {run_file, id, scratch, items[]}, plus {opened: 0, mirror} when it opened phase 0
+#     and {criteria: <entries recorded>} when given --criteria
 #   open, close, skip: {run_file, phase, state, line, mirror[, reason]}
 #   close 3 --result on a closed or skipped phase 3: {run_file, phase, state, line}
 #     with state "recorded", the row unchanged and no mirror

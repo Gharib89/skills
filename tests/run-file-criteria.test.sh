@@ -102,6 +102,14 @@ run=$(printf '%s\n' '## Success Criteria' '- [ ] the box' '- the plain bullet' \
   | bash "$m" init crit-j --scratchpad "$tmp/init" --criteria - | jq -r .run_file)
 check "text with a checkbox records only the checkboxes" '- 1: the box' \
   "$(awk '/^## Criteria/ { f = 1; next } /^## / { f = 0 } f && /^- /' "$run")"
+run=$(printf '%s\n' '## Acceptance criteria' '- [ ] ' '- [x]' '- the plain bullet' \
+  | bash "$m" init crit-k --scratchpad "$tmp/init" --criteria - 2>/dev/null | jq -r .run_file)
+check "an empty checkbox still keeps the plain bullets out" 0 "$(grep -c '^## Criteria' "$run")"
+# Only a Markdown heading opens a criteria list: none of these near misses does.
+run=$(printf '%s\n' 'Acceptance criteria:' '- after a plain line' '##Criteria' '- after no space' \
+  '> ## Criteria' '- after a quoted heading' '    ## Criteria' '- after an indented one' \
+  | bash "$m" init crit-l --scratchpad "$tmp/init" --criteria - 2>/dev/null | jq -r .run_file)
+check "a criteria line that is no heading opens no list" 0 "$(grep -c '^## Criteria' "$run")"
 check "init without --criteria answers with the keys it always did" 'id,items,mirror,opened,run_file,scratch' \
   "$(bash "$m" init crit-d --scratchpad "$tmp/init" | jq -r 'keys | join(",")')"
 out=$(bash "$m" init crit-e --scratchpad "$tmp/init" --criteria "$tmp/missing.md" 2>&1); rc=$?
