@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.51.0 (2026-10-25)
+
+### Features
+
+- **ship**: Run-file records plain-bullet criteria and holds the gate on an orphan not-met line
+  ([#959](https://github.com/Gharib89/skills/pull/959),
+  [`594783a`](https://github.com/Gharib89/skills/commit/594783af50f86d6d1409962ebd00a4b666e098b2))
+
+
 ## v0.50.2 (2026-10-23)
 
 ### Bug Fixes
