@@ -103,8 +103,10 @@ run=$(printf '%s\n' '## Success Criteria' '- [ ] the box' '- the plain bullet' \
 check "text with a checkbox records only the checkboxes" '- 1: the box' \
   "$(awk '/^## Criteria/ { f = 1; next } /^## / { f = 0 } f && /^- /' "$run")"
 run=$(printf '%s\n' '## Acceptance criteria' '- [ ] ' '- [x]' '- the plain bullet' \
-  | bash "$m" init crit-k --scratchpad "$tmp/init" --criteria - 2>/dev/null | jq -r .run_file)
+  | bash "$m" init crit-k --scratchpad "$tmp/init" --criteria - 2>"$tmp/err" | jq -r .run_file)
 check "an empty checkbox still keeps the plain bullets out" 0 "$(grep -c '^## Criteria' "$run")"
+check "and the warning names a checkbox with no text" true \
+  "$(if grep -Fq 'no checkbox with text' "$tmp/err"; then echo true; else echo false; fi)"
 # Only a Markdown heading opens a criteria list: none of these near misses does.
 run=$(printf '%s\n' 'Acceptance criteria:' '- after a plain line' '##Criteria' '- after no space' \
   '> ## Criteria' '- after a quoted heading' '    ## Criteria' '- after an indented one' \
