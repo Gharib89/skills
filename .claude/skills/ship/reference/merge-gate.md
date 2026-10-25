@@ -150,8 +150,9 @@ merge word**: "merge" alone, or a waiver naming fewer than all of them, is asked
 back. `gate clean` reads the same lines, holding on each criterion not met or
 with no line, so `Merge: on-clean-gate` posts the summary with the reply line
 and waits. A run whose Run file has no `## Criteria` section (a free-text run,
-or an `init` given no `--criteria`) has nothing for `gate clean` to read: with
-an unmet criterion listed, wait the same way, whatever it answers.
+an `init` given no `--criteria`, or criteria text yielding none) gives
+`gate clean` only its `Criterion <n>:` lines to read: with an unmet criterion
+listed, wait the same way, whatever it answers.
 
 ## A tracker issue on Targets:
 

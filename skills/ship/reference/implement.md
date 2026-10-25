@@ -72,13 +72,15 @@ verbatim in the issue body.
 An issue's run reads the issue first, `read-issue <issue>`, a read that claims
 nothing (a failed read stops the run there, `host-unreachable`), and settles the
 effective spec by [spec precedence](#phase-1-spec-precedence): the body's
-checkboxes, less each a later `writer: true` brief or comment drops or revises,
-plus the checkboxes it adds. `run-file init <issue> --from-profile --criteria -`
+criteria, less each a later `writer: true` brief or comment drops or revises,
+plus the criteria it adds. `run-file init <issue> --from-profile --criteria -`
 takes that text as a heredoc, so the issue's own words never pass a file or a
 pipe, and records each checkbox line (`-`, `*`, `+` or a numbered item) as an
 entry under the Run file's `## Criteria`, `- <n>: <text>`. Text with no
 checkbox gives its top-level list lines under a heading naming criteria
-(`## Acceptance criteria`) instead. Text yielding none writes no section and
+(`## Acceptance criteria`) instead, so pass the text with its headings, and
+where it holds any checkbox, write each criterion it adds as a checkbox too.
+Text yielding none writes no section and
 warns: record each criterion with `run-file note Criteria <text>`. It refuses
 the text `null`. Phase 0 reuses this read. A free-text run has no issue and
 passes none.
@@ -86,7 +88,7 @@ An issue's init without `--criteria` warns when the issue holds criteria, and
 `run-file gate summary` then holds the gate (`criteria:` in `held_by`) until
 each is recorded with `run-file note Criteria <text>`.
 A phase-1 anchor rewrite that changes a criterion adds each replacement
-checkbox with `run-file note Criteria <text>`, which writes it under the next
+criterion with `run-file note Criteria <text>`, which writes it under the next
 number, owing its own line, and the original's `Criterion` line names them.
 
 Every entry is owed one line, anywhere in the file, written by the run as it
@@ -99,8 +101,8 @@ an `<n>` decides, so a later `met` replaces an earlier `not met`. A criterion is
 met by what the diff and its checks show, never by the summary's account of
 them: one the run declined, deferred or covered with a "gap" is `not met`.
 `run-file gate clean` holds the merge on each entry that is `not met` or has no
-line, and on a `Criterion <n>:` line with no entry that is not `met`
-([merge-gate.md](merge-gate.md#unmet-criteria)).
+line, and on each `<n>` a `Criterion <n>:` line names without an entry, unless
+its last line is `met` ([merge-gate.md](merge-gate.md#unmet-criteria)).
 
 `run-file close 5` refuses an entry with no line or a placeholder `not met`
 (pending, todo, tbd, later, wip, open, unknown). One settling after phase 5 is

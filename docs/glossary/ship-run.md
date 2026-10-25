@@ -89,7 +89,7 @@ An attended stop where Ship prints the exact command and setup, waits for the hu
 _Avoid_: pause, wait-state, hand-back (that releases the claim)
 
 **Unmet criterion**:
-Any checkbox criterion of the issue the run did not meet, recorded in the Run file as `Criterion <n>: not met: <reason>`, or owed a line and given none. The kind a run cannot meet is a criterion asking for a host action no mechanic performs, which it leaves verbatim in the issue and lists on the merge summary with the action a human must take: unattended always, attended when the human, asked before building, says to build the rest. Either kind holds the clean gate, and merging needs the human's explicit waiver of each, beside the merge word. A host-action criterion is not a Ship defect: the action is the issue's deliverable, not a step the run itself must perform.
+Any criterion of the issue the run did not meet, recorded in the Run file as `Criterion <n>: not met: <reason>`, or owed a line and given none. The kind a run cannot meet is a criterion asking for a host action no mechanic performs, which it leaves verbatim in the issue and lists on the merge summary with the action a human must take: unattended always, attended when the human, asked before building, says to build the rest. Either kind holds the clean gate, and merging needs the human's explicit waiver of each, beside the merge word. A host-action criterion is not a Ship defect: the action is the issue's deliverable, not a step the run itself must perform.
 _Avoid_: rewritten criterion, descoped criterion
 
 **Spec precedence**:
