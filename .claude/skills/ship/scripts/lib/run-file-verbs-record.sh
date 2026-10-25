@@ -39,7 +39,7 @@ init)
     criteria=$(criteria_entries "$text") || ship_tooling "cannot read the criteria text"
     # Text that yields nothing leaves the gate nothing to judge, so it is said (#958).
     [ -n "$criteria" ] \
-      || printf 'run-file init: the --criteria text yields no criteria (no checkbox with text, and, with no checkbox at all, no list under a heading naming criteria): record each with `run-file note Criteria <text>`\n' >&2
+      || printf 'run-file init: the --criteria text yields no criteria (no checkbox with text, and no heading naming criteria whose list holds plain lines and no checkbox): record each with `run-file note Criteria <text>`\n' >&2
   fi
   # The profile fills the slots a flag did not: the flag is the run's own word
   # for this run, the profile the repo's standing one.

@@ -59,8 +59,8 @@
 # `--criteria <file|->` takes the issue's spec text (`-` is stdin; the text
 # `null`, a failed read, is refused) and records each of its checkbox lines
 # (`-`, `*`, `+` or numbered) outside a fence as `- <n>: <text>` under
-# `## Criteria`, the full set a run owes; with no checkbox, its top-level list
-# lines under a heading naming criteria, to the next heading at that level or
+# `## Criteria`, the full set a run owes; where a criteria heading lists
+# top-level lines but no checkbox, those, to the next heading at its level or
 # above. The run attests each as `Criterion <n>: met: <proof>` or
 # `Criterion <n>: not met: <reason>` (the last such line deciding, a line
 # anywhere in the file like `Stop:`); `gate clean` holds on an entry with no

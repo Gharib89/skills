@@ -76,11 +76,11 @@ criteria, less each a later `writer: true` brief or comment drops or revises,
 plus the criteria it adds. `run-file init <issue> --from-profile --criteria -`
 takes that text as a heredoc, so the issue's own words never pass a file or a
 pipe, and records each checkbox line (`-`, `*`, `+` or a numbered item) as an
-entry under the Run file's `## Criteria`, `- <n>: <text>`. Text with no
-checkbox gives its top-level list lines under a heading naming criteria
-(`## Acceptance criteria`) instead, so pass the text with its headings, and
-where the text holds any checkbox, write each criterion a brief or comment adds
-as a checkbox too.
+entry under the Run file's `## Criteria`, `- <n>: <text>`. A heading naming
+criteria (`## Acceptance criteria`) whose list holds no checkbox gives its
+top-level list lines instead, whatever checkboxes sit elsewhere, so pass the
+text with its headings, and where that list holds a checkbox, write each
+criterion a brief or comment adds as a checkbox too.
 Text yielding none writes no section and
 warns: record each criterion with `run-file note Criteria <text>`. It refuses
 the text `null`. Phase 0 reuses this read. A free-text run has no issue and
