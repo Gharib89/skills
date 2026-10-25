@@ -33,6 +33,9 @@ jobs:
       # failed, which fails the job. Drift itself never does.
       # The issue's labels are only ever set when it is filed: a
       # `ready-for-human` on it is the owner's, after a run held a pin back.
+      # Its Kind is the title type update-skills gives the run that ships it:
+      # `enhancement` where a skill ship composes drifted (`feat(ship)`),
+      # `chore` where only `others` rows moved (`chore(skills)`).
       # A bot-filed issue alone reaches no one's notifications; the mention
       # does. It posts with gh: comment-issue's create-then-verify reads
       # GET /user, which a workflow token is refused (403).
@@ -68,11 +71,12 @@ jobs:
           fi
           jq -r .table "$t/drift.json" > "$t/table.md"
           if [ -z "$n" ]; then
+            kind=$(jq -er 'if (.drift | arrays | length) > 0 then "enhancement" else "chore" end' "$t/plan.json")
             { printf '## Drift\n\n'; cat "$t/table.md"; printf '\n## Moving the pins\n\n'
               echo "A Ship run moves these pins by the \"In a Ship run\" section of update-skills' SKILL.md."
             } > "$t/body.md"
             url=$(gh issue create --repo "$REPO" --title "$title" --body-file "$t/body.md" \
-              --label ready-for-agent --label enhancement --label XS --label low)
+              --label ready-for-agent --label "$kind" --label XS --label low)
             n=${url##*/}
             echo "Filed $url." >> "$GITHUB_STEP_SUMMARY"
           elif [ "$changed" = true ]; then
