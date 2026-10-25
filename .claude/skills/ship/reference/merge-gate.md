@@ -137,7 +137,7 @@ human should read the title that will land.
 
 ## Unmet criteria
 
-An **unmet criterion** is any checkbox criterion the run did not meet: one
+An **unmet criterion** is any issue criterion the run did not meet: one
 asking for a host action no mechanic performs, which stays verbatim in the issue
 ([implement.md](implement.md#phase-1-a-criterion-no-mechanic-can-perform)), or
 one the run could not prove. Each carries `Criterion <n>: not met: <reason>` in
@@ -150,8 +150,9 @@ merge word**: "merge" alone, or a waiver naming fewer than all of them, is asked
 back. `gate clean` reads the same lines, holding on each criterion not met or
 with no line, so `Merge: on-clean-gate` posts the summary with the reply line
 and waits. A run whose Run file has no `## Criteria` section (a free-text run,
-or an `init` given no `--criteria`) has nothing for `gate clean` to read: with
-an unmet criterion listed, wait the same way, whatever it answers.
+an `init` given no `--criteria`, or criteria text yielding none) gives
+`gate clean` only its `Criterion <n>:` lines to read: with an unmet criterion
+listed, wait the same way, whatever it answers.
 
 ## A tracker issue on Targets:
 

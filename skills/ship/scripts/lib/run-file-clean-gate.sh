@@ -100,11 +100,14 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       # reviewer stops on cap.
       def reraised($name): any(rests("Round: " + $name + " ")[]; test("^[1-9][0-9]*: re-raised declined: "));
       def settled($name): (stop($name) | word) == "tree unchanged" and reviewed($name) and (reraised($name) | not) and $cover[stop($name) | stamp] == true;
-      # The `## Criteria` entries, `- <n>: <text>`, each owed a `Criterion <n>:` line.
-      def criteria: [$lines[] | sub("[ \\t\\r]+$"; "")] | reduce .[] as $l ({in: false, ids: []};
+      # The `## Criteria` entries, `- <n>: <text>`, each owed a `Criterion <n>:` line,
+      # and every number a `Criterion <n>:` line names without an entry, which an
+      # init that recorded none leaves as the only record of a criterion (#958).
+      def criteria: ([$lines[] | sub("[ \\t\\r]+$"; "")] | reduce .[] as $l ({in: false, ids: []};
           if ($l | startswith("## ")) then .in = ($l == "## Criteria")
           elif .in and ($l | test("^- [1-9][0-9]*: ")) then .ids += [$l | capture("^- (?<n>[1-9][0-9]*): ").n]
-          else . end) | .ids;
+          else . end) | .ids) as $ids
+        | $ids + ([rests("Criterion ")[] | capture("^(?<n>[1-9][0-9]*): ").n] | unique_by(tonumber) | map(select(IN($ids[]) | not)));
       def criterion($n): rests("Criterion " + $n + ": ") | last // "";
       # Capped with findings: Cap: spent on a tree-changing last round, which a
       # docs-only end before the cap, also `Stop: cap`, is not, nor is a
@@ -205,7 +208,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
 # Run file, and the head `read-pr` returns. Neither is the caller's to supply,
 # so the summary cannot claim what the gate never read (#894).
 gate_summary() { # gate_summary <pr>, with file already parsed
-  local pr=$1 ci_file pull answer rc lines entries recorded=false id boxes
+  local pr=$1 ci_file pull answer rc lines entries recorded=false id count
   ci_file="$(dirname "$file")/ci-wait.json"
   # Exit 2, not the exit 1 of a held gate: a read that failed is no verdict.
   [ -f "$ci_file" ] || ship_tooling "no saved ci-wait answer at $ci_file: run \`ci-wait $pr\` and save its output there, then re-run"
@@ -221,14 +224,14 @@ gate_summary() { # gate_summary <pr>, with file already parsed
   # With no `## Criteria` the gate read none, so "none" would be a claim it never
   # checked: the line says so and the run lists the issue's criteria itself.
   grep -q '^## Criteria[[:space:]]*$' <<<"$lines" && recorded=true
-  # Unrecorded criteria beside an issue that has checkboxes are criteria nobody
+  # Criteria an issue states and the Run file never recorded are criteria nobody
   # judged, so the gate holds rather than only reporting them (#933). A slug run
   # has no issue to read.
   id=$(basename "$(dirname "$file")"); id=${id#ship-}
   if [ "$recorded" = false ] && [[ $id =~ ^[1-9][0-9]*$ ]]; then
-    boxes=$(issue_checkboxes "$id") || ship_tooling "cannot read issue $id to check for checkboxes: run \`read-issue $id\` and fix what it reports, then re-run"
-    if [ "$boxes" -gt 0 ]; then
-      answer=$(jq --arg h "criteria: the Run file has no ## Criteria but issue #$id has $boxes checkboxes; record each with \`run-file note Criteria <text>\`" \
+    count=$(issue_criteria "$id") || ship_tooling "cannot read issue $id to count its criteria: run \`read-issue $id\` and fix what it reports, then re-run"
+    if [ "$count" -gt 0 ]; then
+      answer=$(jq --arg h "criteria: the Run file has no ## Criteria but issue #$id has $count criteria; record each with \`run-file note Criteria <text>\`" \
         '.clean = false | .held_by += [$h]' <<<"$answer") || ship_tooling "cannot add the criteria hold"
       rc=1
     fi

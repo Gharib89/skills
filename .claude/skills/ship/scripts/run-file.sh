@@ -59,14 +59,17 @@
 # `--criteria <file|->` takes the issue's spec text (`-` is stdin; the text
 # `null`, a failed read, is refused) and records each of its checkbox lines
 # (`-`, `*`, `+` or numbered) outside a fence as `- <n>: <text>` under
-# `## Criteria`, the full set a run owes. The run attests each as
-# `Criterion <n>: met: <proof>` or `Criterion <n>: not met: <reason>` (the last
-# such line deciding, a line anywhere in the file like `Stop:`), and `gate clean`
-# holds on any criterion not met or with no line. No checkbox, or no flag, writes
-# no section and the gate judges nothing of the kind. An init on an issue number
-# with `--from-profile` and no `--criteria` reads the issue and, where it holds
-# checkboxes, warns on stderr naming the flag; `gate summary` holds the same run
-# (`criteria: the Run file has no ## Criteria but issue #<n> has <k> checkboxes`).
+# `## Criteria`, the full set a run owes; where a criteria heading lists
+# top-level lines but no checkbox, those, to the next heading at its level or
+# above. The run attests each as `Criterion <n>: met: <proof>` or
+# `Criterion <n>: not met: <reason>` (the last such line deciding, a line
+# anywhere in the file like `Stop:`); `gate clean` holds on an entry with no
+# line and on any `<n>`, entry or not, whose last line is not met. No criteria
+# writes no section and warns naming `run-file note Criteria`. An init
+# on an issue number with `--from-profile` and no `--criteria` reads the issue
+# and, where it holds criteria, warns on stderr naming the flag; `gate summary`
+# holds the same run
+# (`criteria: the Run file has no ## Criteria but issue #<n> has <k> criteria`).
 # Below the checklist it writes sections the run fills: `Verification results`
 # where `--from-profile` took the names from the profile's headings, or
 # `--verifications` names a comma list of name-shaped words (one
@@ -182,6 +185,7 @@
 #
 # stdout: one JSON object per call
 #   init: {run_file, id, scratch, items[]}, plus {opened: 0, mirror} when it opened phase 0
+#     and {criteria: <entries recorded>} when given --criteria
 #   open, close, skip: {run_file, phase, state, line, mirror[, reason]}
 #   close 3 --result on a closed or skipped phase 3: {run_file, phase, state, line}
 #     with state "recorded", the row unchanged and no mirror
