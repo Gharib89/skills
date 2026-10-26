@@ -126,7 +126,7 @@ those).
    heygen-com/hyperframes arabic`: three hits, none on text animation). So
    the skill writes that technique as its own text (#964 says the same).
 6. **Authoring a free scene costs about the same; the hazards differ.**
-   Remotion: 66 lines of TSX plus a 3-line entry and a 12-line root, `spring()`
+   Remotion: 66 lines of TSX as written (86 after the repo's Prettier) plus a 3-line entry and a 12-line root, `spring()`
    and `@remotion/paths` built in. HyperFrames: one 77-line HTML file, but a
    damped spring had to be written by hand as a GSAP ease (12 lines; GSAP has
    none), and `hyperframes lint` passed it first time (measured, `wc -l`, the
