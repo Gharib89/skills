@@ -24,15 +24,18 @@
 # a script that makes several different reads: `gh_route <endpoint> <body>`
 # writes the body one endpoint answers (an empty body too), matched with the
 # call's query string ignored, and an endpoint with no route fails the way
-# gh's 404 does. `gh_args` lists each call's arguments, one line per call.
+# gh's 404 does. A call with `-X`/`--method` other than GET is matched by
+# `<METHOD> <endpoint>`, so a read and a write of one endpoint answer apart.
+# `gh_args` lists each call's arguments, one line per call.
 gh_fake_install() { # <dir>
   export GH_LOG=$1/calls
   cat > "$1/gh" <<'FAKE'
 #!/usr/bin/env bash
-input="" prev="" include="" endpoint=""
+input="" prev="" include="" endpoint="" method=GET
 for a in "${@:2}"; do
   case $prev:$a in
     --input:*) input=$a ;;
+    -X:*|--method:*) method=$a ;;
     *:--input=*) input=${a#--input=} ;;
     *:-i|*:--include) include=1 ;;
     *:-*|-X:*|--method:*|-q:*|--jq:*|-H:*|--header:*|-f:*|--raw-field:*|-F:*|--field:*) ;;
@@ -55,6 +58,7 @@ for s in ${GH_STATUS_SEQ:-200}; do i=$((i + 1)); status=$s; [ "$i" -ge "$n" ] &&
 out=${GH_BODY:-ok}
 if [ -n "${GH_ROUTES:-}" ] && [ "$status" -lt 400 ]; then
   route=${endpoint%%\?*}
+  [ "$method" = GET ] || route="$method $route"
   route=$GH_ROUTES/${route//\//_}
   [ -f "$route" ] || { echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
   out=$(cat "$route")

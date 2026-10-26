@@ -109,7 +109,7 @@ for bad in '--days 0' '--days -1' '--days' 'other'; do
   # shellcheck disable=SC2086 # each case is a word list
   out=$(bash "$s" $bad 2>/dev/null); rc=$?
   check_rc "a malformed call exits 2: $bad" 2 "$rc"
-  check "with its usage line: $bad" 'usage: retro candidates [--days <n>]' "$(jq -r .error <<<"$out")"
+  check "with its usage line: $bad" 'usage: retro candidates [--days <n>] | retro file <findings.json>' "$(jq -r .error <<<"$out")"
 done
 
 mkdir -p "$tmp/nogh"
