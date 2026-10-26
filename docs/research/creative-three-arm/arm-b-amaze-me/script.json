@@ -1,0 +1,38 @@
+[
+ {
+  "id": "keys",
+  "text": "For fifty years, software has been built the same way. One keystroke. At a time."
+ },
+ {
+  "id": "autocomplete",
+  "text": "Then AI arrived, and learned to finish our sentences. We typed faster. But here's the catch: a faster typewriter is still a typewriter."
+ },
+ {
+  "id": "question",
+  "text": "Agentic engineering asks a different question. Not, what's the next line? But, what's the goal?"
+ },
+ {
+  "id": "loop",
+  "text": "An agent doesn't just suggest. It plans. It acts, running commands, editing files, calling tools. It observes what happened. Then it loops, again and again, until the job is actually done."
+ },
+ {
+  "id": "gps",
+  "text": "Think of it like this. Autocomplete is a GPS telling you the next turn. An agent is the driver. When the road is closed, a failing test, a broken build, it doesn't stop and wait. It reroutes."
+ },
+ {
+  "id": "parallel",
+  "text": "And because agents run on their own loops, they can run side by side. One engineer, one task, becomes one engineer, ten streams of work. Bugs fixed, tests written, docs updated, all at once."
+ },
+ {
+  "id": "engineering",
+  "text": "But notice the word, engineering. This isn't vibe coding, tossing prompts and hoping. It's built on specs that define intent. Tests that define done. Guard rails, code reviews, and a human who owns the outcome."
+ },
+ {
+  "id": "conductor",
+  "text": "So your role changes. You stop being the typist, and become the conductor. You decide what to build, and why. Agents handle more of the how. And you make sure it's right."
+ },
+ {
+  "id": "close",
+  "text": "That's why agentic engineering. The bottleneck was never your keyboard. Stop typing faster. Start thinking bigger."
+ }
+]

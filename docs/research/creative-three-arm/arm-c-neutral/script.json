@@ -1,0 +1,9 @@
+[
+ "For decades, writing software meant one thing: | a person, a keyboard, and every line typed by hand. | Then AI autocomplete arrived, and we got faster at typing. | But typing was never the real bottleneck.",
+ "Agentic engineering is a different idea. | Instead of asking a model to finish your sentence, you give an agent a goal. | It reads the codebase, | makes a plan, | writes the change, | runs the tests, | reads the errors, and tries again, in a loop, | until the work is actually done.",
+ "Why now? Three things converged. | Models got good enough to reason across large codebases. | They learned to use tools: terminals, browsers, test runners. | And they can stay on a long task for hours, not seconds.",
+ "This changes the engineer's job. | You spend less time producing code, | and more time deciding what should be built, setting constraints, and reviewing results. | You become the architect and the reviewer, not the typist.",
+ "And because agents can work in parallel, | one engineer can run several streams of work at once: | a bug fix here, | a migration there, | a test suite filling in the background. | Leverage stops scaling with hours, and starts scaling with judgment.",
+ "But this isn't magic. | Agents need clear goals, | good tests, | and tight feedback loops. | Without them, they confidently build the wrong thing, faster. | That's why it's called engineering: | the discipline moves from writing code to designing the system the agent works inside.",
+ "So, why agentic engineering? | Because the scarce resource is no longer keystrokes. | It's clarity. | Teams that learn to express intent precisely, and verify results rigorously, | will build more, and better, than ever before."
+]

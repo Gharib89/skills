@@ -1,0 +1,12 @@
+{
+  "focus": "why software teams are moving to agentic engineering",
+  "length": 2,
+  "audience": "a developer new to the source",
+  "language": "en",
+  "style": "claude-code",
+  "voice": "bf_emma",
+  "aspect": "16:9",
+  "score": "on",
+  "must": [],
+  "avoid": []
+}
