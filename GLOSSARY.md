@@ -15,3 +15,4 @@ One glossary in several files, one per area, so a session reads only the area it
 - [Grilling](docs/glossary/grilling.md): the grilling round.
 - [Supervision](docs/glossary/supervision.md): driving sessions in Herdr.
 - [Explainer video](docs/glossary/explainer-video.md): the explainer-video skill's vocabulary.
+- [Retro run](docs/glossary/retro.md): the retro run over a week's merged PRs.
