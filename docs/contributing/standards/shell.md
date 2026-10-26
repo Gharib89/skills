@@ -46,8 +46,9 @@ exceptions bound these rules.
   sub-issues and blocked-by edges with `gh api`, because drive-session composes
   no other skill and may be installed alone, so no adapter is beside it to
   route through; it only reads. An eighth: `retro-run`'s `retro` reads merged
-  PRs, their review threads and earlier `retro` issues with `gh api`, for the
-  same reason: it composes no other skill and runs alone in a cloud routine.
+  PRs, their review threads and earlier issues labelled `retro` with `gh api`,
+  for the same reason: it composes no other skill, so no adapter is beside it;
+  it only reads.
   A direct call made in two runs, where this run can see the other, is a
   candidate mechanic, raised as a Ship note.
 - **A host create posts once, through create-then-verify.** A 5xx can be the

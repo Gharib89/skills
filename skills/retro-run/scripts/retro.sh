@@ -21,7 +21,7 @@
 #         `thread` also {author, path}; each filed issue {number, state,
 #         classes[]}
 # exit: 0 answered · 1 GitHub refused a read (gh's message in `error`) · 2
-#       usage, gh missing, or an answer from gh it cannot read
+#       usage, gh or jq missing, or an answer from gh it cannot read
 set -uo pipefail
 
 usage='usage: retro candidates [--days <n>]'
@@ -34,6 +34,7 @@ if [ "${1:-}" = --help ]; then
     f { if ($0 !~ /^#/ || /^# exit:/) exit; sub(/^# ?/, ""); print }' "${BASH_SOURCE[0]}"
   exit 0
 fi
+command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; echo "jq not installed" >&2; exit 2; }
 [ "${1:-}" = candidates ] || tooling "$usage"
 shift
 days=7
@@ -63,25 +64,25 @@ prs=$(jq -cs --arg since "$since" '
     then sort_by(.number) else error end' <<<"$got" 2>/dev/null) \
   || tooling "merged PRs: unreadable answer from gh"
 
-# The body signals of one PR, given as {pr, comments}.
-signals='def section($h): [.pr.body | scan("(?ms)^## " + $h + "[ \t]*\n(.*?)(?=^## |\\z)")] | (.[0][0] // "") | gsub("^\\s+|\\s+$"; "");
-  [.comments[] | select(.in_reply_to_id == null and .user.login != $author)
+# One PR as a candidate, given {pr, comments}, or nothing when it carries no signal.
+candidate='def section($h): [.pr.body | scan("(?ms)^## " + $h + "[ \t]*\n(.*?)(?=^## |\\z)")] | (.[0][0] // "") | gsub("^\\s+|\\s+$"; "");
+  ([.comments[] | select(.in_reply_to_id == null and .user.login != $author)
     | {kind: "thread", author: .user.login, path, text: .body}]
   + [section("Special things to note") | ("\n" + .) | split("\n- ")[1:][] | "- " + gsub("\\s+$"; "")
     | select((test("^- \\S+ Door:") | not) and test("(?i)deviat|departure")) | {kind: "deviation", text: .}]
   + [section("Needs attention") | select(. != "" and . != "None.") | {kind: "needs-attention", text: .}]
   + [section("Review") | select(test("(?i)\\bround [2-9]\\b|\\b([2-9]|two|three) (host |local )?rounds\\b"))
-    | {kind: "review-rounds", text: .}]'
+    | {kind: "review-rounds", text: .}]) as $s
+  | if ($s | length) == 0 then empty else
+    {number: .pr.number, title: .pr.title, url: .pr.url,
+     closes: [.pr.body | scan("(?i)\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?) #([0-9]+)") | .[0] | tonumber],
+     signals: $s} end'
 found=''
 while read -r pr; do
   n=$(jq -r .number <<<"$pr")
   get "review comments of #$n" "repos/{owner}/{repo}/pulls/$n/comments?per_page=100"
-  line=$(jq -cs --argjson pr "$pr" --arg author "$(jq -r .author <<<"$pr")" "
-    {pr: \$pr, comments: add} | ($signals) as \$s
-    | if (\$s | length) == 0 then empty else
-      {number: .pr.number, title: .pr.title, url: .pr.url,
-       closes: [.pr.body | scan(\"(?i)\\\\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?) #([0-9]+)\") | .[0] | tonumber],
-       signals: \$s} end" <<<"$got" 2>/dev/null) \
+  line=$(jq -cs --argjson pr "$pr" --arg author "$(jq -r .author <<<"$pr")" \
+    "{pr: \$pr, comments: add} | $candidate" <<<"$got" 2>/dev/null) \
     || tooling "review comments of #$n: unreadable answer from gh"
   found="$found$line"$'\n'
 done < <(jq -c '.[]' <<<"$prs")

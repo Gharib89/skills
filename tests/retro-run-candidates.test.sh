@@ -48,10 +48,21 @@ $(pr 13 1 "${clean/None./- Ship note: poll-pr read a stale head.}")
 $(pr 14 1 "${clean/One round, clean./Round 1 raised one P2, fixed; round 2 was clean.}")
 $(pr 15 10 "${clean/One round, clean./Round 1 raised one P2, fixed; round 2 was clean.}")
 $(pr 16 1 "$clean")
+$(pr 17 6.99 "${clean/One round, clean./Round 1 raised one P2, fixed; round 2 was clean.}")
+$(pr 18 7.01 "${clean/One round, clean./Round 1 raised one P2, fixed; round 2 was clean.}")
+$(pr 19 1 "## Why the change
+
+A deviation from the brief, and round 2 of the review, told in the wrong section.
+
+${clean#Closes #1
+
+}")
+$(pr 20 1 "${clean/Closes #1/This fixes #4.}
+- claude: two rounds.")
 EOF
 )
 gh_route 'search/issues' "{\"total_count\": 7, \"items\": $items}"
-for n in 10 12 13 14 15; do gh_route "repos/{owner}/{repo}/pulls/$n/comments" '[]'; done
+for n in 10 12 13 14 15 17 18 19 20; do gh_route "repos/{owner}/{repo}/pulls/$n/comments" '[]'; done
 # #11 carries one thread a reviewer opened; #16 only the author's own comment.
 gh_route 'repos/{owner}/{repo}/pulls/11/comments' '[
   {"id": 1, "in_reply_to_id": null, "user": {"login": "codex[bot]"}, "path": "a.sh", "body": "P2: the read is never paged"},
@@ -65,7 +76,8 @@ gh_route 'repos/{owner}/{repo}/issues' '[
 
 out=$(bash "$s" candidates); rc=$?
 check_rc "candidates answers" 0 "$rc"
-check "only the signal PRs in the window, lowest first" '[11,12,13,14]' "$(jq -c '[.candidates[].number]' <<<"$out")"
+check "only the signal PRs in the window, its edge included, lowest first" '[11,12,13,14,17,20]' \
+  "$(jq -c '[.candidates[].number]' <<<"$out")"
 check "a reviewer's thread is the signal, not the author's reply" \
   '[{"kind":"thread","author":"codex[bot]","path":"a.sh","text":"P2: the read is never paged"}]' \
   "$(jq -c '.candidates[] | select(.number == 11) | .signals' <<<"$out")"
@@ -77,14 +89,15 @@ check "a Review section recording a second round" '["review-rounds"]' \
   "$(jq -c '[.candidates[] | select(.number == 14) | .signals[].kind]' <<<"$out")"
 check "each candidate names its title, url and closing issue" '{"title":"PR 12","url":"https://github.com/o/r/pull/12","closes":[1]}' \
   "$(jq -c '.candidates[] | select(.number == 12) | {title, url, closes}' <<<"$out")"
-check "merged counts every PR in the window" 6 "$(jq .merged <<<"$out")"
+check "another closing keyword, in any case" '[4]' "$(jq -c '.candidates[] | select(.number == 20) | .closes' <<<"$out")"
+check "merged counts every PR in the window" 9 "$(jq .merged <<<"$out")"
 check "earlier retro issues' class lines, pull requests aside" \
   '[{"number":900,"state":"closed","classes":["unpaged-list-read","stale-head"]},{"number":901,"state":"open","classes":["brief-path-moved"]}]' \
   "$(jq -c .filed <<<"$out")"
 check "no GraphQL call" '' "$(gh_args | grep -F graphql)"
 
 out=$(bash "$s" candidates --days 14)
-check "--days widens the window" '[11,12,13,14,15]' "$(jq -c '[.candidates[].number]' <<<"$out")"
+check "--days widens the window" '[11,12,13,14,15,17,18,20]' "$(jq -c '[.candidates[].number]' <<<"$out")"
 check "since is the window's start" true "$(jq --arg a "$(ago 14.01)" --arg b "$(ago 13.99)" '.since > $a and .since < $b' <<<"$out")"
 
 for bad in '--days 0' '--days -1' '--days' 'other'; do
@@ -94,6 +107,18 @@ for bad in '--days 0' '--days -1' '--days' 'other'; do
   check "with its usage line: $bad" 'usage: retro candidates [--days <n>]' "$(jq -r .error <<<"$out")"
 done
 
+mkdir -p "$tmp/nogh"
+ln -s "$(command -v jq)" "$tmp/nogh/jq"
+out=$(PATH=$tmp/nogh /bin/bash "$s" candidates 2>/dev/null); rc=$?
+check_rc "gh missing exits 2" 2 "$rc"
+check "and says so" 'gh not installed' "$(jq -r .error <<<"$out")"
+
+gh_route 'search/issues' "{\"total_count\": 1, \"items\": [$(pr 21 1 "$clean" | jq -c '.title = null')]}"
+out=$(bash "$s" candidates 2>/dev/null); rc=$?
+check_rc "an item it cannot read exits 2" 2 "$rc"
+check "naming the read" 'merged PRs: unreadable answer from gh' "$(jq -r .error <<<"$out")"
+
+gh_route 'search/issues' "{\"total_count\": 7, \"items\": $items}"
 rm "$GH_ROUTES/repos_{owner}_{repo}_pulls_14_comments"
 out=$(bash "$s" candidates 2>/dev/null); rc=$?
 check_rc "a refused read exits 1" 1 "$rc"

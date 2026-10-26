@@ -2,7 +2,7 @@
 name: retro-run
 description: >-
   Report the classes of mistake that recurred across two or more of the week's
-  merged PRs, read from the git host alone. Use when the user or a scheduled
+  merged PRs. Use when the user or a scheduled
   routine asks for a retro run, or to find what keeps going wrong across
   recent PRs.
 argument-hint: "[--days <n>]"
@@ -27,10 +27,13 @@ flags and the JSON it prints. Run it from the repository's checkout:
 ```
 
 `--days` is the window, seven by default; pass the argument the run was given.
-It prints the PRs merged in the window that carry a signal, each with its
-number, title, closing issues and the signal text, and under `filed` the class
-keys of every earlier issue labelled `retro`, open or closed. Exit 1 or 2:
-report its `error` as the run's last line and stop.
+It prints JSON: `candidates` (the window's merged PRs that carry a signal),
+`merged` (every PR merged in it) and `filed` (each earlier issue labelled
+`retro`, open or closed, with its `classes`). A signal's `kind` is `thread` (a
+reviewer's review thread), `deviation` (a deviation bullet under `## Special
+things to note`), `needs-attention` (that section, when not `None.`) or
+`review-rounds` (a `## Review` section recording a second round). Exit 1 or
+2: write `retro-run <version>: <error>` as the last line and stop.
 
 ## The run
 
@@ -39,13 +42,15 @@ report its `error` as the run's last line and stop.
    reads are one class, `unpaged-list-read`, while a thread and a deviation
    about unrelated files are two. Give each class a kebab-case key and a
    one-line summary. A signal that names no mistake (a clean round, a thread
-   that was declined as wrong) joins no class.
+   that was declined as wrong) joins no class. The step is done when every
+   signal sits in one class or is set aside as naming no mistake.
 2. **Keep only classes seen in two or more PRs.** Count distinct PR numbers: a
    class seen twice in one PR is seen once. A one-off was handled in its own
    review round, and reporting it again is noise.
-3. **Leave out every class already filed.** Drop a class whose key, or whose
-   meaning, matches one under `filed`, open or closed: an accepted lesson is
-   being built, and a rejected one stays rejected.
+3. **Leave out every class already filed.** Drop a class whose key names the
+   same class as a key under `filed`, open or closed, even when it is spelled
+   differently: an accepted lesson is being built, and a rejected one stays
+   rejected.
 4. **Report.** One entry per class left: its key, its summary and the PRs it
    was seen in, as `#<n>` links. Then the last line, alone:
 
