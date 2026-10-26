@@ -14,6 +14,16 @@ When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the 
 
 Edit the right-hand column to match whatever vocabulary you actually use.
 
+## Marker labels
+
+A marker label says where an issue came from. It is not a triage role, so an issue carries one beside its role label.
+
+| Label | Color | Description |
+| --- | --- | --- |
+| `retro` | `c5def5` | Filed by a retro run: classes of mistake that recurred across merged PRs |
+
+A retro run files its issue with `needs-triage` and `retro`, and creates `retro` when the tracker lacks it. Later retro runs read every issue labelled `retro`, open or closed, to leave out a class already filed.
+
 ## Dimension labels
 
 Three dimensions beside the five triage roles. Triage stamps **at most one label per dimension**, at triage time, alongside the role label, so a maintainer glancing at the tracker reads off what kind of change an issue is, how big it is and how urgent it is without opening it.

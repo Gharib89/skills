@@ -47,8 +47,10 @@ exceptions bound these rules.
   no other skill and may be installed alone, so no adapter is beside it to
   route through; it only reads. An eighth: `retro-run`'s `retro` reads merged
   PRs, their review threads and earlier issues labelled `retro` with `gh api`,
-  for the same reason: it composes no other skill, so no adapter is beside it;
-  it only reads.
+  and creates the `retro` label and one grouped issue with it, for the same
+  reason: it composes no other skill, so no adapter is beside it. Each create
+  posts once and is never retried; a later run's read of `retro` issues covers
+  an issue create whose response was lost.
   A direct call made in two runs, where this run can see the other, is a
   candidate mechanic, raised as a Ship note.
 - **A host create posts once, through create-then-verify.** A 5xx can be the

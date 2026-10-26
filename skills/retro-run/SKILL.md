@@ -1,8 +1,8 @@
 ---
 name: retro-run
 description: >-
-  Report the classes of mistake that recurred across two or more of the week's
-  merged PRs. Use when the user or a scheduled
+  File the classes of mistake that recurred across two or more of the week's
+  merged PRs as one grouped triage issue. Use when the user or a scheduled
   routine asks for a retro run, or to find what keeps going wrong across
   recent PRs.
 argument-hint: "[--days <n>]"
@@ -14,8 +14,9 @@ metadata:
 
 One **retro run**: read the git host's record of a window of merged PRs, find
 the classes of mistake that recurred in two or more of them and were never
-filed before, and report them. It changes no code or instructions, and writes
-nothing to the host.
+filed before, and file them as one grouped issue for triage. It changes no code
+or instructions: the issue, and the `retro` label when missing, are its only
+writes.
 
 ## The script
 
@@ -33,9 +34,20 @@ It prints JSON: `candidates` (the window's merged PRs that carry a signal),
 reviewer's review thread, its `replies` showing whether it was fixed or
 declined), `deviation` (a deviation bullet under `## Special
 things to note`), `needs-attention` (that section, when not `None.`) or
-`review-rounds` (a `## Review` section recording a second round). Exit 1 or
-2: write `retro-run <version>: <error>` as the last line and stop, `<version>`
-being `metadata.version` above.
+`review-rounds` (a `## Review` section recording a second round).
+
+```sh
+<base directory>/scripts/retro.sh file <findings.json>
+```
+
+It takes the run's findings, drops each whose key an earlier `retro` issue
+lists, and files the rest as one issue labelled `needs-triage` and `retro`. It
+prints `issue` and `url` (both `null` when nothing was left to file), `filed`
+and `dropped`, each a list of keys.
+
+From either subcommand, exit 1 or 2: write `retro-run <version>: <error>` as
+the last line and stop, `<error>` being its JSON's `error` and `<version>`
+`metadata.version` above.
 
 ## The run
 
@@ -53,10 +65,21 @@ being `metadata.version` above.
    same class as a key under `filed`, open or closed, even when it is spelled
    differently: an accepted lesson is being built, and a rejected one stays
    rejected.
-4. **Report.** One entry per class left: its key, its summary and the PRs it
-   was seen in, as `#<n>` links. Then the last line, alone:
+4. **Propose a fix site.** For each class left, name where the fix belongs, so
+   triage can turn it straight into a ticket: an automated check, review
+   standards, skill prose or CLAUDE.md, followed by the file or skill it
+   lands in when the signals show one (`skill prose: ship's SKILL.md`).
+5. **File.** Write the classes left to a findings file made with `mktemp`,
+   outside the checkout: a JSON array with one `{"key", "summary", "prs",
+   "site"}` object per class, `prs` the PR numbers as integers, the summary
+   and site each one line; with no class left, write `[]`. Run `file` on it.
+6. **Report.** One entry per key under `file`'s `filed`: its key, its summary,
+   the PRs it was seen in as `#<n>` links, and its fix site. Name each key
+   under `dropped` as already filed. Then end on the last line, alone, the
+   second form when `issue` is `null`:
 
-   - `retro-run <version>: <k> recurring classes in <m> merged PRs: <key> (#<n>, #<n>), ...`
-   - or `retro-run <version>: nothing new recurred in <m> merged PRs.`
+   - `retro-run <version>: filed #<issue> with <k> new classes from <m> merged PRs.`
+   - `retro-run <version>: nothing new recurred in <m> merged PRs.`
 
-   `<version>` is `metadata.version` above, and `<m>` is the script's `merged`.
+   `<version>` is `metadata.version` above, `<k>` the length of `filed`, and
+   `<m>` is `candidates`' `merged`.
