@@ -78,8 +78,8 @@ out=$(bash "$s" candidates); rc=$?
 check_rc "candidates answers" 0 "$rc"
 check "only the signal PRs in the window, its edge included, lowest first" '[11,12,13,14,17,20]' \
   "$(jq -c '[.candidates[].number]' <<<"$out")"
-check "a reviewer's thread is the signal, not the author's reply" \
-  '[{"kind":"thread","author":"codex[bot]","path":"a.sh","text":"P2: the read is never paged"}]' \
+check "a reviewer's thread is the signal, its replies carried with it" \
+  '[{"kind":"thread","author":"codex[bot]","path":"a.sh","text":"P2: the read is never paged","replies":[{"author":"owner","text":"Fixed."}]}]' \
   "$(jq -c '.candidates[] | select(.number == 11) | .signals' <<<"$out")"
 check "a deviation bullet, the Door line aside" '[{"kind":"deviation","text":"- Deviation: the brief named a file that had moved."}]' \
   "$(jq -c '.candidates[] | select(.number == 12) | .signals' <<<"$out")"
@@ -122,7 +122,23 @@ out=$(PATH=$tmp/bin /bin/bash "$s" candidates 2>/dev/null); rc=$?
 check_rc "jq missing exits 2" 2 "$rc"
 check "and says so in JSON written without it" 'jq not installed' "$(jq -r .error <<<"$out")"
 
+# An empty answer is unreadable, never an empty window.
+gh_route 'search/issues' ''
+out=$(bash "$s" candidates 2>/dev/null); rc=$?
+check_rc "an empty search answer exits 2" 2 "$rc"
+check "naming the read" 'merged PRs: unreadable answer from gh' "$(jq -r .error <<<"$out")"
+
 gh_route 'search/issues' "{\"total_count\": $(jq length <<<"$items"), \"items\": $items}"
+for read in 'review comments of #14:repos/{owner}/{repo}/pulls/14/comments' 'earlier retro issues:repos/{owner}/{repo}/issues'; do
+  what=${read%%:*} endpoint=${read#*:}
+  saved=$(cat "$GH_ROUTES/${endpoint//\//_}")
+  gh_route "$endpoint" ''
+  out=$(bash "$s" candidates 2>/dev/null); rc=$?
+  check_rc "an empty answer exits 2: $what" 2 "$rc"
+  check "naming the read: $what" "$what: unreadable answer from gh" "$(jq -r .error <<<"$out")"
+  gh_route "$endpoint" "$saved"
+done
+
 rm "$GH_ROUTES/repos_{owner}_{repo}_pulls_14_comments"
 out=$(bash "$s" candidates 2>/dev/null); rc=$?
 check_rc "a refused read exits 1" 1 "$rc"

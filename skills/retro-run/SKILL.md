@@ -30,7 +30,8 @@ flags and the JSON it prints. Run it from the repository's checkout:
 It prints JSON: `candidates` (the window's merged PRs that carry a signal),
 `merged` (every PR merged in it) and `filed` (each earlier issue labelled
 `retro`, open or closed, with its `classes`). A signal's `kind` is `thread` (a
-reviewer's review thread), `deviation` (a deviation bullet under `## Special
+reviewer's review thread, its `replies` showing whether it was fixed or
+declined), `deviation` (a deviation bullet under `## Special
 things to note`), `needs-attention` (that section, when not `None.`) or
 `review-rounds` (a `## Review` section recording a second round). Exit 1 or
 2: write `retro-run <version>: <error>` as the last line and stop, `<version>`

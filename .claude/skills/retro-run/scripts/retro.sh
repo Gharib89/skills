@@ -18,8 +18,8 @@
 #         (UTC), `merged` the count of PRs merged in it; each candidate
 #         {number, title, url, closes[], signals[]} lowest number first,
 #         `closes` the issues its body closes, each signal {kind, text}, a
-#         `thread` also {author, path}; each filed issue {number, state,
-#         classes[]}
+#         `thread` also {author, path, replies[]}, each reply {author, text};
+#         each filed issue {number, state, classes[]}
 # exit: 0 answered · 1 GitHub refused a read (gh's message in `error`) · 2
 #       usage, gh or jq missing, or an answer from gh it cannot read
 set -uo pipefail
@@ -59,7 +59,8 @@ since=$(jq -nr --argjson d "$days" 'now - $d * 86400 | todate')
 # Search filters by day; the merged_at comparison makes the window exact.
 get "merged PRs" "search/issues?q=repo:$repo+is:pr+is:merged+merged:>=${since%%T*}&per_page=100"
 prs=$(jq -cs --arg since "$since" '
-  [.[].items[] | select(.pull_request.merged_at >= $since)
+  if length == 0 then error else . end
+  | [.[].items[] | select(.pull_request.merged_at >= $since)
     | {number, title, url: .html_url, author: .user.login, body: (.body // "" | gsub("\r"; ""))}]
   | if all(.[]; (.number | type) == "number" and (.title | type) == "string" and (.author | type) == "string")
     then sort_by(.number) else error end' <<<"$got" 2>/dev/null) \
@@ -67,8 +68,10 @@ prs=$(jq -cs --arg since "$since" '
 
 # One PR as a candidate, given {pr, comments}, or nothing when it carries no signal.
 candidate='def section($h): [.pr.body | scan("(?ms)^## " + $h + "[ \t]*\n(.*?)(?=^## |\\z)")] | (.[0][0] // "") | gsub("^\\s+|\\s+$"; "");
-  ([.comments[] | select(.in_reply_to_id == null and .user.login != $author)
-    | {kind: "thread", author: .user.login, path, text: .body}]
+  .comments as $c
+  | ([$c[] | select(.in_reply_to_id == null and .user.login != $author) | .id as $id
+    | {kind: "thread", author: .user.login, path, text: .body,
+       replies: [$c[] | select(.in_reply_to_id == $id) | {author: .user.login, text: .body}]}]
   + [section("Special things to note") | ("\n" + .) | split("\n- ")[1:][] | "- " + gsub("\\s+$"; "")
     | select((test("^- \\S+ Door:") | not) and test("(?i)deviat|departure")) | {kind: "deviation", text: .}]
   + [section("Needs attention") | select(. != "" and . != "None.") | {kind: "needs-attention", text: .}]
