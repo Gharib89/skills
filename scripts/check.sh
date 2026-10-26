@@ -62,7 +62,7 @@ prose-budget|scripts/prose-budget-check.sh
 stray-files|scripts/stray-file-check.sh
 frontmatter|scripts/frontmatter-check.sh
 self-contained|scripts/self-contained-check.sh
-contract|scripts/contract-check.sh skills/ship/scripts skills scripts tests .claude/hooks && scripts/contract-check.sh skills/update-skills/scripts skills/update-skills && scripts/contract-check.sh skills/drive-session/scripts skills/drive-session && scripts/contract-check.sh skills/setup-project/scripts skills/setup-project'
+contract|scripts/contract-check.sh skills/ship/scripts skills scripts tests .claude/hooks && scripts/contract-check.sh skills/update-skills/scripts skills/update-skills && scripts/contract-check.sh skills/drive-session/scripts skills/drive-session && scripts/contract-check.sh skills/setup-project/scripts skills/setup-project && scripts/contract-check.sh skills/retro-run/scripts skills/retro-run'
 # FULL_ROWS names the cloud cannot run (the profile's Local-only: parts),
 # space-separated: `skipped` unrun when CLAUDE_CODE_REMOTE=true.
 LOCAL_ONLY=''

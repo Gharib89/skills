@@ -98,6 +98,11 @@
       "skillPath": "skills/engineering/retro/SKILL.md",
       "computedHash": "b8d55851a2909e26c2dbb2e8563719c87b3b700559f604e4df344f8c27e21047"
     },
+    "retro-run": {
+      "source": ".",
+      "sourceType": "local",
+      "computedHash": "0ee6c8edbb50ac401a05634786101bb7cfe25d5974fe9dd2f40cc329712988c5"
+    },
     "setup-harness": {
       "source": ".",
       "sourceType": "local",

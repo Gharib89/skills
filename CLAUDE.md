@@ -36,7 +36,7 @@ under `## Adding a skill this repo writes` in
 longer reads is reported now, not on the next `/ship`:
 
 ```sh
-npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --skill grill-with-artifact --skill drive-session --skill setup-project --skill explainer-video --agent claude-code -y \
+npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --skill grill-with-artifact --skill drive-session --skill setup-project --skill explainer-video --skill retro-run --agent claude-code -y \
   && .claude/skills/ship/scripts/preflight.sh none
 ```
 
