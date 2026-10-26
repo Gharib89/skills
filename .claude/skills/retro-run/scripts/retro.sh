@@ -117,7 +117,7 @@ if [ "$cmd" = file ]; then
     body: ("A retro run found these classes of mistake recurring across two or more merged PRs, none listed by an earlier `retro` issue. Triage each: accept it as a ticket at its proposed fix site, or decline it. Later retro runs leave out every class listed here either way.\n\n## Findings\n"
       + (map("\n### \(.key)\n\nClass: \(.key)\nSeen in: \(.prs | map("#\(.)") | join(", "))\nProposed fix site: \(.site)\nSummary: \(.summary)\n") | join("")))}' <<<"$split" \
     | gh api -X POST 'repos/{owner}/{repo}/issues' --input - 2>&1) || fail "creating the issue: $(tail -1 <<<"$got")"
-  jq -c --argjson split "$split" '{issue: (.number | numbers), url: (.html_url | strings),
+  jq -ec --argjson split "$split" '{issue: (.number | numbers), url: (.html_url | strings),
     filed: [$split.kept[].key], dropped: $split.dropped}' <<<"$got" 2>/dev/null \
     || tooling "creating the issue: unreadable answer from gh"
   exit 0

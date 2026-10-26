@@ -124,6 +124,12 @@ for bad in 'file' "file $findings extra"; do
 done
 
 gh_route "$issues" '[]'
+for answer in '{}' '{"number": 950}' ''; do
+  gh_route "POST $issues" "$answer"
+  out=$(bash "$s" file "$findings" 2>/dev/null); rc=$?
+  check_rc "an unreadable create answer exits 2: '$answer'" 2 "$rc"
+  check "naming it: '$answer'" 'creating the issue: unreadable answer from gh' "$(jq -r .error <<<"$out")"
+done
 rm "$GH_ROUTES/POST repos_{owner}_{repo}_issues"
 out=$(bash "$s" file "$findings" 2>/dev/null); rc=$?
 check_rc "a refused create exits 1" 1 "$rc"
