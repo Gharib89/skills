@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/scene.js"></script>
+    <style>
+      body { margin: 0; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+      canvas { position: absolute; inset: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-no-timeline data-start="0" data-duration="4" data-width="1920" data-height="1080">
+      <canvas id="c" width="1920" height="1080"></canvas>
+    </div>
+    <script>
+      var draw = LitScene.makeScene(document.getElementById("c"), 1920, 1080);
+      draw(0);
+      window.addEventListener("hf-seek", function (e) { draw(e.detail.time); });
+    </script>
+  </body>
+</html>

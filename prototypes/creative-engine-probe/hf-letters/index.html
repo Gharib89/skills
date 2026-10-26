@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "PlexArabic"; src: url("assets/arabic.ttf") format("truetype"); font-weight: 700; }
+      body { margin: 0; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #14161c; }
+      .line { position: absolute; left: 0; right: 0; text-align: center; font-family: "PlexArabic"; font-weight: 700; font-size: 110px; color: #fafafa; }
+      .line span { display: inline-block; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2" data-width="1920" data-height="1080">
+      <div class="line" id="whole" dir="rtl" style="top: 120px">بيوقف الأمر قبل ما يتنفذ</div>
+      <div class="line" id="naive" dir="rtl" style="top: 440px"></div>
+      <div class="line" id="zwj" dir="rtl" style="top: 760px"></div>
+    </div>
+    <script>
+      var TEXT = "بيوقف الأمر قبل ما يتنفذ";
+      // Port of splitArabicLetters from Remotion's remotion-markup/arabic-text.md skill reference.
+      var ZWJ = "‍";
+      var RIGHT_JOINING = /[آ-إاةد-زوٱ-ٳٵ-ٷڈ-ڙۀۃ-ۋۍۏےۓە]/;
+      var LETTER = /[ؠ-يٮ-ۓەۺ-ۼۿ]/;
+      var LTR_RUN = /^[0-9٠-٩۰-۹A-Za-z٫٬.,:%]+$/;
+      var MARK = /[ً-ٰٟۖ-ۭ]/;
+      var MARKS = /[ً-ٰٟۖ-ۭ‍]/g;
+      function first(u) { return u.replace(MARKS, "")[0] || ""; }
+      function last(u) { return u.replace(MARKS, "").slice(-1); }
+      function joinsPrev(u) { return LETTER.test(first(u)) && first(u) !== "ء"; }
+      function joinsNext(u) { return LETTER.test(last(u)) && last(u) !== "ء" && !RIGHT_JOINING.test(last(u)); }
+      function splitArabicLetters(text) {
+        var g = [];
+        for (var ch of text) { if (MARK.test(ch) && g.length > 0) g[g.length - 1] += ch; else g.push(ch); }
+        var units = [];
+        for (var i = 0; i < g.length; i++) {
+          if (LTR_RUN.test(g[i])) { var run = g[i]; while (g[i + 1] && LTR_RUN.test(g[i + 1])) run += g[++i]; units.push(run); }
+          else if (first(g[i]) === "ل" && /[آأإا]/.test(first(g[i + 1] || ""))) units.push(g[i] + g[++i]);
+          else units.push(g[i]);
+        }
+        return units.map(function (u, i) {
+          var before = i > 0 && joinsNext(units[i - 1]) && joinsPrev(u) ? ZWJ : "";
+          var after = i < units.length - 1 && joinsNext(u) && joinsPrev(units[i + 1]) ? ZWJ : "";
+          return before + u + after;
+        });
+      }
+      function fill(id, units) {
+        var el = document.getElementById(id);
+        units.forEach(function (u) { var s = document.createElement("span"); s.textContent = u === " " ? " " : u; el.appendChild(s); });
+      }
+      fill("naive", Array.from(TEXT));
+      fill("zwj", splitArabicLetters(TEXT));
+      var tl = gsap.timeline({ paused: true });
+      tl.from("#naive span, #zwj span", { y: 60, opacity: 0, duration: 0.4, stagger: 0.02 }, 0);
+      tl.set({}, {}, 2);
+      window.__timelines = window.__timelines || {};
+      window.__timelines.main = tl;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "probe-lit",
+  "private": true,
+  "dependencies": {
+    "three": "0.186.1"
+  }
+}

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "PlexArabic";
+        src: url("assets/arabic.ttf") format("truetype");
+        font-weight: 700;
+      }
+      body { margin: 0; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: #14161c; }
+      .card { position: absolute; top: 140px; width: 240px; height: 240px; border-radius: 32px; }
+      svg { position: absolute; inset: 0; }
+      #ar {
+        position: absolute; left: 0; right: 0; top: 860px; text-align: center;
+        font-family: "PlexArabic"; font-weight: 700; font-size: 84px; color: #fafafa; opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="10" data-width="1920" data-height="1080">
+      <div class="card" style="left: 200px; background: #e07a5f"></div>
+      <div class="card" style="left: 520px; background: #f2cc8f"></div>
+      <div class="card" style="left: 840px; background: #81b29a"></div>
+      <div class="card" style="left: 1160px; background: #3d85c6"></div>
+      <div class="card" style="left: 1480px; background: #c08497"></div>
+      <svg width="1920" height="1080">
+        <path id="path" d="M 160 760 C 460 420, 760 980, 1060 640 S 1560 360, 1760 620" fill="none" stroke="#f2cc8f" stroke-width="10" stroke-linecap="round" />
+        <circle id="dot" r="22" fill="#e07a5f" />
+      </svg>
+      <div id="ar" dir="rtl">الـ hook بيوقف rm -rf قبل ما يتنفذ</div>
+    </div>
+    <script>
+      // Damped spring as a GSAP ease (zeta 0.41, as Remotion damping 9 / stiffness 120 / mass 1).
+      function springEase(stiffness, damping, mass) {
+        var w0 = Math.sqrt(stiffness / mass);
+        var zeta = damping / (2 * Math.sqrt(stiffness * mass));
+        var wd = w0 * Math.sqrt(1 - zeta * zeta);
+        var T = Math.log(1000) / (zeta * w0);
+        var x = function (t) {
+          return 1 - Math.exp(-zeta * w0 * t) * (Math.cos(wd * t) + ((zeta * w0) / wd) * Math.sin(wd * t));
+        };
+        return { ease: function (p) { return p >= 1 ? 1 : x(p * T); }, duration: T };
+      }
+      var sp = springEase(120, 9, 1);
+      var path = document.getElementById("path");
+      var dot = document.getElementById("dot");
+      var len = path.getTotalLength();
+      path.style.strokeDasharray = len;
+      path.style.strokeDashoffset = len;
+      var start = path.getPointAtLength(0);
+      dot.setAttribute("cx", start.x);
+      dot.setAttribute("cy", start.y);
+
+      var tl = gsap.timeline({ paused: true });
+      tl.fromTo(".card", { y: 300, scale: 0.4, rotation: 25 },
+        { y: 0, scale: 1, rotation: 0, duration: sp.duration, ease: sp.ease, stagger: 5 / 30 }, 6 / 30);
+      var prog = { p: 0 };
+      tl.to(prog, {
+        p: 1, duration: 3, ease: "power3.inOut",
+        onUpdate: function () {
+          path.style.strokeDashoffset = len * (1 - prog.p);
+          var pt = path.getPointAtLength(len * prog.p);
+          dot.setAttribute("cx", pt.x);
+          dot.setAttribute("cy", pt.y);
+        },
+      }, 1.5);
+      tl.fromTo("#ar", { y: 120, opacity: 0 }, { y: 0, opacity: 1, duration: sp.duration, ease: sp.ease }, 5);
+      tl.set({}, {}, 10);
+      window.__timelines = window.__timelines || {};
+      window.__timelines.main = tl;
+    </script>
+  </body>
+</html>
