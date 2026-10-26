@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Read the git host's record of a window of merged PRs for a retro run.
+# Read the git host's record of a window of merged PRs for a retro run, and
+# file the classes of mistake the run finds recurring in it.
 #
 #   retro candidates [--days <n>]
 #   retro file <findings.json>
@@ -13,11 +14,11 @@
 # `None.` (`needs-attention`); a `## Review` section recording a second round
 # (`review-rounds`). A class line is a body line `Class: <key>`. Reads the
 # repository of the current directory (or GH_REPO) over REST only, since a
-# cloud sandbox refuses GraphQL, and writes nothing.
+# cloud sandbox refuses GraphQL; `candidates` writes nothing.
 #
 # `file` files the model's findings, a JSON array of {key, summary, prs[], site}
-# (`key` kebab-case, `prs` the PR numbers it was seen in, `site` the proposed
-# fix site), as one issue labelled `needs-triage` and `retro`, creating the
+# (`key` kebab-case and unique, `prs` the PR numbers it was seen in, `site` the
+# proposed fix site, `summary` and `site` one line each), as one issue labelled `needs-triage` and `retro`, creating the
 # `retro` label when missing. It first drops each finding whose key an earlier
 # `retro` issue lists, and files nothing when none is left or the file is empty
 # or `[]`. The body carries each key as a `Class: <key>` line, so `candidates`
@@ -62,12 +63,21 @@ case $cmd in
   file)
     [ $# -eq 2 ] || tooling "$usage"
     [ -f "$2" ] && [ -r "$2" ] || tooling "findings: cannot read $2"
-    findings=$(jq -cs 'if length == 0 then [] elif length == 1 then .[0] else error end
-      | if type == "array" and all(.[]; (.key | type == "string" and test("^[a-z0-9]+(-[a-z0-9]+)*$"))
-          and (.summary | type == "string" and . != "") and (.site | type == "string" and . != "")
-          and (.prs | type == "array" and length > 0 and all(.[]; type == "number")))
-        then . else error end' "$2" 2>/dev/null) \
-      || tooling "findings: not a JSON array of {key, summary, prs[], site}" ;;
+    # One line per summary and site, so no body line but the script's own
+    # reads as a `Class:` line.
+    findings=$(jq -cs --arg f "$2" 'def line: type == "string" and . != "" and (test("[\r\n]") | not);
+      def entry: type == "object" and (.key | type == "string" and test("^[a-z0-9]+(-[a-z0-9]+)*$"))
+        and (.summary | line) and (.site | line)
+        and (.prs | type == "array" and length > 0 and all(.[]; type == "number"));
+      (if length == 0 then [] elif length == 1 then .[0] else null end) as $a
+      | if ($a | type) != "array" then {error: "findings \($f): not a JSON array"}
+        else first(($a | to_entries[] | select(.value | entry | not)
+            | {error: "findings \($f): entry [\(.key)] is not {key, summary, prs[], site}"}),
+          ($a | group_by(.key)[] | select(length > 1)
+            | {error: "findings \($f): key \(.[0].key) appears twice"}),
+          {findings: $a}) end' "$2" 2>/dev/null) || tooling "findings $2: not JSON"
+    jq -e 'has("findings")' <<<"$findings" >/dev/null || tooling "$(jq -r .error <<<"$findings")"
+    findings=$(jq -c .findings <<<"$findings") ;;
   *) tooling "$usage" ;;
 esac
 command -v gh >/dev/null || tooling "gh not installed"
@@ -88,9 +98,8 @@ read_filed() {
 
 if [ "$cmd" = file ]; then
   read_filed
-  split=$(jq -c --argjson filed "$filed" '[$filed[].classes[]] as $old
-    | {kept: map(select(.key as $k | any($old[]; . == $k) | not)),
-       dropped: [.[] | select(.key as $k | any($old[]; . == $k)) | .key]}' <<<"$findings")
+  split=$(jq -c --argjson filed "$filed" 'map(. + {old: (.key | IN($filed[].classes[]))})
+    | {kept: map(select(.old | not) | del(.old)), dropped: map(select(.old) | .key)}' <<<"$findings")
   if jq -e '.kept == []' <<<"$split" >/dev/null; then
     jq -c '{issue: null, url: null, filed: [], dropped}' <<<"$split"
     exit 0
@@ -105,7 +114,7 @@ if [ "$cmd" = file ]; then
     title: "Retro run \($date): \(length) recurring \(if length == 1 then "class" else "classes" end) of mistake",
     labels: ["needs-triage", "retro"],
     body: ("A retro run found these classes of mistake recurring across two or more merged PRs, none listed by an earlier `retro` issue. Triage each: accept it as a ticket at its proposed fix site, or decline it. Later retro runs leave out every class listed here either way.\n\n## Findings\n"
-      + (map("\n### \(.key)\n\nClass: \(.key)\nSeen in: \(.prs | map("#\(.)") | join(", "))\nProposed fix site: \(.site)\n\n\(.summary)\n") | join("")))}' <<<"$split" \
+      + (map("\n### \(.key)\n\nClass: \(.key)\nSeen in: \(.prs | map("#\(.)") | join(", "))\nProposed fix site: \(.site)\nSummary: \(.summary)\n") | join("")))}' <<<"$split" \
     | gh api -X POST 'repos/{owner}/{repo}/issues' --input - 2>&1) || fail "creating the issue: $(tail -1 <<<"$got")"
   jq -c --argjson split "$split" '{issue: (.number | numbers), url: (.html_url | strings),
     filed: [$split.kept[].key], dropped: $split.dropped}' <<<"$got" 2>/dev/null \

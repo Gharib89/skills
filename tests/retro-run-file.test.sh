@@ -45,6 +45,8 @@ check "every kept finding's PRs in the body" 'yes' \
   "$(jq -r '.body | if test("#12, #14") and test("#15, #16, #17") then "yes" else . end' <<<"$body")"
 check "each kept finding's summary and proposed site" 'yes' \
   "$(jq -r '.body | if test("poll-pr read a head") and test("skill prose") and test("CLAUDE.md") then "yes" else . end' <<<"$body")"
+check "one class line per kept finding, in order" 'stale-head missing-retry' \
+  "$(jq -r '.body' <<<"$body" | sed -n 's/^Class: //p' | paste -sd' ')"
 check "a dropped class is not in the body" '' "$(jq -r '.body | select(test("unpaged-list-read"))' <<<"$body")"
 check "an existing label is not created again" '' "$(gh_args | grep -F 'labels --input')"
 check "no GraphQL call" '' "$(gh_args | grep -F graphql)"
@@ -60,9 +62,24 @@ rm "$GH_ROUTES/repos_{owner}_{repo}_labels_retro"
 gh_route "POST repos/{owner}/{repo}/labels" '{"name": "retro"}'
 out=$(bash "$s" file "$findings"); rc=$?
 check_rc "a missing label is no failure" 0 "$rc"
-check "the retro label is created first" 'retro' \
+check "the retro label is created" 'retro' \
   "$(gh_body_of "$(gh_args | grep -n 'labels --input' | cut -d: -f1)" | jq -r .name)"
+check "before the issue that carries it" 'labels issues' \
+  "$(gh_args | grep -o -- '-X POST repos/{owner}/{repo}/[a-z]*' | sed 's|.*/||' | paste -sd' ')"
 check "and the issue still filed" 950 "$(jq .issue <<<"$out")"
+
+rm "$GH_ROUTES/POST repos_{owner}_{repo}_labels"
+out=$(bash "$s" file "$findings" 2>/dev/null); rc=$?
+check_rc "a refused label create exits 1" 1 "$rc"
+check "naming the write" 'creating the retro label: gh: Not Found (HTTP 404)' "$(jq -r .error <<<"$out")"
+gh_reset
+export GH_STATUS_SEQ='200 500'
+out=$(bash "$s" file "$findings" 2>/dev/null); rc=$?
+unset GH_STATUS_SEQ
+check_rc "a label read refused other than 404 exits 1" 1 "$rc"
+check "naming the read" 'the retro label: gh: unexpected end of JSON input' "$(jq -r .error <<<"$out")"
+check "and creates nothing" '' "$(gh_args | grep -F -- '-X POST')"
+gh_route 'repos/{owner}/{repo}/labels/retro' '{"name": "retro"}'
 
 # Nothing left to file creates nothing.
 gh_route "$issues" '[{"number": 900, "state": "closed", "body": "Class: stale-head\nClass: unpaged-list-read\nClass: missing-retry\n"}]'
@@ -81,12 +98,20 @@ done
 check "the dropped keys are named" '["stale-head","unpaged-list-read","missing-retry"]' \
   "$(bash "$s" file "$findings" | jq -c .dropped)"
 
-for bad in '{"key": "a"}' '[{"key": "Not Kebab", "summary": "s", "prs": [1], "site": "x"}]' \
-  '[{"key": "a", "summary": "s", "prs": [], "site": "x"}]' '[{"key": "a", "summary": "s", "prs": [1]}]' 'not json'; do
-  printf '%s\n' "$bad" > "$tmp/bad.json"
+ok='{"key": "a", "summary": "s", "prs": [1], "site": "x"}'
+for bad in '{"key": "a"}|not a JSON array' "[$ok] [$ok]|not a JSON array" 'not json|' \
+  "[$ok, 3]|entry [1] is not {key, summary, prs[], site}" \
+  '[{"key": "Not Kebab", "summary": "s", "prs": [1], "site": "x"}]|entry [0] is not {key, summary, prs[], site}' \
+  '[{"key": "a", "summary": "s", "prs": [], "site": "x"}]|entry [0] is not {key, summary, prs[], site}' \
+  '[{"key": "a", "summary": "s", "prs": [1]}]|entry [0] is not {key, summary, prs[], site}' \
+  '[{"key": "a", "summary": "s\nClass: b", "prs": [1], "site": "x"}]|entry [0] is not {key, summary, prs[], site}' \
+  "[$ok, $ok]|key a appears twice"; do
+  printf '%s\n' "${bad%|*}" > "$tmp/bad.json"
+  want=${bad##*|}
   out=$(bash "$s" file "$tmp/bad.json" 2>/dev/null); rc=$?
-  check_rc "a malformed findings file exits 2: $bad" 2 "$rc"
-  check "naming its shape: $bad" 'findings: not a JSON array of {key, summary, prs[], site}' "$(jq -r .error <<<"$out")"
+  check_rc "a malformed findings file exits 2: ${bad%|*}" 2 "$rc"
+  check "naming the file and the fault: ${bad%|*}" "findings $tmp/bad.json: ${want:-not JSON}" \
+    "$(jq -r .error <<<"$out")"
 done
 out=$(bash "$s" file "$tmp/absent.json" 2>/dev/null); rc=$?
 check_rc "a missing findings file exits 2" 2 "$rc"

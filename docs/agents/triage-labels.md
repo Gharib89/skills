@@ -16,7 +16,7 @@ Edit the right-hand column to match whatever vocabulary you actually use.
 
 ## Marker labels
 
-A marker label says where an issue came from. It is not a triage role, so an issue carries one beside its role label, and triage neither adds nor removes it.
+A marker label says where an issue came from. It is not a triage role, so an issue carries one beside its role label.
 
 | Label | Color | Description |
 | --- | --- | --- |

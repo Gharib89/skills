@@ -46,7 +46,8 @@ prints `issue` and `url` (both `null` when nothing was left to file), `filed`
 and `dropped`, each a list of keys.
 
 From either subcommand, exit 1 or 2: write `retro-run <version>: <error>` as
-the last line and stop, `<version>` being `metadata.version` above.
+the last line and stop, `<error>` being its JSON's `error` and `<version>`
+`metadata.version` above.
 
 ## The run
 
@@ -67,17 +68,18 @@ the last line and stop, `<version>` being `metadata.version` above.
 4. **Propose a fix site.** For each class left, name where the fix belongs, so
    triage can turn it straight into a ticket: an automated check, review
    standards, skill prose or CLAUDE.md, followed by the file or skill it
-   lands in when the signals show one (`skill prose: ship's phase-7 steps`).
-5. **Report.** One entry per class left: its key, its summary, the PRs it was
-   seen in as `#<n>` links, and its fix site.
-6. **File.** Write the classes left to a findings file outside the checkout, a
-   JSON array with one `{"key", "summary", "prs", "site"}` object per class,
-   `prs` the PR numbers as integers; with no class left, write `[]`. Run
-   `file` on it, then end on the last line, alone, the second form when
-   `issue` is `null`:
+   lands in when the signals show one (`skill prose: ship's SKILL.md`).
+5. **File.** Write the classes left to a findings file made with `mktemp`,
+   outside the checkout: a JSON array with one `{"key", "summary", "prs",
+   "site"}` object per class, `prs` the PR numbers as integers, the summary
+   and site each one line; with no class left, write `[]`. Run `file` on it.
+6. **Report.** One entry per key under `file`'s `filed`: its key, its summary,
+   the PRs it was seen in as `#<n>` links, and its fix site. Name each key
+   under `dropped` as already filed. Then end on the last line, alone, the
+   second form when `issue` is `null`:
 
-   - `retro-run <version>: filed #<issue> with <k> findings from <m> merged PRs.`
+   - `retro-run <version>: filed #<issue> with <k> new classes from <m> merged PRs.`
    - `retro-run <version>: nothing new recurred in <m> merged PRs.`
 
-   `<version>` is `metadata.version` above, `<k>` the length of `file`'s
-   `filed`, and `<m>` is `candidates`' `merged`.
+   `<version>` is `metadata.version` above, `<k>` the length of `filed`, and
+   `<m>` is `candidates`' `merged`.

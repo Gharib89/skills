@@ -38,7 +38,7 @@ for a in "${@:2}"; do
     -X:*|--method:*) method=$a ;;
     *:--input=*) input=${a#--input=} ;;
     *:-i|*:--include) include=1 ;;
-    *:-*|-X:*|--method:*|-q:*|--jq:*|-H:*|--header:*|-f:*|--raw-field:*|-F:*|--field:*) ;;
+    *:-*|-q:*|--jq:*|-H:*|--header:*|-f:*|--raw-field:*|-F:*|--field:*) ;;
     *) [ -n "$endpoint" ] || endpoint=$a ;;
   esac
   prev=$a
