@@ -59,10 +59,12 @@ ${clean#Closes #1
 }")
 $(pr 20 1 "${clean/Closes #1/This fixes #4.}
 - claude: two rounds.")
+$(pr 22 1 "${clean/Blast radius: none./Blast radius: none; a departure from the brief.}")
+$(pr 23 1 "${clean/One round, clean./Four rounds, each with findings.}")
 EOF
 )
 gh_route 'search/issues' "{\"total_count\": $(jq length <<<"$items"), \"items\": $items}"
-for n in 10 12 13 14 15 17 18 19 20; do gh_route "repos/{owner}/{repo}/pulls/$n/comments" '[]'; done
+for n in 10 12 13 14 15 17 18 19 20 22 23; do gh_route "repos/{owner}/{repo}/pulls/$n/comments" '[]'; done
 # #11 carries one thread a reviewer opened; #16 only the author's own comment.
 gh_route 'repos/{owner}/{repo}/pulls/11/comments' '[
   {"id": 1, "in_reply_to_id": null, "user": {"login": "codex[bot]"}, "path": "a.sh", "body": "P2: the read is never paged"},
@@ -76,7 +78,7 @@ gh_route 'repos/{owner}/{repo}/issues' '[
 
 out=$(bash "$s" candidates); rc=$?
 check_rc "candidates answers" 0 "$rc"
-check "only the signal PRs in the window, its edge included, lowest first" '[11,12,13,14,17,20]' \
+check "only the signal PRs in the window, its edge included, lowest first" '[11,12,13,14,17,20,23]' \
   "$(jq -c '[.candidates[].number]' <<<"$out")"
 check "a reviewer's thread is the signal, its replies carried with it" \
   '[{"kind":"thread","author":"codex[bot]","path":"a.sh","text":"P2: the read is never paged","replies":[{"author":"owner","text":"Fixed."}]}]' \
@@ -87,17 +89,20 @@ check "a Needs attention section other than None." '[{"kind":"needs-attention","
   "$(jq -c '.candidates[] | select(.number == 13) | .signals' <<<"$out")"
 check "a Review section recording a second round" '["review-rounds"]' \
   "$(jq -c '[.candidates[] | select(.number == 14) | .signals[].kind]' <<<"$out")"
+check "a round count in words past three" '["review-rounds"]' \
+  "$(jq -c '[.candidates[] | select(.number == 23) | .signals[].kind]' <<<"$out")"
+check "a Door line naming a departure is no deviation" '' "$(jq '.candidates[] | select(.number == 22)' <<<"$out")"
 check "each candidate names its title, url and closing issue" '{"title":"PR 12","url":"https://github.com/o/r/pull/12","closes":[1]}' \
   "$(jq -c '.candidates[] | select(.number == 12) | {title, url, closes}' <<<"$out")"
 check "another closing keyword, in any case" '[4]' "$(jq -c '.candidates[] | select(.number == 20) | .closes' <<<"$out")"
-check "merged counts every PR in the window" 9 "$(jq .merged <<<"$out")"
+check "merged counts every PR in the window" 11 "$(jq .merged <<<"$out")"
 check "earlier retro issues' class lines, pull requests aside" \
   '[{"number":900,"state":"closed","classes":["unpaged-list-read","stale-head"]},{"number":901,"state":"open","classes":["brief-path-moved"]}]' \
   "$(jq -c .filed <<<"$out")"
 check "no GraphQL call" '' "$(gh_args | grep -F graphql)"
 
 out=$(bash "$s" candidates --days 14)
-check "--days widens the window" '[11,12,13,14,15,17,18,20]' "$(jq -c '[.candidates[].number]' <<<"$out")"
+check "--days widens the window" '[11,12,13,14,15,17,18,20,23]' "$(jq -c '[.candidates[].number]' <<<"$out")"
 check "since is the window's start" true "$(jq --arg a "$(ago 14.01)" --arg b "$(ago 13.99)" '.since > $a and .since < $b' <<<"$out")"
 
 for bad in '--days 0' '--days -1' '--days' 'other'; do

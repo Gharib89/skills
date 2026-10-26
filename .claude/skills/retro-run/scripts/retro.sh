@@ -75,7 +75,7 @@ candidate='def section($h): [.pr.body | scan("(?ms)^## " + $h + "[ \t]*\n(.*?)(?
   + [section("Special things to note") | ("\n" + .) | split("\n- ")[1:][] | "- " + gsub("\\s+$"; "")
     | select((test("^- \\S+ Door:") | not) and test("(?i)deviat|departure")) | {kind: "deviation", text: .}]
   + [section("Needs attention") | select(. != "" and . != "None.") | {kind: "needs-attention", text: .}]
-  + [section("Review") | select(test("(?i)\\bround [2-9]\\b|\\b([2-9]|two|three) (host |local )?rounds\\b"))
+  + [section("Review") | select(test("(?i)\\bround [2-9]\\b|\\b([2-9]|two|three|four|five|six|seven|eight|nine) (host |local )?rounds\\b"))
     | {kind: "review-rounds", text: .}]) as $s
   | if ($s | length) == 0 then empty else
     {number: .pr.number, title: .pr.title, url: .pr.url,
