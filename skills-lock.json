@@ -65,17 +65,17 @@
     },
     "hyperframes": {
       "source": "heygen-com/hyperframes",
-      "ref": "683e9b1765aa1d4d45f91ac000b6e65f7767d728",
+      "ref": "9ebc1f8a13fc2c6756f92394688e35f9891eb5c8",
       "sourceType": "github",
       "skillPath": "skills/hyperframes/SKILL.md",
-      "computedHash": "c57aac160bdc0ca7b347727b072d7b9ac16a23992b970c6a1031f84eb8c99cc5"
+      "computedHash": "754d909e943e97050d544cebedc21b24138a4e805518dc9603fa914e9aed6261"
     },
     "hyperframes-cli": {
       "source": "heygen-com/hyperframes",
-      "ref": "683e9b1765aa1d4d45f91ac000b6e65f7767d728",
+      "ref": "9ebc1f8a13fc2c6756f92394688e35f9891eb5c8",
       "sourceType": "github",
       "skillPath": "skills/hyperframes-cli/SKILL.md",
-      "computedHash": "311f4a6f46acb79b4024415d2082e4d8bfce55045be33a950777959f83df4d35"
+      "computedHash": "e28f813e80d5fa5e1049bfbe4bd1886437fd0cf7aa775dba7374c78f78b320f6"
     },
     "prototype": {
       "source": "mattpocock/skills",
