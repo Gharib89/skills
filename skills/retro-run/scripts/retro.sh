@@ -18,18 +18,19 @@
 #
 # `file` files the model's findings, a JSON array of {key, summary, prs[], site}
 # (`key` kebab-case and unique, `prs` the PR numbers it was seen in, `site` the
-# proposed fix site, `summary` and `site` one line each), as one issue labelled `needs-triage` and `retro`, creating the
-# `retro` label when missing. It first drops each finding whose key an earlier
-# `retro` issue lists, and files nothing when none is left or the file is empty
-# or `[]`. The body carries each key as a `Class: <key>` line, so `candidates`
-# reads it back. REST only, like `candidates`.
+# proposed fix site, `summary` and `site` one line each), as one issue labelled
+# `needs-triage` and `retro`, creating the `retro` label when missing. It first
+# drops each finding whose key an earlier `retro` issue lists, and files nothing
+# when none is left or the file is empty or `[]`. The body carries each key as
+# a `Class: <key>` line, so `candidates` reads it back. REST only, like
+# `candidates`.
 #
-# stdout: candidates: {since, merged, candidates[], filed[]}: `since` the window's start
-#         (UTC), `merged` the count of PRs merged in it; each candidate
-#         {number, title, url, closes[], signals[]} lowest number first,
-#         `closes` the issues its body closes, each signal {kind, text}, a
-#         `thread` also {author, path, replies[]}, each reply {author, text};
-#         each filed issue {number, state, classes[]}
+# stdout: candidates: {since, merged, candidates[], filed[]}: `since` the
+#         window's start (UTC), `merged` the count of PRs merged in it; each
+#         candidate {number, title, url, closes[], signals[]} lowest number
+#         first, `closes` the issues its body closes, each signal {kind,
+#         text}, a `thread` also {author, path, replies[]}, each reply
+#         {author, text}; each filed issue {number, state, classes[]}
 #         file: {issue, url, filed[], dropped[]}: the issue created, or both
 #         null when nothing was left to file; `filed` and `dropped` class keys
 # exit: 0 answered · 1 GitHub refused a read or a write (gh's message in

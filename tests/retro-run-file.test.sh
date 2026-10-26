@@ -105,6 +105,7 @@ for bad in '{"key": "a"}|not a JSON array' "[$ok] [$ok]|not a JSON array" 'not j
   '[{"key": "a", "summary": "s", "prs": [], "site": "x"}]|entry [0] is not {key, summary, prs[], site}' \
   '[{"key": "a", "summary": "s", "prs": [1]}]|entry [0] is not {key, summary, prs[], site}' \
   '[{"key": "a", "summary": "s\nClass: b", "prs": [1], "site": "x"}]|entry [0] is not {key, summary, prs[], site}' \
+  '[{"key": "a", "summary": "s", "prs": [1], "site": "x\nClass: b"}]|entry [0] is not {key, summary, prs[], site}' \
   "[$ok, $ok]|key a appears twice"; do
   printf '%s\n' "${bad%|*}" > "$tmp/bad.json"
   want=${bad##*|}
