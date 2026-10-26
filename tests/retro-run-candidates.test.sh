@@ -61,7 +61,7 @@ $(pr 20 1 "${clean/Closes #1/This fixes #4.}
 - claude: two rounds.")
 EOF
 )
-gh_route 'search/issues' "{\"total_count\": 7, \"items\": $items}"
+gh_route 'search/issues' "{\"total_count\": $(jq length <<<"$items"), \"items\": $items}"
 for n in 10 12 13 14 15 17 18 19 20; do gh_route "repos/{owner}/{repo}/pulls/$n/comments" '[]'; done
 # #11 carries one thread a reviewer opened; #16 only the author's own comment.
 gh_route 'repos/{owner}/{repo}/pulls/11/comments' '[
@@ -118,7 +118,11 @@ out=$(bash "$s" candidates 2>/dev/null); rc=$?
 check_rc "an item it cannot read exits 2" 2 "$rc"
 check "naming the read" 'merged PRs: unreadable answer from gh' "$(jq -r .error <<<"$out")"
 
-gh_route 'search/issues' "{\"total_count\": 7, \"items\": $items}"
+out=$(PATH=$tmp/bin /bin/bash "$s" candidates 2>/dev/null); rc=$?
+check_rc "jq missing exits 2" 2 "$rc"
+check "and says so in JSON written without it" 'jq not installed' "$(jq -r .error <<<"$out")"
+
+gh_route 'search/issues' "{\"total_count\": $(jq length <<<"$items"), \"items\": $items}"
 rm "$GH_ROUTES/repos_{owner}_{repo}_pulls_14_comments"
 out=$(bash "$s" candidates 2>/dev/null); rc=$?
 check_rc "a refused read exits 1" 1 "$rc"

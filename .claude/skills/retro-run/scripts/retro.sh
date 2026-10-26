@@ -34,6 +34,7 @@ if [ "${1:-}" = --help ]; then
     f { if ($0 !~ /^#/ || /^# exit:/) exit; sub(/^# ?/, ""); print }' "${BASH_SOURCE[0]}"
   exit 0
 fi
+# tooling's answer, written by hand because tooling itself needs jq.
 command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; echo "jq not installed" >&2; exit 2; }
 [ "${1:-}" = candidates ] || tooling "$usage"
 shift

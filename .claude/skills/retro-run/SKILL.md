@@ -33,7 +33,8 @@ It prints JSON: `candidates` (the window's merged PRs that carry a signal),
 reviewer's review thread), `deviation` (a deviation bullet under `## Special
 things to note`), `needs-attention` (that section, when not `None.`) or
 `review-rounds` (a `## Review` section recording a second round). Exit 1 or
-2: write `retro-run <version>: <error>` as the last line and stop.
+2: write `retro-run <version>: <error>` as the last line and stop, `<version>`
+being `metadata.version` above.
 
 ## The run
 
