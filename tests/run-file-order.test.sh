@@ -247,13 +247,20 @@ y=$(out init 707 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done --state 
 held=$(cat "$y")
 for n in 5 6 7 8; do
   check "skip $n while phase 3 is open names phase 3" \
-    "phase 3 is open; close it before skipping $n" "$(err skip "$n" 'small lane' --file "$y")"
+    "phase 3 is open; close it before skipping $n: an open phase 3 settles with \`close 3 --result <name>=n/a\` per pending Verification" "$(err skip "$n" 'small lane' --file "$y")"
   check_rc "skip $n while phase 3 is open exits 1" 1 "$(rc skip "$n" 'small lane' --file "$y")"
 done
 check "the refused skips wrote nothing" "$held" "$(cat "$y")"
 out open 4 --file "$y" >/dev/null
 check "skip 5 while 3 and 4 are open still names phase 3" \
-  "phase 3 is open; close it before skipping 5" "$(err skip 5 'small lane' --file "$y")"
+  "phase 3 is open; close it before skipping 5: an open phase 3 settles with \`close 3 --result <name>=n/a\` per pending Verification" "$(err skip 5 'small lane' --file "$y")"
+# A skip over an open phase 3 itself names the route out: close 3 with an n/a
+# result per pending Verification (#989).
+y=$(out init 709 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done | jq -r .run_file)
+out next 3 --file "$y" >/dev/null
+check "skip 3 after next 3 names close 3 --result" \
+  "phase 3 is open; close it before skipping it: an open phase 3 settles with \`close 3 --result <name>=n/a\` per pending Verification" "$(err skip 3 'small lane' --file "$y")"
+check_rc "skip 3 after next 3 still exits 1" 1 "$(rc skip 3 'small lane' --file "$y")"
 y=$(out init 708 --scratchpad "$tmp" "${done_below2[@]}" --state 2=done --state 3=done --state 4=done | jq -r .run_file)
 check_rc "skip 5 once phase 3 is closed is admitted" 0 "$(rc skip 5 'small lane' --file "$y")"
 

@@ -35,8 +35,9 @@
 # `Cannot find module`, a `No module named` or a like missing-file phrase,
 # proves nothing about the fix: any test that reads the file goes red without
 # it, and the check cannot tell that line from the test's other failures. Such a
-# red is exit 1, red false, so revert a hunk inside the file, or a path the fix
-# changed, instead.
+# red is exit 1, red false. The route out: commit the new file with the lines
+# the test reads stubbed, commit those lines, and prove that commit with
+# `--fix <commit>`; or revert a path the fix changed instead.
 # stdout: {test, paths, red, command[, fix]}   red: true when the test failed on
 #   the reverted tree and its log names no file the fix added as missing;
 #   command: the argv that ran, `["bash", <test>]` by default; fix: the commit
@@ -213,7 +214,7 @@ for p in ${added[@]+"${added[@]}"}; do
   [ -z "$stem" ] || names+=(-e "'$stem'" -e ".$stem'" -e "/$stem'")
   if grep -qF "${names[@]}" <<<"$missing_lines"; then
     verdict false "$@"
-    echo "revert-red: $test_path goes red with $list reverted, but its error names $p as missing, which says nothing about the fix's behaviour: revert a hunk inside it, or a path the fix changed and the test reads." >&2
+    echo "revert-red: $test_path goes red with $list reverted, but its error names $p as missing, which says nothing about the fix's behaviour: commit $p with the lines the test reads stubbed, commit those lines, and prove that commit with --fix <commit>; or revert a path the fix changed and the test reads." >&2
     exit 1
   fi
 done

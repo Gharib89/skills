@@ -57,6 +57,19 @@ check_rc "--fix with no value is tooling" 2 "$(multi_rc tests/one.test.sh lib.sh
 check_rc "a path in neither the fix's parent nor HEAD is refused" 2 "$(multi_rc tests/one.test.sh nothere.sh --fix "$fix2")"
 check_rc "a --fix that is not on HEAD's history is tooling" 2 "$(multi_rc tests/one.test.sh lib.sh --fix "$(git -C "$multi" commit-tree -m x "$(git -C "$multi" write-tree)")")"
 check_rc "a file the fix added is still a missing-file red" 1 "$(multi_rc tests/added.test.sh added.sh)"
+# The route the missing-file refusal names: the new file lands stubbed, then its
+# body lands as its own commit, and --fix on that commit takes out only the body,
+# so the test goes red on behaviour with the file still there (#989).
+printf '%s\n' 'filled() { :; }' > "$multi/filled.sh"
+git -C "$multi" add -A && git -C "$multi" commit -qm 'filled.sh stubbed'
+printf '%s\n' 'filled() { echo n; }' > "$multi/filled.sh"
+git -C "$multi" add -A && git -C "$multi" commit -qm 'filled.sh body'
+fill=$(git -C "$multi" rev-parse HEAD)
+printf '%s\n' 'cd "$(dirname "$0")/.." || exit 2' 'source filled.sh' '[ "$(filled)" = n ]' > "$multi/tests/filled.test.sh"
+git -C "$multi" add -A && git -C "$multi" commit -qm 'filled test'
+check_rc "a new file committed stubbed, then filled, proves the fill with --fix" 0 "$(multi_rc tests/filled.test.sh filled.sh --fix "$fill")"
+check "and its verdict reads red true" true \
+  "$(cd "$multi" && bash "$script" tests/filled.test.sh filled.sh --fix "$fill" 2>/dev/null | jq -r .red)"
 
 # Two fixes edit adjacent lines of one file. Taking out the first fix's delta
 # leaves the second's, so a test of the second stays green; a whole-file restore
