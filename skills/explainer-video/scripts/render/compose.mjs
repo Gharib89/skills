@@ -138,6 +138,10 @@ async function sceneParts(
       ease: ease === "soft" ? "power2.out" : "power4.out",
       blur: bans.includes("blur") ? 0 : TITLE_BLUR,
     },
+    // The ease a component's own reveal (a tween from opacity 0 it plays
+    // outside `reveals`) takes: a settle's under `velocity`, else the rise's
+    // opacity ease, which `spring` fades on too.
+    ease: ease === "velocity" ? VELOCITY.settle.ease : RISE[1].ease,
     // The scene's sentences in spoken form, for a cue that lands on words.
     said: scene.narration,
     highlight: backend.highlight,

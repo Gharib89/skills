@@ -21,7 +21,7 @@ const share = (items) => {
   return v.map((x) => (max > 0 ? +(x / max).toFixed(4) : 0));
 };
 
-export const chart = (p, f) => {
+export const chart = (p, f, x) => {
   const n = p.items.length;
   const unit = p.unit ? `<span class="unit">${f.t(p.unit)}</span>` : "";
   const val = (x) => `<div class="val">${num(x.value)}${unit}</div>`;
@@ -81,11 +81,11 @@ ${css}`,
     reveals: p.items.map((x, i) => [`.r${i}`, x]),
     tweens: p.items
       .slice(1)
-      .map((x, i) => [
+      .map((it, i) => [
         `.s${i + 1}`,
         { opacity: 0 },
-        { opacity: 1, duration: 0.5, ease: "power1.inOut" },
-        x,
+        { opacity: 1, duration: 0.5, ease: x.ease },
+        it,
       ]),
     counts: counts(p.items),
   };

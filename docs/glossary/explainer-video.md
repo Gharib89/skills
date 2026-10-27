@@ -140,6 +140,10 @@ _Avoid_: freeform scene, escape hatch, bespoke component
 The spoken moment a reveal, the camera beat or the emphasis lands on: a sentence of the scene's narration, or a word or phrase within that sentence.
 _Avoid_: trigger, beat (for the general case), keyframe
 
+**Reveal**:
+Any tween that takes an element from opacity 0, on its cue. Every reveal takes the visual grammar's ease; one a component keeps on its own ease on purpose sits in one named exception list, with its reason. A tween that moves something already shown (a cursor, a packet, a count, a stroke drawn on) is not a reveal.
+_Avoid_: entrance, fade-in (for the general case)
+
 **Clip insert**:
 A pre-rendered video made outside the composer (a maths animation, a screen recording: footage the composer cannot draw from a seek) that fills one scene's slot on the composer's timeline.
 _Avoid_: embed, sub-render, segment
