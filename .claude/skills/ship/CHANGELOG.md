@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.51.3 (2026-10-27)
+
+### Bug Fixes
+
+- **ship**: The worktree guard and the Report-file name read as the harness behaves
+  ([#1020](https://github.com/Gharib89/skills/pull/1020),
+  [`bafc3b7`](https://github.com/Gharib89/skills/commit/bafc3b7fd55b6724f0836948267e4b254b313c77))
+
+
 ## v0.51.2 (2026-10-27)
 
 ### Bug Fixes
