@@ -94,10 +94,14 @@ and one Bash rule, stricter than the guard on purpose, holds for the
 orchestrator and in every subagent prompt it writes: **once isolated, each Bash
 call is one plain command run with the worktree as its cwd**, naming no `.git`
 path, with no chain, loop, substitution, variable as the command or heredoc.
-`run-file note` takes one line per call, naming no shell command in its text
-(say "the prove recipe", not its command). Text a script reads (criteria, a
-body, a reply) goes into a file written with the Write tool and passes by path.
-Where a form works only before isolation, the prose that hands it out says so.
+Its one exception is a `run-file prove` test command passed as one quoted
+`bash -c` argument ([evidence-lines.md](evidence-lines.md)), which the guard
+admitted. `run-file note` takes one line per call, naming no `bash -c` or other
+nested shell in its text (say "the prove recipe", not its command); a plain
+command named as a `Criterion` proof was admitted. Text a script reads
+(criteria, a body, a reply) goes into a file written with the Write tool and
+passes by path. Where a form works only before isolation, the prose that hands
+it out says so.
 
 ## The Run file
 
