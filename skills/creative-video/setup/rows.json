@@ -1,0 +1,215 @@
+{
+  "rows": [
+    {
+      "id": "npm-packages",
+      "kind": "npm",
+      "neededBy": "sources, render, voice",
+      "size": 708925810,
+      "licence": "Apache-2.0 (hyperframes, kokoro-js, transformers.js, pdfjs-dist, Readability), MIT (onnxruntime-node, Turndown, JSZip), BSD-2-Clause (mammoth), the GSAP Standard License (gsap), and their dependencies"
+    },
+    {
+      "id": "onnx-cuda",
+      "kind": "cuda",
+      "when": "voice",
+      "backend": "kokoro",
+      "os": "linux",
+      "arch": "x64",
+      "minCapability": 7.5,
+      "url": "https://api.nuget.org/v3-flatcontainer/microsoft.ml.onnxruntime.gpu.linux/1.30.0/microsoft.ml.onnxruntime.gpu.linux.1.30.0.nupkg",
+      "sha256": "77ca23682fc164789e67cd0fa4ce022b1b1c94e1978046c6446eee5fb0a3a3d6",
+      "size": 236037232,
+      "install": {
+        "apt": "sudo apt install cudnn9-cuda-13"
+      },
+      "neededBy": "voice (Kokoro on the GPU)",
+      "licence": "MIT (onnxruntime's CUDA provider); it loads your own NVIDIA CUDA 13 and cuDNN 9 libraries"
+    },
+    {
+      "id": "model:kokoro-82m",
+      "kind": "model",
+      "when": "voice",
+      "language": "en",
+      "backend": "kokoro",
+      "repo": "onnx-community/Kokoro-82M-v1.0-ONNX",
+      "revision": "1939ad2a8e416c0acfeecc08a694d14ef25f2231",
+      "files": [
+        {
+          "path": "config.json",
+          "size": 44,
+          "sha256": "df34b4f930b23447cd4dc410fabfb42eb3f24e803e6c3f97d618fb359380a36f"
+        },
+        {
+          "path": "tokenizer.json",
+          "size": 3497,
+          "sha256": "77a02c8e164413299b4b4c403b14f8e0e1c1b727db4d46a09d6327b861060a34"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "size": 113,
+          "sha256": "be1cb066d6ef6b074b3f15e6a6dd21ac88ff3cdaedf325f0aaed686c70f75d20"
+        },
+        {
+          "path": "onnx/model.onnx",
+          "size": 325532232,
+          "sha256": "8fbea51ea711f2af382e88c833d9e288c6dc82ce5e98421ea61c058ce21a34cb"
+        }
+      ],
+      "neededBy": "voice (English)",
+      "licence": "Apache-2.0 (Kokoro-82M)"
+    },
+    {
+      "id": "model:wav2vec2-base-960h",
+      "kind": "model",
+      "when": "voice",
+      "language": "en",
+      "repo": "Xenova/wav2vec2-base-960h",
+      "revision": "a19f851b3d42865797e410752b4c570c871e4825",
+      "files": [
+        {
+          "path": "vocab.json",
+          "size": 358,
+          "sha256": "4178db26b3c7570f6a47f14ac6a1c7b32950b8c2800fb097287e53776934f1c5"
+        },
+        {
+          "path": "onnx/model_int8.onnx",
+          "size": 95286006,
+          "sha256": "a4249bb7b7bcbe391be19980922b0523c0907e976a9e5d5aabfadb40fcea5058"
+        }
+      ],
+      "neededBy": "voice (English aligner)",
+      "licence": "Apache-2.0 (facebook/wav2vec2-base-960h)"
+    },
+    {
+      "id": "model:egyptian-arabic-wav2vec2",
+      "kind": "model",
+      "when": "voice",
+      "language": "ar",
+      "repo": "agharib/egyptian-arabic-wav2vec2-xlsr-53-onnx",
+      "revision": "888b8be067d3a1ac2ca72806832f29e8786a3341",
+      "files": [
+        {
+          "path": "vocab.json",
+          "size": 491,
+          "sha256": "5249032aba7fc3c10f199a813fa5e45b779731e6d9bc7061c56e1f55c78f8aba"
+        },
+        {
+          "path": "onnx/model_int8.onnx",
+          "size": 317268245,
+          "sha256": "2d8525c7b0e27eff0d43aa061c440b95105ce994f0c76f398e75a4d7659bbcc6"
+        }
+      ],
+      "neededBy": "voice (Arabic aligner)",
+      "licence": "Apache-2.0 (IbrahimAmin/egyptian-arabic-wav2vec2-xlsr-53)"
+    },
+    {
+      "id": "key:gemini",
+      "kind": "key",
+      "when": "voice",
+      "backend": "gemini",
+      "vendor": "Google",
+      "env": "GEMINI_API_KEY",
+      "get": "https://aistudio.google.com/apikey",
+      "neededBy": "voice (Gemini narrators)",
+      "licence": "Gemini API terms"
+    },
+    {
+      "id": "key:elevenlabs",
+      "kind": "key",
+      "when": "voice",
+      "backend": "elevenlabs",
+      "vendor": "ElevenLabs",
+      "env": "ELEVENLABS_API_KEY",
+      "get": "https://elevenlabs.io/app/settings/api-keys",
+      "neededBy": "voice (ElevenLabs narrators)",
+      "licence": "ElevenLabs terms"
+    },
+    {
+      "id": "chrome",
+      "kind": "chrome",
+      "neededBy": "sources, render",
+      "size": 272381534,
+      "licence": "BSD-3-Clause (Chrome Headless Shell, pinned by hyperframes)"
+    },
+    {
+      "id": "font:source-serif-4",
+      "kind": "font",
+      "family": "source-serif-4",
+      "class": "serif",
+      "version": "5.3.0",
+      "files": ["latin-600-normal"],
+      "neededBy": "render",
+      "size": 21532,
+      "licence": "OFL-1.1"
+    },
+    {
+      "id": "font:inter",
+      "kind": "font",
+      "family": "inter",
+      "class": "sans",
+      "version": "5.3.0",
+      "files": ["latin-400-normal", "latin-600-normal"],
+      "neededBy": "render",
+      "size": 48116,
+      "licence": "OFL-1.1"
+    },
+    {
+      "id": "font:jetbrains-mono",
+      "kind": "font",
+      "family": "jetbrains-mono",
+      "class": "mono",
+      "version": "5.3.0",
+      "files": ["latin-400-normal"],
+      "neededBy": "render",
+      "size": 21168,
+      "licence": "OFL-1.1"
+    },
+    {
+      "id": "font:noto-naskh-arabic",
+      "kind": "font",
+      "family": "noto-naskh-arabic",
+      "class": "serif",
+      "version": "5.3.0",
+      "files": ["arabic-600-normal"],
+      "language": "ar",
+      "neededBy": "render (Arabic titles)",
+      "size": 56648,
+      "licence": "OFL-1.1"
+    },
+    {
+      "id": "font:ibm-plex-sans-arabic",
+      "kind": "font",
+      "family": "ibm-plex-sans-arabic",
+      "class": "sans",
+      "version": "5.3.0",
+      "files": ["arabic-400-normal", "arabic-600-normal"],
+      "language": "ar",
+      "neededBy": "render (Arabic text and captions)",
+      "size": 88536,
+      "licence": "OFL-1.1"
+    },
+    {
+      "id": "font:noto-kufi-arabic",
+      "kind": "font",
+      "family": "noto-kufi-arabic",
+      "class": "sans",
+      "version": "5.3.0",
+      "files": ["arabic-400-normal", "arabic-600-normal"],
+      "language": "ar",
+      "neededBy": "render (Arabic companion of a display face)",
+      "size": 91356,
+      "licence": "OFL-1.1"
+    },
+    {
+      "id": "ffmpeg",
+      "kind": "system",
+      "command": "ffmpeg",
+      "neededBy": "voice, render",
+      "licence": "LGPL-2.1-or-later or GPL-2.0-or-later, by build",
+      "install": {
+        "apt": "sudo apt install ffmpeg",
+        "brew": "brew install ffmpeg",
+        "winget": "winget install --id Gyan.FFmpeg -e"
+      }
+    }
+  ]
+}

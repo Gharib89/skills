@@ -29,14 +29,15 @@ upstream its `source` names, at the lock's `ref` (the skills ship composes come
 from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`), and lives
 only under `.claude/skills/`. The `hyperframes` and `hyperframes-cli` entries
 (`heygen-com/hyperframes`) are maintainer aids for building explainer-video
-components. Adding a skill this repo writes touches the sites in the checklist
-under `## Adding a skill this repo writes` in
+components; `creative-video` composes `hyperframes` and `media-use` from the
+same upstream at the same ref. Adding a skill this repo writes touches the
+sites in the checklist under `## Adding a skill this repo writes` in
 `docs/contributing/standards/release.md`. Refresh at project scope, without
 `-g`; ship's refresh chains its preflight, so a profile the refreshed ship no
 longer reads is reported now, not on the next `/ship`:
 
 ```sh
-npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --skill grill-with-artifact --skill drive-session --skill setup-project --skill explainer-video --skill retro-run --agent claude-code -y \
+npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --skill grill-with-artifact --skill drive-session --skill setup-project --skill explainer-video --skill retro-run --skill creative-video --agent claude-code -y \
   && .claude/skills/ship/scripts/preflight.sh none
 ```
 

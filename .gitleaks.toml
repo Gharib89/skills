@@ -1,0 +1,16 @@
+# gitleaks' default rules, plus one allowlist. The vendored media-use skill
+# (installed byte for byte from heygen-com/hyperframes, see skills-lock.json)
+# carries HeyGen's PostHog project key, a public client-side ingest key, not a
+# secret of this repo. Only that rule, file and key prefix are allowed, so any
+# other secret in the file is still caught.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+    [[rules.allowlists]]
+    description = "HeyGen's public PostHog project key in the vendored media-use telemetry"
+    condition = "AND"
+    paths = ['''(^|/)\.claude/skills/media-use/scripts/lib/telemetry\.mjs$''']
+    regexes = ['''^phc_''']

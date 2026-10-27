@@ -1,0 +1,305 @@
+// The backend's voice tools: the narration engines and the aligners.
+import fs from "node:fs";
+import path from "node:path";
+import { sentences } from "../length.mjs";
+import { ORT_CUDA_MIN_CAP, ortProvider } from "../tools.mjs";
+import { fromCache } from "./common.mjs";
+import { computeCapability, cudaProbe } from "./media.mjs";
+
+const GEMINI = "https://generativelanguage.googleapis.com/v1beta";
+const GEMINI_TTS = "gemini-3.8-flash-tts";
+
+// A Gemini answer's error message: its JSON's, else its text. A rate or daily
+// limit answers 429; spent prepaid credits answer 402
+// (https://ai.google.dev/gemini-api/docs/troubleshooting) with `error.status:
+// "RESOURCE_EXHAUSTED"`, a body seen live but not in the docs.
+async function geminiError(r) {
+  const body = await r.text();
+  let error = {};
+  try {
+    error = JSON.parse(body).error ?? {};
+  } catch {}
+  return Object.assign(
+    new Error(`Gemini answered HTTP ${r.status}: ${error.message ?? body}`),
+    {
+      quota:
+        r.status === 429 ||
+        (r.status === 402 && error.status === "RESOURCE_EXHAUSTED"),
+      vendor: "Gemini",
+    },
+  );
+}
+
+// Gemini TTS on the user's key, the whole text in one Interactions call; its
+// audio is 16-bit little-endian PCM, mono, 24 kHz, split across content items.
+async function gemini(text, narrator) {
+  const r = await fetch(`${GEMINI}/interactions`, {
+    method: "POST",
+    headers: {
+      "x-goog-api-key": process.env.GEMINI_API_KEY,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GEMINI_TTS,
+      input: [
+        {
+          type: "user_input",
+          content: [
+            {
+              type: "text",
+              text,
+              annotations: [{ type: "speech_metadata", style: narrator.style }],
+            },
+          ],
+        },
+      ],
+      response_format: {
+        type: "audio",
+        mime_type: "audio/l16",
+        sample_rate: 24000,
+      },
+      generation_config: { speech_config: [{ voice: narrator.voice }] },
+    }),
+  });
+  if (r.status !== 200) throw await geminiError(r);
+  const pcm = Buffer.concat(
+    (await r.json()).steps
+      .flatMap((s) => s.content ?? [])
+      .filter((c) => c.type === "audio")
+      .map((c) => Buffer.from(c.data, "base64")),
+  );
+  const samples = new Float32Array(pcm.length >> 1);
+  for (let i = 0; i < samples.length; i++)
+    samples[i] = pcm.readInt16LE(2 * i) / 32768;
+  return { samples, sampleRate: 24000 };
+}
+
+// Whether Google takes `key`, read from the TTS model's metadata so no TTS
+// request is spent. Nothing tells a free-tier key from a paid one.
+export async function geminiKey(key) {
+  const r = await fetch(`${GEMINI}/models/${GEMINI_TTS}`, {
+    headers: { "x-goog-api-key": key },
+  });
+  if (r.status === 200) return { ok: true };
+  const error = (await r.json().catch(() => ({}))).error;
+  return {
+    ok: false,
+    reason: error?.details?.[0]?.reason ?? error?.status ?? `HTTP ${r.status}`,
+  };
+}
+
+const ELEVENLABS = "https://api.elevenlabs.io/v1";
+
+// An ElevenLabs answer's error message: its JSON's detail, else its text. Spent
+// credits answer 402 with `detail.code: "insufficient_credits"`
+// (https://elevenlabs.io/docs/eleven-api/resources/errors); the legacy answer,
+// 400 or 401 with `detail.status: "quota_exceeded"`, is still read
+// (https://elevenlabs.io/docs/help-center/technical/api-error-code-400-or-401).
+async function elevenlabsError(r) {
+  const body = await r.text();
+  let detail = {};
+  try {
+    detail = JSON.parse(body).detail ?? {};
+  } catch {}
+  return Object.assign(
+    new Error(
+      `ElevenLabs answered HTTP ${r.status}: ${detail.message ?? body}`,
+    ),
+    {
+      quota:
+        detail.code === "insufficient_credits" ||
+        detail.status === "quota_exceeded",
+      vendor: "ElevenLabs",
+    },
+  );
+}
+
+// ElevenLabs TTS on the user's key; the audio is raw 16-bit little-endian PCM,
+// mono, 24 kHz.
+async function elevenlabs(text, narrator) {
+  const r = await fetch(
+    `${ELEVENLABS}/text-to-speech/${narrator.voice}?output_format=pcm_24000`,
+    {
+      method: "POST",
+      headers: {
+        "xi-api-key": process.env.ELEVENLABS_API_KEY,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ text, model_id: "eleven_multilingual_v2" }),
+    },
+  );
+  if (r.status !== 200) throw await elevenlabsError(r);
+  const pcm = Buffer.from(await r.arrayBuffer());
+  const samples = new Float32Array(pcm.length >> 1);
+  for (let i = 0; i < samples.length; i++)
+    samples[i] = pcm.readInt16LE(2 * i) / 32768;
+  return { samples, sampleRate: 24000 };
+}
+
+// Whether ElevenLabs takes `key`, read from the narrator's voice metadata so no
+// credits are spent; a bad key answers `detail.code` (legacy `detail.status`)
+// `invalid_api_key`.
+export async function elevenlabsKey(key, voice) {
+  const r = await fetch(`${ELEVENLABS}/voices/${voice}`, {
+    headers: { "xi-api-key": key },
+  });
+  if (r.status === 200) return { ok: true };
+  if (r.status === 401 || r.status === 403) {
+    const detail = (await r.json().catch(() => ({}))).detail;
+    return {
+      ok: false,
+      reason: detail?.code ?? detail?.status ?? `HTTP ${r.status}`,
+    };
+  }
+  throw await elevenlabsError(r);
+}
+
+// Kokoro reads at most 510 phoneme tokens a call, and kokoro-js truncates past
+// that without a word, so the adapter packs whole sentences into each call
+// under this budget, counted with kokoro-js's own phonemizer; the headroom
+// covers the normalisation kokoro-js applies before it phonemizes.
+const KOKORO_TOKENS = 400;
+
+// A narrator adapter: text in, audio out, never timings (ADR 0016). Kokoro
+// voices each call's lead and tail silence, so one call per sentence paces
+// narration slower than the voice speaks.
+let kokoro;
+let speak;
+
+const cudaFailed = (why) =>
+  console.error(
+    `kokoro: CUDA failed (${String(why).split("\n")[0].slice(0, 160)}); voicing on the CPU`,
+  );
+
+// CUDA where setup installed the provider, the card can run it and the host's
+// CUDA 13 and cuDNN 9 libraries load, else the CPU. The libraries are probed in
+// a child process because a failed CUDA load cannot be recovered in this one:
+// transformers.js keeps the first session's promise (`wasmInitPromise`), so
+// every later session, a CPU one included, rejects with the same error.
+async function pickDevice(node) {
+  if (!ortProvider(node) || !((await computeCapability()) >= ORT_CUDA_MIN_CAP))
+    return "cpu";
+  const why = await cudaProbe(node);
+  if (why) cudaFailed(why);
+  return why ? "cpu" : "cuda";
+}
+
+export async function synthesize({ text, narrator, tools }) {
+  if (narrator.backend === "gemini") return gemini(text, narrator);
+  if (narrator.backend === "elevenlabs") return elevenlabs(text, narrator);
+  if (narrator.backend !== "kokoro")
+    throw new Error(`no adapter for backend ${narrator.backend}`);
+  const req = fromCache(tools.node);
+  const { KokoroTTS } = req("kokoro-js");
+  if (!kokoro) {
+    // kokoro-js's own dependency, pinned by the lock: requiring it from the same
+    // install yields the instance kokoro-js reads its settings from.
+    const { env } = req("@huggingface/transformers");
+    env.allowRemoteModels = false;
+    // An absolute path is read as a folder; a name under localModelPath must
+    // pass the hub's model-id check, which the `@` in the cache name fails.
+    const load = (device) =>
+      KokoroTTS.from_pretrained(tools.models["model:kokoro-82m"], {
+        dtype: "fp32",
+        device,
+      });
+    // The CPU model loads first, beside a CUDA one too: a CUDA load that fails
+    // after the probe passed (the card's memory taken by another process, say)
+    // would otherwise be the first session and poison the CPU load that follows
+    // (see pickDevice). A call failing on the CUDA model falls back the same way,
+    // for the rest of the process.
+    const cpu = await load("cpu");
+    kokoro = cpu;
+    if ((await pickDevice(tools.node)) === "cuda")
+      try {
+        kokoro = await load("cuda");
+      } catch (e) {
+        cudaFailed(e.message);
+      }
+    speak = async (c, voice) => {
+      try {
+        return await kokoro.generate(c, { voice });
+      } catch (e) {
+        if (kokoro === cpu) throw e;
+        cudaFailed(e.message);
+        kokoro = cpu;
+        return cpu.generate(c, { voice });
+      }
+    };
+  }
+  // kokoro-js's dependency again, phonemizing as it does: American voices
+  // (`a…`) in en-us, British ones in en.
+  const { phonemize } = req("phonemizer");
+  const lang = narrator.voice.startsWith("a") ? "en-us" : "en";
+  const count = async (s) => (await phonemize(s, lang)).join(" ").length;
+  // A sentence over the budget breaks between words, at the last that fits.
+  const units = [];
+  for (const s of sentences(text.trim())) {
+    if ((await count(s)) <= KOKORO_TOKENS) {
+      units.push(s);
+      continue;
+    }
+    let piece = "";
+    for (const w of s.split(/\s+/)) {
+      const next = piece ? `${piece} ${w}` : w;
+      if (piece && (await count(next)) > KOKORO_TOKENS) {
+        units.push(piece);
+        piece = w;
+      } else piece = next;
+    }
+    units.push(piece);
+  }
+  const calls = [];
+  for (const u of units) {
+    const n = await count(u);
+    const last = calls.at(-1);
+    if (last && last.n + 1 + n <= KOKORO_TOKENS)
+      Object.assign(last, { text: `${last.text} ${u}`, n: last.n + 1 + n });
+    else calls.push({ text: u, n });
+  }
+  const parts = [];
+  for (const c of calls)
+    parts.push((await speak(c.text, narrator.voice)).audio);
+  const samples = new Float32Array(parts.reduce((n, p) => n + p.length, 0));
+  parts.reduce((o, p) => (samples.set(p, o), o + p.length), 0);
+  return { samples, sampleRate: 24000 };
+}
+
+// One CTC model per language (ADR 0016).
+const ALIGNERS = {
+  en: "model:wav2vec2-base-960h",
+  ar: "model:egyptian-arabic-wav2vec2",
+};
+
+// A language's CTC model: its vocabulary, and its logits for 16 kHz audio,
+// normalised as its feature extractor does.
+export async function aligner({ language, tools }) {
+  if (!ALIGNERS[language])
+    throw new Error(`no aligner for language ${language}`);
+  const dir = tools.models[ALIGNERS[language]];
+  const ort = fromCache(tools.node)("onnxruntime-node");
+  const session = await ort.InferenceSession.create(
+    path.join(dir, "onnx", "model_int8.onnx"),
+  );
+  const vocab = JSON.parse(
+    fs.readFileSync(path.join(dir, "vocab.json"), "utf8"),
+  );
+  async function logits(x) {
+    let mean = 0;
+    for (const v of x) mean += v;
+    mean /= x.length;
+    let sq = 0;
+    for (const v of x) sq += (v - mean) ** 2;
+    const sd = Math.sqrt(sq / x.length + 1e-7);
+    const input = new ort.Tensor(
+      "float32",
+      x.map((v) => (v - mean) / sd),
+      [1, x.length],
+    );
+    const out = (await session.run({ [session.inputNames[0]]: input }))[
+      session.outputNames[0]
+    ];
+    return { data: out.data, frames: out.dims[1], classes: out.dims[2] };
+  }
+  return { vocab, logits };
+}

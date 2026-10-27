@@ -20,6 +20,11 @@
       "skillPath": "skills/engineering/codebase-design/SKILL.md",
       "computedHash": "b2888e4f4e8c0af3bfd557575a64b905c44e6248c3101d72077816882b3a92b9"
     },
+    "creative-video": {
+      "source": ".",
+      "sourceType": "local",
+      "computedHash": "ebe35fc4c790310ae99f0d404a2e6c48a1d5ab74d72c777db17977301b0872ce"
+    },
     "domain-modeling": {
       "source": "mattpocock/skills",
       "ref": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60",
@@ -76,6 +81,13 @@
       "sourceType": "github",
       "skillPath": "skills/hyperframes-cli/SKILL.md",
       "computedHash": "e28f813e80d5fa5e1049bfbe4bd1886437fd0cf7aa775dba7374c78f78b320f6"
+    },
+    "media-use": {
+      "source": "heygen-com/hyperframes",
+      "ref": "9ebc1f8a13fc2c6756f92394688e35f9891eb5c8",
+      "sourceType": "github",
+      "skillPath": "skills/media-use/SKILL.md",
+      "computedHash": "372fda62380e0d70f540c4d413af8bc2d89b03c99d85cb557e0e1f0e3e7d79b5"
     },
     "prototype": {
       "source": "mattpocock/skills",
