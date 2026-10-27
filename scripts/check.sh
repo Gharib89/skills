@@ -31,8 +31,8 @@ shopt -u patsub_replacement 2>/dev/null || :
 # >>> setup-harness configuration
 # Files the edit rung covers, as shell globs on the file name; any other file
 # is `skipped`. `*.md` is there for the prose-budget hook alone, which only a
-# skill's SKILL.md and references wake.
-EDIT_GLOBS='*.sh *.yml *.yaml *.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts *.md'
+# skill's SKILL.md and references wake, and `*.html` for the token-limit hook.
+EDIT_GLOBS='*.sh *.yml *.yaml *.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts *.md *.html'
 # The runner on a file list ({files}), and on every file for `full`. The edit
 # rung skips house-style, a whole-repo check that costs a second on every
 # Markdown write and stays at the commit rung.

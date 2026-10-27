@@ -74,8 +74,12 @@ nothing (a failed read stops the run there, `host-unreachable`), and settles the
 effective spec by [spec precedence](#phase-1-spec-precedence): the body's
 criteria, less each a later `writer: true` brief or comment drops or revises,
 plus the criteria it adds. `run-file init <issue> --from-profile --criteria -`
-takes that text as a heredoc, so the issue's own words never pass a file or a
-pipe, and records each checkbox line (`-`, `*`, `+` or a numbered item) as an
+takes that text as a quoted heredoc, so the shell expands none of the issue's
+own words. That form works only before isolation: a session already isolated
+writes the text with the Write tool and passes `--criteria <file>`, since the
+guard refuses a heredoc naming git
+([context-discipline.md](context-discipline.md#once-isolated)). Init records
+each checkbox line (`-`, `*`, `+` or a numbered item) as an
 entry under the Run file's `## Criteria`, `- <n>: <text>`. A heading naming
 criteria (`## Acceptance criteria`) whose list holds no checkbox gives its
 top-level list lines instead; each criteria heading then gives its own kind,
@@ -175,10 +179,13 @@ architecture: a plan-implement loop across a subagent boundary loses too much.
 Hand the subagent the worktree path, its `execute` scratch directory, the plan,
 the test command and the conventions the edit needs. Require back a diff
 summary, the tests added or updated, and a **structured deviations list**,
-which lands verbatim in the merge summary. Two hard rules in its prompt:
+which lands verbatim in the merge summary. Three hard rules in its prompt:
 
-- Every Edit/Write path carries the **worktree prefix**; after its first edit,
-  `git -C <main-checkout> status` must be clean.
+- Every Edit/Write path carries the **worktree prefix**; the inherited guard
+  refuses a write to the main checkout, so such a refusal is a wrong path to
+  correct, not a form to work around.
+- Each Bash call is **one plain command** run with the worktree as its cwd,
+  per [context-discipline.md](context-discipline.md#once-isolated).
 - It runs only the **targeted test nodes**; the phase-5 gate stays with the
   orchestrator.
 
