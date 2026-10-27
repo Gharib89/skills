@@ -5,8 +5,9 @@
 //
 // Reads <run>/timeline.json and <run>/project/ (render/timing.mjs wrote both,
 // and the agent has authored a compositions/<id>.html per scene), and writes
-// the root again (render/root.mjs) so it names the project as it stands. A
-// refusal leaves out/ as it was. Renders the
+// the root again (render/root.mjs) so it names the project as it stands. It
+// refuses unless <run>/gates.json (gates/gates.mjs) passed for this very
+// project, and a refusal leaves out/ as it was. Renders the
 // project with HyperFrames to <run>/.cache/render/raw.mp4, normalises its
 // audio to -14 LUFS with a true peak of -1.5 dBTP into out/<slug>.mp4, writes
 // out/<slug>.srt from the timeline's cues and out/poster.png from the middle of
@@ -22,8 +23,9 @@
 //         delivery check failed · 2 usage
 import fs from "node:fs";
 import path from "node:path";
-import { readJson } from "../lib/json.mjs";
-import { voiceHash, writeIgnore } from "../lib/runfolder.mjs";
+import { captionFindings, cuesOf } from "../gates/captions.mjs";
+import { inputsHash } from "../gates/inputs.mjs";
+import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend, lockHash } from "../lib/tools.mjs";
 import { videoFacts, srtText, writeManifest } from "./delivery.mjs";
@@ -49,21 +51,18 @@ function fail(why) {
 }
 const slug = path.basename(path.resolve(run));
 const project = path.join(path.resolve(run), "project");
-const again = "run render/timing.mjs first";
-if (!fs.existsSync(path.join(run, "timeline.json")))
-  fail(`timeline.json is missing: ${again}`);
-const timeline = readJson(run, "timeline.json");
-const voice = readJson(run, "voice.json");
-if (timeline.voice !== voiceHash(run))
-  fail(
-    "timeline.json is from an older voice.json: run render/timing.mjs again",
-  );
-const missing = timeline.scenes
-  .map((s) => `compositions/${s.id}.html`)
-  .filter((f) => !fs.existsSync(path.join(project, f)));
-if (missing.length) fail(`no ${missing.join(", ")}: author each scene file`);
+const { timeline, voice } = readTimeline(run, fail);
 writeIgnore(run);
 writeRoot(run);
+// The gates stage's record must be of this very project and have passed.
+const record = fs.existsSync(path.join(run, "gates.json"))
+  ? JSON.parse(fs.readFileSync(path.join(run, "gates.json"), "utf8"))
+  : null;
+if (
+  record?.inputs !== inputsHash(run) ||
+  Object.values(record.gates).some((g) => g.status !== "pass")
+)
+  fail("the gates have not passed on this project: run gates/gates.mjs");
 
 const backend = await loadBackend();
 const out = path.join(run, "out");
@@ -103,8 +102,18 @@ try {
 // Delivery checks, every one printed before any verdict.
 const { size, fps, ratio } = videoFacts(probe);
 const seconds = +probe.format.duration;
-const srtCues = (fs.readFileSync(srt, "utf8").match(/^\d+\n.+ --> .+$/gm) ?? [])
-  .length;
+// The captions the video draws (the composition's cues) against the timeline's
+// words and the SRT delivered beside it.
+const caps = captionFindings({
+  timeline,
+  cues: cuesOf(
+    fs.readFileSync(
+      path.join(project, "compositions", "captions.html"),
+      "utf8",
+    ),
+  ),
+  srtText: fs.readFileSync(srt, "utf8"),
+});
 const checks = [
   ["resolution", size, `${WIDTH}x${HEIGHT}`],
   ["frame rate", fps, FPS],
@@ -120,7 +129,11 @@ const checks = [
     probe.streams.some((s) => s.codec_type === "audio") ? "a stream" : "none",
     "a stream",
   ],
-  ["srt", `${srtCues} cue(s)`, `${timeline.cues.length} cue(s)`],
+  [
+    "captions",
+    caps.length ? `${caps.length} finding(s), first: ${caps[0]}` : "none",
+    "none",
+  ],
   [
     "loudness",
     `${loud.lufs} LUFS`,

@@ -1,8 +1,10 @@
-// Maintainer only: render short fixtures through the skill's own timing and
-// render stages with real HyperFrames, and prove what the fake backend cannot:
-// the delivered MP4 has exactly the frame grid's frames, three renders match
-// frame for frame, and two chapters rendered apart and joined by the chapter
-// join have the sum of their frames and a chapter mark each.
+// Maintainer only: render short fixtures through the skill's own timing, gates
+// and render stages with real HyperFrames, and prove what the fake backend
+// cannot: the delivered MP4 has exactly the frame grid's frames, three renders
+// match frame for frame, two chapters rendered apart and joined by the chapter
+// join have the sum of their frames and a chapter mark each, and each hard gate
+// that measures a rendered frame fails a fixture built to fail it and passes
+// the same fixture without the defect.
 //
 //   node maintainer/real-render.mjs
 //
@@ -11,7 +13,8 @@
 // (real-render-lib.mjs) voiced by tones of whole frames. The whole's 122
 // frames are 4.0666... s, which a grid writing its times rounded to the voice
 // stage's 3 places instead of truncated would render as 123.
-// stdout: `creative-real-render <check>: pass|fail: <detail>` per check
+// stdout: `creative-real-render <check>: pass|fail: <detail>` per check, `gate
+//         <name>` for each gate's fixture pair
 // exit:   0 every check passed · 1 a check failed, or a stage or tool failed
 //         with `creative-real-render: <why>` on stderr · 2 a tool row is
 //         missing
@@ -24,7 +27,7 @@ import { stage } from "../scripts/lib/stage.mjs";
 import { catalogue, dest, loadBackend, skill } from "../scripts/lib/tools.mjs";
 import { chapterCheck, joinChapters } from "../scripts/render/chapters.mjs";
 import { FPS, gridScenes } from "../scripts/render/grid.mjs";
-import { differing, runFolder, tone } from "./real-render-lib.mjs";
+import { authored, differing, runFolder, tone } from "./real-render-lib.mjs";
 
 const NAME = "creative-real-render";
 stage(NAME);
@@ -71,9 +74,10 @@ function capture(cmd, args) {
   }
   return r.stdout;
 }
-// Runs the skill's stage `name` on `run`; the MP4 it delivers.
-function runStage(name, run) {
-  capture(process.execPath, [path.join(skill, "scripts", "render", name), run]);
+// Runs the skill's stage `script` (under scripts/) on `run`; the MP4 it would
+// deliver.
+function runStage(script, run) {
+  capture(process.execPath, [path.join(skill, "scripts", script), run]);
   return path.join(run, "out", `${path.basename(run)}.mp4`);
 }
 const count = (file) =>
@@ -97,14 +101,15 @@ const grid = (scenes) =>
 // The whole: its frame count against the grid, then two more renders against
 // the first, frame for frame.
 const whole = runFolder(work, "whole", WHOLE);
-runStage("timing.mjs", whole);
-const mp4 = runStage("render.mjs", whole);
+runStage("render/timing.mjs", whole);
+runStage("gates/gates.mjs", whole);
+const mp4 = runStage("render/render.mjs", whole);
 const frames = count(mp4);
 const want = grid(WHOLE);
 check("frame count", frames === want, `${frames} frames vs the grid's ${want}`);
 const first = hashes(mp4);
 const diffs = [2, 3].flatMap((k) => {
-  const d = differing(first, hashes(runStage("render.mjs", whole)));
+  const d = differing(first, hashes(runStage("render/render.mjs", whole)));
   return d.length
     ? [
         `render ${k} differs at frame(s) ${d.slice(0, 10).join(", ")}${d.length > 10 ? ` and ${d.length - 10} more` : ""}`,
@@ -123,8 +128,9 @@ check(
 // one narration over the whole and a mark at each chapter's first frame.
 const parts = CHAPTERS.map((c, k) => {
   const run = runFolder(work, `chapter-${k + 1}`, c.scenes);
-  runStage("timing.mjs", run);
-  return runStage("render.mjs", run);
+  runStage("render/timing.mjs", run);
+  runStage("gates/gates.mjs", run);
+  return runStage("render/render.mjs", run);
 });
 const sizes = parts.map(count);
 const sum = sizes.reduce((a, n) => a + n, 0);
@@ -156,4 +162,59 @@ const [, got, wanted, marked] = chapterCheck(
   (await backend.ffprobe(output)).chapters,
 );
 check("chapter marks", marked, `${got} vs ${wanted}`);
+
+// Each gate that measures a rendered frame, on a one-scene fixture built to
+// fail it and the same fixture without the defect. The gate line is read from
+// the stage's stdout, since a red gate exits 1.
+const BOX =
+  '<div id="b" style="position:absolute;left:160px;top:600px;width:200px;height:200px;background:#7cc"></div>';
+const slide = (x) => `tl.to("#b", { x: ${x}, duration: 3, ease: "none" }, 0);`;
+const line = (top, width = 1200) =>
+  `<div style="position:absolute;left:200px;top:${top}px;width:${width}px;overflow:hidden;white-space:nowrap;font:700 60px Inter,sans-serif;color:#fff"><span>A line the viewer reads</span></div>`;
+const pairs = [
+  {
+    gate: "determinism",
+    bad: [BOX, slide("Math.random() * 600")],
+    good: [BOX, slide(600)],
+    warn: "clock",
+  },
+  { gate: "layout", bad: [line(300, 200)], good: [line(300)] },
+  { gate: "caption band", bad: [line(900)], good: [line(300)] },
+  {
+    gate: "anchors",
+    bad: [BOX + line(300), 'tl.to("#b", { x: 300 }, at("one", "nosuchword"));'],
+    good: [BOX + line(300), 'tl.to("#b", { x: 300 }, at("one", "Scene"));'],
+  },
+];
+let fixture = 0;
+function gateOf(gate, [body, js]) {
+  const run = runFolder(work, `gate-${++fixture}`, [
+    { id: "one", frames: 90, html: authored("one", body, js) },
+  ]);
+  runStage("render/timing.mjs", run);
+  const r = spawnSync(
+    process.execPath,
+    [path.join(skill, "scripts", "gates", "gates.mjs"), run],
+    { encoding: "utf8", maxBuffer: 1 << 26 },
+  );
+  const m = r.stdout.match(
+    new RegExp(`^gate ${gate}: (pass|fail): (.*)$`, "m"),
+  );
+  if (!m)
+    throw new Error(
+      `gates.mjs ${gate}: ${r.stdout.trim()}\n${r.stderr.trim()}`,
+    );
+  return { status: m[1], measured: m[2], out: r.stdout };
+}
+for (const { gate, bad, good, warn } of pairs) {
+  const [b, g] = [gateOf(gate, bad), gateOf(gate, good)];
+  const warned = (r) => new RegExp(`^warn ${warn}:`, "m").test(r.out);
+  check(
+    `gate ${gate}`,
+    b.status === "fail" &&
+      g.status === "pass" &&
+      (!warn || (warned(b) && !warned(g))),
+    `failing twin: ${b.measured}; passing twin: ${g.measured}`,
+  );
+}
 process.exit(failed ? 1 : 0);

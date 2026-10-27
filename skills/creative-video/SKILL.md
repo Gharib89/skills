@@ -111,8 +111,9 @@ looks techy" is not a reason.
 Where the `hyperframes` loop and [Make a video](#make-a-video) differ, these
 steps win: `DIRECTIONS.md` is its storylines, the stills review of step 10 is
 its review (no `REVIEW.md`, nothing but the sheets to the reviewer), the
-render follows that review with no stop at a Studio preview, every command
-but the render (`render.mjs`) runs through `hf.mjs`, and a registry block is
+gates and the render follow that review with no stop at a Studio preview,
+every command but the gates and the render (`gates.mjs`, `render.mjs`) runs
+through `hf.mjs`, and a registry block is
 raw material you edit into the concept's look, never a look to pick.
 
 ### Look at what you made
@@ -133,8 +134,10 @@ for the video. [reference/authoring.md](reference/authoring.md) holds the run
 folder's files, timing, the word anchors, the pinned CLI and the render.
 
 1. **Brief.** Write `<run>/brief.json`, `{ "length": <minutes> }`: the length
-   asked for, about two minutes when none is. The language is the one asked
-   for, English when none is; the narrator the one asked for, else the
+   asked for, about two minutes when none is. Add `"must"` and `"avoid"` lists
+   of words for what the video has to say or show and what it must not. The
+   language is the one asked for, English when none is; the narrator the one
+   asked for, else the
    language's default in `<skill>/narrators.json`. Name the audience (the one
    asked for, else a smart newcomer): it is the researcher's `{audience}` and
    heads `DIRECTIONS.md`.
@@ -179,9 +182,14 @@ folder's files, timing, the word anchors, the pinned CLI and the render.
     `{notes}` `<run>/.cache/review/stills-notes.md`, and nothing else from the
     run. Fix every P0 and every default it or you named, fix each P1 or write
     in `DELIVERY.md` why it stays, then snapshot what changed.
-11. **Render.** `node <skill>/scripts/render/render.mjs <run>`; on exit 1 fix
-    what it names and render again.
-12. **Deliver.** Write `<run>/CREDITS.md` (each source cited with its
+11. **Gates.** `node <skill>/scripts/gates/gates.mjs <run>`; on exit 1 fix
+    each failing gate's evidence and run it again. After two fix attempts it
+    prints `stop`: deliver no video and report the evidence. Quote its `warn`
+    lines in `DELIVERY.md`.
+12. **Render.** `node <skill>/scripts/render/render.mjs <run>`; it refuses
+    until the gates pass on the current project. On exit 1 fix what it names
+    and render again.
+13. **Deliver.** Write `<run>/CREDITS.md` (each source cited with its
     locators, each sound with its source, licence and attribution, the voice,
     the faces and their licences) and `<run>/DELIVERY.md` (the concept and why
     it was picked; what was measured, quoting the render's `delivery` and

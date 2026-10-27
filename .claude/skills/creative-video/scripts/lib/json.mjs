@@ -44,8 +44,13 @@ export const SHAPES = {
       obj({ id: text, language: text, backend: text, voice: text }),
     ),
   }),
-  // The brief, read by the voice stage for its length.
-  "brief.json": obj({ length: number }),
+  // The brief: the voice stage reads its length, the gates stage its must and
+  // avoid words.
+  "brief.json": obj({
+    length: number,
+    must: opt(list(text)),
+    avoid: opt(list(text)),
+  }),
   // The voice stage's input.
   "script.json": obj({
     language: text,

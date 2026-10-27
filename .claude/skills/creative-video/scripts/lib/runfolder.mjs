@@ -4,6 +4,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { readJson } from "./json.mjs";
 
 const BEGIN = "# creative-video: begin";
 const END = "# creative-video: end";
@@ -13,6 +14,7 @@ const REBUILDABLE = [
   ".cache/",
   "out/",
   "timeline.json",
+  "gates.json",
   "project/index.html",
   "project/timing.js",
   "project/compositions/captions.html",
@@ -50,3 +52,23 @@ export const voiceHash = (run) =>
     .update(fs.readFileSync(path.join(run, "voice.json")))
     .digest("hex")
     .slice(0, 16);
+
+// timeline.json and voice.json once the run's project is ready to judge or
+// render: the timeline exists, answers to this voice.json, and every scene has
+// its file. The render and the gates refuse the same three ways; `fail` ends
+// the stage with the reason.
+export function readTimeline(run, fail) {
+  if (!fs.existsSync(path.join(run, "timeline.json")))
+    fail("timeline.json is missing: run render/timing.mjs first");
+  const timeline = readJson(run, "timeline.json");
+  const voice = readJson(run, "voice.json");
+  if (timeline.voice !== voiceHash(run))
+    fail(
+      "timeline.json is from an older voice.json: run render/timing.mjs again",
+    );
+  const missing = timeline.scenes
+    .map((s) => `compositions/${s.id}.html`)
+    .filter((f) => !fs.existsSync(path.join(run, "project", f)));
+  if (missing.length) fail(`no ${missing.join(", ")}: author each scene file`);
+  return { timeline, voice };
+}
