@@ -1,12 +1,25 @@
 // The `creative-videos/` folder every run folder sits in. Its `.gitignore`
 // keeps a run's recipe (excerpts.json, outline.md, manifest.json, brief.json,
 // script.json) committed and everything a stage can rebuild out of git.
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
 const BEGIN = "# creative-video: begin";
 const END = "# creative-video: end";
-const REBUILDABLE = ["voice.json", "snapshots/", ".cache/", "out/"];
+const REBUILDABLE = [
+  "voice.json",
+  "snapshots/",
+  ".cache/",
+  "out/",
+  "timeline.json",
+  "project/index.html",
+  "project/timing.js",
+  "project/compositions/captions.html",
+  "project/assets/narration.wav",
+  "project/assets/gsap.min.js",
+  "project/.hyperframes/",
+];
 const BLOCK = `${BEGIN} (each run folder commits its recipe only)
 ${REBUILDABLE.map((f) => `*/${f}`).join("\n")}
 ${END}
@@ -28,3 +41,12 @@ export function writeIgnore(run) {
       : old + (old && !old.endsWith("\n") ? "\n" : "") + BLOCK;
   if (next !== old) fs.writeFileSync(file, next);
 }
+
+// The hash of the run's voice.json bytes: timeline.json records it, so the
+// render knows the timeline still answers to the voice.
+export const voiceHash = (run) =>
+  crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(path.join(run, "voice.json")))
+    .digest("hex")
+    .slice(0, 16);

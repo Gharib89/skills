@@ -66,6 +66,13 @@ export const SHAPES = {
       }),
     ),
   }),
+  // The timing stage, read by the root and the render.
+  "timeline.json": obj({
+    voice: text,
+    total: number,
+    scenes: list(obj({ id: text, start: number, duration: number })),
+    cues: list(obj({ start: number, end: number, text })),
+  }),
   // The source snapshot.
   "snapshots/sources.json": obj({
     minutes: number,
