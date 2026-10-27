@@ -1,4 +1,4 @@
-// The gates stage's refusals and its fix-round cap: a red run on one script is
+// The gates stage's refusals and its fix-round cap: a red run on one voice is
 // one fix attempt, judging the same inputs again is none, a third red stops the
 // run, and a pass or a new voice starts the count again.
 import { test } from "node:test";
@@ -66,7 +66,7 @@ test("gates.json records the inputs, the voice, each gate's verdict with its evi
   runGates(fx);
   const rec = record(fx);
   assert.match(rec.inputs, /^[0-9a-f]{16}$/);
-  assert.match(rec.voice, /^[0-9a-f]+$/);
+  assert.match(rec.voice, /^[0-9a-f]{16}$/);
   assert.deepEqual(Object.keys(rec.gates), [
     "determinism",
     "layout",

@@ -228,11 +228,13 @@ const reading = plan.flatMap((p) =>
 const SCRIPT_ERROR = /^\[HyperFrames\] composition script error: (\S+)\s*/;
 const anchors = [];
 const scriptErrors = [];
+const flagged = new Set();
 const addOnce = (list, line) => list.includes(line) || list.push(line);
 for (const f of checked.runtime.findings) {
   const anchor = f.message?.match(NO_WORD_RE);
   if (anchor) {
     const start = timeline.scenes.find((s) => s.id === anchor[2])?.start ?? 0;
+    flagged.add(anchor[2]);
     addOnce(
       anchors,
       `${start.toFixed(2)} s ${anchor[2]}: ${NO_WORD} "${anchor[1]}"`,
@@ -240,21 +242,19 @@ for (const f of checked.runtime.findings) {
   } else if (f.severity === "error") {
     const named = f.message?.match(SCRIPT_ERROR);
     const what = (named ? f.message.slice(named[0].length) : f.message) ?? "";
+    const scene = named?.[1] ?? sourceScene(f) ?? "project";
+    flagged.add(scene);
     addOnce(
       scriptErrors,
-      `${named?.[1] ?? sourceScene(f) ?? "project"}: ${what.split("\n")[0].trim().slice(0, 120)}`,
+      `${scene}: ${what.split("\n")[0].trim().slice(0, 120)}`,
     );
   }
 }
 // A scene registers its timeline last, so one missing means its script stopped.
 // HyperFrames 0.8.206 reports no error for a throwing script that also names a
 // second timeline, so the missing timeline is the evidence for an unnamed one.
-const named = (id) =>
-  [...anchors, ...scriptErrors].some(
-    (l) => l.startsWith(`${id}: `) || l.includes(` s ${id}: `),
-  );
 for (const { sc } of plan)
-  if (!events[sc.id] && !named(sc.id))
+  if (!events[sc.id] && !flagged.has(sc.id))
     scriptErrors.push(
       `${sc.id}: no timeline registered as window.__timelines["${sc.id}"], so its script stopped`,
     );

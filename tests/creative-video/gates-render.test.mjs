@@ -56,7 +56,7 @@ test("a kit file added after the gates passed also makes them stale", () => {
 });
 
 test("a file reached through a symlink, to a file or a folder, changed after the gates passed makes them stale", () => {
-  for (const link of ["file", "dir"]) {
+  for (const link of ["file", "dir", "loop"]) {
     const fx = timed();
     const outside = path.join(fx.dir, "outside");
     fs.mkdirSync(outside);
@@ -64,6 +64,8 @@ test("a file reached through a symlink, to a file or a folder, changed after the
     if (link === "file")
       fs.symlinkSync(path.join(outside, "look.css"), project(fx, "look.css"));
     else fs.symlinkSync(outside, project(fx, "kit"));
+    // a folder that links back to itself: the walk must still end
+    if (link === "loop") fs.symlinkSync(outside, path.join(outside, "back"));
     assert.equal(runGates(fx).code, 0);
     fs.writeFileSync(path.join(outside, "look.css"), "b {}");
     assert.match(exec(render, fx).err, REFUSED, link);
