@@ -48,7 +48,7 @@ function fail(why) {
 const num = (x) => String(+x.toFixed(2));
 
 // The JSON in `f`, or a refusal naming the file when it does not parse.
-function parseFile(f) {
+function parseUnchecked(f) {
   try {
     return JSON.parse(fs.readFileSync(f, "utf8"));
   } catch (e) {
@@ -63,7 +63,7 @@ const length = brief.length;
 // A decline holds for the length it was made at: a brief changed since is
 // offered the split again.
 const saved = fs.existsSync(file("parts.json"))
-  ? parseFile(file("parts.json"))
+  ? parseUnchecked(file("parts.json"))
   : null;
 const held = saved?.declined && saved.length !== length ? null : saved;
 
@@ -185,7 +185,7 @@ function notesOn(dir) {
     : null;
   if (!latest) return [];
   const name = latest[0];
-  const a = parseFile(path.join(board, name));
+  const a = parseUnchecked(path.join(board, name));
   if (!a || typeof a !== "object" || Array.isArray(a))
     fail(`${name} is not an object`);
   // One field's entries, each held to `kind` with a named refusal.
@@ -225,7 +225,9 @@ function notesOn(dir) {
 // folder and the video stands in it.
 function delivered(dir) {
   const manifest = path.join(dir, "manifest.json");
-  const out = fs.existsSync(manifest) ? parseFile(manifest)?.delivered : null;
+  const out = fs.existsSync(manifest)
+    ? parseUnchecked(manifest)?.delivered
+    : null;
   return (
     typeof out === "string" &&
     fs.existsSync(path.join(out, `${path.basename(dir)}.mp4`))
@@ -263,7 +265,7 @@ function start(n) {
   const notes = n > 1 ? notesOn(at(n - 2)) : [];
   const next = n < plan.length ? { title: plan[n].title } : null;
   const own = path.join(dir, "brief.json");
-  const old = fs.existsSync(own) ? parseFile(own) : null;
+  const old = fs.existsSync(own) ? parseUnchecked(own) : null;
   const now = {
     ...brief,
     focus: p.focus,
@@ -285,7 +287,7 @@ function start(n) {
   // A profile only the run holds (the style card's Use once) goes with each
   // part, which looks for its style in its own folder first.
   const style = file("style.json");
-  if (fs.existsSync(style) && parseFile(style).name === now.style)
+  if (fs.existsSync(style) && parseUnchecked(style)?.name === now.style)
     put(path.join(dir, "style.json"), fs.readFileSync(style, "utf8"));
   const pack = readJson(run, "excerpts.json");
   const wanted = new Set([...p.excerpts, ...(bridge?.excerpts ?? [])]);

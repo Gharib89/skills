@@ -94,6 +94,12 @@ test("a style the run holds only in its own style.json (the card's Use once) com
   );
   assert.equal(parts(fx, "start", "1").code, 0);
   assert.equal(fs.existsSync(path.join(dir, "style.json")), false);
+  // nor does one that holds no profile at all, which style's own reader refuses
+  fs.rmSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(fx.dir, "style.json"), "null");
+  const r2 = parts(fx, "start", "1");
+  assert.equal(r2.code, 0, r2.err);
+  assert.equal(fs.existsSync(path.join(dir, "style.json")), false);
 });
 
 // A part folder under the render fixture's project, its scene file moved in.

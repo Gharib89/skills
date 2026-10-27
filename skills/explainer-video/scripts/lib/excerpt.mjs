@@ -54,7 +54,7 @@ function load(read) {
   const pack = parseJson("excerpts.json", body);
   pack.sources.forEach((s, i) => {
     const at = `excerpts.json source ${i + 1}`;
-    named(at, s?.id, "an id");
+    named(at, s.id, "an id");
     // an unknown kind would read a repo's code as prose
     if (!KINDS.includes(s.kind))
       fail(
@@ -64,9 +64,9 @@ function load(read) {
   const kind = new Map(pack.sources.map((s) => [s.id, s.kind]));
   pack.excerpts.forEach((x, i) => {
     const at = `excerpts.json excerpt ${i + 1}`;
-    named(at, x?.id, "an id");
-    named(at, x?.text, "text");
-    named(at, x?.locator, "a locator");
+    named(at, x.id, "an id");
+    named(at, x.text, "text");
+    named(at, x.locator, "a locator");
     // an absent source would read a repo's code as prose
     if (!kind.has(x.source))
       fail(`${at} needs a source its sources list holds`);
