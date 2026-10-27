@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { parseJson } from "./json.mjs";
 import { userDirs } from "./paths.mjs";
 
 export const skill = path.join(
@@ -13,8 +14,10 @@ export const skill = path.join(
 );
 
 export const catalogue = () =>
-  JSON.parse(fs.readFileSync(path.join(skill, "setup", "rows.json"), "utf8"))
-    .rows;
+  parseJson(
+    "setup/rows.json",
+    fs.readFileSync(path.join(skill, "setup", "rows.json"), "utf8"),
+  ).rows;
 
 export const lockHash = crypto
   .createHash("sha256")

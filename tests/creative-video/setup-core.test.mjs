@@ -289,3 +289,18 @@ test("a usage error exits 2", () => {
   assert.equal(run(fx, ["check", "--voice"]).code, 2);
   assert.equal(run(fx, ["check", "--all"]).code, 2);
 });
+
+test("a catalogue or narrator list of the wrong shape is refused by file and field", () => {
+  const rows = fixture({});
+  const r = run(rows, ["check"]);
+  assert.notEqual(r.code, 0);
+  assert.match(r.err, /setup\/rows\.json: rows is not a list/);
+  const voices = fixture();
+  fs.writeFileSync(
+    path.join(voices.skill, "narrators.json"),
+    JSON.stringify({ narrators: [{ id: "x", language: null }] }),
+  );
+  const n = run(voices, ["check"]);
+  assert.notEqual(n.code, 0);
+  assert.match(n.err, /narrators\.json: narrators\[0\]\.language is not text/);
+});

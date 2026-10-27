@@ -1,11 +1,14 @@
 // The narrators a script and setup name: narrators.json's list.
 import fs from "node:fs";
 import path from "node:path";
+import { parseJson } from "./json.mjs";
 import { skill } from "./tools.mjs";
 
 export const narrators = () =>
-  JSON.parse(fs.readFileSync(path.join(skill, "narrators.json"), "utf8"))
-    .narrators;
+  parseJson(
+    "narrators.json",
+    fs.readFileSync(path.join(skill, "narrators.json"), "utf8"),
+  ).narrators;
 
 // The narrator `id` names for `language`, or the language's first default when
 // id is undefined; null when none.

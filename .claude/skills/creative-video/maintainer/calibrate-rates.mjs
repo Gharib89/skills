@@ -21,6 +21,7 @@
 // exit:   0 written · 1 synthesis or alignment failed · 2 usage
 import fs from "node:fs";
 import path from "node:path";
+import { parseJson } from "../scripts/lib/json.mjs";
 import { chars, sentences } from "../scripts/lib/length.mjs";
 import { loadBackend, skill, toolPaths } from "../scripts/lib/tools.mjs";
 import { align } from "../scripts/voice/align.mjs";
@@ -80,7 +81,7 @@ if (!TEXTS[language] || rest.length) {
   process.exit(2);
 }
 
-const doc = JSON.parse(fs.readFileSync(file, "utf8"));
+const doc = parseJson("narrators.json", fs.readFileSync(file, "utf8"));
 const tools = toolPaths();
 const backend = await loadBackend();
 const ctc = await backend.aligner({ language, tools });

@@ -1,4 +1,5 @@
 // The shapes of the run folder's JSON files, as their writers give them, and
+// of the skill's own data files (setup/rows.json, narrators.json), and
 // the loader that holds a file to its shape, so a malformed file is refused as
 // `<file>: is missing`, `<file>: is not valid JSON (...)` or
 // `<file>: <field> <problem>`, which the stage prints after its own prefix,
@@ -33,8 +34,16 @@ const obj = (fields) => (v, at) => {
 
 const words = list(obj({ text, start: number, end: number }));
 
-// One shape per run-folder file, keyed by its path in the run folder.
+// One shape per file, keyed by its path in the run folder or the skill.
 export const SHAPES = {
+  // The setup catalogue: every reader keys a row by its id and kind.
+  "setup/rows.json": obj({ rows: list(obj({ id: text, kind: text })) }),
+  // The narrators setup and the voice stage pick from.
+  "narrators.json": obj({
+    narrators: list(
+      obj({ id: text, language: text, backend: text, voice: text }),
+    ),
+  }),
   // The brief, read by the voice stage for its length.
   "brief.json": obj({ length: number }),
   // The voice stage's input.
