@@ -192,4 +192,4 @@ less legibly than a GSAP timeline.
 - **GPU renders are not bit-stable on HyperFrames.** A lit scene on its GPU
   path differed on 96 to 407 of 2,165 frames between runs, its CLI bans
   hardware GL in distributed renders as "bitwise unstable", and 6 or more GPU
-  workers silently fall back to screenshot capture (hyperframes#4584).
+  workers silently fall back to screenshot capture.

@@ -22,6 +22,12 @@ the teaching evidence under them. Effect sizes (Cohen's d, Hedges' g) come
 from the studies named, mostly short lab lessons with students: read them as
 direction and rough size, not a forecast for a 30-minute chaptered film.
 
+The two **bar videos** are the films this skill was measured against: the
+best, a game show where the viewer is the contestant, and a 34-minute
+chaptered explainer built from fixed component types. A chapter here is a
+stretch of the film with its own question and payoff; in a video under six
+minutes, read it as the film.
+
 ## The spectacle carries the idea
 
 Test every vivid thing on screen (a gag, a character, a sound, a camera move)
@@ -146,6 +152,9 @@ other bar, a 34-minute explainer, filled 14 fixed component types from YAML;
 its strength was structure (a progress rail, chapter cards, a citation behind
 every sentence), and its motion sat in the same low band as a slide deck. This
 prevents the film with no concept, which falls back to hook, points, recap.
+The game show fit its subject (permissions are rules a contestant can guess
+at); derive your three directions from your own subject's relations in the
+same way, not from that film.
 
 ## Characters with a job
 

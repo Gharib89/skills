@@ -24,7 +24,9 @@ What you write, all committed as the video's recipe:
 - `script.json`: the narration, scene by scene ([voice.md](voice.md) holds its
   shape and the spoken-form rules). A scene is a stretch of narration that one
   composition stages; the picture changes inside it on words, so a scene runs
-  as long as its idea, not a fixed length.
+  as long as its idea, not a fixed length. Its `id` is a file name, an element
+  id and a timeline key: lower-case letters, digits and hyphens, and none of
+  `main`, `captions`, `over` or `narration`.
 - `project/kit/`: the format kit, before the first scene: `*.css` (the palette
   as custom properties, the faces with their `@font-face` rules, sizes) and
   `*.js` (the recurring devices every scene shares). The root loads every file
@@ -40,8 +42,11 @@ What you write, all committed as the video's recipe:
 What the stages write, rebuilt on every run: `voice.json` and `.cache/` (voice),
 `timeline.json`, `project/index.html`, `project/timing.js`,
 `project/compositions/captions.html`, `project/assets/narration.wav` and
-`project/assets/gsap.min.js` (timing), and `out/` (render). Never edit these by
-hand: the next timing run overwrites them.
+`project/assets/gsap.min.js` (timing), `project/.hyperframes/` (the CLI's
+snapshots), and `out/` (render). Never edit these by hand: the next run of
+their stage overwrites them. `hf.mjs` and the render write `index.html` again
+before they run, so an `over.html` or a kit file added after timing is in the
+root they use.
 
 ## Timing
 
@@ -96,9 +101,12 @@ node <skill>/scripts/hf.mjs <run> <command> [args]
 
 It runs in `<run>/project` with the tool cache's Chrome. The commands you need:
 `check --json` after your last edit (fix every error, weigh every warning),
-`snapshot --review` for the contact sheets, `snapshot --at <t>` or
-`--range <a>,<b>` to look at what you changed, `timeline --json`. Exit codes
-and output are HyperFrames' own.
+`snapshot --review --json` for the contact sheets (its `review.sheets` lists
+their paths), `snapshot --at <t>` or `--range <a>,<b>` to look at what you
+changed, `timeline --json`. `--at` and `--range` take seconds of the whole
+video, not a scene's: `timeline.json` holds each scene's `start` and the
+absolute word times, or use `--composition <id>` for one scene. Exit codes and
+output are HyperFrames' own.
 
 ## Render
 
@@ -111,8 +119,9 @@ ceiling of -1.5 dBTP, and writes `out/<slug>.mp4` (captions drawn in),
 `out/<slug>.srt` and `out/poster.png`. It prints one `delivery <check>: pass`
 or `delivery <check>: fail: <measured> vs <wanted>` line per check
 (`resolution`, `frame rate`, `aspect`, `duration`, `audio`, `srt`,
-`true peak`), a `delivery loudness:` line with what it measured, then
-`delivered: <path of out/<slug>.mp4>`. On exit 1 nothing is delivered and
-`out/` is empty:
-a `render: <why>` line names the cause (a missing scene file, a timing older
-than the voice: run timing again), a failed `delivery` line the check.
+`loudness` within 1 LU, `true peak` at most -1 dBTP), a `measured loudness:`
+line with both values, `delivered: <path of out/<slug>.mp4>`, then
+`render: <slug>.mp4 <seconds> s, <n> scene(s)`. On exit 1 nothing new is
+delivered: a `render: <why>` refusal (a missing scene file, a timing older
+than the voice: run timing again) leaves `out/` as it was, and a failed
+render or `delivery` check empties it.

@@ -4,15 +4,17 @@
 //   node render.mjs <run-folder>
 //
 // Reads <run>/timeline.json and <run>/project/ (render/timing.mjs wrote both,
-// and the agent has authored a compositions/<id>.html per scene). Renders the
+// and the agent has authored a compositions/<id>.html per scene), and writes
+// the root again (render/root.mjs) so it names the project as it stands. A
+// refusal leaves out/ as it was. Renders the
 // project with HyperFrames to <run>/.cache/render/raw.mp4, normalises its
 // audio to -14 LUFS with a true peak of -1.5 dBTP into out/<slug>.mp4, writes
 // out/<slug>.srt from the timeline's cues and out/poster.png from the middle of
 // the first scene, and checks the MP4 against the delivery contract. A failed
 // check empties out/ and delivers nothing.
 // stdout: one `delivery <check>: pass|fail: <measured> vs <wanted>` line per
-//         check, `delivery loudness: <lufs> LUFS integrated, <peak> dBTP true
-//         peak`, `delivered: <path>`, then `render: <slug>.mp4 <seconds> s,
+//         check, `measured loudness: <lufs> LUFS integrated, <peak> dBTP
+//         true peak`, `delivered: <path>`, then `render: <slug>.mp4 <seconds> s,
 //         <n> scene(s)`
 // writes: <run>/.cache/render/raw.mp4, out/<slug>.mp4|.srt, out/poster.png,
 //         manifest.json
@@ -26,10 +28,12 @@ import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend, lockHash } from "../lib/tools.mjs";
 import { videoFacts, srtText, writeManifest } from "./delivery.mjs";
 import { FPS } from "./grid.mjs";
+import { HEIGHT, WIDTH, writeRoot } from "./root.mjs";
 
-// The mastering targets: the loudness gate's integrated level and a true peak
-// half a dB under its -1.0 dBTP ceiling.
+// The mastering targets: the loudness gate's integrated level, held within
+// 1 LU, and a true peak half a dB under its -1.0 dBTP ceiling.
 const LUFS = -14;
+const LU = 1;
 const PEAK = -1.5;
 const CEILING = -1.0;
 
@@ -48,11 +52,7 @@ const project = path.join(path.resolve(run), "project");
 const again = "run render/timing.mjs first";
 if (!fs.existsSync(path.join(run, "timeline.json")))
   fail(`timeline.json is missing: ${again}`);
-if (!fs.existsSync(path.join(project, "index.html")))
-  fail(`project/index.html is missing: ${again}`);
-const timeline = JSON.parse(
-  fs.readFileSync(path.join(run, "timeline.json"), "utf8"),
-);
+const timeline = readJson(run, "timeline.json");
 const voice = readJson(run, "voice.json");
 if (timeline.voice !== voiceHash(run))
   fail(
@@ -63,6 +63,7 @@ const missing = timeline.scenes
   .filter((f) => !fs.existsSync(path.join(project, f)));
 if (missing.length) fail(`no ${missing.join(", ")}: author each scene file`);
 writeIgnore(run);
+writeRoot(run);
 
 const backend = await loadBackend();
 const out = path.join(run, "out");
@@ -105,7 +106,7 @@ const seconds = +probe.format.duration;
 const srtCues = (fs.readFileSync(srt, "utf8").match(/^\d+\n.+ --> .+$/gm) ?? [])
   .length;
 const checks = [
-  ["resolution", size, "1920x1080"],
+  ["resolution", size, `${WIDTH}x${HEIGHT}`],
   ["frame rate", fps, FPS],
   ["aspect", ratio, "16:9"],
   [
@@ -121,6 +122,12 @@ const checks = [
   ],
   ["srt", `${srtCues} cue(s)`, `${timeline.cues.length} cue(s)`],
   [
+    "loudness",
+    `${loud.lufs} LUFS`,
+    `${LUFS} LUFS within ${LU} LU`,
+    Math.abs(loud.lufs - LUFS) <= LU,
+  ],
+  [
     "true peak",
     `${loud.peak} dBTP`,
     `at most ${CEILING} dBTP`,
@@ -133,7 +140,7 @@ for (const [name, got, want, ok = got === want] of checks) {
   console.log(`delivery ${name}: ${ok ? "pass" : `fail: ${got} vs ${want}`}`);
 }
 console.log(
-  `delivery loudness: ${loud.lufs} LUFS integrated, ${loud.peak} dBTP true peak`,
+  `measured loudness: ${loud.lufs} LUFS integrated, ${loud.peak} dBTP true peak`,
 );
 if (failed) {
   fs.rmSync(out, { recursive: true, force: true });

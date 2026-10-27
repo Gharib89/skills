@@ -12,8 +12,13 @@ const REBUILDABLE = [
   "snapshots/",
   ".cache/",
   "out/",
+  "timeline.json",
+  "project/index.html",
+  "project/timing.js",
+  "project/compositions/captions.html",
   "project/assets/narration.wav",
   "project/assets/gsap.min.js",
+  "project/.hyperframes/",
 ];
 const BLOCK = `${BEGIN} (each run folder commits its recipe only)
 ${REBUILDABLE.map((f) => `*/${f}`).join("\n")}

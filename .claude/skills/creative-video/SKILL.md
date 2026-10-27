@@ -18,7 +18,8 @@ authored freely in HyperFrames rather than drawn from a fixed set of
 components, a long one split into **chapters**. Given a concept, a topic, a
 repo or a document (and optionally a language and a length), make one under
 [The stance](#the-stance), by the steps of [Make a video](#make-a-video). This
-version makes one video of up to about six minutes, without chapters. Run
+version makes one video of up to about six minutes, without chapters: asked for
+a longer one or for chapters, say so and offer one of about six minutes. Run
 setup alone only when asked (`/creative-video setup`).
 
 ## The stance
@@ -101,11 +102,18 @@ you would have written an adjective. At least:
 
 The `hyperframes` skill is your engine and its craft; `hyperframes-cli` is its
 command line, run through this skill's pinned copy (`hf.mjs`,
-[reference/authoring.md](reference/authoring.md#the-pinned-cli)). Read its
-`SKILL.md` and the references you need. Its BANNED list (the dark navy void
-with a glow, neon, floating particles, purple and blue gradients, everything
-centred and fading in) stays banned, with one more way out: the format concept
-needs it, and `SPEC.md` says why in one line. "It looks techy" is not a reason.
+[reference/authoring.md](reference/authoring.md#the-pinned-cli)). Read the
+`hyperframes` `SKILL.md` and the references you need. Its BANNED list (the
+dark navy void with a glow, neon, floating particles, purple and blue
+gradients, everything centred and fading in) stays banned, with one more way
+out: the format concept needs it, and `SPEC.md` says why in one line. "It
+looks techy" is not a reason.
+Where the `hyperframes` loop and [Make a video](#make-a-video) differ, these
+steps win: `DIRECTIONS.md` is its storylines, the stills review of step 10 is
+its review (no `REVIEW.md`, nothing but the sheets to the reviewer), the
+render follows that review with no stop at a Studio preview, every command
+runs through `hf.mjs`, and a registry block is raw material you edit into the
+concept's look, never a look to pick.
 
 ### Look at what you made
 
@@ -126,9 +134,12 @@ folder's files, timing, the word anchors, the pinned CLI and the render.
 
 1. **Brief.** Write `<run>/brief.json`, `{ "length": <minutes> }`: the length
    asked for, about two minutes when none is. The language is the one asked
-   for, English when none is.
-2. **Tools.** Run setup's check (below) with the narrator you will use. A
-   missing row: run setup's steps first. The `hyperframes` and `media-use`
+   for, English when none is; the narrator the one asked for, else the
+   language's default in `<skill>/narrators.json`. Name the audience (the one
+   asked for, else a smart newcomer): it is the researcher's `{audience}` and
+   heads `DIRECTIONS.md`.
+2. **Tools.** Run setup's check (below) with that narrator. A missing row:
+   run setup's steps first. The `hyperframes` and `media-use`
    skills must be installed (Composed skills, below).
 3. **Sources.** Read [reference/sources.md](reference/sources.md) and run its
    steps, to the outline and the still-standing check.
@@ -143,33 +154,42 @@ folder's files, timing, the word anchors, the pinned CLI and the render.
    skill's [craft-teaching.md](reference/craft-teaching.md) and
    [craft-motion.md](reference/craft-motion.md). Write `<run>/SPEC.md` by the
    stance, then the format kit in `<run>/project/kit/`, both before any scene.
+   Fetch each sound of the palette and the bed with `media-use` into
+   `<run>/project/assets/`, its source and licence on `SPEC.md`'s Sound line.
+   A bed that is music carries one reason line there, as a banned default
+   does.
 6. **Script.** Write `<run>/script.json`
    ([reference/voice.md](reference/voice.md) holds its shape), one scene per
    idea of the arc: the misconception given a voice and broken, the question
    posed before its answer, each metaphor's limit said. Every factual
-   sentence comes from an excerpt in the outline.
+   sentence comes from an excerpt in the outline. This version voices one
+   narrator: anyone else in the cast is drawn, or speaks in on-screen text.
 7. **Voice.** Run [reference/voice.md](reference/voice.md)'s steps until the
    voice stage passes.
 8. **Timing.** `node <skill>/scripts/render/timing.mjs <run>`, again after
    every re-voice.
-9. **Scenes.** Author `<run>/project/compositions/<id>.html` for every scene
-   it lists, each event that answers a word placed at `at(scene, word)`.
-10. **Look.** `node <skill>/scripts/hf.mjs <run> check --json` until clean,
-    then `node <skill>/scripts/hf.mjs <run> snapshot --review`, and describe
-    each frame as a stranger would. Dispatch one subagent with
-    `<skill>/agents/stills-reviewer.md` as its prompt, `{sheets}` the sheets'
-    paths, `{notes}` `<run>/.cache/review/stills-notes.md`, and nothing else
-    from the run. Fix every P0 and every default it or you named, then
-    snapshot what changed.
+9. **Scenes.** Author `<run>/project/compositions/<id>.html` for every
+   `to author` line timing printed, each event that answers a word placed at
+   `at(scene, word)`, each effect's clip at the `at()` of the event it marks.
+10. **Look: the stills review.** `node <skill>/scripts/hf.mjs <run> check
+    --json` until it reports no errors, then `node <skill>/scripts/hf.mjs
+    <run> snapshot --review --json`, and describe each frame as a stranger
+    would. Dispatch one subagent with `<skill>/agents/stills-reviewer.md` as
+    its prompt, `{sheets}` every path in the output's `review.sheets`,
+    `{notes}` `<run>/.cache/review/stills-notes.md`, and nothing else from the
+    run. Fix every P0 and every default it or you named, fix each P1 or write
+    in `DELIVERY.md` why it stays, then snapshot what changed.
 11. **Render.** `node <skill>/scripts/render/render.mjs <run>`; on exit 1 fix
     what it names and render again.
 12. **Deliver.** Write `<run>/CREDITS.md` (each source cited with its
     locators, each sound with its source, licence and attribution, the voice,
     the faces and their licences) and `<run>/DELIVERY.md` (the concept and why
-    it was picked; what was measured, quoting the render's `delivery` lines,
-    and what was only looked at; that the sound was measured, not heard; any
+    it was picked; what was measured, quoting the render's `delivery` and
+    `measured loudness` lines, and what was only looked at; that the sound
+    was measured, not heard, and each effect placed on its event's word; any
     source updated or withdrawn; the weakest shot and what you would change).
-    Reply with the `out/` path and the note's short form.
+    Reply with the `out/` path, the concept, the delivery lines and the
+    weakest shot.
 
 ## Setup
 

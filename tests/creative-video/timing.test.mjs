@@ -214,8 +214,20 @@ test("a run keeps the agent's files, builds the assets, and lists only the scene
     Math.abs(wav.readUInt32LE(40) / 2 / wav.readUInt32LE(24) - tl.total) < 1e-3,
   );
   const ignore = read(path.join(path.dirname(fx.dir), ".gitignore"));
-  assert.ok(ignore.includes("*/project/assets/narration.wav"));
-  assert.ok(ignore.includes("*/project/assets/gsap.min.js"));
+  for (const f of [
+    "timeline.json",
+    "project/index.html",
+    "project/timing.js",
+    "project/compositions/captions.html",
+    "project/assets/narration.wav",
+    "project/assets/gsap.min.js",
+    "project/.hyperframes/",
+  ])
+    assert.match(
+      ignore,
+      new RegExp(`^\\*/${f.replaceAll(".", "\\.")}$`, "m"),
+      f,
+    );
 });
 
 test("a voice.json that no longer matches the script is refused", () => {

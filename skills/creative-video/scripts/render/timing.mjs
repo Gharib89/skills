@@ -16,9 +16,7 @@
 //                          to each scene) and window.at(scene, word, nth), the
 //                          start of the nth matching word, for scene scripts
 //   compositions/captions.html   the cues as HyperFrames cue clips
-//   index.html             the root: every scene host in order, over.html's
-//                          host when the file exists, the captions host, the
-//                          narration, and the kit's .css and .js sorted
+//   index.html             the root (render/root.mjs)
 // stdout: `timing: <n> scene(s), <total> s`, then one `timing: compositions/<id>.html
 //         to author` line per scene file not yet written
 // exit:   0 timed · 1 refused, `timing: <why>` on stderr · 2 usage
@@ -33,6 +31,7 @@ import { catalogue, dest } from "../lib/tools.mjs";
 import { captionCues } from "./cues.mjs";
 import { gridScenes, written } from "./grid.mjs";
 import { joinNarration, wavSeconds } from "./narration.mjs";
+import { HEIGHT, WIDTH, esc, writeRoot } from "./root.mjs";
 
 stage("timing");
 const [run, ...rest] = process.argv.slice(2);
@@ -81,17 +80,19 @@ const grid = gridScenes(
   voice.scenes.map((v) => wavSeconds(run, v.audio, fail)),
   HOLD,
 );
+const shift = (words, by) =>
+  words.map((w) => ({
+    text: w.text,
+    start: r3(by + w.start),
+    end: r3(by + w.end),
+  }));
 const scenes = script.scenes.map((s, i) => {
   const start = written(grid[i].start);
   return {
     id: s.id,
     start,
     duration: written(grid[i].frames),
-    words: voice.scenes[i].words.map((w) => ({
-      text: w.text,
-      start: r3(start + w.start),
-      end: r3(start + w.end),
-    })),
+    words: shift(voice.scenes[i].words, start),
   };
 });
 const total = written(grid.total);
@@ -132,14 +133,7 @@ fs.copyFileSync(
 const local = Object.fromEntries(
   scenes.map((s, i) => [
     s.id,
-    {
-      duration: s.duration,
-      words: voice.scenes[i].words.map((w) => ({
-        text: w.text,
-        start: r3(w.start),
-        end: r3(w.end),
-      })),
-    },
+    { duration: s.duration, words: shift(voice.scenes[i].words, 0) },
   ]),
 );
 fs.writeFileSync(
@@ -158,8 +152,6 @@ window.at = (scene, word, nth = 1) => {
 `,
 );
 
-const esc = (s) =>
-  s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 const cueDivs = cues
   .map(
     (c, i) =>
@@ -187,7 +179,7 @@ fs.writeFileSync(
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
     }
   </style>
-  <div id="root" data-composition-id="captions" data-width="1920" data-height="1080">
+  <div id="root" data-composition-id="captions" data-width="${WIDTH}" data-height="${HEIGHT}">
 ${cueDivs}
   </div>
   <script>
@@ -197,49 +189,7 @@ ${cueDivs}
 `,
 );
 
-const host = (id, start, duration, track, kind, style = "") =>
-  `    <div id="${id}" data-composition-id="${id}" data-composition-src="compositions/${id}.html" data-start="${start}" data-duration="${duration}" data-track-index="${track}" data-track-kind="${kind}" data-width="1920" data-height="1080"${style}></div>`;
-const kit = (ext) =>
-  fs.existsSync(path.join(proj, "kit"))
-    ? fs
-        .readdirSync(path.join(proj, "kit"))
-        .filter((f) => f.endsWith(ext))
-        .sort()
-    : [];
-fs.writeFileSync(
-  path.join(proj, "index.html"),
-  `<!doctype html>
-<html lang="${script.language}">
-  <head>
-    <meta charset="utf-8" />
-    <title>${esc(path.basename(path.resolve(run)))}</title>
-    <style>
-      body {
-        margin: 0;
-      }
-    </style>
-    <script src="assets/gsap.min.js"></script>
-    <script src="timing.js"></script>
-${kit(".css")
-  .map((f) => `    <link rel="stylesheet" href="kit/${f}" />`)
-  .join("\n")}
-${kit(".js")
-  .map((f) => `    <script src="kit/${f}"></script>`)
-  .join("\n")}
-  </head>
-  <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="${total}" data-width="1920" data-height="1080">
-${scenes.map((s) => host(s.id, s.start, s.duration, 1, "graphics")).join("\n")}
-${fs.existsSync(path.join(comps, "over.html")) ? host("over", 0, total, 2, "graphics") + "\n" : ""}${host("captions", 0, total, 3, "captions", ' style="z-index:10"')}
-      <audio id="narration" class="clip" src="assets/narration.wav" data-start="0" data-duration="${total}" data-volume="1" data-track-index="4"></audio>
-    </div>
-    <script>
-      window.__timelines["main"] = gsap.timeline({ paused: true });
-    </script>
-  </body>
-</html>
-`.replace(/\n{2,}/g, "\n"),
-);
+writeRoot(run);
 
 console.log(`timing: ${scenes.length} scene(s), ${total} s`);
 for (const s of scenes)
