@@ -132,4 +132,5 @@ place a swallowed `## Attribution` shows while the PR is open;
 
 `open-pr` runs the repo's body checker, the profile's `## PR` `Body-check:`
 line, on the body file before the push, and `update-pr-body` on the body it
-would publish; on a refusal, fix the section the checker names and re-run.
+would publish; on a refusal, fix what the checker's output names and re-run
+the call it refused.

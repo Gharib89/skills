@@ -267,27 +267,26 @@ ship_template_missing() { # <body>
     --argjson h "$(ship_body_headings "$1" | jq -R . | jq -sc .)" '$w - $h'
 }
 
-# ship_body_check <file>: run the repo's body checker (`ship_body_check_path`)
-# on <file>, from the checkout root with the file as its one argument. One gate
-# for `open-pr`, before the push, and `update-pr-body`, before the write, so the
-# two cannot drift. Returns 0 on a pass or with no checker; 1 when the checker
-# refuses (exit 1), printing the refusal with its stdout's last 40 lines; 2 when
-# it cannot answer (any other exit, or an unreadable profile), printing the
-# reason with its stderr's last 40 lines.
-ship_body_check() { # <file>
-  local check file err out rc
-  check=$(ship_body_check_path) || { echo "cannot read the ship profile for its Body-check: line"; return 2; }
+# ship_require_body_check <file>: run the repo's body checker
+# (`ship_body_check_path`) on <file>, from the checkout root with the file as its
+# one argument. One gate for `open-pr`, before the push, and `update-pr-body`,
+# before the write, so the two cannot drift. No checker returns 0. The checker's
+# exit 1 is a refusal (`ship_fail`, its stdout's last 40 lines); any other exit,
+# an unreadable profile or no checkout is tooling (`ship_tooling`, its stderr's
+# last 40 lines). A relative <file> is the caller's, so it is resolved first.
+ship_require_body_check() { # <file>
+  local check top file err out rc
+  check=$(ship_body_check_path) || ship_tooling "cannot read the ship profile for its Body-check: line"
   [ -n "$check" ] || return 0
+  top=$(git rev-parse --show-toplevel) || ship_tooling "not inside a git checkout"
   case $1 in /*) file=$1 ;; *) file=$PWD/$1 ;; esac
-  err=$(mktemp) || { echo "cannot create a temp file for the body check"; return 2; }
-  out=$(cd "$(git rev-parse --show-toplevel)" && "./$check" "$file" 2>"$err"); rc=$?
+  err=$(mktemp); trap 'rm -f "$err"; trap - RETURN' RETURN
+  out=$(cd "$top" && "./$check" "$file" 2>"$err"); rc=$?
   case $rc in
     0) ;;
-    1) printf "PR body fails the repo's body check (%s): %s\n" "$check" "$(printf '%s\n' "$out" | tail -n 40)" ;;
-    *) printf 'body check %s failed (exit %s): %s\n' "$check" "$rc" "$(tail -n 40 "$err")"; rc=2 ;;
+    1) ship_fail "PR body fails the repo's body check ($check): $(printf '%s\n' "$out" | tail -n 40)" ;;
+    *) ship_tooling "body check $check failed (exit $rc): $(tail -n 40 "$err")" ;;
   esac
-  rm -f "$err"
-  return "$rc"
 }
 
 # ship_outline_missing <body> <paths>: the paths, one per line, that the body's

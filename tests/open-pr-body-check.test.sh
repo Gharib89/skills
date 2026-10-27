@@ -77,4 +77,18 @@ reset; profile 'Body-check: None.'
 opn "$long" >/dev/null; rc=$?
 check_rc "Body-check: None. opens unchecked" 0 "$rc"
 
+# A profile that is there but cannot be read is no answer: read as "no
+# checker", it would open the PR unchecked.
+if [ "$(id -u)" -ne 0 ]; then
+  reset; profile 'Body-check: scripts/check-outline.sh'
+  chmod 000 "$repo/docs/agents/ship.md"
+  out=$(opn "$short"); rc=$?
+  chmod 644 "$repo/docs/agents/ship.md"
+  check_rc "an unreadable profile is tooling" 2 "$rc"
+  check "nothing is pushed" none "$(pushed)"
+  check "no PR is created" "" "$(created)"
+else
+  skipped "unreadable profile is tooling: running as root"
+fi
+
 finish

@@ -33,10 +33,11 @@
 #
 # Body check. The repo's own body checker, the profile's `## PR` `Body-check:`
 # line, then runs on the body file before the push, as update-pr-body runs it
-# before a write (ship_body_check): its refusal (exit 1) is refused with its
-# stdout, so a Change outline it rejects is fixed now, not at the first phase-7
-# body write. Any other checker exit is tooling, exit 2. No profile, no line or
-# `None.` is no check. `--rework` takes no body file and runs none.
+# before a write (ship_require_body_check). A checker exit 1 refuses the call
+# with the checker's stdout, so a body it rejects is fixed before any PR exists,
+# not at the first phase-7 body write. Any other checker exit is tooling, exit
+# 2. No profile, no line or `None.` is no check. `--rework` takes no body file
+# and runs none.
 #
 # `created_at` is the PR's creation time, which is when an `auto-once` reviewer
 # fires: phase 7 passes it to `poll-pr --since` so that one round counts on
@@ -82,8 +83,7 @@ $rework || [ "$n" = none ] || ship_require_grade "$n" "$title"
 if ! $rework; then
   lacks=$(ship_template_missing "$(cat "$file")") || ship_tooling "cannot read $lacks"
   [ "$lacks" = '[]' ] || ship_fail "body lacks the template headings: $(jq -r 'join(", ")' <<<"$lacks")"
-  why=$(ship_body_check "$file")
-  case $? in 0) ;; 1) ship_fail "$why" ;; *) ship_tooling "$why" ;; esac
+  ship_require_body_check "$file"
 fi
 
 if $rework; then

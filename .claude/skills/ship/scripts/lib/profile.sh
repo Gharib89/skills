@@ -16,8 +16,9 @@ ship_profile_path() {
 }
 
 # ship_body_check_path: the repo's own body checker, the path from the checkout
-# root on the profile's `## PR` `Body-check:` line, which `update-pr-body` runs
-# on the body it would publish. Prints nothing for no profile, no line or
+# root on the profile's `## PR` `Body-check:` line, which `open-pr` and
+# `update-pr-body` run through `ship_require_body_check` on the body they would
+# publish. Prints nothing for no profile, no line or
 # `None.`: a repo with no checker publishes as it always did. A line inside a
 # fenced block is example text, not the setting; a profile that exists and
 # cannot be read returns 1, which the caller reads as tooling, not as no checker.

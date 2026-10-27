@@ -102,8 +102,7 @@ elif ship_body_replace_section "$body" "$section" "$file" > "$new"; then
 else
   replaced=false; created=true
 fi
-why=$(ship_body_check "$new")
-case $? in 0) ;; 1) ship_fail "$why" ;; *) ship_tooling "$why" ;; esac
+ship_require_body_check "$new"
 answer=$(host_pr_set_body "$pr" "$new") || ship_fail "PR body update failed" "$answer"
 sections=$(ship_body_headings "$(cat "$new")")
 jq -n --argjson pr "$pr" --arg s "$section" --argjson p "$preamble" \
