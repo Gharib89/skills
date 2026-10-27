@@ -15,7 +15,7 @@ const text = (v, at) => (typeof v === "string" ? null : [at, "is not text"]);
 const number = (v, at) => (Number.isFinite(v) ? null : [at, "is not a number"]);
 // Text a reader matches whole words against: an empty or punctuation-only
 // entry would match at every word boundary.
-const word = (v, at) =>
+const matchWord = (v, at) =>
   text(v, at) ??
   (/[\p{L}\p{N}]/u.test(v) ? null : [at, "has no letter or digit"]);
 const opt = (shape) => (v, at) => (v === undefined ? null : shape(v, at));
@@ -62,8 +62,8 @@ export const SHAPES = {
   // avoid words.
   "brief.json": obj({
     length: number,
-    must: opt(list(word)),
-    avoid: opt(list(word)),
+    must: opt(list(matchWord)),
+    avoid: opt(list(matchWord)),
   }),
   // The gates stage's record: what it is of and each gate's verdict, which the
   // render reads to refuse a project the gates have not passed.

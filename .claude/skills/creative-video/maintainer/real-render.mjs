@@ -166,8 +166,9 @@ const [, got, wanted, marked] = chapterCheck(
 check("chapter marks", marked, `${got} vs ${wanted}`);
 
 // Five gates, each on a one-scene fixture built to fail it and the same fixture
-// without the defect, layout twice more on a clip seen at one sample only. The gate line is read from the stage's stdout, since a
-// red gate exits 1. Determinism's failing twin reads the wall clock.
+// without the defect, layout twice more on a clip seen at one sample only. The
+// gate line is read from the stage's stdout, since a red gate exits 1.
+// Determinism's failing twin reads the wall clock.
 const BOX =
   '<div id="b" style="position:absolute;left:160px;top:600px;width:200px;height:200px;background:#7cc"></div>';
 const slide = (x) => `tl.to("#b", { x: ${x}, duration: 3, ease: "none" }, 0);`;

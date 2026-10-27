@@ -91,10 +91,13 @@ test("a gates.json that is not JSON, or whose gates are not an object, is refuse
   let r = runGates(fx);
   assert.equal(r.code, 1);
   assert.match(r.err, /^gates: gates\.json: is not valid JSON \(/);
-  fs.writeFileSync(record, JSON.stringify({ inputs: "x", gates: [] }));
+  fs.writeFileSync(
+    record,
+    JSON.stringify({ inputs: "x", script: "x", gates: [] }),
+  );
   r = runGates(fx);
   assert.equal(r.code, 1);
-  assert.match(r.err, /^gates: gates\.json: script is not text/);
+  assert.match(r.err, /^gates: gates\.json: gates is not an object/);
   assert.deepEqual(
     calls(fx).filter((c) => ["check", "probe", "snapshot"].includes(c.call)),
     [],
