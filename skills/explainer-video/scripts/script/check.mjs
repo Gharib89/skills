@@ -23,14 +23,17 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { maybeJson, readJson, SHAPES } from "../lib/json.mjs";
 import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { isPart, packRun, readPart, writeIgnore } from "../lib/runfolder.mjs";
 import { plain } from "../lib/count.mjs";
 import { numberIn } from "../lib/figures.mjs";
+import { stage } from "../lib/stage.mjs";
 import { VISUALS } from "../lib/visuals.mjs";
 import { segment, squash } from "../source/locators.mjs";
 
+stage("script");
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
   console.error("usage: node check.mjs <run-folder>");
@@ -42,11 +45,12 @@ function need(f, why) {
     console.error(`script: no ${f}: ${why}`);
     process.exit(1);
   }
-  return fs.readFileSync(file(f), "utf8");
+  // part.json has its own reader, readPart.
+  return f in SHAPES ? readJson(run, f) : fs.readFileSync(file(f), "utf8");
 }
-const script = JSON.parse(need("script.json", "compile first"));
-const brief = JSON.parse(need("brief.json", "run brief.mjs first"));
-const pack = JSON.parse(need("excerpts.json", "run the source stage first"));
+const script = need("script.json", "compile first");
+const brief = need("brief.json", "run brief.mjs first");
+const pack = need("excerpts.json", "run the source stage first");
 const md = need("script.md", "write the scene file first");
 
 const narrator = findNarrator(script.narrator, script.language);
@@ -123,10 +127,7 @@ const gates = {};
   const byId = new Map(pack.excerpts.map((x) => [x.id, x]));
   // A part's snapshots stay with the run folder that holds the source pack.
   const packDir = packRun(run);
-  const sourcesFile = path.join(packDir, "snapshots", "sources.json");
-  const sources = fs.existsSync(sourcesFile)
-    ? JSON.parse(fs.readFileSync(sourcesFile, "utf8")).sources
-    : null;
+  const sources = maybeJson(packDir, "snapshots/sources.json")?.sources ?? null;
   const seen = new Set();
   for (const s of scenes)
     s.cites.forEach((cites, i) => {
@@ -169,9 +170,7 @@ const gates = {};
 // words, cites and cited excerpts' words are unchanged keeps the first verdict
 // it got, and a different one is drift: a warn, never a new failure or fix
 // attempt.
-const record = fs.existsSync(file("check.json"))
-  ? JSON.parse(fs.readFileSync(file("check.json"), "utf8"))
-  : null;
+const record = maybeJson(run, "check.json");
 let support = record?.support ?? { attempts: 0, judged: null };
 let red = false;
 const drift = [];
@@ -194,8 +193,7 @@ const drift = [];
   else if (mtime("excerpts.json") > mtime("support.json"))
     f.push("support.json predates excerpts.json: run the support check");
   else {
-    const raw = fs.readFileSync(file("support.json"), "utf8");
-    const verdicts = JSON.parse(raw).sentences ?? [];
+    const verdicts = readJson(run, "support.json").sentences;
     let judged = true;
     const failing = [];
     for (const s of scenes)

@@ -28,8 +28,10 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
+import { maybeJson, readJson } from "../lib/json.mjs";
 import { judge } from "../lib/layout.mjs";
 import { sampleTimes } from "../lib/motion.mjs";
+import { stage } from "../lib/stage.mjs";
 import { LUFS, floors, grammar, loadStyle, typeRoles } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend, renderInputs } from "../lib/tools.mjs";
 import { drawsWebgl } from "../lib/visuals.mjs";
@@ -47,6 +49,7 @@ import {
 import { cutSheets, readPrevKeys } from "./sheets.mjs";
 import { SCORES, KIND_LIST, checkVerdict } from "./verdict.mjs";
 
+stage("gates");
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
   console.error("usage: node gates.mjs <run-folder>");
@@ -87,8 +90,11 @@ for (const f of [
 ])
   if (!fs.existsSync(path.join(run, f)))
     fail(`no ${f}: run the render stage first`);
-const script = JSON.parse(read("script.json"));
-const timeline = JSON.parse(read("timeline.json"));
+const script = readJson(run, "script.json");
+const timeline = readJson(run, "timeline.json");
+const score = readJson(run, "score.json");
+const pack = maybeJson(run, "excerpts.json");
+const prev = maybeJson(run, "gates.json");
 let profile, floor;
 try {
   profile = loadStyle(run, script.style);
@@ -226,7 +232,7 @@ if (peak > ceiling)
 const caps = captionFindings({ timeline, cues, srtText: read(srtFile) });
 
 // Sound effects: the most cues the score puts in any minute.
-const sfxCues = JSON.parse(read("score.json")).cues;
+const sfxCues = score.cues;
 const { perMinute } = floor.sfx;
 let busiest = { n: 0, t: 0 };
 for (const c of sfxCues) {
@@ -295,10 +301,6 @@ const renderHash = hash(
   fs.readFileSync(path.join(run, mp4)),
   read(srtFile),
 );
-const recordFile = path.join(run, "gates.json");
-const prev = fs.existsSync(recordFile)
-  ? JSON.parse(fs.readFileSync(recordFile, "utf8"))
-  : null;
 const same = prev?.script === scriptKey;
 const again = same && prev.render === renderHash;
 const count = (failing, before) =>
@@ -317,15 +319,7 @@ const CRITIC_FORMAT = 4;
 // A verdict stands for the render, for what else the critic read (the title,
 // every scene's narration, each sentence's cites and the cited excerpts' text)
 // and for its format.
-const excerptsFile = path.join(run, "excerpts.json");
-const excerptText = new Map(
-  fs.existsSync(excerptsFile)
-    ? JSON.parse(fs.readFileSync(excerptsFile, "utf8")).excerpts.map((x) => [
-        x.id,
-        x.text,
-      ])
-    : [],
-);
+const excerptText = new Map((pack?.excerpts ?? []).map((x) => [x.id, x.text]));
 // Every critic reads every excerpt the script cites, so a scene's key below
 // takes all of them, not its own cites alone.
 const criticRead = [
@@ -462,7 +456,7 @@ const attempts = Math.max(
   criticFinal || nondeterministic ? 3 : 0,
 );
 fs.writeFileSync(
-  recordFile,
+  path.join(run, "gates.json"),
   JSON.stringify(
     { script: scriptKey, render: renderHash, attempts, gates },
     null,

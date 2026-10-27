@@ -31,13 +31,16 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { maybeJson, readJson } from "../lib/json.mjs";
 import { HOLD, fitsLength } from "../lib/length.mjs";
 import { OWN_PREFIX, narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
+import { stage } from "../lib/stage.mjs";
 import { catalogue, loadBackend, toolPaths } from "../lib/tools.mjs";
 import { FRAME, align, transcribe } from "./align.mjs";
 import { check } from "./qc.mjs";
 
+stage("voice");
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
   console.error("usage: node voice.mjs <run-folder>");
@@ -51,9 +54,9 @@ if (!fs.existsSync(path.join(run, "script.json"))) {
   );
   process.exit(1);
 }
-const script = JSON.parse(
-  fs.readFileSync(path.join(run, "script.json"), "utf8"),
-);
+const script = readJson(run, "script.json");
+// Read before any synthesis, so a malformed brief costs no voicing.
+const brief = maybeJson(run, "brief.json");
 writeIgnore(run);
 const language = script.language ?? "en";
 const narrator = findNarrator(script.narrator, language);
@@ -261,9 +264,8 @@ if (failed) {
 }
 // length: with a brief, the voiced scenes and the render's closing hold within
 // 10 percent of the brief's length, which the script's budget only predicts.
-const briefFile = path.join(run, "brief.json");
-if (fs.existsSync(briefFile)) {
-  const { length } = JSON.parse(fs.readFileSync(briefFile, "utf8"));
+if (brief) {
+  const { length } = brief;
   const durations = scenes.map((s) => (s.cached ?? s.voiced).duration);
   const voiced = durations.reduce((a, d) => a + d, 0);
   const ok = fitsLength(voiced, length);

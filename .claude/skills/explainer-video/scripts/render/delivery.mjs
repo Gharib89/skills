@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { maybeJson } from "../lib/json.mjs";
 import { explainersDir, isPart, readPart } from "../lib/runfolder.mjs";
 import { skill } from "../lib/tools.mjs";
 
@@ -23,9 +24,7 @@ export const srtText = (cues) =>
 // skill's version.
 export function writeManifest(run, facts) {
   const file = path.join(run, "manifest.json");
-  const old = fs.existsSync(file)
-    ? JSON.parse(fs.readFileSync(file, "utf8"))
-    : {};
+  const old = maybeJson(run, "manifest.json") ?? {};
   const version = fs
     .readFileSync(path.join(skill, "SKILL.md"), "utf8")
     .match(/^ {2}version: (\S+)$/m)[1];

@@ -22,7 +22,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { OWN_PREFIX, narrator, narrators } from "../lib/narrators.mjs";
+import { maybeJson } from "../lib/json.mjs";
 import { explainersDir } from "../lib/runfolder.mjs";
+import { stage } from "../lib/stage.mjs";
 import { defaultStyle, stores } from "../lib/style.mjs";
 import { loadBackend, unavailable } from "../lib/tools.mjs";
 import { ASPECTS, SCORES } from "./knobs.mjs";
@@ -53,6 +55,7 @@ const FEEDS = {
   avoid: "script",
 };
 
+stage("brief");
 const [run, ...args] = process.argv.slice(2);
 const usage = () => {
   console.error(
@@ -63,9 +66,7 @@ const usage = () => {
 if (!run) usage();
 
 const file = path.join(run, "brief.json");
-const old = fs.existsSync(file)
-  ? JSON.parse(fs.readFileSync(file, "utf8"))
-  : null;
+const old = maybeJson(run, "brief.json");
 const given = {};
 const lists = {};
 for (const a of args) {

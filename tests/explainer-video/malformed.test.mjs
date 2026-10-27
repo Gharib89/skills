@@ -12,6 +12,13 @@ import { fixture as rendered, render, skill } from "./render-lib.mjs";
 import { fixture as parted, plan, writePlan } from "./parts-lib.mjs";
 
 const BAD = ["{}", "null", "[null]"];
+// The bad inputs a stage defaults rather than refuses, and the default it
+// applies: these pass.
+const DEFAULTS = {
+  // The board adds `board` once it posts and the render `delivered` once it
+  // delivers, so `{}` is a manifest with neither: no board link, not delivered.
+  "manifest.json {}": "no board link and not delivered",
+};
 
 // One run folder every stage below passes on: check-lib's brief, pack and
 // support verdicts on render-lib's machine, compiled, voiced and delivered.
@@ -22,6 +29,14 @@ for (const f of ["brief.json", "excerpts.json", "support.json"])
 fs.cpSync(path.join(c.dir, "snapshots"), path.join(fx.dir, "snapshots"), {
   recursive: true,
 });
+// The reader's draft `pack.mjs <run> doc` checks.
+fs.writeFileSync(
+  path.join(fx.dir, "snapshots", "doc.draft.json"),
+  JSON.stringify({
+    summary: "Ship and its gate.",
+    excerpts: [{ locator: "§ Ship", text: "Ship reads the issue.", note: "n" }],
+  }),
+);
 const r = render(fx);
 assert.equal(r.code, 0, r.out + r.err);
 const s = run(fx.dir, "gates/samples.mjs", [], fx.env);
@@ -38,6 +53,8 @@ p.env = {
 
 // Each stage: its stderr prefix, its command, its folder and the files it reads.
 const STAGES = [
+  ["brief", "brief/brief.mjs", [], fx, ["brief.json"]],
+  ["pack", "source/pack.mjs", ["doc"], fx, ["snapshots/sources.json"]],
   ["voice", "voice/voice.mjs", [], fx, ["script.json", "brief.json"]],
   [
     "render",
@@ -96,18 +113,17 @@ function run(dir, script, args, env) {
   return { code: x.status, out: x.stdout, err: x.stderr };
 }
 
-// The run folder's own JSON files, put back after each case with their
-// times, which the board reads: a stage may remove one (voice drops voice.json
-// first) or write one before it refuses.
-const saved = (dir) =>
+// The run folder's own JSON files and the stage's, put back after each case
+// with their times, which the board reads: a stage may remove one (voice drops
+// voice.json first) or write one before it refuses.
+const saved = (dir, files) =>
   new Map(
-    fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => [
+    [...fs.readdirSync(dir).filter((f) => f.endsWith(".json")), ...files].map(
+      (f) => [
         f,
         [fs.readFileSync(path.join(dir, f)), fs.statSync(path.join(dir, f))],
-      ]),
+      ],
+    ),
   );
 const restore = (dir, files) => {
   for (const f of fs.readdirSync(dir))
@@ -120,7 +136,7 @@ const restore = (dir, files) => {
 
 for (const [name, script, args, at, files] of STAGES) {
   const label = [script, ...args].join(" ");
-  const held = saved(at.dir);
+  const held = saved(at.dir, files);
 
   test(`${label} passes on the well-formed run folder`, () => {
     const x = run(at.dir, script, args, at.env);
@@ -129,20 +145,19 @@ for (const [name, script, args, at, files] of STAGES) {
   });
 
   for (const file of files)
-    for (const bad of BAD)
-      test(`${label} refuses ${file} as ${bad} by name`, () => {
+    for (const bad of BAD) {
+      const given = DEFAULTS[`${file} ${bad}`];
+      test(`${label} ${given ? `defaults ${file} as ${bad} to ${given}` : `refuses ${file} as ${bad} by name`}`, () => {
         fs.writeFileSync(path.join(at.dir, file), bad);
         const x = run(at.dir, script, args, at.env);
         restore(at.dir, held);
+        if (given) return assert.equal(x.code, 0, x.out + x.err);
         const lines = x.err.trim().split("\n");
         assert.equal(x.code, 1, `exit ${x.code}\n${x.out}${x.err}`);
         assert.doesNotMatch(x.err, /TypeError|^\s+at /m, x.err);
-        assert.deepEqual(
-          lines.filter((l) => l.startsWith(`${name}: `)),
-          lines,
-          x.err,
-        );
         assert.equal(lines.length, 1, x.err);
-        assert.match(lines[0], new RegExp(`\\b${file.replace(".", "\\.")}\\b`));
+        assert.ok(lines[0].startsWith(`${name}: `), x.err);
+        assert.ok(lines[0].includes(file), x.err);
       });
+    }
 }

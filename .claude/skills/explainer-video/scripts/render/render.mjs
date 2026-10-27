@@ -33,10 +33,12 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { checkScenes } from "../lib/allowed.mjs";
+import { maybeJson, readJson } from "../lib/json.mjs";
 import { HOLD } from "../lib/length.mjs";
 import { videosDir } from "../lib/paths.mjs";
 import { drawsWebgl } from "../lib/visuals.mjs";
 import { isPart, readPart, writeIgnore } from "../lib/runfolder.mjs";
+import { stage } from "../lib/stage.mjs";
 import { LUFS, floors, loadStyle, typeRoles } from "../lib/style.mjs";
 import { writeWav } from "../score/dsp.mjs";
 import { ACE_CAPTION, bedLevel, score } from "../score/score.mjs";
@@ -68,6 +70,7 @@ import {
   writeSection,
 } from "./sections.mjs";
 
+stage("render");
 const [run, ...rest] = process.argv.slice(2);
 const stillsOnly = rest[0] === "--stills";
 if (!run || rest.length > (stillsOnly ? 1 : 0)) {
@@ -89,8 +92,10 @@ const hash = (...parts) => {
 const json = (f) => JSON.parse(fs.readFileSync(f, "utf8"));
 if (!fs.existsSync(path.join(run, "script.json")))
   fail("no script.json: run the compile stage first (script/compile.mjs)");
-const script = json(path.join(run, "script.json"));
-// A part.json of another shape would fail at delivery, after the whole render.
+const script = readJson(run, "script.json");
+// A part.json or manifest.json of another shape would fail at delivery, after
+// the whole render.
+maybeJson(run, "manifest.json");
 if (isPart(run))
   try {
     readPart(run);
@@ -114,7 +119,7 @@ const roles = typeRoles(script.language);
 
 if (!fs.existsSync(path.join(run, "voice.json")))
   fail("no voice.json: run the voice stage first (voice/voice.mjs)");
-const voice = json(path.join(run, "voice.json"));
+const voice = readJson(run, "voice.json");
 script.scenes.forEach((s, i) => {
   const v = voice.scenes[i];
   if (
@@ -163,8 +168,7 @@ for (const r of fontRows) {
 
 // The score the brief asks for: on (synthesised), off, or ace-step, the
 // opt-in row setup installs only when asked for.
-const briefFile = path.join(run, "brief.json");
-const scoreMode = fs.existsSync(briefFile) ? json(briefFile).score : "on";
+const scoreMode = maybeJson(run, "brief.json")?.score ?? "on";
 const ace =
   !stillsOnly && scoreMode === "ace-step"
     ? rows.find((r) => r.id === "ace-step")

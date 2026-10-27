@@ -20,7 +20,10 @@ test("a verdict stands only for the evidence it read: new cites or a changed cit
   const excerpts = (text) =>
     fs.writeFileSync(
       path.join(fx.dir, "excerpts.json"),
-      JSON.stringify({ excerpts: [{ id: "ex-1", text }] }),
+      JSON.stringify({
+        sources: [{ id: "s1" }],
+        excerpts: [{ id: "ex-1", source: "s1", locator: "L1", text }],
+      }),
     );
   excerpts("Ship reads the issue first.");
   assert.equal(render(fx).code, 0);
@@ -42,7 +45,10 @@ test("a changed cite or cited excerpt's text sends every scene back to the criti
   const excerpts = (fx, text) =>
     fs.writeFileSync(
       path.join(fx.dir, "excerpts.json"),
-      JSON.stringify({ excerpts: [{ id: "ex-1", text }] }),
+      JSON.stringify({
+        sources: [{ id: "s1" }],
+        excerpts: [{ id: "ex-1", source: "s1", locator: "L1", text }],
+      }),
     );
   const fx = fixture();
   excerpts(fx, "Ship reads the issue first.");

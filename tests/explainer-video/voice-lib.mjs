@@ -52,10 +52,23 @@ export function fixture(scenes = SCENES, language = "en") {
   return fx;
 }
 
-export const write = (fx, scenes, language = "en") =>
+// A script.json of the shape compile writes, filled around the fields the voice
+// stage reads; `extra` sets top-level fields such as the narrator.
+export const write = (fx, scenes, language = "en", extra = {}) =>
   fs.writeFileSync(
     path.join(fx.dir, "script.json"),
-    JSON.stringify({ language, scenes }),
+    JSON.stringify({
+      title: "Demo",
+      language,
+      ...extra,
+      scenes: scenes.map((s) => ({
+        title: s.id,
+        captions: s.narration.map(() => []),
+        cites: s.narration.map(() => []),
+        visual: { component: "title" },
+        ...s,
+      })),
+    }),
   );
 
 export function run(fx, extra = {}) {

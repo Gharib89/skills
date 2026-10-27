@@ -21,10 +21,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { estimate, loadRates } from "../lib/estimate.mjs";
+import { readJson as loadJson } from "../lib/json.mjs";
 import { HOLD, LONG, PART } from "../lib/length.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
+import { stage } from "../lib/stage.mjs";
 import { findStyle, grammar } from "../lib/style.mjs";
 
+stage("parts");
 const [run, cmd, ...args] = process.argv.slice(2);
 const commands = ["offer", "decline", "check", "start"];
 if (
@@ -55,11 +58,7 @@ function readJson(f) {
 
 if (!fs.existsSync(file("brief.json")))
   fail("no brief.json: run brief.mjs first");
-const brief = readJson(file("brief.json"));
-if (!brief || typeof brief !== "object" || Array.isArray(brief))
-  fail("brief.json is not an object");
-if (!Number.isFinite(brief.length)) fail("brief.json length is not a number");
-if (typeof brief.style !== "string") fail("brief.json style is not a name");
+const brief = loadJson(run, "brief.json");
 const length = brief.length;
 // A decline holds for the length it was made at: a brief changed since is
 // offered the split again.
@@ -132,13 +131,7 @@ function problems(plan) {
   }
   if (!fs.existsSync(file("excerpts.json")))
     return ["no excerpts.json: run pack.mjs first"];
-  if (!strings(brief.must)) return ["brief.json must is not a list"];
-  const pack = readJson(file("excerpts.json"));
-  if (!Array.isArray(pack.excerpts))
-    return ["excerpts.json holds no excerpts list"];
-  const odd = pack.excerpts.findIndex((x) => typeof x?.id !== "string");
-  if (odd >= 0)
-    return [`excerpts.json excerpt ${odd + 1} is not an object with an id`];
+  const pack = loadJson(run, "excerpts.json");
   const ids = new Set(pack.excerpts.map((x) => x.id));
   const owner = new Map();
   plan.parts.forEach((p, i) => {
@@ -294,7 +287,7 @@ function start(n) {
   const style = file("style.json");
   if (fs.existsSync(style) && readJson(style).name === now.style)
     put(path.join(dir, "style.json"), fs.readFileSync(style, "utf8"));
-  const pack = readJson(file("excerpts.json"));
+  const pack = loadJson(run, "excerpts.json");
   const wanted = new Set([...p.excerpts, ...(bridge?.excerpts ?? [])]);
   put(
     path.join(dir, "excerpts.json"),

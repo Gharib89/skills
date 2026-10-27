@@ -207,13 +207,16 @@ test("a brief.json of the wrong shape is refused by file and field, whichever co
   const file = path.join(fx.dir, "brief.json");
   const good = fs.readFileSync(file, "utf8");
   for (const [body, why] of [
-    ["null", /^parts: brief\.json is not an object$/m],
-    ["[]", /^parts: brief\.json is not an object$/m],
-    ["{}", /^parts: brief\.json length is not a number$/m],
-    ['{"length":"12"}', /^parts: brief\.json length is not a number$/m],
+    ["null", /^parts: brief\.json: is not an object$/m],
+    ["[]", /^parts: brief\.json: is not an object$/m],
+    ["{}", /^parts: brief\.json: focus is not text$/m],
+    [
+      JSON.stringify({ ...JSON.parse(good), length: "12" }),
+      /^parts: brief\.json: length is not a number$/m,
+    ],
     [
       JSON.stringify({ ...JSON.parse(good), style: 3 }),
-      /^parts: brief\.json style is not a name$/m,
+      /^parts: brief\.json: style is not text$/m,
     ],
   ])
     for (const cmd of ["offer", "decline", "check"]) {

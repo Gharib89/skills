@@ -10,6 +10,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { write } from "./voice-lib.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const scripts = path.join(
@@ -178,15 +179,7 @@ const AR_SCENES = [
   },
 ];
 const KEY = { GEMINI_API_KEY: "test-key" };
-const script = (fx) =>
-  fs.writeFileSync(
-    path.join(fx.dir, "script.json"),
-    JSON.stringify({
-      language: "ar",
-      narrator: "own:maya",
-      scenes: AR_SCENES,
-    }),
-  );
+const script = (fx) => write(fx, AR_SCENES, "ar", { narrator: "own:maya" });
 const voice = (fx, extra = KEY) => node(fx, "voice/voice.mjs", [fx.dir], extra);
 const synths = (fx) =>
   fs
