@@ -132,7 +132,7 @@ Paths: skills/explainer-video/scripts/render/**, skills/explainer-video/scripts/
 
 ### creative-real-render
 
-Proves: creative-video's frame grid holds under real HyperFrames through its own stages on authored scenes: the delivered MP4 has the grid's frame count, three renders match frame for frame, and two chapters joined by its chapter join have the sum of their frames and a mark each.
+Proves: on real HyperFrames, through creative-video's own stages: the delivered MP4 has the grid's frame count, three renders match frame for frame, two chapters joined have the sum of their frames and a mark each, and each gate's failing fixture fails while its passing twin passes.
 Applies when: the change touches a file in `Paths:`.
 Run: `node skills/creative-video/maintainer/real-render.mjs` after `node skills/creative-video/scripts/setup.mjs install` has installed the worktree's lock (a new pin is a new cache). Outside `tests/run.sh` (it needs real Chrome). Exit 0 is `pass`, 1 `fail`, 2 a missing tool row.
 Needs: the `npm-packages` and `chrome` rows installed, and `ffmpeg`.
