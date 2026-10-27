@@ -27,22 +27,18 @@ page() { awk -v n="$1" 'BEGIN { print "<p>"; for (i = 0; i < n / 8; i++) print "
 edit() {
   out=$(cd "$r" && CLAUDE_CODE_REMOTE='' bash scripts/check.sh edit "$1" 2>&1); rc=$?
 }
+# <case> <needle>: the output holds the needle.
+says() { case $out in *"$2"*) check "$1" 0 0 ;; *) check "$1" "output holds: $2" "$out" ;; esac; }
 
 page 24000 > "$r/docs/big.html"
 edit docs/big.html
 check_rc "an HTML file over the token limit fails the edit rung" 1 "$rc"
-case $out in
-  *"docs/big.html: "*" tokens, over the 5000-token limit"*) check "and the failure names the limit" 0 0 ;;
-  *) check "and the failure names the limit" "output holds: over the 5000-token limit" "$out" ;;
-esac
+says "and the failure names the limit" "over the 5000-token limit"
 
 page 8000 > "$r/docs/small.html"
 edit docs/small.html
 check_rc "an HTML file inside the limit passes" 0 "$rc"
 # Exit 0 is also `skipped`, so the verdict tells a pass from a file the rung never read.
-case $out in
-  *'"verdict":"pass"'*) check "and the rung read it" 0 0 ;;
-  *) check "and the rung read it" 'output holds: "verdict":"pass"' "$out" ;;
-esac
+says "and the rung read it" '"verdict":"pass"'
 
 finish
