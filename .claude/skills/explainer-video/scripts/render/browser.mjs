@@ -101,7 +101,7 @@ export const browser = (p, f, x) => {
           {
             opacity: 1,
             duration: FADE,
-            ease: "power2.out",
+            ease: x.ease,
             delay: r(move + j * step),
           },
           a,

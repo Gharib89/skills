@@ -45,19 +45,24 @@ const CALLOUT_CSS = `.em-host { position: relative; }
 .em::after { left: 50%; top: calc(100% + 44px); width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; }
 .em.side::before { left: auto; inset-inline-start: 100%; top: 50%; width: 44px; height: 4px; margin: -2px 0 0; }
 .em.side::after { left: auto; inset-inline-start: calc(100% + 44px); top: 50%; margin: -8px 0 0; }`;
+// The reveals (tweens from opacity 0) a component keeps on their own ease, each
+// with why. Every other reveal takes an ease compose resolves from the profile's
+// `grammar.ease`: `reveals` theirs, a per-word rise `x.type.ease`, and the rest
+// `x.ease`.
+export const OWN_EASE = [
+  {
+    component: "codediff",
+    target: /^\.add\d+$/,
+    why: "an added line opens its height on the same power2.inOut a removed line closes on, so the kept lines slide as one move",
+  },
+];
+
 // The index of the item an emphasis names, by the text shown for each, or -1.
 const emphasised = (e, texts) => (e ? texts.indexOf(e.target) : -1);
-// The callout appears on the emphasis's cue.
-const reveal = (e) =>
+// The callout appears on the emphasis's cue, on `x.ease`.
+const reveal = (e, x) =>
   e
-    ? [
-        [
-          ".em",
-          { opacity: 0 },
-          { opacity: 1, duration: 0.35, ease: "power2.out" },
-          e,
-        ],
-      ]
+    ? [[".em", { opacity: 0 }, { opacity: 1, duration: 0.35, ease: x.ease }, e]]
     : [];
 
 // Shiki tokens as spans coloured by the `--code-*` variables, which the code
@@ -194,7 +199,7 @@ export const COMPONENTS = {
 .note { margin-top: 22px; font: 400 var(--size-small) ${f.note}; color: var(--muted); }
 ${CALLOUT_CSS}`,
       reveals: p.items.map((x, i) => [`.r${i}`, x]),
-      tweens: reveal(p.emphasis),
+      tweens: reveal(p.emphasis, x),
     };
   },
   terminal: (p, f, x) => {
@@ -217,7 +222,7 @@ ${CALLOUT_CSS}`,
 .line { white-space: pre; }
 ${CALLOUT_CSS}`,
       reveals: [[".rt", 1], ...p.lines.map((x, i) => [`.r${i}`, x, "snap"])],
-      tweens: reveal(p.emphasis),
+      tweens: reveal(p.emphasis, x),
     };
   },
   flow: async (p, f, x) => {
@@ -269,7 +274,7 @@ ${CALLOUT_CSS}`,
             { strokeDashoffset: 0, duration: 0.5, ease: "power1.inOut" },
             s,
           ]),
-        ...reveal(p.emphasis),
+        ...reveal(p.emphasis, x),
       ],
     };
   },
@@ -297,10 +302,10 @@ ${CALLOUT_CSS}`,
 ${sketchCss(x.surface)}
 ${CALLOUT_CSS}`,
       reveals: p.items.map((it, i) => [`.p${i}`, it]),
-      tweens: reveal(p.emphasis),
+      tweens: reveal(p.emphasis, x),
     };
   },
-  list: (p, f) => {
+  list: (p, f, x) => {
     const em = emphasised(
       p.emphasis,
       p.items.map((it) => it.text),
@@ -322,7 +327,7 @@ ${CALLOUT_CSS}`,
         ...(p.title ? [[".lt", 1, "land"]] : []),
         ...p.items.map((it, i) => [`.i${i}`, it, "snap"]),
       ],
-      tweens: reveal(p.emphasis),
+      tweens: reveal(p.emphasis, x),
     };
   },
   // Key lines, each a box of whole-word spans. A line read along (see
@@ -393,7 +398,7 @@ ${WORD_CSS}`,
       ...frame,
       css: `${frame.css}\n${CALLOUT_CSS}\n.body > .em { left: 30px; }`,
       reveals: [[".rt", 1]],
-      tweens: reveal(e),
+      tweens: reveal(e, x),
     };
   },
   // The diff plays at its sentence: removed lines close and added ones open,

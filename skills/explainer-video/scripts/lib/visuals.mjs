@@ -1,4 +1,5 @@
 // The visual vocabulary a scene's `### Visual` block names: per component, the
+// techniques a style profile's ban reaches it by (`techniques`), the
 // props it takes (`props`, and `item` for each entry of its `rows` list), what
 // they must hold (`check`, throwing the reason) and what it shows a viewer to
 // read (`items`, as [name, sentence it rises at, texts], which the camera beat
@@ -30,20 +31,6 @@ import {
 // A code frame holds this many lines at 30 px: longer code is a second scene.
 const CODE_LINES = 12;
 export const lines = (code) => code.split("\n");
-
-// The techniques a style profile may ban beside the components, each with the
-// components that use it: `draw` strokes arrows on, `kinetic` moves type word
-// by word, `3d` draws with WebGL. The texture draws `blur`, not a component: the
-// profile loader checks it there, and the type family `words` the same way for
-// `kinetic`. `camera` is a scene's `camera` key, which compile checks, and the
-// `canvas` component, whose camera tours its map.
-export const TECHNIQUES = {
-  draw: ["flow", "diagram"],
-  blur: [],
-  camera: ["canvas"],
-  kinetic: ["words", "browser"],
-  "3d": ["stack3d"],
-};
 
 // Whether a scene draws WebGL, which the render and the gates take the GPU
 // path for, and whether any of `scenes` does.
@@ -145,11 +132,13 @@ function code(name, v, what) {
 
 export const VISUALS = {
   title: {
+    techniques: [],
     props: ["kicker", "title", "subtitle"],
     check: (p) => text("title", p.title, "a title"),
     items: (p) => [["title", 1, [p.kicker, p.title, p.subtitle]]],
   },
   cards: {
+    techniques: [],
     props: ["items", "emphasis"],
     rows: "items",
     item: [...CUE, "label", "value", "note"],
@@ -175,6 +164,7 @@ export const VISUALS = {
       ]),
   },
   terminal: {
+    techniques: [],
     props: ["title", "lines", "emphasis"],
     rows: "lines",
     item: [...CUE, "text"],
@@ -192,6 +182,7 @@ export const VISUALS = {
       p.lines.map((x, i) => [`line ${i + 1}`, x.at, [x.text], x.on]),
   },
   flow: {
+    techniques: ["draw"],
     props: ["steps", "emphasis"],
     rows: "steps",
     item: [...CUE, "label", "note"],
@@ -209,6 +200,7 @@ export const VISUALS = {
       p.steps.map((x, i) => [`step ${i + 1}`, x.at, [x.label, x.note], x.on]),
   },
   panels: {
+    techniques: [],
     props: ["items", "emphasis"],
     rows: "items",
     item: [...CUE, "title", "body"],
@@ -229,6 +221,7 @@ export const VISUALS = {
       p.items.map((x, i) => [`panel ${i + 1}`, x.at, [x.title, x.body], x.on]),
   },
   list: {
+    techniques: [],
     props: ["title", "items", "emphasis"],
     rows: "items",
     item: [...CUE, "text"],
@@ -250,6 +243,7 @@ export const VISUALS = {
   // Key lines of about six words, each staged word by word. It is rich: the
   // component owns the frame, so the grammar's camera never pushes on it.
   words: {
+    techniques: ["kinetic"],
     props: ["lines"],
     rows: "lines",
     item: [...CUE, "text"],
@@ -264,6 +258,7 @@ export const VISUALS = {
   // Bars or a line over 1 or more numbers that count up as each is said. Rich
   // like `words`; `numbers` are what the script gate holds to a cited excerpt.
   chart: {
+    techniques: [],
     props: ["kind", "unit", "items"],
     rows: "items",
     item: [...CUE, "label", "value"],
@@ -291,6 +286,7 @@ export const VISUALS = {
   },
   // Big numbers that count up, each with its label. Rich like `chart`.
   stat: {
+    techniques: [],
     props: ["items"],
     rows: "items",
     item: [...CUE, "value", "label"],
@@ -310,6 +306,7 @@ export const VISUALS = {
   // `when` is display text, shown as written and never parsed. Rich like
   // `words`.
   timeline: {
+    techniques: [],
     props: ["items"],
     rows: "items",
     item: [...CUE, "when", "label", "note"],
@@ -339,6 +336,7 @@ export const VISUALS = {
   // side's title arrives with its first item, so no item cues before it.
   // Rich like `words`.
   compare: {
+    techniques: [],
     props: ["sides"],
     ownCamera: true,
     check: (p, said) => {
@@ -380,6 +378,7 @@ export const VISUALS = {
   // no earlier than both its nodes, and a link's packets flow along it from its
   // cue to the scene's end. Rich like `words`.
   diagram: {
+    techniques: ["draw"],
     props: ["nodes", "links"],
     ownCamera: true,
     check: checkDiagram,
@@ -393,6 +392,7 @@ export const VISUALS = {
   // later. Rich like `words`. A number on the page, typed text included, is a
   // claim like a diagram's.
   browser: {
+    techniques: ["kinetic"],
     props: ["url", "title", "elements", "actions"],
     ownCamera: true,
     check: checkBrowser,
@@ -414,6 +414,7 @@ export const VISUALS = {
   // text the pack's own and never the scene file's, and numbered chips for
   // further cited excerpts. Not rich: the camera beat reads what it shows.
   excerpt: {
+    techniques: [],
     props: ["cite", "chips", "emphasis"],
     check: checkExcerpt,
     items: (p) => [
@@ -434,6 +435,7 @@ export const VISUALS = {
   // cue, ending on the overview of the whole map. Rich like `words`: the
   // component moves the frame itself.
   canvas: {
+    techniques: ["camera"],
     props: ["items"],
     rows: "items",
     item: [...CUE, "title", "body"],
@@ -446,6 +448,7 @@ export const VISUALS = {
   // Lit layers drawn in 3D with WebGL, each rising on its cue with its label
   // (DOM text over the canvas, so the layout gate judges it). Rich like `words`.
   stack3d: {
+    techniques: ["3d"],
     props: ["layers"],
     ownCamera: true,
     webgl: true,
@@ -455,6 +458,7 @@ export const VISUALS = {
     numbers: (p) => p.layers.flatMap((l) => numbersIn([l.label])),
   },
   code: {
+    techniques: [],
     props: ["lang", "code", "file", "emphasis"],
     retired: {
       highlights:
@@ -468,6 +472,7 @@ export const VISUALS = {
     items: (p) => [["code", 1, [p.file, ...lines(p.code)]]],
   },
   codediff: {
+    techniques: [],
     props: ["lang", "file", "before", "after", ...CUE],
     check: (p, said) => {
       text("codediff", p.lang, "a lang");
@@ -496,6 +501,7 @@ export const VISUALS = {
   // the fragment and keeps its text as `source`. Rich like `words`, and it shows
   // nothing the camera beat could read.
   custom: {
+    techniques: [],
     props: ["file", "intent", "cues"],
     ownCamera: true,
     check: checkCustom,
@@ -504,6 +510,20 @@ export const VISUALS = {
     shown: (p) => [shownText(p.source ?? "")],
   },
 };
+
+// The techniques a style profile may ban beside the components, each with the
+// components declaring it in their `techniques`: `draw` strokes arrows on,
+// `kinetic` moves type word by word, `3d` draws with WebGL. The texture draws
+// `blur`, not a component: the profile loader checks it there, and the type
+// family `words` the same way for `kinetic`. `camera` is a scene's `camera`
+// key, which compile checks, and the `canvas` component, whose camera tours its
+// map.
+export const TECHNIQUES = Object.fromEntries(
+  ["draw", "blur", "camera", "kinetic", "3d"].map((t) => [
+    t,
+    Object.keys(VISUALS).filter((c) => VISUALS[c].techniques.includes(t)),
+  ]),
+);
 
 // The props a visual must hold and no others, for the scene's sentences in
 // spoken form; throws why not. The component's own checks come first, so a
