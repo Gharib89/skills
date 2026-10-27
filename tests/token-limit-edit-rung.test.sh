@@ -39,5 +39,10 @@ esac
 page 8000 > "$r/docs/small.html"
 edit docs/small.html
 check_rc "an HTML file inside the limit passes" 0 "$rc"
+# Exit 0 is also `skipped`, so the verdict tells a pass from a file the rung never read.
+case $out in
+  *'"verdict":"pass"'*) check "and the rung read it" 0 0 ;;
+  *) check "and the rung read it" 'output holds: "verdict":"pass"' "$out" ;;
+esac
 
 finish
