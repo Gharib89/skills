@@ -24,18 +24,19 @@ handed() {
   sed 's|.*/||' "$fixture/log" | grep '\.test\.mjs$'
 }
 all=$(for f in tests/explainer-video/*.test.mjs; do printf '%s\n' "${f##*/}"; done)
-# What --turn leaves out: the gates and render pipeline files, the three files
+# What --turn leaves out: the gates and render pipeline files, the render-rate
+# calibration, which renders the pipeline four times a run, the three files
 # that run the real ffmpeg and the one that starts real Chrome. The rest of the
 # suite runs on the canned backend or on stubs, so a turn costs no other run's
 # quiet window.
-skip='^(gates-.*|render-.*|style-motion-real|motion-real|backend-concat|layout-real)\.test\.mjs$'
+skip='^(gates-.*|render-.*|calibrate-render-rates|style-motion-real|motion-real|backend-concat|layout-real)\.test\.mjs$'
 
 check "the bare call hands node every test file" "$all" "$(handed)"
-check "--turn hands it every file but gates, render and the real-ffmpeg and real-Chrome ones" \
+check "--turn hands it every file but gates, render, calibration and the real-ffmpeg and real-Chrome ones" \
   "$(printf '%s\n' "$all" | grep -vE "$skip")" "$(handed --turn)"
 
 # Every name in the skip exists, or a rename would put one back on the rung.
-for f in 'gates-*' 'render-*' style-motion-real motion-real backend-concat layout-real; do
+for f in 'gates-*' 'render-*' calibrate-render-rates style-motion-real motion-real backend-concat layout-real; do
   if compgen -G "tests/explainer-video/$f.test.mjs" > /dev/null; then have=0; else have=1; fi
   check_rc "tests/explainer-video/$f.test.mjs exists" 0 "$have"
 done

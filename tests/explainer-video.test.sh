@@ -8,7 +8,9 @@
 #
 # `--turn` is the harness's turn rung, which has 60 s: it leaves out the files
 # that run the render and gates pipeline once per case, `gates-*` and
-# `render-*`, which together take longer than that. It also leaves out the
+# `render-*`, which together take longer than that, and
+# `calibrate-render-rates`, which renders four videos a run and alone takes
+# longer than the rest of the set. It also leaves out the
 # three that run the real ffmpeg, `style-motion-real`, `motion-real` and
 # `backend-concat`, and `layout-real`, which starts real Chrome, so a turn never
 # takes CPU from a timed render in another session. Given changed files,
@@ -65,7 +67,7 @@ if [ "${1:-}" = --turn ]; then
   kept=()
   for f in "${files[@]}"; do
     case ${f##*/} in
-      gates-*.test.mjs | render-*.test.mjs | style-motion-real.test.mjs | motion-real.test.mjs | backend-concat.test.mjs | layout-real.test.mjs) ;;
+      gates-*.test.mjs | render-*.test.mjs | calibrate-render-rates.test.mjs | style-motion-real.test.mjs | motion-real.test.mjs | backend-concat.test.mjs | layout-real.test.mjs) ;;
       *) kept+=("$f") ;;
     esac
   done
