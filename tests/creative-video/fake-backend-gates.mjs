@@ -15,6 +15,9 @@
 //   at("<id>", "<word>")  a word the timeline lacks is a console_error, as the
 //                 browser running the scene's script reports it
 //   throw new Error("<text>")  the same console_error with the thrown text
+//   no-timeline   the scene registers no timeline and no error is reported,
+//                 as HyperFrames 0.8.206 does for a throwing script that also
+//                 names a second timeline
 //   data-tween="<a>-<b>" and data-sound="<t>" the scene's tween windows and
 //                 sounds, in scene seconds (no tween: one across the scene)
 import crypto from "node:crypto";
@@ -190,6 +193,7 @@ export async function probe(dir, times) {
   });
   const events = {};
   for (const m of mounted(dir).filter((m) => m.id !== "captions")) {
+    if (/\bno-timeline\b/.test(m.html)) continue;
     const tweens = [...m.html.matchAll(/data-tween="([\d.]+)-([\d.]+)"/g)].map(
       (w) => [+w[1], +w[2]],
     );

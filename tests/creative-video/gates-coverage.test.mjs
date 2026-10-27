@@ -51,6 +51,18 @@ test("a scene whose script throws fails script errors by scene and message, not 
   );
 });
 
+test("a scene that never registers its timeline fails script errors though no error is reported", () => {
+  const fx = timed();
+  compose(fx, "context", "<p>context line</p>", "// no-timeline");
+  const r = runGates(fx);
+  assert.equal(r.code, 1);
+  only(r, "script errors");
+  assert.match(
+    gateLine(r, "script errors"),
+    /^fail: 1 finding\(s\), first: context: no timeline registered as window\.__timelines\["context"\], so its script stopped vs /,
+  );
+});
+
 const BRIEF = (extra) => ({ brief: { length: 0.2, ...extra } });
 
 test("a must word said or shown passes, one neither said nor shown fails", () => {

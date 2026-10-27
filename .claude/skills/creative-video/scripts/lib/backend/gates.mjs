@@ -82,6 +82,7 @@ export async function framePixels(file) {
 const MIME = {
   ".html": "text/html",
   ".js": "text/javascript",
+  ".mjs": "text/javascript",
   ".css": "text/css",
   ".json": "application/json",
   ".wav": "audio/wav",
@@ -93,6 +94,11 @@ const MIME = {
   ".svg": "image/svg+xml",
   ".png": "image/png",
   ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
 };
 
 // The project open in a fresh browser, ready to seek. It is served as
@@ -252,10 +258,11 @@ function sceneEvents() {
         .getChildren(true, true, false)
         .filter((c) => !c.getChildren)
         .map((c) => [lift(c, c.startTime()), lift(c, c.endTime())]),
+      // A timeline a script registers beyond its scene's has no element.
       sounds: [
-        ...document
+        ...(document
           .querySelector(`[data-composition-id="${id}"]`)
-          .querySelectorAll("audio[data-start]"),
+          ?.querySelectorAll("audio[data-start]") ?? []),
       ].map((a) => r3(+a.dataset.start)),
     };
   }

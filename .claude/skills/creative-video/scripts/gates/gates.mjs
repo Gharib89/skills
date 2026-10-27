@@ -246,6 +246,18 @@ for (const f of checked.runtime.findings) {
     );
   }
 }
+// A scene registers its timeline last, so one missing means its script stopped.
+// HyperFrames 0.8.206 reports no error for a throwing script that also names a
+// second timeline, so the missing timeline is the evidence for an unnamed one.
+const named = (id) =>
+  [...anchors, ...scriptErrors].some(
+    (l) => l.startsWith(`${id}: `) || l.includes(` s ${id}: `),
+  );
+for (const { sc } of plan)
+  if (!events[sc.id] && !named(sc.id))
+    scriptErrors.push(
+      `${sc.id}: no timeline registered as window.__timelines["${sc.id}"], so its script stopped`,
+    );
 
 // Must and avoid, carried from explainer-video's script check: a whole-word
 // match over each scene's voiced words and the readable text its samples show.

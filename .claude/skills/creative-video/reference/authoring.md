@@ -133,7 +133,8 @@ failing one indented under it. Each is a hard fail:
 - `caption band`: no readable text in the bottom 220 px, the captions' own.
 - `anchors`: every `at(scene, word)` names a word the narration holds.
 - `script errors`: no scene's script throws (an error HyperFrames reports from
-  running it, other than an anchor), each named `<scene>: <message>`.
+  running it, other than an anchor), each named `<scene>: <message>`, and
+  every scene registers its timeline (one missing means its script stopped).
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no
   `avoid` word is: said in the voiced narration (not `script.json`, which can
   change after the voice), shown fully drawn in a sample frame.

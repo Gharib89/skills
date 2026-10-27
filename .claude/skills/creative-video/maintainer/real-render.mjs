@@ -2,11 +2,12 @@
 // and render stages with real HyperFrames, and prove what the fake backend
 // cannot: the delivered MP4 has exactly the frame grid's frames, three renders
 // match frame for frame, two chapters rendered apart and joined by the chapter
-// join have the sum of their frames and a chapter mark each, and five hard
-// gates (determinism, layout, caption band, anchors, script errors) each fail a
-// fixture built to fail them and pass the same fixture without the defect,
-// layout also on a clip held at the key or the out sample only. Contrast,
-// reading and must and avoid have no real-render fixture.
+// join have the sum of their frames and a chapter mark each, and six hard gates
+// (determinism, layout, caption band, anchors, script errors, must and avoid)
+// each fail a fixture built to fail them and pass the same fixture without the
+// defect: layout also on a clip held at the key or the out sample only, script
+// errors beside a timeline no element carries, must and avoid on a word a
+// module script writes. Contrast and reading have no real-render fixture.
 //
 //   node maintainer/real-render.mjs
 //
@@ -165,9 +166,10 @@ const [, got, wanted, marked] = chapterCheck(
 );
 check("chapter marks", marked, `${got} vs ${wanted}`);
 
-// Five gates, each on a one-scene fixture built to fail it and the same fixture
-// without the defect, layout twice more on a clip seen at one sample only. The
-// gate line is read from the stage's stdout, since a red gate exits 1.
+// Six gates, each on a one-scene fixture built to fail it and the same fixture
+// without the defect, layout twice more on a clip seen at one sample only. A
+// fixture's optional third part writes its files beside the scene. The gate
+// line is read from the stage's stdout, since a red gate exits 1.
 // Determinism's failing twin reads the wall clock.
 const BOX =
   '<div id="b" style="position:absolute;left:160px;top:600px;width:200px;height:200px;background:#7cc"></div>';
@@ -179,6 +181,22 @@ const line = (top, width = 1200) =>
 const clipped = (from, to) =>
   `tl.set("#l", { width: 200 }, ${from});` +
   (to ? ` tl.set("#l", { width: 1200 }, ${to});` : "");
+// A module script that writes `word` into the line, the brief asking for
+// "quantum": the probe must serve .mjs as JavaScript or the module never runs.
+const MODULE = '<script type="module" src="kit/m.mjs"></script>';
+const moduled = (word) => (run) => {
+  fs.mkdirSync(path.join(run, "project", "kit"), { recursive: true });
+  fs.writeFileSync(
+    path.join(run, "project", "kit", "m.mjs"),
+    `document.querySelector("#l span").textContent = "${word} line";\n`,
+  );
+  fs.writeFileSync(
+    path.join(run, "brief.json"),
+    JSON.stringify({ length: 0.2, must: ["quantum"] }),
+  );
+};
+// A named timeline no element carries, which the probe must skip.
+const EXTRA = 'window.__timelines["extra"] = gsap.timeline({ paused: true });';
 const pairs = [
   {
     gate: "determinism",
@@ -210,12 +228,25 @@ const pairs = [
     bad: [line(300), 'throw new Error("no such element");'],
     good: [line(300)],
   },
+  {
+    gate: "script errors",
+    name: "script errors beside an extra timeline",
+    bad: [line(300), `${EXTRA} throw new Error("no such element");`],
+    good: [line(300), EXTRA],
+  },
+  {
+    gate: "must and avoid",
+    name: "must and avoid in a module script",
+    bad: [line(300) + MODULE, "", moduled("plain")],
+    good: [line(300) + MODULE, "", moduled("quantum")],
+  },
 ];
 let fixture = 0;
-function gateOf(gate, [body, js]) {
+function gateOf(gate, [body, js, setup]) {
   const run = runFolder(work, `gate-${++fixture}`, [
     { id: "one", frames: 90, html: authored("one", body, js) },
   ]);
+  setup?.(run);
   runStage("render/timing.mjs", run);
   const r = spawnSync(
     process.execPath,
