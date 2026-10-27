@@ -55,7 +55,7 @@ test("a kit file added after the gates passed also makes them stale", () => {
   assert.match(exec(render, fx).err, REFUSED);
 });
 
-test("a file reached through a symlink, to a file or a folder, changed after the gates passed makes them stale", () => {
+test("a file reached through a symlink, to a file, a folder or a folder that links back to itself, changed after the gates passed makes them stale", () => {
   for (const link of ["file", "dir", "loop"]) {
     const fx = timed();
     const outside = path.join(fx.dir, "outside");
