@@ -58,27 +58,31 @@ if (missing.length) {
 const work = fs.mkdtempSync(path.join(os.tmpdir(), `${NAME}-`));
 process.on("exit", () => fs.rmSync(work, { recursive: true, force: true }));
 
-// The stdout of `cmd`; a failure throws with what it printed.
-function exec(cmd, args) {
+// The stdout of `cmd`; a failure throws with both streams, since the render
+// stage prints its delivery failures on stdout and its renderer on stderr.
+function capture(cmd, args) {
   const r = spawnSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 });
-  if (r.status !== 0)
+  if (r.status !== 0) {
+    const files = args.filter((a) => path.isAbsolute(a)).map(path.basename);
+    const said = [r.stdout, r.stderr].map((s) => s?.trim()).filter(Boolean);
     throw new Error(
-      `${path.basename(cmd)} ${path.basename(args.at(-1))}: ${r.stderr?.trim() || r.stdout?.trim() || r.error?.message}`,
+      `${path.basename(cmd)} ${files.join(" ")}: ${said.join("\n") || r.error?.message}`,
     );
+  }
   return r.stdout;
 }
 // Runs the skill's stage `name` on `run`; the MP4 it delivers.
-function step(name, run) {
-  exec(process.execPath, [path.join(skill, "scripts", "render", name), run]);
+function runStage(name, run) {
+  capture(process.execPath, [path.join(skill, "scripts", "render", name), run]);
   return path.join(run, "out", `${path.basename(run)}.mp4`);
 }
 const count = (file) =>
-  +exec("ffprobe", [
+  +capture("ffprobe", [
     ...["-v", "error", "-count_frames", "-select_streams", "v:0"],
     ...["-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", file],
   ]).trim();
 const hashes = (file) =>
-  exec("ffmpeg", [
+  capture("ffmpeg", [
     ...["-v", "error", "-i", file, "-map", "0:v", "-f", "framemd5", "-"],
   ])
     .split("\n")
@@ -93,14 +97,14 @@ const grid = (scenes) =>
 // The whole: its frame count against the grid, then two more renders against
 // the first, frame for frame.
 const whole = runFolder(work, "whole", WHOLE);
-step("timing.mjs", whole);
-const mp4 = step("render.mjs", whole);
+runStage("timing.mjs", whole);
+const mp4 = runStage("render.mjs", whole);
 const frames = count(mp4);
 const want = grid(WHOLE);
 check("frame count", frames === want, `${frames} frames vs the grid's ${want}`);
 const first = hashes(mp4);
 const diffs = [2, 3].flatMap((k) => {
-  const d = differing(first, hashes(step("render.mjs", whole)));
+  const d = differing(first, hashes(runStage("render.mjs", whole)));
   return d.length
     ? [
         `render ${k} differs at frame(s) ${d.slice(0, 10).join(", ")}${d.length > 10 ? ` and ${d.length - 10} more` : ""}`,
@@ -119,8 +123,8 @@ check(
 // one narration over the whole and a mark at each chapter's first frame.
 const parts = CHAPTERS.map((c, k) => {
   const run = runFolder(work, `chapter-${k + 1}`, c.scenes);
-  step("timing.mjs", run);
-  return step("render.mjs", run);
+  runStage("timing.mjs", run);
+  return runStage("render.mjs", run);
 });
 const sizes = parts.map(count);
 const sum = sizes.reduce((a, n) => a + n, 0);
