@@ -216,6 +216,7 @@ Spoken words beside a picture beat printed ones (d = 1.02) for first-language
 listeners, and the reverse holds for second-language listeners; captions that
 repeat the narration cost native listeners (d = 0.80 against), so keep
 captions out of the diagram's space. Put a label on the part it names (d = 0.65
-over a caption), and never print the spoken sentence word for word. This
+over a caption), and never put the spoken sentence word for word in a scene's
+own text: the caption track already carries it, in its band at the bottom. This
 prevents a lecture read aloud, and an even, slow delivery with no hard step
 marked.
