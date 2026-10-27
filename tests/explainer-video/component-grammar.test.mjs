@@ -1,6 +1,7 @@
 // Every component against the style profile's grammar, over the fixture scenes
 // of all of them: each declares the techniques a ban reaches it by, its
-// composed output strokes no line on unless it declares `draw`, and every
+// composed output strokes no line on unless it declares `draw`, one drawing
+// WebGL declares `3d`, and every
 // reveal it plays (a tween from opacity 0) changes ease with the profile's
 // `grammar.ease`, except those `OWN_EASE` keeps on their own.
 import { test } from "node:test";
