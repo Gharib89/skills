@@ -84,8 +84,8 @@ this worktree. Measured on Claude Code 2.1.311, it refused:
 - a loop around a git command;
 - git pointed at another checkout, `git -C <main-checkout> ...`;
 - a heredoc fed to a script whose text names git;
-- a `run-file note` whose text held both `bash -c` and an apostrophe, read as
-  a nested shell it could not parse;
+- a `run-file note` whose text named `bash -c`, in 3 of the 7 wordings tried,
+  read as a nested shell it could not parse;
 - an Edit or a Bash command naming a `.git` path.
 
 It admitted plain git run from the worktree, and chains, substitutions and
@@ -93,7 +93,8 @@ variables that it could parse. One rule therefore covers every case, stricter
 than the guard on purpose, for the orchestrator and in every subagent prompt it
 writes: **once isolated, each Bash call is one plain command run with the
 worktree as its cwd**, naming no `.git` path, with no chain, loop, substitution,
-variable as the command or heredoc. `run-file note` takes one line per call.
+variable as the command or heredoc. `run-file note` takes one line per call,
+naming no shell command in its text (say "the prove recipe", not its command).
 Text a script reads (criteria, a body, a reply) goes into a file written with
 the Write tool and passes by path. Where a form works only before isolation, the
 prose that hands it out says so.
