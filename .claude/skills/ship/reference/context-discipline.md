@@ -4,6 +4,7 @@
 
 - [Model tiers](#model-tiers)
 - [While a subagent is out, end the turn](#while-a-subagent-is-out-end-the-turn)
+- [Once isolated](#once-isolated)
 - [The Run file](#the-run-file)
 
 What bloats the window is raw tool output landing in the main thread, not the
@@ -72,24 +73,47 @@ Dispatch a composed skill's subagents, then **end the turn**. The completion
 notification resumes the run on its own: a poll loop, a sleep, a status ping or
 a read of the output file buys nothing it does not deliver.
 
+## Once isolated
+
+After `EnterWorktree`, Claude Code guards the session, and every subagent it
+dispatches inherits the guard. It refuses an Edit or Write to a path in the
+main checkout, and a Bash command whose git it cannot show stays inside the
+worktree. Measured on #1005's run, that covers:
+
+- git inside a compound form: a loop or chain around a git command;
+- git pointed at another checkout, `git -C <main-checkout> ...`;
+- a command whose text names git or reads as a nested shell in a form it
+  cannot parse: a heredoc naming git fed to a script, an argument holding
+  `bash -c` beside an unmatched quote;
+- an Edit or a Bash command naming a `.git` path.
+
+So the form that always passes, for the orchestrator and in every subagent
+prompt it writes: **once isolated, each Bash call is one plain command run with
+the worktree as its cwd**, with no chain, loop, substitution, variable as the
+command or heredoc. `run-file note` takes one line per call. Text a script
+reads (criteria, a body, a reply) goes into a file written with the Write tool
+and passes by path. A form ship hands out that works only before isolation says
+so where it is handed out.
+
 ## The Run file
 
-`run-file init <issue|slug> --from-profile` (`--criteria -` for an issue)
-is the run's first write, placed by SKILL.md's
-[pipeline step](../SKILL.md#the-pipeline). Init reads the
-profile's `Tripwires:`, its Verification names, its reviewers and its `Legs:`
-into the checklist. The record lives at `<root>/ship-<issue>/run.md`, `<root>`
-being `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>` with the key hashed
-from the git common dir, so the main checkout and every worktree share it. It
-sits outside every checkout, so the gate never reads it and a session isolated
-by `EnterWorktree`, which refuses an Edit or a Bash command naming a `.git`
-path, can still write it. `--scratchpad <dir>` overrides the root. Init also
-prints `scratch`, `<root>/scratch-<issue>`, the run's own scratch root, and
-opens phase 0. It refuses an existing record: a resumed run reads that one, and
-a new run of an issue whose earlier run stopped passes `--rebuild` to replace
-it. `cleanup` removes both directories after the merge; a free-text run
-(`cleanup none`) leaves its `ship-<slug>/` and `scratch-<slug>/` in place, and a
-run that stops before the merge gate leaves its record.
+`run-file init <issue|slug> --from-profile` (`--criteria -` for an issue) is the
+run's first write, placed by SKILL.md's [pipeline
+step](../SKILL.md#the-pipeline). Init reads the profile's `Tripwires:`, its
+Verification names, its reviewers and its `Legs:` into the checklist. The record
+lives at `<root>/ship-<issue>/run.md`, `<root>` being
+`${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>` with the key hashed from the
+git common dir, so the main checkout and every worktree share it. It sits
+outside every checkout, so the gate never reads it and a session isolated by
+`EnterWorktree`, whose guard refuses an Edit naming a `.git` path among the
+forms [listed above](#once-isolated), can still write it. `--scratchpad <dir>`
+overrides the root. Init also prints `scratch`, `<root>/scratch-<issue>`, the
+run's own scratch root, and opens phase 0. It refuses an existing record: a
+resumed run reads that one, and a new run of an issue whose earlier run stopped
+passes `--rebuild` to replace it. `cleanup` removes both directories after the
+merge; a free-text run (`cleanup none`) leaves its `ship-<slug>/` and
+`scratch-<slug>/` in place, and a run that stops before the merge gate leaves
+its record.
 
 The file is the run's **record**, the source of truth for where the run is and
 the home of the design and plan; it survives a mid-run context summary, so work
@@ -129,21 +153,23 @@ harness that refuses the task tools has answered: run on the file alone.
 <issue>`** (`Round:`, `Stop:`, `Criterion <n>:`, `Noted:`, `Filed:`):
 it appends one line under `## <section>` and creates one the record lacks,
 where an editor or heredoc write to the file from a worktree-isolated session
-draws a guard refusal.
+draws a guard refusal. Each call takes one line.
 
 **A phase-4 report is written to a Report file before one of its findings is
 dispositioned**, `<scratch>/<role>/<role>-report.md`, or
 `<scratch>/standards/standards-report-<n>.md` for round `<n>` of the
 [self-review loop](implement.md#phase-4-the-self-review-loop) from round 2 on,
 because a report held in context alone is lost to a compaction the Run file
-survives. Each dispatch names the file, and takes back only the path and a
-summary of at most five lines. No file at the named path is a report that
-failed to arrive: retry while retries make progress, as SKILL.md's stops say,
-then `red-after-retry`. An inline pass writes the same file itself before
-dispositioning. The Run file's `## Design and plan` names every round's paths
-as each round is dispatched; disposition from the file, and quote the merge
-summary's `Self-review` item from it. Phase 7's
-[local review](review-loop.md#the-round) writes
+survives. The `<role>-` prefix is required: Claude Code refuses a subagent's
+Write to a file named `report*.md` ("subagents should return findings as text"),
+and a prefixed name is admitted. Each dispatch names the file, and takes back
+only the path and a summary of at most five lines. No file at the named path is
+a report that failed to arrive: retry while retries make progress, as SKILL.md's
+stops say, then `red-after-retry`. An inline pass writes the same file itself
+before dispositioning. The Run file's `## Design and plan` names every round's
+paths as each round is dispatched; disposition from the file, and quote the
+merge summary's `Self-review` item from it. Phase 7's [local
+review](review-loop.md#the-round) writes
 `<scratch>/standards/standards-report-local.md` under the same rule, a path no
 phase-4 round uses.
 
