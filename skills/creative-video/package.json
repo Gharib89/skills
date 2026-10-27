@@ -1,0 +1,22 @@
+{
+  "name": "creative-video-tools",
+  "private": true,
+  "description": "The tools creative-video installs into its per-user tool cache with npm ci; never installed in the skill's own folder.",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@mozilla/readability": "0.6.0",
+    "gsap": "3.14.2",
+    "hyperframes": "0.8.206",
+    "jszip": "3.10.2",
+    "kokoro-js": "1.2.1",
+    "mammoth": "1.13.0",
+    "onnxruntime-node": "1.30.0",
+    "pdfjs-dist": "6.4.299",
+    "turndown": "7.2.4"
+  },
+  "overrides": {
+    "onnxruntime-node": "$onnxruntime-node"
+  }
+}

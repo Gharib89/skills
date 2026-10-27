@@ -47,13 +47,14 @@ module.exports = [
     },
     rules,
   },
-  // The two modules whose page.evaluate bodies run in a page. Browser globals
+  // The modules whose page.evaluate bodies run in a page. Browser globals
   // elsewhere would let a missing import of a helper named open, close, find
   // or name pass, since the browser declares those too.
   {
     files: [
       "skills/explainer-video/scripts/lib/backend/browser.mjs",
       "skills/explainer-video/scripts/lib/backend/source.mjs",
+      "skills/creative-video/scripts/lib/backend/source.mjs",
     ],
     languageOptions: { globals: globals.browser },
   },

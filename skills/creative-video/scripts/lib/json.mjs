@@ -1,0 +1,100 @@
+// The shapes of the run folder's JSON files, as their writers give them, and
+// the loader that holds a file to its shape, so a malformed file is refused as
+// `<file>: is missing`, `<file>: is not valid JSON (...)` or
+// `<file>: <field> <problem>`, which the stage prints after its own prefix,
+// and never reaches a stage as a TypeError. A shape lists the fields some
+// reader dereferences; a reader that defaults a missing field leaves that
+// field out of the shape, or wraps it in `opt`.
+import fs from "node:fs";
+import path from "node:path";
+
+// A shape returns null for a value it accepts, else [field, problem].
+const field = (at, key) => (at ? `${at}.${key}` : key);
+const text = (v, at) => (typeof v === "string" ? null : [at, "is not text"]);
+const number = (v, at) => (Number.isFinite(v) ? null : [at, "is not a number"]);
+const opt = (shape) => (v, at) => (v === undefined ? null : shape(v, at));
+const isObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+const list = (of) => (v, at) => {
+  if (!Array.isArray(v)) return [at, "is not a list"];
+  for (const [i, x] of v.entries()) {
+    const bad = of(x, `${at}[${i}]`);
+    if (bad) return bad;
+  }
+  return null;
+};
+const obj = (fields) => (v, at) => {
+  if (!isObject(v)) return [at, "is not an object"];
+  for (const [k, shape] of Object.entries(fields)) {
+    const bad = shape(v[k], field(at, k));
+    if (bad) return bad;
+  }
+  return null;
+};
+
+const words = list(obj({ text, start: number, end: number }));
+
+// One shape per run-folder file, keyed by its path in the run folder.
+export const SHAPES = {
+  // The brief, read by the voice stage for its length.
+  "brief.json": obj({ length: number }),
+  // The voice stage's input.
+  "script.json": obj({
+    language: text,
+    narrator: opt(text),
+    scenes: list(obj({ id: text, narration: list(text) })),
+  }),
+  // The voice stage.
+  "voice.json": obj({
+    narrator: text,
+    language: text,
+    scenes: list(
+      obj({
+        id: text,
+        audio: text,
+        duration: number,
+        words,
+        qc: obj({ failures: list(text) }),
+      }),
+    ),
+  }),
+  // The source snapshot.
+  "snapshots/sources.json": obj({
+    minutes: number,
+    budget: number,
+    sources: list(
+      obj({
+        id: text,
+        kind: text,
+        source: text,
+        snapshot: text,
+        share: number,
+      }),
+    ),
+  }),
+};
+
+// `name` in run folder `run`, parsed and held to its shape. Throws
+// `<name>: is missing`, or what `parseJson` throws.
+export function readJson(run, name) {
+  const file = path.join(run, name);
+  if (!fs.existsSync(file)) throw new Error(`${name}: is missing`);
+  return parseJson(name, fs.readFileSync(file, "utf8"));
+}
+
+// `body`, the text of run-folder file `name`, parsed and held to its shape.
+// Throws `<name>: is not valid JSON (...)` or `<name>: <field> <problem>`.
+export function parseJson(name, body) {
+  let v;
+  try {
+    v = JSON.parse(body);
+  } catch (e) {
+    throw new Error(`${name}: is not valid JSON (${e.message})`);
+  }
+  const bad = SHAPES[name](v, "");
+  if (bad) throw new Error(`${name}: ${bad[0] ? `${bad[0]} ` : ""}${bad[1]}`);
+  return v;
+}
+
+// `name` held to its shape, or null when the run folder has none.
+export const maybeJson = (run, name) =>
+  fs.existsSync(path.join(run, name)) ? readJson(run, name) : null;

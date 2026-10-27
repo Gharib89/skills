@@ -20,6 +20,11 @@
       "skillPath": "skills/engineering/codebase-design/SKILL.md",
       "computedHash": "b2888e4f4e8c0af3bfd557575a64b905c44e6248c3101d72077816882b3a92b9"
     },
+    "creative-video": {
+      "source": ".",
+      "sourceType": "local",
+      "computedHash": "bc496f09ef61e5f0bf5ce8f08335dd055c0b9e72f8631bad7359b04921b96279"
+    },
     "domain-modeling": {
       "source": "mattpocock/skills",
       "ref": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60",

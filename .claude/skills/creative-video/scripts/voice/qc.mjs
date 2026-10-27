@@ -1,0 +1,152 @@
+// Voice QC (ADR 0016): the aligner's greedy transcript against the narration,
+// so a garbled, cut or looped render blocks before anything is built on it.
+// Floors from the spec: content-word recall 0.8 (cuts and mumbles), precision
+// 0.85 (loops and invented speech), and 7 to 18 spoken characters per second.
+import { fold, toArabic } from "./arabic.mjs";
+import { chars } from "../lib/length.mjs";
+
+// The rate is in the script budget's unit, spoken characters (`chars()`: letters
+// and digits, no spaces or punctuation). The band is the spec's 9 to 22 on the
+// full length, divided by the 1.25 that length runs over `chars()` on the
+// calibration texts (1.22 to 1.28), 7.2 to 17.6, rounded out to whole numbers. Its
+// seconds are the voiced span, gaps between sentences included, so the rate is
+// gross and reads lower than a narrator's speech-only `rate`.
+export const FLOORS = { recall: 0.8, precision: 0.85, rate: [7, 18] };
+
+// English function words: a content word is any other word of two letters or more.
+const STOP = new Set(
+  `a an the and or but if of to in on at by for with from as is are was were be
+  been being it its this that these those there here we you he she they i me my
+  our your his her their them us do does did not no so than then too very can
+  will would should could may might must has have had into out up down over
+  about just what which who whom when where why how all any each some such only
+  own same also both`.split(/\s+/),
+);
+
+const words = (text) =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9' ]+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+const content = (ws) =>
+  ws.filter((w) => w.length > 1 && !STOP.has(w) && !/\d/.test(w));
+
+// Egyptian Arabic function words from the alignment research, folded, with the
+// clitics ال and لل that a split word leaves. ايه is not one: it is A's name,
+// and an acronym of function words alone (AI) would count for nothing.
+const STOP_AR = new Set(
+  `اللي لما على علي في فيه من ده دي دا و بس كل لحد ما عن مع بعد كده قبل لو ولا
+  هي هو عشان اللى الى إلى الي ل ب يا انا أنا انت إنت ليها ليه بتاع بتاعك
+  بتاعة وبعدين بعدها وبعدها نفس أي اي the a an of to for and or in on لل ال`
+    .split(/\s+/)
+    .map(fold),
+);
+
+// Arabic content words, each English term in the Arabic letters the model
+// writes for it, so "request" meets ريكويست. An acronym's letter names are
+// words of their own, filtered again, as the transcript's are: CI's اي is a
+// function word on both sides.
+const keep = (w) =>
+  w.length > 1 && !/\d/.test(w) && !STOP_AR.has(w.toLowerCase());
+// The model glues a tatweel clitic to the word after it (الـ pull request is
+// heard as البلركوست), so the narration's is glued too. Words then compare as
+// consonant skeletons: no article, and none of the vowel letters, hamza or
+// ain that speakers and the model write either way. A word of vowel letters
+// alone (يو, U's name) keeps its letters, so it still counts.
+const skeleton = (w) =>
+  w
+    .replace(/^(و|ف|ب|ل)?ال(?=..)/, "")
+    .replace(/[اويءئؤع]/g, "")
+    .replace(/(.)\1+/g, "$1") || w;
+const arabicContent = (text) =>
+  fold(text.replace(/ـ\s+/g, ""))
+    .replace(/[^ء-يڨیA-Za-z0-9']+/g, " ")
+    .split(/\s+/)
+    .filter(keep)
+    .flatMap((w) => fold(toArabic(w)).split(" "))
+    .filter(keep)
+    .map(skeleton);
+
+function similar(a, b) {
+  if (a === b) return true;
+  const d = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let diag = d[0];
+    d[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const up = d[j];
+      d[j] = Math.min(
+        d[j] + 1,
+        d[j - 1] + 1,
+        diag + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+      diag = up;
+    }
+  }
+  // A model hearing a rare name spells it near enough: 60 percent of letters.
+  return 1 - d[b.length] / Math.max(a.length, b.length) >= 0.6;
+}
+
+// One scene's verdict: each measured value, and a failure line per floor or band missed.
+export function check(narration, transcript, seconds, language = "en") {
+  const read =
+    language === "ar" ? arabicContent : (text) => content(words(text));
+  const ref = read(narration);
+  const hyp = read(transcript);
+  const hit = new Array(ref.length).fill(false);
+  const used = new Array(hyp.length).fill(false);
+  const free = (k) => k < hyp.length && !used[k];
+  // Exact matches first, a word or two adjacent narration words joined, so a
+  // near match cannot take a word an exact one owns.
+  ref.forEach((w, i) => {
+    let k = hyp.findIndex((h, j) => free(j) && h === w);
+    if (k >= 0) return (hit[i] = used[k] = true);
+    if (i + 1 >= ref.length || hit[i + 1]) return;
+    k = hyp.findIndex((h, j) => free(j) && h === w + ref[i + 1]);
+    if (k >= 0) hit[i] = hit[i + 1] = used[k] = true;
+  });
+  // The model splits or joins compounds ("work tree" for "worktree", "readyfull"
+  // for "ready pull"), so a word also matches two adjacent words of the other side.
+  ref.forEach((w, i) => {
+    if (hit[i]) return;
+    let k = hyp.findIndex((h, j) => free(j) && similar(w, h));
+    if (k >= 0) return (hit[i] = used[k] = true);
+    k = hyp.findIndex(
+      (h, j) => free(j) && free(j + 1) && similar(w, h + hyp[j + 1]),
+    );
+    if (k >= 0) hit[i] = used[k] = used[k + 1] = true;
+  });
+  ref.forEach((w, i) => {
+    if (hit[i] || i + 1 >= ref.length || hit[i + 1]) return;
+    const k = hyp.findIndex((h, j) => free(j) && similar(w + ref[i + 1], h));
+    if (k >= 0) hit[i] = hit[i + 1] = used[k] = true;
+  });
+  const count = (xs) => xs.filter(Boolean).length;
+  const recall = ref.length ? count(hit) / ref.length : 1;
+  const precision = hyp.length ? count(used) / hyp.length : 1;
+  const rate = seconds > 0 ? chars(narration) / seconds : 0;
+  // Two decimal places, and more while rounding would print a floor or band
+  // edge the value does not equal, so 0.849 never prints as the 0.85 floor it
+  // fails. The edges have two places, so rounding lands on one, never past it.
+  const shown = (n, ...edges) => {
+    let p = 2;
+    while (p < 6 && edges.some((e) => n !== e && +n.toFixed(p) === e)) p++;
+    return +n.toFixed(p);
+  };
+  const out = {
+    recall: shown(recall, FLOORS.recall),
+    precision: shown(precision, FLOORS.precision),
+    rate: shown(rate, ...FLOORS.rate),
+    failures: [],
+  };
+  if (recall < FLOORS.recall)
+    out.failures.push(`recall ${out.recall} under ${FLOORS.recall}`);
+  if (precision < FLOORS.precision)
+    out.failures.push(`precision ${out.precision} under ${FLOORS.precision}`);
+  if (rate < FLOORS.rate[0] || rate > FLOORS.rate[1])
+    out.failures.push(
+      `rate ${out.rate} chars/s outside ${FLOORS.rate[0]} to ${FLOORS.rate[1]}`,
+    );
+  return out;
+}

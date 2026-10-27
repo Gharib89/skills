@@ -1,0 +1,82 @@
+{
+  "narrators": [
+    {
+      "id": "bf_emma",
+      "language": "en",
+      "gender": "female",
+      "backend": "kokoro",
+      "voice": "bf_emma",
+      "style": null,
+      "licence": "Apache-2.0",
+      "leavesMachine": false,
+      "rate": 16.55,
+      "pause": 0.78,
+      "default": false
+    },
+    {
+      "id": "am_fenrir",
+      "language": "en",
+      "gender": "male",
+      "backend": "kokoro",
+      "voice": "am_fenrir",
+      "style": null,
+      "licence": "Apache-2.0",
+      "leavesMachine": false,
+      "rate": 15.7,
+      "pause": 0.57,
+      "default": false
+    },
+    {
+      "id": "af_heart",
+      "language": "en",
+      "gender": "female",
+      "backend": "kokoro",
+      "voice": "af_heart",
+      "style": null,
+      "licence": "Apache-2.0",
+      "leavesMachine": false,
+      "rate": 15.11,
+      "pause": 0.81,
+      "default": true
+    },
+    {
+      "id": "ar-eg-csagent-2",
+      "language": "ar",
+      "gender": "female",
+      "backend": "gemini",
+      "voice": "ar-eg-csagent-2",
+      "style": "a clear, warm, friendly narrator explaining a software workflow",
+      "licence": "Gemini API terms",
+      "leavesMachine": true,
+      "rate": 11.2,
+      "pause": 0.7,
+      "default": true
+    },
+    {
+      "id": "ar-eg-commercial-11",
+      "language": "ar",
+      "gender": "male",
+      "backend": "gemini",
+      "voice": "ar-eg-commercial-11",
+      "style": "a clear, warm, friendly narrator explaining a software workflow",
+      "licence": "Gemini API terms",
+      "leavesMachine": true,
+      "rate": 12.71,
+      "pause": 0.68,
+      "default": true
+    },
+    {
+      "id": "elevenlabs-george",
+      "language": "en",
+      "gender": "male",
+      "backend": "elevenlabs",
+      "voice": "JBFqnCBsd6RMkjVDRZzb",
+      "style": null,
+      "licence": "ElevenLabs terms",
+      "leavesMachine": true,
+      "rate": 13.38,
+      "pause": 0,
+      "default": false
+    }
+  ]
+}
