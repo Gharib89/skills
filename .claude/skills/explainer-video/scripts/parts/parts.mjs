@@ -47,7 +47,10 @@ function fail(why) {
 }
 const num = (x) => String(+x.toFixed(2));
 
-// The JSON in `f`, or a refusal naming the file when it does not parse.
+// The JSON in `f`, or a refusal naming the file when it does not parse. Each
+// caller guards what it reads: parts.json and board answers are checked field
+// by field, a part's brief.json is rewritten whatever it holds, a manifest
+// without a `delivered` path is not delivered, and style.json is style's own.
 function parseUnchecked(f) {
   try {
     return JSON.parse(fs.readFileSync(f, "utf8"));
