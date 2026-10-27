@@ -54,7 +54,7 @@ FULL_RUN='prek run --all-files'
 # 2 s whole, so they need no selector.
 TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json|||../../tests/explainer-video.test.sh --turn {paths}
 tests/explainer-video/|explainer-video-tests|*.mjs|||../explainer-video.test.sh --turn {paths}
-skills/creative-video/|creative-video|*.js *.mjs *.json|||../../tests/creative-video.test.sh
+skills/creative-video/|creative-video|*.js *.mjs package.json package-lock.json|||../../tests/creative-video.test.sh
 tests/creative-video/|creative-video-tests|*.mjs|||../creative-video.test.sh
 skills/grill-with-artifact/|grill-with-artifact|*.js||../../tests/grill-with-artifact.test.sh|
 |shell|*.sh|||scripts/shell-turn-tests.sh {paths}'
