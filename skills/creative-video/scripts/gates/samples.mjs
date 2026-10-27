@@ -10,7 +10,6 @@ export const ceil3 = (t) => Math.max(0, Math.ceil(t * 1000 - 1e-6)) / 1000;
 // each on a frame of the scene and never before its start. A scene shorter than
 // 0.6 s has no room to settle, so its in still is its middle.
 export function sampleTimes({ start, duration }) {
-  if (start >= 0) return { in: start, key: start, out: start };
   const n = frames(duration);
   const at = (k) => ceil3(start + k / FPS);
   const key = at(Math.floor(n / 2));

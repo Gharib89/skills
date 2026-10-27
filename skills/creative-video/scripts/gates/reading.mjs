@@ -17,7 +17,6 @@ export const readable = (e) => e.opacity >= 0.99;
 // frame of the run to the first frame after it, the scene's end if none, of at
 // least its floor. Two short runs never add up.
 export function readingFindings({ id, end, frames, samples }) {
-  if (id) return [];
   const keyed = frames.map((f) => {
     const seen = new Map();
     return new Map(
