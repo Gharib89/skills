@@ -248,7 +248,9 @@ for (const f of checked.runtime.findings) {
 }
 
 // Must and avoid, carried from explainer-video's script check: a whole-word
-// match over each scene's narration and the text its samples show.
+// match over each scene's voiced words and the readable text its samples show.
+// The voiced words, not script.json, since the script can be edited after the
+// voice was made.
 const hasWord = (corpus, item) =>
   new RegExp(
     `(?<![\\p{L}\\p{N}])${item.toLowerCase().replace(/[.*+?^$|()[\]{}\\]/g, "\\$&")}(?![\\p{L}\\p{N}])`,
@@ -257,8 +259,12 @@ const hasWord = (corpus, item) =>
 const corpus = plan.map((p) => ({
   id: p.sc.id,
   text: [
-    ...(script.scenes.find((s) => s.id === p.sc.id)?.narration ?? []),
-    ...p.samples.flatMap((t) => textsAt(t).map((e) => e.text)),
+    p.sc.words.map((w) => w.text).join(" "),
+    ...p.samples.flatMap((t) =>
+      textsAt(t)
+        .filter(readable)
+        .map((e) => e.text),
+    ),
   ]
     .join("\n")
     .toLowerCase(),

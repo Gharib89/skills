@@ -92,6 +92,38 @@ test("an avoid word said or shown fails naming the scenes, and matches whole wor
   );
 });
 
+test("must and avoid judge the voiced words, not a script.json edited after timing", () => {
+  const edit = (fx, change) => {
+    const file = path.join(fx.dir, "script.json");
+    const script = JSON.parse(fs.readFileSync(file, "utf8"));
+    for (const s of script.scenes) s.narration = s.narration.map(change);
+    fs.writeFileSync(file, JSON.stringify(script));
+  };
+  const added = timed({}, BRIEF({ must: ["quantum"] }));
+  edit(added, (n) => `${n} quantum`);
+  const r = runGates(added);
+  assert.equal(r.code, 1, r.out);
+  assert.match(gateLine(r, "must and avoid"), /must "quantum" is not said/);
+  const removed = timed({}, BRIEF({ avoid: ["profile"] }));
+  edit(removed, (n) => n.replace(/profile/gi, "outline"));
+  assert.match(
+    gateLine(runGates(removed), "must and avoid"),
+    /avoid "profile" is in context/,
+  );
+});
+
+test("text drawn at opacity 0 is not shown, for must or for avoid", () => {
+  const must = runGates(
+    timed({ recap: "<p>quantum hidden</p>" }, BRIEF({ must: ["quantum"] })),
+  );
+  assert.equal(must.code, 1, must.out);
+  assert.match(gateLine(must, "must and avoid"), /must "quantum" is not said/);
+  const avoid = runGates(
+    timed({ hook: "<p>secret hidden</p>" }, BRIEF({ avoid: ["secret"] })),
+  );
+  assert.match(gateLine(avoid, "must and avoid"), /^pass: /, avoid.out);
+});
+
 test("a brief with no must and no avoid passes the gate, and a list that is not text is refused", () => {
   const r = runGates(timed({}, BRIEF({})));
   assert.equal(r.code, 0, r.out);

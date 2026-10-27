@@ -135,7 +135,8 @@ failing one indented under it. Each is a hard fail:
 - `script errors`: no scene's script throws (an error HyperFrames reports from
   running it, other than an anchor), each named `<scene>: <message>`.
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no
-  `avoid` word is.
+  `avoid` word is: said in the voiced narration (not `script.json`, which can
+  change after the voice), shown fully drawn in a sample frame.
 
 Warnings print as `warn <name>: <detail>`, are recorded in `gates.json` and
 never change the exit: `effect rate` (over 24 sounds in a minute), `effect

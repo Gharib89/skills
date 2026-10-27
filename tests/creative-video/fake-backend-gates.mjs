@@ -8,7 +8,8 @@
 //   low-contrast  a contrast_aa_failure (a warning, as HyperFrames grades it)
 //   in-band       the text sits at y 900, in the bottom 220 px
 //   tiny          12 px text; `edge` sits at x 40, outside the safe margin
-//   faint         opacity 0.5; `blink` is shown only 0.25 to 0.75 s into its scene
+//   faint         opacity 0.5; `blink` is shown only 0.25 to 0.75 s into its scene;
+//                 `hidden` is never shown, opacity 0
 //   tl.<call>(... Date.now() or performance.now() ...) the scene's snapshots
 //                 differ between two launches
 //   at("<id>", "<word>")  a word the timeline lacks is a console_error, as the
@@ -75,9 +76,11 @@ function texts(m, local) {
         fontPx: has("tiny") ? 12 : 40,
         opacity: has("faint")
           ? 0.5
-          : has("blink") && !(local >= 0.25 && local < 0.75)
+          : has("hidden")
             ? 0
-            : 1,
+            : has("blink") && !(local >= 0.25 && local < 0.75)
+              ? 0
+              : 1,
       };
     });
 }
