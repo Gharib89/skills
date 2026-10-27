@@ -93,7 +93,7 @@ fi
 ship_load_host
 
 body=$(host_pr_get "$pr" | jq -r .body) || ship_tooling "cannot read PR $pr"
-new=$(mktemp); trap 'rm -f "$new" "$new.err"' EXIT
+new=$(mktemp); trap 'rm -f "$new"' EXIT
 if [ "$preamble" = true ]; then
   ship_body_replace_preamble "$body" "$file" > "$new"
   replaced=true; created=false
@@ -102,15 +102,8 @@ elif ship_body_replace_section "$body" "$section" "$file" > "$new"; then
 else
   replaced=false; created=true
 fi
-check=$(ship_body_check_path) || ship_tooling "cannot read the ship profile for its Body-check: line"
-if [ -n "$check" ]; then
-  checked=$(cd "$(git rev-parse --show-toplevel)" && "./$check" "$new" 2>"$new.err"); rc=$?
-  case $rc in
-    0) ;;
-    1) ship_fail "PR body fails the repo's body check ($check): $(printf '%s\n' "$checked" | tail -n 40)" ;;
-    *) ship_tooling "body check $check failed (exit $rc): $(tail -n 40 "$new.err")" ;;
-  esac
-fi
+why=$(ship_body_check "$new")
+case $? in 0) ;; 1) ship_fail "$why" ;; *) ship_tooling "$why" ;; esac
 answer=$(host_pr_set_body "$pr" "$new") || ship_fail "PR body update failed" "$answer"
 sections=$(ship_body_headings "$(cat "$new")")
 jq -n --argjson pr "$pr" --arg s "$section" --argjson p "$preamble" \

@@ -267,6 +267,29 @@ ship_template_missing() { # <body>
     --argjson h "$(ship_body_headings "$1" | jq -R . | jq -sc .)" '$w - $h'
 }
 
+# ship_body_check <file>: run the repo's body checker (`ship_body_check_path`)
+# on <file>, from the checkout root with the file as its one argument. One gate
+# for `open-pr`, before the push, and `update-pr-body`, before the write, so the
+# two cannot drift. Returns 0 on a pass or with no checker; 1 when the checker
+# refuses (exit 1), printing the refusal with its stdout's last 40 lines; 2 when
+# it cannot answer (any other exit, or an unreadable profile), printing the
+# reason with its stderr's last 40 lines.
+ship_body_check() { # <file>
+  local check file err out rc
+  check=$(ship_body_check_path) || { echo "cannot read the ship profile for its Body-check: line"; return 2; }
+  [ -n "$check" ] || return 0
+  case $1 in /*) file=$1 ;; *) file=$PWD/$1 ;; esac
+  err=$(mktemp) || { echo "cannot create a temp file for the body check"; return 2; }
+  out=$(cd "$(git rev-parse --show-toplevel)" && "./$check" "$file" 2>"$err"); rc=$?
+  case $rc in
+    0) ;;
+    1) printf "PR body fails the repo's body check (%s): %s\n" "$check" "$(printf '%s\n' "$out" | tail -n 40)" ;;
+    *) printf 'body check %s failed (exit %s): %s\n' "$check" "$rc" "$(tail -n 40 "$err")"; rc=2 ;;
+  esac
+  rm -f "$err"
+  return "$rc"
+}
+
 # ship_outline_missing <body> <paths>: the paths, one per line, that the body's
 # `## Change outline` section does not mention. <paths> is newline-separated. A
 # path is mentioned when the section names it by its full path, or by its
