@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  FPS,
   gridScenes,
   written,
 } from "../../skills/creative-video/scripts/render/grid.mjs";
@@ -40,7 +41,7 @@ test("a fixture run folder times through the timing stage onto the grid its scen
   assert.equal(r.code, 0, r.out + r.err);
   assert.doesNotMatch(r.out, /to author/);
   const tl = readJson(path.join(run, "timeline.json"));
-  const grid = gridScenes([50 / 30, 42 / 30], HOLD);
+  const grid = gridScenes([50 / FPS, 42 / FPS], HOLD);
   assert.equal(tl.total, written(grid.total));
   assert.deepEqual(
     tl.scenes.map((s) => s.duration),
@@ -52,6 +53,8 @@ test("differing names each frame whose hash differs, and each frame past the sho
   assert.deepEqual(differing(["a", "b", "c"], ["a", "b", "c"]), []);
   assert.deepEqual(differing(["a", "b", "c"], ["a", "x", "c"]), [1]);
   assert.deepEqual(differing(["a", "b"], ["a", "b", "c", "d"]), [2, 3]);
+  assert.deepEqual(differing(["a", "b", "c"], ["a"]), [1, 2]);
+  assert.deepEqual(differing([], []), []);
 });
 
 test("with the render rows not installed it exits 2 naming each one", () => {

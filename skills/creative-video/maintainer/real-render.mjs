@@ -8,22 +8,26 @@
 //
 // Needs the npm-packages and chrome rows installed (`node scripts/setup.mjs
 // install`) and the ffmpeg row. The fixtures are run folders
-// (real-render-lib.mjs) voiced by tones of whole frames, chosen so a total
-// written to 6 places would round up: a grid that rounded a time instead of
-// truncating it renders a frame too many.
+// (real-render-lib.mjs) voiced by tones of whole frames. The whole's 122
+// frames are 4.0666... s, which a grid writing its times rounded to the voice
+// stage's 3 places instead of truncated would render as 123.
 // stdout: `creative-real-render <check>: pass|fail: <detail>` per check
-// exit:   0 every check passed · 1 a check failed · 2 a tool row is missing
+// exit:   0 every check passed · 1 a check failed, or a stage or tool failed
+//         with `creative-real-render: <why>` on stderr · 2 a tool row is
+//         missing
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { HOLD } from "../scripts/lib/length.mjs";
+import { stage } from "../scripts/lib/stage.mjs";
 import { catalogue, dest, loadBackend, skill } from "../scripts/lib/tools.mjs";
 import { chapterCheck, joinChapters } from "../scripts/render/chapters.mjs";
 import { FPS, gridScenes } from "../scripts/render/grid.mjs";
 import { differing, runFolder, tone } from "./real-render-lib.mjs";
 
 const NAME = "creative-real-render";
+stage(NAME);
 const WHOLE = [
   { id: "open", frames: 50 },
   { id: "close", frames: 42 },
@@ -54,39 +58,30 @@ if (missing.length) {
 const work = fs.mkdtempSync(path.join(os.tmpdir(), `${NAME}-`));
 process.on("exit", () => fs.rmSync(work, { recursive: true, force: true }));
 
-// Runs the skill's stage `name` on `run`; a failed stage fails the run here.
-function stage(name, run) {
-  const r = spawnSync(
-    process.execPath,
-    [path.join(skill, "scripts", "render", name), run],
-    { encoding: "utf8" },
-  );
-  if (r.status !== 0) {
-    check(
-      name,
-      false,
-      `${path.basename(run)}: ${(r.stdout + r.stderr).trim()}`,
+// The stdout of `cmd`; a failure throws with what it printed.
+function exec(cmd, args) {
+  const r = spawnSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 });
+  if (r.status !== 0)
+    throw new Error(
+      `${path.basename(cmd)} ${path.basename(args.at(-1))}: ${r.stderr?.trim() || r.stdout?.trim() || r.error?.message}`,
     );
-    process.exit(1);
-  }
+  return r.stdout;
+}
+// Runs the skill's stage `name` on `run`; the MP4 it delivers.
+function step(name, run) {
+  exec(process.execPath, [path.join(skill, "scripts", "render", name), run]);
   return path.join(run, "out", `${path.basename(run)}.mp4`);
 }
 const count = (file) =>
-  +spawnSync(
-    "ffprobe",
-    [
-      ...["-v", "error", "-count_frames", "-select_streams", "v:0"],
-      ...["-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", file],
-    ],
-    { encoding: "utf8" },
-  ).stdout.trim();
+  +exec("ffprobe", [
+    ...["-v", "error", "-count_frames", "-select_streams", "v:0"],
+    ...["-show_entries", "stream=nb_read_frames", "-of", "csv=p=0", file],
+  ]).trim();
 const hashes = (file) =>
-  spawnSync(
-    "ffmpeg",
-    ["-v", "error", "-i", file, "-map", "0:v", "-f", "framemd5", "-"],
-    { encoding: "utf8", maxBuffer: 1 << 26 },
-  )
-    .stdout.split("\n")
+  exec("ffmpeg", [
+    ...["-v", "error", "-i", file, "-map", "0:v", "-f", "framemd5", "-"],
+  ])
+    .split("\n")
     .filter((l) => l && !l.startsWith("#"))
     .map((l) => l.split(",").at(-1).trim());
 const grid = (scenes) =>
@@ -98,20 +93,22 @@ const grid = (scenes) =>
 // The whole: its frame count against the grid, then two more renders against
 // the first, frame for frame.
 const whole = runFolder(work, "whole", WHOLE);
-stage("timing.mjs", whole);
-const mp4 = stage("render.mjs", whole);
+step("timing.mjs", whole);
+const mp4 = step("render.mjs", whole);
 const frames = count(mp4);
 const want = grid(WHOLE);
 check("frame count", frames === want, `${frames} frames vs the grid's ${want}`);
 const first = hashes(mp4);
 const diffs = [2, 3].flatMap((k) => {
-  const d = differing(first, hashes(stage("render.mjs", whole)));
+  const d = differing(first, hashes(step("render.mjs", whole)));
   return d.length
     ? [
         `render ${k} differs at frame(s) ${d.slice(0, 10).join(", ")}${d.length > 10 ? ` and ${d.length - 10} more` : ""}`,
       ]
     : [];
 });
+if (first.length !== frames)
+  diffs.unshift(`render 1 hashed ${first.length} of its ${frames} frames`);
 check(
   "determinism",
   !diffs.length,
@@ -122,8 +119,8 @@ check(
 // one narration over the whole and a mark at each chapter's first frame.
 const parts = CHAPTERS.map((c, k) => {
   const run = runFolder(work, `chapter-${k + 1}`, c.scenes);
-  stage("timing.mjs", run);
-  return stage("render.mjs", run);
+  step("timing.mjs", run);
+  return step("render.mjs", run);
 });
 const sizes = parts.map(count);
 const sum = sizes.reduce((a, n) => a + n, 0);
