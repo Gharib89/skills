@@ -51,10 +51,13 @@ FULL_RUN='prek run --all-files'
 # subset twice more beside it. Their `--turn {paths}` runs the --turn tests the
 # files reach, and the whole --turn set for a file it cannot place. The
 # creative-video rows do the same for the same reason; their suite takes about
-# 2 s whole, so they need no selector.
+# 2 s whole, so they need no selector. Globs match a file's basename anywhere,
+# and a file one matches under no row's prefix is a new root, so a row names
+# its manifests rather than `*.json`: the skill's JSON data files go unrun on
+# `turn`, and `full` covers them (#1026).
 TURN_ROWS='skills/explainer-video/|explainer-video|*.ts *.tsx *.js *.jsx *.mjs *.cjs *.mts *.cts package.json package-lock.json|||../../tests/explainer-video.test.sh --turn {paths}
 tests/explainer-video/|explainer-video-tests|*.mjs|||../explainer-video.test.sh --turn {paths}
-skills/creative-video/|creative-video|*.js *.mjs *.json|||../../tests/creative-video.test.sh
+skills/creative-video/|creative-video|*.js *.mjs package.json package-lock.json|||../../tests/creative-video.test.sh
 tests/creative-video/|creative-video-tests|*.mjs|||../creative-video.test.sh
 skills/grill-with-artifact/|grill-with-artifact|*.js||../../tests/grill-with-artifact.test.sh|
 |shell|*.sh|||scripts/shell-turn-tests.sh {paths}'
