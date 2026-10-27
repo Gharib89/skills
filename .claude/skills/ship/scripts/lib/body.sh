@@ -275,17 +275,21 @@ ship_template_missing() { # <body>
 # an unreadable profile or no checkout is tooling (`ship_tooling`, its stderr's
 # last 40 lines). A relative <file> is the caller's, so it is resolved first.
 ship_require_body_check() { # <file>
-  local check top file err out rc
+  local check top file err out rc why
   check=$(ship_body_check_path) || ship_tooling "cannot read the ship profile for its Body-check: line"
   [ -n "$check" ] || return 0
   top=$(git rev-parse --show-toplevel) || ship_tooling "not inside a git checkout"
   case $1 in /*) file=$1 ;; *) file=$PWD/$1 ;; esac
-  err=$(mktemp); trap 'rm -f "$err"; trap - RETURN' RETURN
+  # Read and removed before the case: ship_fail and ship_tooling exit, and an
+  # exit never fires the RETURN trap.
+  err=$(mktemp) || ship_tooling "cannot create a temp file for the body check"
+  trap 'rm -f "$err"; trap - RETURN' RETURN
   out=$(cd "$top" && "./$check" "$file" 2>"$err"); rc=$?
+  why=$(tail -n 40 "$err"); rm -f "$err"
   case $rc in
     0) ;;
     1) ship_fail "PR body fails the repo's body check ($check): $(printf '%s\n' "$out" | tail -n 40)" ;;
-    *) ship_tooling "body check $check failed (exit $rc): $(tail -n 40 "$err")" ;;
+    *) ship_tooling "body check $check failed (exit $rc): $why" ;;
   esac
 }
 

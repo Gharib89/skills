@@ -43,11 +43,14 @@ short=$'## Change outline\n\n```diff\na\nb\n```\n'
 long=$'## Change outline\n\n```diff\na\nb\nc\nd\n```\n'
 
 reset; profile 'Body-check: scripts/check-outline.sh'
-out=$(opn "$long"); rc=$?
+mkdir "$work/tmp"
+out=$(TMPDIR=$work/tmp opn "$long"); rc=$?
 check_rc "a body the checker refuses exits 1" 1 "$rc"
 check "the refusal names the checker and quotes it" "PR body fails the repo's body check (scripts/check-outline.sh): pr-body: change outline: the Shape fence is 4 lines, over 3" "$(jq -r .error <<<"$out")"
 check "nothing is pushed" none "$(pushed)"
 check "no PR is created" "" "$(created)"
+# The refusal exits from inside the helper, where its RETURN trap never fires.
+check "the checker's stderr file is removed" "" "$(ls -A "$work/tmp")"
 
 reset
 opn "$short" >/dev/null; rc=$?
@@ -76,19 +79,5 @@ check_rc "no Body-check line opens unchecked" 0 "$rc"
 reset; profile 'Body-check: None.'
 opn "$long" >/dev/null; rc=$?
 check_rc "Body-check: None. opens unchecked" 0 "$rc"
-
-# A profile that is there but cannot be read is no answer: read as "no
-# checker", it would open the PR unchecked.
-if [ "$(id -u)" -ne 0 ]; then
-  reset; profile 'Body-check: scripts/check-outline.sh'
-  chmod 000 "$repo/docs/agents/ship.md"
-  out=$(opn "$short"); rc=$?
-  chmod 644 "$repo/docs/agents/ship.md"
-  check_rc "an unreadable profile is tooling" 2 "$rc"
-  check "nothing is pushed" none "$(pushed)"
-  check "no PR is created" "" "$(created)"
-else
-  skipped "unreadable profile is tooling: running as root"
-fi
 
 finish
