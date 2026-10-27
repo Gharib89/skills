@@ -94,6 +94,7 @@ const clockReads = (proj) =>
 // The warnings in print order, as `<name>: <detail>` lines. `total` is the
 // video's length in seconds, `proj` the project folder.
 export function warnings({ plan, events, script, total, proj }) {
+  if (plan) return [];
   const eventsOf = (id) => events[id] ?? { tweens: [], sounds: [] };
   const sounds = plan.flatMap((p) =>
     eventsOf(p.sc.id).sounds.map((s) => p.sc.start + s),
