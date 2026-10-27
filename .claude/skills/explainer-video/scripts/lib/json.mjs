@@ -1,12 +1,14 @@
-// The run folder's JSON files, each read through one loader that checks the
-// shape its writer gives it, so a malformed file is refused as
-// `<file>: <field> <problem>` and never reaches a stage as a TypeError. A
-// shape holds the fields some reader dereferences; a reader that defaults a
-// missing field leaves it out, or optional.
+// The shapes of the run folder's JSON files, as their writers give them, and
+// the loader that holds a file to its shape, so a malformed file is refused as
+// `<file>: is missing`, `<file>: is not valid JSON (...)` or
+// `<file>: <field> <problem>`, which the stage prints after its own prefix,
+// and never reaches a stage as a TypeError. A shape lists the fields some
+// reader dereferences; a reader that defaults a missing field leaves that
+// field out of the shape, or wraps it in `opt`.
 import fs from "node:fs";
 import path from "node:path";
 
-// A shape answers null for a value it holds, else [field, problem].
+// A shape returns null for a value it accepts, else [field, problem].
 const field = (at, key) => (at ? `${at}.${key}` : key);
 const text = (v, at) => (typeof v === "string" ? null : [at, "is not text"]);
 const number = (v, at) => (Number.isFinite(v) ? null : [at, "is not a number"]);
@@ -108,8 +110,9 @@ export const SHAPES = {
   }),
   "stills.json": obj({ scenes: list(obj({ id: text, still: text })) }),
   "score.json": obj({ score: text, cues: list(obj({ t: number })) }),
-  // The render stage once delivered; the board adds `board`
-  // before that, so a manifest may hold either field alone, or neither.
+  // The board writes `board` when it posts; the render stage keeps it, null
+  // when unset, beside `delivered`, so a manifest may hold `board` alone, or
+  // neither field.
   "manifest.json": obj({
     board: opt(nullable(text)),
     delivered: opt(text),
@@ -168,15 +171,21 @@ export const SHAPES = {
 };
 
 // `name` in run folder `run`, parsed and held to its shape. Throws
-// `<name>: <field> <problem>`, or `<name>: is not valid JSON (...)`.
+// `<name>: is missing`, or what `parseJson` throws.
 export function readJson(run, name) {
+  const file = path.join(run, name);
+  if (!fs.existsSync(file)) throw new Error(`${name}: is missing`);
+  return parseJson(name, fs.readFileSync(file, "utf8"));
+}
+
+// `body`, the text of run-folder file `name`, parsed and held to its shape.
+// Throws `<name>: is not valid JSON (...)` or `<name>: <field> <problem>`.
+export function parseJson(name, body) {
   let v;
   try {
-    v = JSON.parse(fs.readFileSync(path.join(run, name), "utf8"));
+    v = JSON.parse(body);
   } catch (e) {
-    throw new Error(
-      `${name}: ${e.code === "ENOENT" ? "is missing" : `is not valid JSON (${e.message})`}`,
-    );
+    throw new Error(`${name}: is not valid JSON (${e.message})`);
   }
   const bad = SHAPES[name](v, "");
   if (bad) throw new Error(`${name}: ${bad[0] ? `${bad[0]} ` : ""}${bad[1]}`);

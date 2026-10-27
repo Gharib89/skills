@@ -18,6 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { clipHash, OWN_NAME, ownVoiceDir } from "../lib/narrators.mjs";
 import { loadBackend, unavailable } from "../lib/tools.mjs";
+import { stage } from "../lib/stage.mjs";
 
 const usage =
   'usage: node own-voice.mjs enroll <name> <clip> --gender female|male --consent "<statement>"\n       node own-voice.mjs remove <name>';
@@ -26,6 +27,7 @@ const fail = (message, code) => {
   process.exit(code);
 };
 
+stage("own-voice");
 const [mode, name, ...rest] = process.argv.slice(2);
 if (!OWN_NAME.test(name ?? "")) fail(usage, 2);
 const dir = ownVoiceDir(name);

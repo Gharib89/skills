@@ -29,7 +29,9 @@ import { oklab } from "../lib/style.mjs";
 import { catalogue, dest, hyperframesEnv, loadBackend } from "../lib/tools.mjs";
 import { decodePpm } from "./motion.mjs";
 import { readVideo } from "./video.mjs";
+import { stage } from "../lib/stage.mjs";
 
+stage("style");
 const args = process.argv.slice(2);
 const run = args.shift();
 const given = [...new Set(args)];

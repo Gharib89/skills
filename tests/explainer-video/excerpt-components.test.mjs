@@ -67,23 +67,27 @@ test("a cited excerpt compiles with no text of its own", () => {
 });
 
 test("a pack that parses but is not a pack is refused, naming the file", () => {
-  for (const held of [{}, { sources: [] }, { sources: {}, excerpts: [] }, []])
-    bad(
-      excerpt(),
-      /excerpts.json must hold a sources list and an excerpts list/,
-      ctx({ read: () => JSON.stringify(held) }),
-    );
+  for (const [held, why] of [
+    [{}, /excerpts.json: excerpts is not a list/],
+    [{ sources: [] }, /excerpts.json: excerpts is not a list/],
+    [{ sources: {}, excerpts: [] }, /excerpts.json: sources is not a list/],
+    [[], /excerpts.json: is not an object/],
+  ])
+    bad(excerpt(), why, ctx({ read: () => JSON.stringify(held) }));
   // each entry holds what an excerpt scene reads of it
   const entry = { id: "ex-1", source: "notes", locator: "l", text: "T." };
   for (const [held, why] of [
-    [{ sources: [null], excerpts: [] }, /excerpts.json source 1 needs an id/],
+    [
+      { sources: [null], excerpts: [] },
+      /excerpts.json: sources\[0\] is not an object/,
+    ],
     [
       { sources: [], excerpts: [{ ...entry, text: undefined }] },
-      /excerpts.json excerpt 1 needs text/,
+      /excerpts.json: excerpts\[0\].text is not text/,
     ],
     [
       { sources: [], excerpts: [{ ...entry, locator: 7 }] },
-      /excerpts.json excerpt 1 needs a locator/,
+      /excerpts.json: excerpts\[0\].locator is not text/,
     ],
     [
       { sources: [], excerpts: [{ ...entry, id: "" }] },
@@ -108,7 +112,7 @@ test("a pack that parses but is not a pack is refused, naming the file", () => {
         sources: [{ id: "notes", kind: "repo" }],
         excerpts: [{ ...entry, source: undefined }],
       },
-      /excerpts.json excerpt 1 needs a source its sources list holds/,
+      /excerpts.json: excerpts\[0\].source is not text/,
     ],
     [
       {
@@ -121,7 +125,7 @@ test("a pack that parses but is not a pack is refused, naming the file", () => {
     bad(excerpt(), why, ctx({ read: () => JSON.stringify(held) }));
   bad(
     excerpt(),
-    /excerpts.json cannot be read: /,
+    /excerpts.json: is not valid JSON /,
     ctx({ read: () => "not json" }),
   );
 });

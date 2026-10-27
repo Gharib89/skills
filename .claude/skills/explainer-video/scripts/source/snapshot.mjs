@@ -31,7 +31,9 @@ import { pathToFileURL } from "node:url";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { catalogue, dest, hyperframesEnv, loadBackend } from "../lib/tools.mjs";
 import { marker, sections } from "./locators.mjs";
+import { stage } from "../lib/stage.mjs";
 
+stage("source");
 const args = process.argv.slice(2);
 const run = args.shift();
 let minutes = 2;

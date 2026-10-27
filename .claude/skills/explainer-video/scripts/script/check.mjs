@@ -19,11 +19,12 @@
 // writes: <run>/check.json, the machine record, the support attempts and each
 //         sentence's kept verdict
 // exit:   0 no gate failed · 1 a gate failed, or `script: no <input>: <why>`
-//         on stderr when an input is missing or names no narrator · 2 usage
+//         on stderr when an input is missing or names no narrator, or
+//         `script: <file>: <field> <problem>` when one is malformed · 2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { maybeJson, readJson, SHAPES } from "../lib/json.mjs";
+import { maybeJson, readJson } from "../lib/json.mjs";
 import { HOLD, chars, fitsLength, sentences } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { isPart, packRun, readPart, writeIgnore } from "../lib/runfolder.mjs";
@@ -45,13 +46,15 @@ function need(f, why) {
     console.error(`script: no ${f}: ${why}`);
     process.exit(1);
   }
-  // part.json has its own reader, readPart.
-  return f in SHAPES ? readJson(run, f) : fs.readFileSync(file(f), "utf8");
 }
-const script = need("script.json", "compile first");
-const brief = need("brief.json", "run brief.mjs first");
-const pack = need("excerpts.json", "run the source stage first");
-const md = need("script.md", "write the scene file first");
+need("script.json", "compile first");
+need("brief.json", "run brief.mjs first");
+need("excerpts.json", "run the source stage first");
+need("script.md", "write the scene file first");
+const script = readJson(run, "script.json");
+const brief = readJson(run, "brief.json");
+const pack = readJson(run, "excerpts.json");
+const md = fs.readFileSync(file("script.md"), "utf8");
 
 const narrator = findNarrator(script.narrator, script.language);
 if (!narrator) {

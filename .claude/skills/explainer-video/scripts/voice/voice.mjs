@@ -58,7 +58,7 @@ const script = readJson(run, "script.json");
 // Read before any synthesis, so a malformed brief costs no voicing.
 const brief = maybeJson(run, "brief.json");
 writeIgnore(run);
-const language = script.language ?? "en";
+const { language } = script;
 const narrator = findNarrator(script.narrator, language);
 if (!narrator) {
   console.error(

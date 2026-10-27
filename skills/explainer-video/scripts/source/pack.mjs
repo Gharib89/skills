@@ -12,7 +12,8 @@
 // share of the budget. With <id>, checks that draft alone and writes nothing.
 // stdout: `pack <id>: <n> of <share> excerpt(s): pass` per draft, then
 //         `pack: <n> excerpt(s) from <m> source(s) -> excerpts.json, outline.md`
-// stderr: `pack <id>: [excerpt <k>: ]<why>` per problem
+// stderr: `pack <id>: [excerpt <k>: ]<why>` per problem, or
+//         `pack: snapshots/sources.json: <field> <problem>` when it is malformed
 // writes: <run>/excerpts.json, <run>/outline.md, explainers/.gitignore
 // exit:   0 pass · 1 a problem · 2 usage
 import fs from "node:fs";

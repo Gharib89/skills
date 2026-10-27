@@ -337,7 +337,7 @@ test("build refuses until the sampling pass ran on these stills, then every card
     ["{}", /^board: samples\.json: scenes is not a list$/m],
     [
       '{"scenes":[]}',
-      /^board: samples\.json has no findings for scene hook: run node gates/,
+      /^board: samples\.json has no record for scene hook: run node gates/,
     ],
   ]) {
     fs.writeFileSync(record, bad);

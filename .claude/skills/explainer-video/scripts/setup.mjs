@@ -54,8 +54,10 @@ import {
   torchDevice,
   unavailable,
 } from "./lib/tools.mjs";
+import { stage } from "./lib/stage.mjs";
 
 const usage = "usage: node setup.mjs check|install [--all] [--voice <id>]";
+stage("setup");
 const [mode, ...flags] = process.argv.slice(2);
 const voiceAt = flags.indexOf("--voice");
 const voiceId = voiceAt < 0 ? undefined : flags.splice(voiceAt, 2)[1];

@@ -16,7 +16,8 @@
 // stdout: `compile: <n> scene(s) -> script.json`
 // writes: <run>/script.json, and explainers/.gitignore
 // exit:   0 compiled · 1 the file is malformed, `compile: [<scene>: ]<what>`
-//         on stderr · 2 usage
+//         on stderr, or brief.json is, `compile: brief.json: <field>
+//         <problem>` · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";

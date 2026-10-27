@@ -4,6 +4,7 @@
 // for a later stage to play what was checked.
 import { CUE, cue, fail, known, named, object, place } from "./props.mjs";
 import { FORMS, squash } from "../source/locators.mjs";
+import { parseJson } from "./json.mjs";
 import { ARABIC_SCRIPT } from "./terms.mjs";
 
 // The kinds the source stage gives a source: those with a locator form.
@@ -40,9 +41,9 @@ export function matching(text, code, target) {
 
 // The pack's excerpts by id, each `{ text, locator, code }`.
 function load(read) {
-  let pack;
+  let body;
   try {
-    pack = JSON.parse(read("excerpts.json"));
+    body = read("excerpts.json");
   } catch (e) {
     fail(
       e.code === "ENOENT"
@@ -50,8 +51,7 @@ function load(read) {
         : `excerpts.json cannot be read: ${e.message}`,
     );
   }
-  if (!Array.isArray(pack?.sources) || !Array.isArray(pack?.excerpts))
-    fail("excerpts.json must hold a sources list and an excerpts list");
+  const pack = parseJson("excerpts.json", body);
   pack.sources.forEach((s, i) => {
     const at = `excerpts.json source ${i + 1}`;
     named(at, s?.id, "an id");

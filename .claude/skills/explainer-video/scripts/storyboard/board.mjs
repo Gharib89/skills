@@ -236,7 +236,7 @@ if (!delivered) {
   );
   if (gap)
     fail(
-      `samples.json has no findings for scene ${gap.id}: run node gates/samples.mjs ${run} again`,
+      `samples.json has no record for scene ${gap.id}: run node gates/samples.mjs ${run} again`,
     );
   if (
     fs.statSync(at("samples.json")).mtimeMs <
@@ -255,7 +255,7 @@ const loop = (id) => {
   const t = timeline.scenes.find((x) => x.id === id);
   if (!t)
     fail(
-      `timeline.json has no start and slot for scene ${id}: run node render.mjs ${run} --stills`,
+      `timeline.json has no scene ${id}: run node render.mjs ${run} --stills`,
     );
   return { start: t.start, slot: t.slot };
 };

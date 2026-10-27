@@ -18,7 +18,8 @@
 //         a change the script stage redoes removes <run>/check.json, so the
 //         new script's support fix attempts count from none
 // exit:   0 written · 1 a value this version cannot make, `brief <knob>
-//         <value>: <why>` on stderr · 2 usage
+//         <value>: <why>` on stderr, or an earlier brief.json that is
+//         malformed, `brief: brief.json: <field> <problem>` · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { OWN_PREFIX, narrator, narrators } from "../lib/narrators.mjs";

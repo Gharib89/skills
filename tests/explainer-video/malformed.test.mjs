@@ -41,6 +41,11 @@ const r = render(fx);
 assert.equal(r.code, 0, r.out + r.err);
 const s = run(fx.dir, "gates/samples.mjs", [], fx.env);
 assert.equal(s.code, 0, s.out + s.err);
+// The same run folder under another name, so its board is a review board,
+// which reads the sampling pass and the gates record: no MP4 of its name is
+// delivered.
+const review = { ...fx, dir: path.join(path.dirname(fx.dir), "review") };
+fs.cpSync(fx.dir, review.dir, { recursive: true, preserveTimestamps: true });
 
 // A parts run folder: a 12-minute brief, its pack and a plan of three parts.
 const p = parted();
@@ -68,7 +73,13 @@ const STAGES = [
     "gates/gates.mjs",
     [],
     fx,
-    ["script.json", "timeline.json", "score.json", "excerpts.json"],
+    [
+      "script.json",
+      "timeline.json",
+      "score.json",
+      "excerpts.json",
+      "gates.json",
+    ],
   ],
   ["samples", "gates/samples.mjs", [], fx, ["script.json", "timeline.json"]],
   [
@@ -87,11 +98,25 @@ const STAGES = [
     ],
   ],
   [
+    "board",
+    "storyboard/board.mjs",
+    ["build"],
+    review,
+    ["samples.json", "gates.json"],
+  ],
+  [
     "script",
     "script/check.mjs",
     [],
     fx,
-    ["script.json", "brief.json", "excerpts.json", "support.json"],
+    [
+      "script.json",
+      "brief.json",
+      "excerpts.json",
+      "support.json",
+      "check.json",
+      "snapshots/sources.json",
+    ],
   ],
   ["compile", "script/compile.mjs", [], fx, ["brief.json"]],
   [
@@ -115,15 +140,16 @@ function run(dir, script, args, env) {
 
 // The run folder's own JSON files and the stage's, put back after each case
 // with their times, which the board reads: a stage may remove one (voice drops
-// voice.json first) or write one before it refuses.
+// voice.json first) or write one before it refuses. A file the folder lacks
+// (check.json before the script check's first run) is removed again.
 const saved = (dir, files) =>
   new Map(
-    [...fs.readdirSync(dir).filter((f) => f.endsWith(".json")), ...files].map(
-      (f) => [
+    [...fs.readdirSync(dir).filter((f) => f.endsWith(".json")), ...files]
+      .filter((f) => fs.existsSync(path.join(dir, f)))
+      .map((f) => [
         f,
         [fs.readFileSync(path.join(dir, f)), fs.statSync(path.join(dir, f))],
-      ],
-    ),
+      ]),
   );
 const restore = (dir, files) => {
   for (const f of fs.readdirSync(dir))
@@ -135,7 +161,8 @@ const restore = (dir, files) => {
 };
 
 for (const [name, script, args, at, files] of STAGES) {
-  const label = [script, ...args].join(" ");
+  const where = at === review ? " on a review board" : "";
+  const label = [script, ...args].join(" ") + where;
   const held = saved(at.dir, files);
 
   test(`${label} passes on the well-formed run folder`, () => {
@@ -154,7 +181,13 @@ for (const [name, script, args, at, files] of STAGES) {
         if (given) return assert.equal(x.code, 0, x.out + x.err);
         const lines = x.err.trim().split("\n");
         assert.equal(x.code, 1, `exit ${x.code}\n${x.out}${x.err}`);
-        assert.doesNotMatch(x.err, /TypeError|^\s+at /m, x.err);
+        // stage() prints only the message, so an escaped TypeError shows as
+        // its message: no `TypeError`, but `Cannot read properties of null`.
+        assert.doesNotMatch(
+          x.err,
+          /TypeError|Cannot read propert|is not a function|is not iterable|^\s+at /m,
+          x.err,
+        );
         assert.equal(lines.length, 1, x.err);
         assert.ok(lines[0].startsWith(`${name}: `), x.err);
         assert.ok(lines[0].includes(file), x.err);
