@@ -26,13 +26,43 @@ const files = (dir) =>
         : [path.join(dir, e.name)],
     );
 
+// A quote, backtick or separator before `explainer-video` or its `explainers`
+// run folder, a separator after that folder, or its environment variable. In
+// Markdown a backtick marks code in prose, not a path, so it is left out there.
+const CODE =
+  /["'`/\\](explainer-video|explainers)\b|\bexplainers[/\\]|EXPLAINER_VIDEO_/;
+const MARKDOWN =
+  /["'/\\](explainer-video|explainers)\b|\bexplainers[/\\]|EXPLAINER_VIDEO_/;
+const reaches = (file, line) =>
+  (file.endsWith(".md") ? MARKDOWN : CODE).test(line);
+
+test("the reach matcher hits every way code names explainer-video's paths, and not prose", () => {
+  for (const l of [
+    'import { x } from "../../explainer-video/scripts/lib/paths.mjs";',
+    'path.join(skill, "..", "explainer-video", "scripts")',
+    '"..\\\\explainer-video\\\\x"',
+    "`${root}/../explainer-video`",
+    "path.join(dir, `explainer-video`)",
+    'path.resolve("explainers")',
+    "process.env.EXPLAINER_VIDEO_BACKEND",
+  ])
+    assert.ok(reaches("x.mjs", l), l);
+  assert.ok(reaches("x.md", "Read `../explainer-video/SKILL.md`."));
+  for (const l of [
+    "// forked from explainer-video's plumbing",
+    "// the explainers stage",
+  ])
+    assert.ok(!reaches("x.mjs", l), l);
+  assert.ok(!reaches("x.md", "A request for an `explainer-video` goes there."));
+});
+
 test("no file in the skill imports, spawns or names a path into explainer-video", () => {
   const hits = files(skill).flatMap((f) =>
     fs
       .readFileSync(f, "utf8")
       .split("\n")
       .flatMap((l, i) =>
-        /explainer-video\/|\.\.\/explainer-video|EXPLAINER_VIDEO_/.test(l)
+        reaches(f, l)
           ? [`${path.relative(skill, f)}:${i + 1}: ${l.trim()}`]
           : [],
       ),

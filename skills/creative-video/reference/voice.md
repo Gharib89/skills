@@ -35,8 +35,8 @@ in Arabic.
    are unchanged is a cache hit and is not voiced again. Once every scene
    passes, with a `brief.json` in the run folder, a `voice length: pass|fail`
    line follows the scene lines: the scenes' total voiced seconds, then each
-   scene's, and whether they and the render's closing hold land within 10
-   percent of the brief's `length`.
+   scene's, and whether they plus the one-second closing hold land within 10
+   percent of `brief.json`'s `length`, in minutes.
 3. **On a pass** (exit 0), the stage has written `voice.json` in the run
    folder: per scene its WAV under `.cache/voice/`, its duration and each
    word's start and end in seconds from the start of that scene's WAV. Report
@@ -59,11 +59,11 @@ in Arabic.
    is an input or tool error (an unknown narrator, a scene with no narration,
    a Gemini narrator with no `GEMINI_API_KEY`, an ElevenLabs narrator with no
    `ELEVENLABS_API_KEY`, a failed synthesis): relay the stderr message as
-   printed. Keep the brief's narrator: only the user moves `voice`.
+   printed. Keep `script.json`'s `narrator`: only the user changes it.
 5. **On `voice: Gemini quota reached`** (or `ElevenLabs`), the key has hit
    that vendor's limit: a rate or daily limit, or spent credits. The line
    quotes the vendor's own message, and the scenes it counts as kept are
    cached. Relay the line and ask the user to pick one: voice again once the
    quota resets (tomorrow, for a daily quota) or the credits are topped up,
    which voices only the missing scenes; set another key (a paid one, for a
-   free-tier limit); or move the brief's `voice` to another narrator.
+   free-tier limit); or change `script.json`'s `narrator`.

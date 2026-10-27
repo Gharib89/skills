@@ -65,6 +65,19 @@ test("a token that would take a cue past CUE_CHARS starts a new cue", () => {
   );
 });
 
+test("a cue of exactly CUE_CHARS stays one cue, and one more character splits it", () => {
+  const words = (last) =>
+    ["a", "b", "c", "d"].map((c, i) => c.repeat(i === 3 ? last : 20));
+  const at = scene([words(21)]);
+  assert.equal(
+    captionCues([at.script], [at.timeline])[0].text.length,
+    CUE_CHARS,
+  );
+  assert.equal(captionCues([at.script], [at.timeline]).length, 1);
+  const over = scene([words(22)]);
+  assert.equal(captionCues([over.script], [over.timeline]).length, 2);
+});
+
 test("a token spanning several words takes its first word's start and its last word's end", () => {
   const timeline = {
     start: 2,

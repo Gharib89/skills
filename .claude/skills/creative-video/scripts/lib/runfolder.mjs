@@ -1,18 +1,12 @@
 // The `creative-videos/` folder every run folder sits in. Its `.gitignore`
-// keeps a run's recipe (excerpts.json, outline.md, manifest.json) committed and
-// everything a stage can rebuild out of git.
+// keeps a run's recipe (excerpts.json, outline.md, manifest.json, brief.json,
+// script.json) committed and everything a stage can rebuild out of git.
 import fs from "node:fs";
 import path from "node:path";
 
 const BEGIN = "# creative-video: begin";
 const END = "# creative-video: end";
-const REBUILDABLE = [
-  "script.json",
-  "voice.json",
-  "snapshots/",
-  ".cache/",
-  "out/",
-];
+const REBUILDABLE = ["voice.json", "snapshots/", ".cache/", "out/"];
 const BLOCK = `${BEGIN} (each run folder commits its recipe only)
 ${REBUILDABLE.map((f) => `*/${f}`).join("\n")}
 ${END}

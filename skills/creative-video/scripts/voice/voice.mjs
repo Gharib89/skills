@@ -172,14 +172,14 @@ function wav(file, samples, rate) {
 
 const missing = scenes.filter((s) => !s.cached);
 // A Gemini or ElevenLabs narrator speaks only on the user's own key, its
-// backend's key row in setup/rows.json: no other narrator stands in, since the
-// brief chose this voice.
+// backend's key row in setup/rows.json: no other narrator stands in, since
+// script.json names this narrator.
 const keyRow = catalogue().find(
   (r) => r.kind === "key" && r.backend === narrator.backend,
 );
 if (missing.length && keyRow && !process.env[keyRow.env]) {
   console.error(
-    `voice: narrator ${narrator.id} needs ${keyRow.env}: get a free key at ${keyRow.get}, or choose another narrator in the brief`,
+    `voice: narrator ${narrator.id} needs ${keyRow.env}: get a free key at ${keyRow.get}, or choose another narrator in script.json`,
   );
   process.exit(1);
 }
@@ -227,7 +227,7 @@ try {
   // Each group is cached as it passes, so a rerun voices only what is missing.
   if (e.quota)
     console.error(
-      `voice: ${e.vendor} quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota) or the credits are topped up, which voices only the missing scenes; set another key (a paid one, for a free-tier limit); or choose another narrator in the brief`,
+      `voice: ${e.vendor} quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota) or the credits are topped up, which voices only the missing scenes; set another key (a paid one, for a free-tier limit); or choose another narrator in script.json`,
     );
   else console.error(`voice: ${e.message}`);
   process.exit(1);

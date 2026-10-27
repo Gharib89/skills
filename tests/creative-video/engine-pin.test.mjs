@@ -33,6 +33,9 @@ const shipped = () => ({
 // The disagreement between the three files, or null.
 function check(lock, pkg, pkgLock) {
   const ref = lock.skills?.hyperframes?.ref;
+  const media = lock.skills?.["media-use"]?.ref;
+  if (media !== ref)
+    return `media-use is locked at ${media}, hyperframes at ${ref}`;
   const want = ENGINE[ref];
   if (!want) return `no measured engine version for the hyperframes ref ${ref}`;
   const pinned = pkg.dependencies?.hyperframes;
@@ -52,9 +55,19 @@ test("the shipped lock, package.json and lockfile agree on the engine", () => {
 test("a lock whose hyperframes ref has no measured entry fails", () => {
   const s = shipped();
   s.lock.skills.hyperframes.ref = "0".repeat(40);
+  s.lock.skills["media-use"].ref = "0".repeat(40);
   assert.match(
     check(s.lock, s.pkg, s.pkgLock),
     /no measured engine version for the hyperframes ref 0{40}/,
+  );
+});
+
+test("a media-use lock ref apart from the hyperframes ref fails", () => {
+  const s = shipped();
+  s.lock.skills["media-use"].ref = "0".repeat(40);
+  assert.match(
+    check(s.lock, s.pkg, s.pkgLock),
+    /media-use is locked at 0{40}, hyperframes at 9ebc1f8/,
   );
 });
 

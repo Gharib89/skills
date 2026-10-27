@@ -18,8 +18,9 @@ authored freely in HyperFrames rather than drawn from a fixed set of
 components, a long one split into **chapters**. This version carries
 **setup** and the plumbing later versions build on: the source pack, the
 voice stage, the narration and chapter joins, captions and delivery.
-Authoring arrives in later versions. Asked for a video now, run setup, say
-that authoring is not in this version yet, and stop.
+Authoring arrives in later versions. Asked for a video now, say that
+authoring is not in this version yet, offer `explainer-video` for a narrated
+video today, and stop. Run setup only when asked (`/creative-video setup`).
 
 ## Setup
 
@@ -68,7 +69,8 @@ To remove the tools, the user deletes the `creative-video` folders that the
 
 Scenes are HyperFrames compositions, authored with the `hyperframes` skill;
 media is found or made with `media-use`. Both are pinned to the HyperFrames
-release this skill's `package.json` installs. Install them with:
+release this skill's `package.json` installs. Authoring, in a later version,
+needs both; when the user asks for them, install them with:
 
 ```
 npx skills add heygen-com/hyperframes#9ebc1f8a13fc2c6756f92394688e35f9891eb5c8 --skill hyperframes --agent claude-code -y
@@ -77,5 +79,6 @@ npx skills add heygen-com/hyperframes#9ebc1f8a13fc2c6756f92394688e35f9891eb5c8 -
 
 ## Voice
 
-Read [reference/voice.md](reference/voice.md) for the voice stage's input and
-steps.
+To voice a `script.json` the user wrote in a run folder
+`creative-videos/<slug>`, read [reference/voice.md](reference/voice.md) and
+run its steps.

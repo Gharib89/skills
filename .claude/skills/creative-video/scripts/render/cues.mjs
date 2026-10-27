@@ -2,8 +2,8 @@
 // token that would take it past CUE_CHARS; it shows until the next cue in its
 // scene starts.
 
-// A caption is 40 px: 40 px Inter fits about 70 characters a line in the
-// 1680 px caption band, so 84 is at most two lines.
+// Sized for a 40 px Inter caption 1680 px wide, about 70 characters a line, so
+// 84 is at most two lines.
 export const CUE_CHARS = 84;
 
 const r3 = (n) => +n.toFixed(3);

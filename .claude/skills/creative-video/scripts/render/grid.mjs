@@ -1,6 +1,6 @@
 // The render's frame grid. HyperFrames renders ceil(duration x fps) frames, so
-// the composer counts whole frames itself and writes each time truncated: a
-// time rounded up by a hair would cost a whole extra frame.
+// a time is counted in whole frames and written truncated: a time rounded up
+// by a hair would cost a whole extra frame.
 
 // The render's frame rate.
 export const FPS = 30;

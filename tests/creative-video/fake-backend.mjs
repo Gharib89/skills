@@ -103,13 +103,12 @@ export async function computeCapability() {
   return cap ? +cap : null;
 }
 
-// CREATIVE_VIDEO_FAKE_PLATFORM `<os>/<arch>[/<macOS version>]` (default
-// linux/x64).
+// CREATIVE_VIDEO_FAKE_PLATFORM `<os>/<arch>` (default linux/x64).
 export function platform() {
-  const [os, arch, version = null] = (
+  const [os, arch] = (
     process.env.CREATIVE_VIDEO_FAKE_PLATFORM ?? "linux/x64"
   ).split("/");
-  return { os, arch, version };
+  return { os, arch };
 }
 
 export function which(cmd) {

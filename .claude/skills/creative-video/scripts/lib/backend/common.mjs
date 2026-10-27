@@ -1,5 +1,5 @@
 // Helpers the backend modules share: the platform flag, the quiet stdio, the
-// ffmpeg and ffprobe wrappers, PATH lookup and the tool cache's require.
+// ffmpeg wrapper, PATH lookup and the tool cache's require.
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -20,28 +20,6 @@ export function ffmpeg(args) {
       `ffmpeg exited ${r.status ?? r.error?.message}: ${(r.stderr || "").trim().split("\n").pop()}`,
     );
   return r.stderr;
-}
-
-export function sampleRate(input) {
-  const probed = spawnSync(
-    "ffprobe",
-    [
-      "-v",
-      "error",
-      "-select_streams",
-      "a:0",
-      "-show_entries",
-      "stream=sample_rate",
-      "-of",
-      "csv=p=0",
-      input,
-    ],
-    { encoding: "utf8" },
-  );
-  const rate = parseInt(probed.stdout, 10);
-  if (probed.status !== 0 || !rate)
-    throw new Error(`ffprobe ${input}: no audio sample rate`);
-  return rate;
 }
 
 export function which(cmd) {

@@ -157,14 +157,7 @@ export async function computeCapability() {
 }
 
 // The OS and CPU, as Node names them, which the CUDA provider row's `os` and
-// `arch` match, and macOS's version from sw_vers (null elsewhere, or when
-// sw_vers fails).
+// `arch` match.
 export function platform() {
-  const version =
-    process.platform === "darwin"
-      ? spawnSync("sw_vers", ["-productVersion"], {
-          encoding: "utf8",
-        }).stdout?.trim() || null
-      : null;
-  return { os: process.platform, arch: process.arch, version };
+  return { os: process.platform, arch: process.arch };
 }

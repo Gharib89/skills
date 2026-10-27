@@ -106,6 +106,17 @@ test("a chapter mark within a frame of its start passes; one further off, retitl
     )[3],
     true,
   );
+  // Exactly one frame off passes: `1/30 - 0` is exact in floating point.
+  assert.equal(
+    chapterCheck(
+      CHAPTERS,
+      probed([
+        [1 / 30, "Why"],
+        [4, "How"],
+      ]),
+    )[3],
+    true,
+  );
   for (const marks of [
     [
       [0, "Why"],

@@ -317,13 +317,14 @@ test("the merge numbers every excerpt across the pack and writes the excerpts an
     /## alpha · md · Alpha\n\nSource: .*alpha\.md\n\nAlpha in one line\.\n\n- ex-1 · § One · note for § One\n- ex-2 · § Two · note for § Two\n/,
   );
   assert.match(outline, /- ex-3 · line 1 · note for line 1\n$/);
-  // Snapshots and drafts stay out of git; the excerpts and outline are recipe.
+  // Snapshots and drafts stay out of git; the excerpts, outline, brief and
+  // hand-written script are recipe.
   const ignore = fs.readFileSync(
     path.join(path.dirname(fx.dir), ".gitignore"),
     "utf8",
   );
   assert.match(ignore, /^\*\/snapshots\/$/m);
-  assert.doesNotMatch(ignore, /excerpts|outline/);
+  assert.doesNotMatch(ignore, /excerpts|outline|brief|script/);
 });
 
 test("a converter source with its tools not installed is refused before any read", () => {

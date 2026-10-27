@@ -90,7 +90,7 @@ test("a Gemini narrator with no GEMINI_API_KEY is refused with where to get one,
     assert.equal(r.code, 1, r.out + r.err);
     assert.match(
       r.err,
-      /^voice: narrator ar-eg-csagent-2 needs GEMINI_API_KEY: get a free key at https:\/\/aistudio\.google\.com\/apikey, or choose another narrator in the brief$/m,
+      /^voice: narrator ar-eg-csagent-2 needs GEMINI_API_KEY: get a free key at https:\/\/aistudio\.google\.com\/apikey, or choose another narrator in script\.json$/m,
     );
     assert.equal(synths(fx).length, 0);
   }
@@ -146,7 +146,7 @@ test("a Gemini quota stop keeps the scenes voiced before it, and the next run vo
   const stopped = run(fx, { ...KEY, CREATIVE_VIDEO_FAKE_QUOTA: "2" });
   assert.equal(stopped.code, 1, stopped.out + stopped.err);
   const QUOTA_LINE =
-    /^voice: Gemini quota reached \(Gemini answered HTTP 429: You exceeded your current quota\); 1 scene\(s\) voiced before it are kept\. Voice again once the quota resets \(tomorrow, for a daily quota\) or the credits are topped up, which voices only the missing scenes; set another key \(a paid one, for a free-tier limit\); or choose another narrator in the brief$/m;
+    /^voice: Gemini quota reached \(Gemini answered HTTP 429: You exceeded your current quota\); 1 scene\(s\) voiced before it are kept\. Voice again once the quota resets \(tomorrow, for a daily quota\) or the credits are topped up, which voices only the missing scenes; set another key \(a paid one, for a free-tier limit\); or choose another narrator in script\.json$/m;
   assert.match(stopped.err, QUOTA_LINE);
   assert.doesNotMatch(OLD_QUOTA_LINE, QUOTA_LINE);
   assert.equal(synths(fx).length, 2);
@@ -172,7 +172,7 @@ test("an ElevenLabs narrator with no ELEVENLABS_API_KEY is refused with where to
   assert.equal(r.code, 1, r.out + r.err);
   assert.match(
     r.err,
-    /^voice: narrator elevenlabs-george needs ELEVENLABS_API_KEY: get a free key at https:\/\/elevenlabs\.io\/app\/settings\/api-keys, or choose another narrator in the brief$/m,
+    /^voice: narrator elevenlabs-george needs ELEVENLABS_API_KEY: get a free key at https:\/\/elevenlabs\.io\/app\/settings\/api-keys, or choose another narrator in script\.json$/m,
   );
   assert.equal(synths(fx).length, 0);
 });
