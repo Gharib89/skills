@@ -1,0 +1,11 @@
+{
+  "name": "creative-arabic-joins-probe",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "harfbuzzjs": "^1.6.4",
+    "hyperframes": "0.8.197",
+    "pngjs": "*",
+    "puppeteer-core": "*"
+  }
+}
