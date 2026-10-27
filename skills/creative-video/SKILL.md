@@ -15,12 +15,161 @@ metadata:
 
 A **creative video** is a narrated video that teaches a concept, its scenes
 authored freely in HyperFrames rather than drawn from a fixed set of
-components, a long one split into **chapters**. This version carries
-**setup** and the plumbing later versions build on: the source pack, the
-voice stage, the narration and chapter joins, captions and delivery.
-Authoring arrives in later versions. Asked for a video now, say that
-authoring is not in this version yet, offer `explainer-video` for a narrated
-video today, and stop. Run setup only when asked (`/creative-video setup`).
+components, a long one split into **chapters**. Given a concept, a topic, a
+repo or a document (and optionally a language and a length), make one under
+[The stance](#the-stance), by the steps of [Make a video](#make-a-video). This
+version makes one video of up to about six minutes, without chapters. Run
+setup alone only when asked (`/creative-video setup`).
+
+## The stance
+
+Read this before anything else and work by it through every step. A run with
+nobody to answer (the request says to go ahead without questions, or a
+scheduled run) is **unattended**: wherever the stance says the person picks,
+take your recommendation and write down why.
+
+You are making a film someone chooses to watch to the end, and it is the best
+explainer on this subject they will see this year. Treat it as the reel you
+would show to get your next job. The expected version is not the goal: a
+narrator over tidy slides is the failure this stance exists to prevent. Go all
+out, and aim everything you have at the explanation.
+
+### What has to be true
+
+**The spectacle is the explanation.** Every striking thing on screen carries
+the idea: a metaphor that is the mechanism, a picture that changes the moment
+the narration names the change. Decoration around the idea costs the viewer
+learning (removing interesting but irrelevant material raised transfer by
+d = 0.80; removing background music, by d = 0.95). If a shot would survive
+with the narration muted and still teach nothing, it is decoration.
+
+**One format concept owns the film, chosen before any scene.** A concept is
+a world (a kitchen at service, a heist), a format (a game show where the
+viewer is the contestant, a courtroom), or the subject itself drawn directly,
+when the thing already teaches better than any metaphor would (an algorithm
+running, a proof building). Write three directions that differ in kind, not in
+palette: make one the bold one you would not pick first, and let one be the
+subject drawn directly when it fits. Recommend one and say why. The person
+picks; with nobody there to pick, take your recommendation and write down
+why. The chosen concept owns the arc, the cast, the audience device, what each
+sound means and what each colour means. A film with no concept falls back to
+hook, points, recap: that is the expected version.
+
+**The viewer's wrong idea is on screen.** Name what a smart newcomer believes
+that is false, give that belief a voice (a learner character, a rival, the
+viewer's own guess), and break it on screen. Feeling clear is not learning;
+staging the misconception is (d of about 0.8).
+
+**The viewer is asked, not told twice.** Before the answer, pose the question
+and hold a beat for a guess. A prediction or a "will it run?" frame beats a
+recap; a recap that replays content teaches nothing.
+
+**Each metaphor says where it breaks.** One line, in the narration or on
+screen, where the comparison stops being true.
+
+**The picture moves with the words, not the sentences.** Time events to the
+word that names them, several per sentence where the narration names several
+things: the best bar video changed the picture about 15 times a minute without
+cutting. Build, don't cut.
+
+**The voice has energy.** Conversational, about 155 words a minute, a person
+talking to one viewer, never a lecture read aloud. Slow down only at the hard
+step.
+
+**Facts are traced; pictures are free.** Every factual sentence comes from a
+source you can name that still stands: check whether its authors have since
+updated or withdrawn it. Metaphors, characters and staging are yours.
+
+### Decide, then build
+
+Before any scene, write `SPEC.md`: the concept and why, and a number wherever
+you would have written an adjective. At least:
+
+- **Colour**: the palette as hex values with a role each, drawn from the
+  concept's own world (a game show's stage, a kitchen, a courtroom), and what
+  each colour means in the story. Colour carries meaning or stays out.
+- **Sound**: the sound palette as a short list, each sound with the story event
+  it marks and nothing else; where the bed plays, where it drops out, and the
+  one moment it changes. A low bed plays by default, well under the voice and
+  drawn from the concept's world (room tone, a track), and drops out for the
+  hardest step of the explanation. Effects are recorded sounds from a licensed
+  source (CC0 packs, a library with a licence you write down), never tones or
+  beeps generated in code: nobody can hear whether they are good, and they
+  sound like it.
+- **Motion**: the event rate, the easing family, what moves on which word.
+- **Type**: faces and sizes.
+
+The `hyperframes` skill is your engine and its craft; `hyperframes-cli` is its
+command line, run through this skill's pinned copy (`hf.mjs`,
+[reference/authoring.md](reference/authoring.md#the-pinned-cli)). Read its
+`SKILL.md` and the references you need. Its BANNED list (the dark navy void
+with a glow, neon, floating particles, purple and blue gradients, everything
+centred and fading in) stays banned, with one more way out: the format concept
+needs it, and `SPEC.md` says why in one line. "It looks techy" is not a reason.
+
+### Look at what you made
+
+You cannot watch video, so look at stills. Before the full render, render a
+contact sheet of every scene's key frames and describe each frame as a
+stranger would: what is the eye drawn to, what does it say without the
+narration. Hand the sheet to a fresh-eyes subagent that has not read your
+plan. Name every default that crept in, from the BANNED list or not, and fix
+it. Measure the sound you cannot hear: loudness, peaks, and that each effect
+lands on its picture. Say in your delivery note what was measured, not heard.
+
+## Make a video
+
+`<skill>` is the folder this file is in, `<run>` the run folder
+`creative-videos/<slug>` in the current repo, `<slug>` a short kebab-case name
+for the video. [reference/authoring.md](reference/authoring.md) holds the run
+folder's files, timing, the word anchors, the pinned CLI and the render.
+
+1. **Brief.** Write `<run>/brief.json`, `{ "length": <minutes> }`: the length
+   asked for, about two minutes when none is. The language is the one asked
+   for, English when none is.
+2. **Tools.** Run setup's check (below) with the narrator you will use. A
+   missing row: run setup's steps first. The `hyperframes` and `media-use`
+   skills must be installed (Composed skills, below).
+3. **Sources.** Read [reference/sources.md](reference/sources.md) and run its
+   steps, to the outline and the still-standing check.
+4. **Directions.** Write `<run>/DIRECTIONS.md`: three directions that differ
+   in kind, each a paragraph (the concept, its arc, its cast and audience
+   device, its sound and colour), one bold, one the subject drawn directly
+   when that fits, and one marked recommended with why. Attended, show them
+   and ask the person once which to make; unattended, take the recommended one.
+   Write the pick and its reason into the file.
+5. **Spec and kit.** Read the `hyperframes` skill's `SKILL.md`, its
+   `references/spec.md` and the references the concept needs, and this
+   skill's [craft-teaching.md](reference/craft-teaching.md) and
+   [craft-motion.md](reference/craft-motion.md). Write `<run>/SPEC.md` by the
+   stance, then the format kit in `<run>/project/kit/`, both before any scene.
+6. **Script.** Write `<run>/script.json`
+   ([reference/voice.md](reference/voice.md) holds its shape), one scene per
+   idea of the arc: the misconception given a voice and broken, the question
+   posed before its answer, each metaphor's limit said. Every factual
+   sentence comes from an excerpt in the outline.
+7. **Voice.** Run [reference/voice.md](reference/voice.md)'s steps until the
+   voice stage passes.
+8. **Timing.** `node <skill>/scripts/render/timing.mjs <run>`, again after
+   every re-voice.
+9. **Scenes.** Author `<run>/project/compositions/<id>.html` for every scene
+   it lists, each event that answers a word placed at `at(scene, word)`.
+10. **Look.** `node <skill>/scripts/hf.mjs <run> check --json` until clean,
+    then `node <skill>/scripts/hf.mjs <run> snapshot --review`, and describe
+    each frame as a stranger would. Dispatch one subagent with
+    `<skill>/agents/stills-reviewer.md` as its prompt, `{sheets}` the sheets'
+    paths, `{notes}` `<run>/.cache/review/stills-notes.md`, and nothing else
+    from the run. Fix every P0 and every default it or you named, then
+    snapshot what changed.
+11. **Render.** `node <skill>/scripts/render/render.mjs <run>`; on exit 1 fix
+    what it names and render again.
+12. **Deliver.** Write `<run>/CREDITS.md` (each source cited with its
+    locators, each sound with its source, licence and attribution, the voice,
+    the faces and their licences) and `<run>/DELIVERY.md` (the concept and why
+    it was picked; what was measured, quoting the render's `delivery` lines,
+    and what was only looked at; that the sound was measured, not heard; any
+    source updated or withdrawn; the weakest shot and what you would change).
+    Reply with the `out/` path and the note's short form.
 
 ## Setup
 
@@ -69,8 +218,8 @@ To remove the tools, the user deletes the `creative-video` folders that the
 
 Scenes are HyperFrames compositions, authored with the `hyperframes` skill;
 media is found or made with `media-use`. Both are pinned to the HyperFrames
-release this skill's `package.json` installs. Authoring, in a later version,
-needs both; when the user asks for them, install them with:
+release this skill's `package.json` installs. Authoring needs both; when
+either is missing, ask once, then install it with:
 
 ```
 npx skills add heygen-com/hyperframes#9ebc1f8a13fc2c6756f92394688e35f9891eb5c8 --skill hyperframes --agent claude-code -y

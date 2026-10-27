@@ -2,6 +2,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { toolPaths } from "../tools.mjs";
 import { quiet, win } from "./common.mjs";
 
 // The lock's only install scripts are esbuild's and onnxruntime-node's, and
@@ -39,6 +40,22 @@ export async function ensureChrome(nodeDir, home, env) {
       env: childEnv,
       stdio: quiet,
     }).status ?? 1
+  );
+}
+
+// A HyperFrames CLI call, through the CLI in the tool cache. The caller builds
+// `env` (Chrome's home, the no-telemetry variables); `stdio` is quiet unless a
+// caller wants the tool's output on its own terminal.
+export async function hyperframes(args, { cwd, env, stdio = quiet }) {
+  const cli = path.join(
+    toolPaths().node,
+    "node_modules",
+    "hyperframes",
+    "bin",
+    "hyperframes.mjs",
+  );
+  return (
+    spawnSync(process.execPath, [cli, ...args], { cwd, env, stdio }).status ?? 1
   );
 }
 

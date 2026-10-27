@@ -1,0 +1,152 @@
+// The render stage: the authored HyperFrames project to a mastered MP4, SRT and
+// poster.
+//
+//   node render.mjs <run-folder>
+//
+// Reads <run>/timeline.json and <run>/project/ (render/timing.mjs wrote both,
+// and the agent has authored a compositions/<id>.html per scene). Renders the
+// project with HyperFrames to <run>/.cache/render/raw.mp4, normalises its
+// audio to -14 LUFS with a true peak of -1.5 dBTP into out/<slug>.mp4, writes
+// out/<slug>.srt from the timeline's cues and out/poster.png from the middle of
+// the first scene, and checks the MP4 against the delivery contract. A failed
+// check empties out/ and delivers nothing.
+// stdout: one `delivery <check>: pass|fail: <measured> vs <wanted>` line per
+//         check, `delivery loudness: <lufs> LUFS integrated, <peak> dBTP true
+//         peak`, `delivered: <path>`, then `render: <slug>.mp4 <seconds> s,
+//         <n> scene(s)`
+// writes: <run>/.cache/render/raw.mp4, out/<slug>.mp4|.srt, out/poster.png,
+//         manifest.json
+// exit:   0 delivered · 1 refused or failed, `render: <why>` on stderr, or a
+//         delivery check failed · 2 usage
+import fs from "node:fs";
+import path from "node:path";
+import { readJson } from "../lib/json.mjs";
+import { voiceHash, writeIgnore } from "../lib/runfolder.mjs";
+import { stage } from "../lib/stage.mjs";
+import { hyperframesEnv, loadBackend, lockHash } from "../lib/tools.mjs";
+import { videoFacts, srtText, writeManifest } from "./delivery.mjs";
+import { FPS } from "./grid.mjs";
+
+// The mastering targets: the loudness gate's integrated level and a true peak
+// half a dB under its -1.0 dBTP ceiling.
+const LUFS = -14;
+const PEAK = -1.5;
+const CEILING = -1.0;
+
+stage("render");
+const [run, ...rest] = process.argv.slice(2);
+if (!run || rest.length) {
+  console.error("usage: node render.mjs <run-folder>");
+  process.exit(2);
+}
+function fail(why) {
+  console.error(`render: ${why}`);
+  process.exit(1);
+}
+const slug = path.basename(path.resolve(run));
+const project = path.join(path.resolve(run), "project");
+const again = "run render/timing.mjs first";
+if (!fs.existsSync(path.join(run, "timeline.json")))
+  fail(`timeline.json is missing: ${again}`);
+if (!fs.existsSync(path.join(project, "index.html")))
+  fail(`project/index.html is missing: ${again}`);
+const timeline = JSON.parse(
+  fs.readFileSync(path.join(run, "timeline.json"), "utf8"),
+);
+const voice = readJson(run, "voice.json");
+if (timeline.voice !== voiceHash(run))
+  fail(
+    "timeline.json is from an older voice.json: run render/timing.mjs again",
+  );
+const missing = timeline.scenes
+  .map((s) => `compositions/${s.id}.html`)
+  .filter((f) => !fs.existsSync(path.join(project, f)));
+if (missing.length) fail(`no ${missing.join(", ")}: author each scene file`);
+writeIgnore(run);
+
+const backend = await loadBackend();
+const out = path.join(run, "out");
+fs.rmSync(out, { recursive: true, force: true });
+fs.mkdirSync(out);
+const raw = path.resolve(run, ".cache", "render", "raw.mp4");
+fs.mkdirSync(path.dirname(raw), { recursive: true });
+const code = await backend.hyperframes(
+  [
+    ...["render", "--strict", "--quiet", "--fps", String(FPS)],
+    ...["--workers", "3", "-o", raw],
+  ],
+  { cwd: project, env: hyperframesEnv() },
+);
+if (code !== 0) fail(`hyperframes render exited ${code}`);
+
+const mp4 = path.join(out, `${slug}.mp4`);
+const srt = path.join(out, `${slug}.srt`);
+const first = timeline.scenes[0];
+let probe;
+let loud;
+try {
+  await backend.loudnorm(raw, mp4, { lufs: LUFS, peak: PEAK });
+  fs.writeFileSync(srt, srtText(timeline.cues));
+  await backend.poster(
+    mp4,
+    +(first.start + first.duration / 2).toFixed(3),
+    path.join(out, "poster.png"),
+  );
+  probe = await backend.ffprobe(mp4);
+  loud = await backend.loudness(mp4);
+} catch (e) {
+  fs.rmSync(out, { recursive: true, force: true });
+  fail(e.message);
+}
+
+// Delivery checks, every one printed before any verdict.
+const { size, fps, ratio } = videoFacts(probe);
+const seconds = +probe.format.duration;
+const srtCues = (fs.readFileSync(srt, "utf8").match(/^\d+\n.+ --> .+$/gm) ?? [])
+  .length;
+const checks = [
+  ["resolution", size, "1920x1080"],
+  ["frame rate", fps, FPS],
+  ["aspect", ratio, "16:9"],
+  [
+    "duration",
+    `${seconds.toFixed(2)} s`,
+    `${timeline.total.toFixed(2)} s within 0.25 s`,
+    Math.abs(seconds - timeline.total) <= 0.25,
+  ],
+  [
+    "audio",
+    probe.streams.some((s) => s.codec_type === "audio") ? "a stream" : "none",
+    "a stream",
+  ],
+  ["srt", `${srtCues} cue(s)`, `${timeline.cues.length} cue(s)`],
+  [
+    "true peak",
+    `${loud.peak} dBTP`,
+    `at most ${CEILING} dBTP`,
+    loud.peak <= CEILING,
+  ],
+];
+let failed = 0;
+for (const [name, got, want, ok = got === want] of checks) {
+  if (!ok) failed++;
+  console.log(`delivery ${name}: ${ok ? "pass" : `fail: ${got} vs ${want}`}`);
+}
+console.log(
+  `delivery loudness: ${loud.lufs} LUFS integrated, ${loud.peak} dBTP true peak`,
+);
+if (failed) {
+  fs.rmSync(out, { recursive: true, force: true });
+  process.exit(1);
+}
+
+writeManifest(run, {
+  lock: lockHash,
+  narrator: voice.narrator,
+  lufs: LUFS,
+  peak: PEAK,
+});
+console.log(`delivered: ${mp4}`);
+console.log(
+  `render: ${slug}.mp4 ${seconds.toFixed(2)} s, ${timeline.scenes.length} scene(s)`,
+);

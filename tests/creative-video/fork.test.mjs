@@ -77,7 +77,6 @@ test("none of the parts left behind exists in the fork, and setup lists no own-v
   const left = [
     "scripts/render/compose.mjs",
     "scripts/render/components.mjs",
-    "scripts/render/render.mjs",
     "scripts/style",
     "scripts/storyboard",
     "storyboard",

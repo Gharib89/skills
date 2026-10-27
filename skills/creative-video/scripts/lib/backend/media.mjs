@@ -78,6 +78,50 @@ export async function ffprobe(file) {
   return JSON.parse(r.stdout);
 }
 
+// Integrated loudness (LUFS) and true peak (dBTP) of a file's audio, as
+// ffmpeg's ebur128 summary prints them.
+export async function loudness(file) {
+  const err = ffmpeg([
+    ...["-i", file, "-af", "ebur128=peak=true", "-f", "null", "-"],
+  ]);
+  const summary = err.slice(err.lastIndexOf("Summary:"));
+  const lufs = summary.match(/\n\s*I:\s*(-?[\d.]+|-inf) LUFS/)?.[1];
+  const peak = summary.match(
+    /True peak:[\s\S]*?Peak:\s*(-?[\d.]+|-inf) dBFS/,
+  )?.[1];
+  if (lufs === undefined || peak === undefined || lufs === "-inf")
+    throw new Error(`ffmpeg ebur128 gave no loudness for ${file}`);
+  return { lufs: +lufs, peak: +peak };
+}
+
+// The MP4 `input` with its audio normalised to `lufs` integrated and `peak`
+// true peak (LRA 11) into `output`: two-pass loudnorm, pass 2 linear from pass
+// 1's measurements so speech keeps its dynamics. The video stream is copied,
+// the audio is AAC 192k at 48 kHz.
+export async function loudnorm(input, output, { lufs, peak }) {
+  const loud = `loudnorm=I=${lufs}:TP=${peak}:LRA=11`;
+  const err = ffmpeg([
+    ...["-i", input, "-vn", "-af", `${loud}:print_format=json`],
+    ...["-f", "null", "-"],
+  ]);
+  const m = err.match(/\{[^{}]*"input_i"[^{}]*\}/)?.[0];
+  if (!m)
+    throw new Error(`loudnorm pass 1 printed no measurements for ${input}`);
+  const j = JSON.parse(m);
+  const measured = `measured_I=${j.input_i}:measured_TP=${j.input_tp}:measured_LRA=${j.input_lra}:measured_thresh=${j.input_thresh}`;
+  ffmpeg([
+    ...["-y", "-i", input, "-map", "0:v", "-map", "0:a", "-c:v", "copy"],
+    ...["-af", `${loud}:${measured}:offset=${j.target_offset}:linear=true`],
+    ...["-c:a", "aac", "-b:a", "192k", "-ar", "48000"],
+    ...["-movflags", "+faststart", output],
+  ]);
+}
+
+// One frame of `video` at `seconds` as a PNG.
+export async function poster(video, seconds, png) {
+  ffmpeg(["-y", "-ss", String(seconds), "-i", video, "-frames:v", "1", png]);
+}
+
 // A Fontsource family's metadata, or null for a family it does not hold.
 export async function fontMeta(id) {
   const r = await fetch(
