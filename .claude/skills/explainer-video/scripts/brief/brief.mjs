@@ -132,7 +132,7 @@ if (!narrator(brief.voice, brief.language))
 const own = path.join(run, "style.json");
 const held =
   fs.existsSync(own) &&
-  JSON.parse(fs.readFileSync(own, "utf8")).name === brief.style;
+  JSON.parse(fs.readFileSync(own, "utf8"))?.name === brief.style;
 if (
   !held &&
   !styles.some((d) => fs.existsSync(path.join(d, `${brief.style}.json`)))

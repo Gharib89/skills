@@ -18,6 +18,11 @@ const DEFAULTS = {
   // The board adds `board` once it posts and the render `delivered` once it
   // delivers, so `{}` is a manifest with neither: no board link, not delivered.
   "manifest.json {}": "no board link and not delivered",
+  // A run's style.json holding no profile names none: the brief looks for
+  // its style in the stores alone.
+  "style.json {}": "the stores' profiles",
+  "style.json null": "the stores' profiles",
+  "style.json [null]": "the stores' profiles",
 };
 
 // One run folder every stage below passes on: check-lib's brief, pack and
@@ -58,7 +63,7 @@ p.env = {
 
 // Each stage: its stderr prefix, its command, its folder and the files it reads.
 const STAGES = [
-  ["brief", "brief/brief.mjs", [], fx, ["brief.json"]],
+  ["brief", "brief/brief.mjs", [], fx, ["brief.json", "style.json"]],
   ["pack", "source/pack.mjs", ["doc"], fx, ["snapshots/sources.json"]],
   ["voice", "voice/voice.mjs", [], fx, ["script.json", "brief.json"]],
   [

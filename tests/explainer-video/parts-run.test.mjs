@@ -70,7 +70,11 @@ test("a brief change in a part sees the project style store of its explainers fo
   const { knobOffer } = await import(
     path.join(skill, "scripts", "brief", "knobs.mjs")
   );
-  assert.ok(knobOffer("style", dir, {}).options.includes("mine"));
+  const { options } = knobOffer("style", dir, {});
+  assert.ok(options.includes("mine"));
+  // a style.json holding no profile adds no name to the menu
+  fs.writeFileSync(path.join(dir, "style.json"), "null");
+  assert.deepEqual(knobOffer("style", dir, {}).options, options);
 });
 
 test("a style the run holds only in its own style.json (the card's Use once) comes with each part", () => {
