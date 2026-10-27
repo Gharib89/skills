@@ -15,6 +15,21 @@ export const scriptHash = (script) =>
       .update(JSON.stringify(script.scenes.map((s) => [s.id, s.narration]))),
   );
 
+// The files under `dir`, through symlinks to files and folders, since the
+// project loads what a link points at; a folder seen before is walked once, so
+// a link loop ends.
+function walk(dir, seen = new Set()) {
+  const real = fs.realpathSync(dir);
+  if (seen.has(real)) return [];
+  seen.add(real);
+  return fs.readdirSync(dir).flatMap((name) => {
+    const f = path.join(dir, name);
+    const stat = fs.statSync(f, { throwIfNoEntry: false });
+    if (stat?.isDirectory()) return walk(f, seen);
+    return stat?.isFile() ? [f] : [];
+  });
+}
+
 // Everything a video is rendered from: the timeline, the script, the brief and
 // every file of the project but the CLI's own state. A render of other inputs
 // than the gates passed is refused.
@@ -25,10 +40,7 @@ export function inputsHash(run) {
     .map((f) => path.join(run, f));
   const proj = path.join(run, "project");
   files.push(
-    ...fs
-      .readdirSync(proj, { recursive: true, withFileTypes: true })
-      .filter((e) => e.isFile())
-      .map((e) => path.join(e.parentPath, e.name))
+    ...walk(proj)
       .filter(
         (f) => path.relative(proj, f).split(path.sep)[0] !== ".hyperframes",
       )

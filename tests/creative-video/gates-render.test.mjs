@@ -55,6 +55,21 @@ test("a kit file added after the gates passed also makes them stale", () => {
   assert.match(exec(render, fx).err, REFUSED);
 });
 
+test("a file reached through a symlink, to a file or a folder, changed after the gates passed makes them stale", () => {
+  for (const link of ["file", "dir"]) {
+    const fx = timed();
+    const outside = path.join(fx.dir, "outside");
+    fs.mkdirSync(outside);
+    fs.writeFileSync(path.join(outside, "look.css"), "a {}");
+    if (link === "file")
+      fs.symlinkSync(path.join(outside, "look.css"), project(fx, "look.css"));
+    else fs.symlinkSync(outside, project(fx, "kit"));
+    assert.equal(runGates(fx).code, 0);
+    fs.writeFileSync(path.join(outside, "look.css"), "b {}");
+    assert.match(exec(render, fx).err, REFUSED, link);
+  }
+});
+
 test("a render after the gates passed delivers, and its captions check names its findings against the composition's cues", () => {
   const fx = timed();
   assert.equal(runGates(fx).code, 0);
