@@ -76,8 +76,9 @@ check "an edited gates, render, real-ffmpeg or real-Chrome test selects nothing 
 terms=$(sel skills/explainer-video/scripts/lib/terms.mjs)
 check "a source selects the test named for it" 1 \
   "$(printf '%s\n' "$terms" | grep -cx tests/explainer-video/terms.test.mjs)"
-check "a source only the source tests reach selects them alone" \
-  "tests/explainer-video/source-pack.test.mjs
+check "a source only the source tests and the malformed-input test reach selects them alone" \
+  "tests/explainer-video/malformed.test.mjs
+tests/explainer-video/source-pack.test.mjs
 tests/explainer-video/source-page.test.mjs
 tests/explainer-video/source-repo.test.mjs" "$(sel skills/explainer-video/scripts/source/pack.mjs)"
 check "a selection never reaches a skipped file" "" \

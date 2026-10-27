@@ -43,7 +43,7 @@ const words = list(obj({ text, start: number, end: number }));
 
 // One shape per run-folder file, keyed by its path in the run folder.
 export const SHAPES = {
-  // brief/brief.mjs writes every knob; a part's brief is the run's, refocused.
+  // The brief stage writes every knob; a part's brief is the run's, refocused.
   "brief.json": obj({
     focus: text,
     length: number,
@@ -56,7 +56,7 @@ export const SHAPES = {
     must: list(text),
     avoid: list(text),
   }),
-  // script/compile.mjs.
+  // The compile stage.
   "script.json": obj({
     title: text,
     language: text,
@@ -77,7 +77,7 @@ export const SHAPES = {
       }),
     ),
   }),
-  // voice/voice.mjs.
+  // The voice stage.
   "voice.json": obj({
     narrator: text,
     language: text,
@@ -91,7 +91,7 @@ export const SHAPES = {
       }),
     ),
   }),
-  // render/render.mjs, `--stills` included.
+  // The render stage, `--stills` included.
   "timeline.json": obj({
     total: number,
     scenes: list(
@@ -108,18 +108,18 @@ export const SHAPES = {
   }),
   "stills.json": obj({ scenes: list(obj({ id: text, still: text })) }),
   "score.json": obj({ score: text, cues: list(obj({ t: number })) }),
-  // render/delivery.mjs once delivered; storyboard/board.mjs adds `board`
+  // The render stage once delivered; the board adds `board`
   // before that, so a manifest may hold either field alone, or neither.
   "manifest.json": obj({
     board: opt(nullable(text)),
     delivered: opt(text),
   }),
-  // source/pack.mjs; lib/excerpt.mjs checks the kinds and the source ids.
+  // The source pack; the excerpt reader checks the kinds and the source ids.
   "excerpts.json": obj({
     excerpts: list(obj({ id: text, source: text, locator: text, text })),
     sources: list(obj({ id: text })),
   }),
-  // The support-checker agent, per agents/support-checker.md.
+  // The support-checker agent, per its agent file.
   "support.json": obj({
     sentences: list(
       obj({
@@ -132,7 +132,7 @@ export const SHAPES = {
       }),
     ),
   }),
-  // script/check.mjs, read back on its next run.
+  // The script check, read back on its next run.
   "check.json": obj({
     support: obj({
       attempts: number,
@@ -140,18 +140,18 @@ export const SHAPES = {
       verdicts: opt(dict(obj({ verdict: text, why: text }))),
     }),
   }),
-  // gates/gates.mjs, read back on its next run and by the board.
+  // The video gates, read back on their next run and by the board.
   "gates.json": obj({
     script: text,
     render: text,
     attempts: number,
     gates: dict(obj({ status: text, evidence: list(text) })),
   }),
-  // gates/samples.mjs.
+  // The sampling pass.
   "samples.json": obj({
     scenes: list(obj({ id: text, findings: list(text) })),
   }),
-  // source/snapshot.mjs.
+  // The source snapshot.
   "snapshots/sources.json": obj({
     minutes: number,
     budget: number,
