@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.2.1 (2026-10-27)
+
+### Chores
+
+- **creative-video**: Real-render verification for the creative render path
+  ([#1024](https://github.com/Gharib89/skills/pull/1024),
+  [`61b3b40`](https://github.com/Gharib89/skills/commit/61b3b402f86e33ce56c49d3c20706118e7e66b74))
+
+
 ## v0.2.0 (2026-10-27)
 
 ### Features
