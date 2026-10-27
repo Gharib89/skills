@@ -33,6 +33,18 @@ test("a scene shorter than 0.6 s takes its middle as the in still, and one frame
   assert.deepEqual(one, { in: 0, key: 0, out: 0 });
 });
 
+// At 0.6 s (18 frames) the middle is also 0.3 s in, so both rules agree there;
+// a frame shorter, only the middle rule holds.
+test("a scene 0.6 s long takes its in still 0.3 s in, one a frame shorter its middle", () => {
+  assert.equal(sampleTimes({ start: 0, duration: 0.6 }).in, 0.3);
+  const under = sampleTimes({ start: 0, duration: 17 / FPS });
+  assert.equal(under.in, under.key);
+  assert.notEqual(under.in, 0.3);
+  const over = sampleTimes({ start: 0, duration: 20 / FPS });
+  assert.equal(over.in, 0.3);
+  assert.notEqual(over.in, over.key);
+});
+
 test("a time on a millisecond is not pushed to the next one", () => {
   assert.deepEqual(sampleTimes({ start: 0, duration: 3 }), {
     in: 0.3,

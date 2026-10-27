@@ -206,10 +206,10 @@ function measureFrame() {
   const sub = '[data-composition-id]:not([data-composition-id="main"])';
   const out = [];
   for (const el of document.querySelectorAll("#root *")) {
-    const own = [...el.childNodes]
-      .filter((n) => n.nodeType === 3 && n.textContent.trim())
-      .map((n) => n.textContent.trim())
-      .join(" ");
+    const texts = [...el.childNodes].filter(
+      (n) => n.nodeType === 3 && n.textContent.trim(),
+    );
+    const own = texts.map((n) => n.textContent.trim()).join(" ");
     if (
       !own ||
       !el.checkVisibility({ visibilityProperty: true }) ||
@@ -217,6 +217,13 @@ function measureFrame() {
     )
       continue;
     const r = el.getBoundingClientRect();
+    // Where the glyphs are: a block's box spans its container wherever its
+    // text sits, so the rect is the union of its own text nodes' boxes.
+    const glyphs = texts.map((n) => {
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      return range.getBoundingClientRect();
+    });
     let opacity = 1;
     for (let a = el; a; a = a.parentElement)
       opacity *= +getComputedStyle(a).opacity;
@@ -226,10 +233,10 @@ function measureFrame() {
       words: own.split(/\s+/).length,
       scene: el.closest(sub)?.dataset.compositionId ?? null,
       rect: {
-        left: r1(r.left),
-        top: r1(r.top),
-        right: r1(r.right),
-        bottom: r1(r.bottom),
+        left: r1(Math.min(...glyphs.map((g) => g.left))),
+        top: r1(Math.min(...glyphs.map((g) => g.top))),
+        right: r1(Math.max(...glyphs.map((g) => g.right))),
+        bottom: r1(Math.max(...glyphs.map((g) => g.bottom))),
       },
       fontPx: parseFloat(getComputedStyle(el).fontSize) * scale,
       opacity,

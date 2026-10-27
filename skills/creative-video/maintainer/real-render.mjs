@@ -167,9 +167,10 @@ const [, got, wanted, marked] = chapterCheck(
 check("chapter marks", marked, `${got} vs ${wanted}`);
 
 // Six gates, each on a one-scene fixture built to fail it and the same fixture
-// without the defect, layout twice more on a clip seen at one sample only. A
-// fixture's optional third part writes its files beside the scene. The gate
-// line is read from the stage's stdout, since a red gate exits 1.
+// without the defect, layout twice more on a clip seen at one sample only and
+// once on a full-width heading. A fixture's optional third part writes its
+// files beside the scene. The gate line is read from the stage's stdout, since
+// a red gate exits 1.
 // Determinism's failing twin reads the wall clock.
 const BOX =
   '<div id="b" style="position:absolute;left:160px;top:600px;width:200px;height:200px;background:#7cc"></div>';
@@ -178,6 +179,10 @@ const line = (top, width = 1200) =>
   `<div id="l" style="position:absolute;left:200px;top:${top}px;width:${width}px;overflow:hidden;white-space:nowrap;font:700 60px Inter,sans-serif;color:#fff"><span>A line the viewer reads</span></div>`;
 // The line clipped from `from` to `to` s only: the 4 s scene's key sample is
 // at 2 s, its out at 3.967 s.
+// A block heading spans the frame's width, its text where `align` puts it: the
+// margin judges the glyphs, not the box.
+const heading = (align) =>
+  `<h1 style="margin:300px 0 0;text-align:${align};font:700 60px Inter,sans-serif;color:#fff">A heading the viewer reads</h1>`;
 const clipped = (from, to) =>
   `tl.set("#l", { width: 200 }, ${from});` +
   (to ? ` tl.set("#l", { width: 1200 }, ${to});` : "");
@@ -216,6 +221,12 @@ const pairs = [
     name: "layout at out only",
     bad: [line(300), clipped(3.6)],
     good: [line(300)],
+  },
+  {
+    gate: "layout",
+    name: "layout on a full-width heading",
+    bad: [heading("left")],
+    good: [heading("center")],
   },
   { gate: "caption band", bad: [line(900)], good: [line(300)] },
   {
