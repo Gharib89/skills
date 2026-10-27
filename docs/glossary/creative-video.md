@@ -6,6 +6,10 @@ The sibling of `explainer-video` whose scenes the agent authors freely. Its name
 A recorded sound under a creative video's narration, drawn from the format concept's world (a kitchen's room tone, a studio crowd), kept well under the voice and taken out for the hardest step. It is not music unless the concept names a reason.
 _Avoid_: score, soundtrack, background music
 
+**Brand**:
+A saved, named look a person can give a creative video: its colours, type faces and logo, measured from their own material or from the brand's own pages. It fixes what makes the video recognisable; the format concept still gives each colour its meaning and may add a colour its world needs. A creative video with no brand takes its whole look from its concept.
+_Avoid_: style profile (that is an explainer video's), theme, house style
+
 **Cast**:
 The roles that speak in one creative video, each with its voice per language and its style line, fixed in the format kit so every chapter hears the same people.
 _Avoid_: narrators, voices, characters (a character can be drawn and never speak)
@@ -24,7 +28,7 @@ _Avoid_: theme, style, template
 
 **Format kit**:
 The format concept made concrete before the first chapter is authored: its palette, type, cast and their voices, sound cues, and the recurring devices every chapter shares. Changing the kit changes every chapter that uses it.
-_Avoid_: style profile (that is an explainer video's), brand, design system
+_Avoid_: style profile (that is an explainer video's), brand (a look the kit may wear), design system
 
 **Role**:
 One speaking part of a cast: the narrator, a host, an announcer, a learner. Each narration line names its role, and a line that names none is the narrator's.
