@@ -128,7 +128,7 @@ since=$(jq -nr --argjson d "$days" 'now - $d * 86400 | todate')
 # proxy answers 403 to any path outside repos/{owner}/{repo}/, search included
 # (#988). A PR is never updated before it merged, so the first page reaching
 # back past the window start is the last one that can hold a PR merged inside
-# it. Not get's --paginate, which would read every closed PR the repo has.
+# it. Not `get`'s --paginate, which would read every closed PR the repo has.
 pages='' page=1
 while :; do
   got=$(gh api "repos/{owner}/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page=$page" 2>&1 </dev/null) \

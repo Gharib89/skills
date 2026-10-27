@@ -190,6 +190,10 @@ gh_route "$pulls" ''
 out=$(bash "$s" candidates 2>/dev/null); rc=$?
 check_rc "an empty later page exits 2" 2 "$rc"
 check "naming the read" 'merged PRs: unreadable answer from gh' "$(jq -r .error <<<"$out")"
+gh_route "$pulls" '{}'
+out=$(bash "$s" candidates 2>/dev/null); rc=$?
+check_rc "a later page that is no list exits 2" 2 "$rc"
+check "naming the read" 'merged PRs: unreadable answer from gh' "$(jq -r .error <<<"$out")"
 
 rm "$GH_ROUTES/${pulls//\//_}"
 out=$(bash "$s" candidates 2>/dev/null); rc=$?
