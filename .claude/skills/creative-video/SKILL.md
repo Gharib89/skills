@@ -112,8 +112,8 @@ Where the `hyperframes` loop and [Make a video](#make-a-video) differ, these
 steps win: `DIRECTIONS.md` is its storylines, the stills review of step 10 is
 its review (no `REVIEW.md`, nothing but the sheets to the reviewer), the
 render follows that review with no stop at a Studio preview, every command
-runs through `hf.mjs`, and a registry block is raw material you edit into the
-concept's look, never a look to pick.
+but the render (`render.mjs`) runs through `hf.mjs`, and a registry block is
+raw material you edit into the concept's look, never a look to pick.
 
 ### Look at what you made
 

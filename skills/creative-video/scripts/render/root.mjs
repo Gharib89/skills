@@ -1,9 +1,9 @@
 // The project's root, <run>/project/index.html, from timeline.json and the
 // project as it stands: every scene host on the grid, over.html's host when
 // that file exists, the captions host, the narration, and the kit's .css and
-// .js sorted. timing.mjs, hf.mjs and render.mjs each write it again before
-// they use it, so an over.html or a kit file authored after the timing stage
-// still reaches the check, the snapshots and the render.
+// .js sorted. timing.mjs writes it, and hf.mjs and render.mjs write it again
+// before they use it, so an over.html or a kit file authored after the timing
+// stage still reaches the check, the snapshots and the render.
 import fs from "node:fs";
 import path from "node:path";
 import { readJson } from "../lib/json.mjs";

@@ -121,11 +121,13 @@ test("a delivery check passes at its edge and fails just past it", () => {
   assert.match(at({ peak: -0.9 }, "true peak"), /^fail: /);
   assert.equal(at({ lufs: -15 }, "loudness"), "pass");
   assert.equal(at({ lufs: -13 }, "loudness"), "pass");
+  assert.match(at({ lufs: -12.9 }, "loudness"), /^fail: /);
   assert.equal(
     at({ lufs: -15.1 }, "loudness"),
     "fail: -15.1 LUFS vs -14 LUFS within 1 LU",
   );
   assert.equal(at({ duration: total + 0.249 }, "duration"), "pass");
+  assert.equal(at({ duration: total - 0.249 }, "duration"), "pass");
   assert.match(at({ duration: total + 0.251 }, "duration"), /^fail: /);
   assert.match(at({ duration: total - 0.251 }, "duration"), /^fail: /);
 });

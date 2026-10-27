@@ -33,7 +33,7 @@ import { HEIGHT, WIDTH, writeRoot } from "./root.mjs";
 // The mastering targets: the loudness gate's integrated level, held within
 // 1 LU, and a true peak half a dB under its -1.0 dBTP ceiling.
 const LUFS = -14;
-const LU = 1;
+const LU_WINDOW = 1;
 const PEAK = -1.5;
 const CEILING = -1.0;
 
@@ -124,8 +124,8 @@ const checks = [
   [
     "loudness",
     `${loud.lufs} LUFS`,
-    `${LUFS} LUFS within ${LU} LU`,
-    Math.abs(loud.lufs - LUFS) <= LU,
+    `${LUFS} LUFS within ${LU_WINDOW} LU`,
+    Math.abs(loud.lufs - LUFS) <= LU_WINDOW,
   ],
   [
     "true peak",
