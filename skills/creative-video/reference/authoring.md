@@ -151,9 +151,10 @@ The last line is `gates: <p> pass, <f> fail`. Each red run after a change to
 the project is one fix attempt; a re-run with nothing changed counts none. The
 first two red runs end `; next: fix attempt <n> of 2`, the third `; stop: red
 after two fix attempts, no video`. Stop there and report the findings. A pass,
-or a changed `script.json` (the narration, not a scene script), starts the
-count again. Gates judge the project as it is: change a scene, the kit or an
-asset after a pass and the render refuses until they pass again.
+or a new voice (the narration voiced and timed again), starts the count again;
+`script.json` edited without voicing again does not. Gates judge the project
+as it is: change a scene, the kit or an asset after a pass and the render
+refuses until they pass again.
 
 Exit 1 with a `gates: <why>` line on stderr and no gate lines is a refusal (no
 timeline, a timing older than the voice, a missing scene file, a `gates.json`

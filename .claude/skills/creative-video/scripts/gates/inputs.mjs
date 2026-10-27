@@ -6,15 +6,6 @@ import path from "node:path";
 
 const hex = (h) => h.digest("hex").slice(0, 16);
 
-// The script a record is of: each scene's id and narration. A pass or a changed
-// script starts the fix-attempt count again.
-export const scriptHash = (script) =>
-  hex(
-    crypto
-      .createHash("sha256")
-      .update(JSON.stringify(script.scenes.map((s) => [s.id, s.narration]))),
-  );
-
 // The files under `dir`, through symlinks to files and folders, since the
 // project loads what a link points at; a folder seen before is walked once, so
 // a link loop ends.

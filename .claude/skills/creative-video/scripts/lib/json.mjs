@@ -69,7 +69,7 @@ export const SHAPES = {
   // render reads to refuse a project the gates have not passed.
   "gates.json": obj({
     inputs: text,
-    script: text,
+    voice: text,
     attempts: opt(number),
     gates: map(obj({ status: text })),
   }),

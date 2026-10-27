@@ -19,7 +19,7 @@
 //         per warning, then `gates: <n> pass, <m> fail`, when red ending `; next:
 //         fix attempt <a> of 2` or, past two, `; stop: red after two fix
 //         attempts, no video`
-// writes: <run>/gates.json (the inputs and script it is of, the attempts, each
+// writes: <run>/gates.json (the inputs and voice it is of, the attempts, each
 //         gate's status, measured, floor and evidence, the warnings),
 //         .cache/gates/frames/a and b, and the root again (render/root.mjs)
 // exit:   0 every gate passes · 1 a gate fails, or `gates: <why>` on stderr
@@ -33,7 +33,7 @@ import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
 import { NO_WORD, NO_WORD_RE } from "../render/anchors.mjs";
 import { HEIGHT, WIDTH, writeRoot } from "../render/root.mjs";
-import { inputsHash, scriptHash } from "./inputs.mjs";
+import { inputsHash } from "./inputs.mjs";
 import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
 import { warnings } from "./warnings.mjs";
@@ -330,19 +330,21 @@ const warned = warnings({
   proj,
 });
 
-// The fix cap: a red run on one script is one fix attempt, the same inputs
-// judged again are none, and a pass or a changed script starts the count again.
-const scriptKey = scriptHash(script);
-const sameScript = prev?.script === scriptKey;
+// The fix cap: a red run on one voice is one fix attempt, the same inputs
+// judged again are none, and a pass or a new voice starts the count again. The
+// voice, not script.json: the gates judge the voiced words, so a script edited
+// without voicing again changes nothing they judge.
+const { voice } = timeline;
+const sameVoice = prev?.voice === voice;
 const attempts = !failing
   ? 0
-  : sameScript && prev.inputs === inputs
+  : sameVoice && prev.inputs === inputs
     ? Math.max(prev.attempts ?? 0, 1)
-    : (sameScript ? (prev.attempts ?? 0) : 0) + 1;
+    : (sameVoice ? (prev.attempts ?? 0) : 0) + 1;
 fs.writeFileSync(
   path.join(run, "gates.json"),
   JSON.stringify(
-    { inputs, script: scriptKey, attempts, gates, warnings: warned },
+    { inputs, voice, attempts, gates, warnings: warned },
     null,
     2,
   ) + "\n",

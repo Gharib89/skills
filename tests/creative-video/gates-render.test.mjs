@@ -39,7 +39,7 @@ test("a gates.json that is not JSON, or lacks its gates, is refused by name befo
   assert.match(r.err, /^render: gates\.json: is not valid JSON \(/);
   fs.writeFileSync(
     record,
-    JSON.stringify({ inputs: "0123456789abcdef", script: "0123456789abcdef" }),
+    JSON.stringify({ inputs: "0123456789abcdef", voice: "0123456789abcdef" }),
   );
   r = exec(render, fx);
   assert.equal(r.code, 1);
