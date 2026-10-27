@@ -1,8 +1,8 @@
 // Every component against the style profile's grammar, over the fixture scenes
 // of all of them: each declares the techniques a ban reaches it by, its
-// composed output draws none it leaves out, and every reveal it plays (a tween
-// from opacity 0) takes the profile's `grammar.ease`, but the ones the named
-// exception list keeps on their own.
+// composed output strokes no line on unless it declares `draw`, and every
+// reveal it plays (a tween from opacity 0) changes ease with the profile's
+// `grammar.ease`, except those `OWN_EASE` keeps on their own.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
@@ -105,12 +105,14 @@ test("every component declares its techniques, each one the profile may ban", ()
     for (const t of v.techniques)
       assert.ok(Object.hasOwn(TECHNIQUES, t), `${name}: ${t} is no technique`);
   }
-  // a technique's components are the ones declaring it, and no other list
-  for (const [t, components] of Object.entries(TECHNIQUES))
-    assert.deepEqual(
-      components,
-      Object.keys(VISUALS).filter((c) => VISUALS[c].techniques.includes(t)),
-    );
+  // the declarations give each technique the components it always had
+  assert.deepEqual(TECHNIQUES, {
+    draw: ["flow", "diagram"],
+    blur: [],
+    camera: ["canvas"],
+    kinetic: ["words", "browser"],
+    "3d": ["stack3d"],
+  });
 });
 
 test("the fixture scenes cover every component", () => {
@@ -141,7 +143,7 @@ test("a component whose output strokes lines on declares draw, and one drawing W
 // `soft` and `velocity` share no reveal ease, so every reveal taking the
 // profile's moves between them. (`spring` fades opacity on `soft`'s ease, and
 // its per-word rise is `velocity`'s: a spring has no opacity or per-word form.)
-test("every reveal of every component takes the profile's ease, but the named exceptions", async () => {
+test("every reveal of every component changes ease with the profile's, except those OWN_EASE keeps", async () => {
   const own = new Set();
   for (const scene of SCENES) {
     const c = scene.visual.component;
@@ -164,7 +166,8 @@ test("every reveal of every component takes the profile's ease, but the named ex
     assert.ok(own.has(e), `${e.component} ${e.target}: no reveal matches it`);
 });
 
-test("under velocity, the browser's typed words take the profile's ease", async () => {
+// A settle's ease under `velocity`, the one a component's own reveal takes.
+test("under velocity, the browser's typed words take velocity's power3.out", async () => {
   for (const scene of SCENES.filter((s) => s.visual.component === "browser")) {
     const typed = tweens(
       await compose(scene, eased("velocity")),
@@ -172,6 +175,6 @@ test("under velocity, the browser's typed words take the profile's ease", async 
     ).filter(([s]) => /^\.tw\d+$/.test(s));
     assert.ok(typed.length, `scene ${scene.id} types no words`);
     for (const [s, , to] of typed)
-      assert.notEqual(to.ease, "power2.out", `${s} still eases power2.out`);
+      assert.equal(to.ease, "power3.out", `${s} eases ${to.ease}`);
   }
 });
