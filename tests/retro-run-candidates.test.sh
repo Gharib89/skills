@@ -106,7 +106,8 @@ check "no GraphQL call" '' "$(gh_args | grep -F graphql)"
 check "every call is repository-scoped" '' "$(gh_args | awk '{print $NF}' | grep -v '^repos/{owner}/{repo}/')"
 check "the pulls list is read newest update first, one page at a time" \
   "$pulls?state=closed&sort=updated&direction=desc&per_page=100&page=1" \
-  "$(gh_args | grep -F "$pulls?" | grep -vF -- --paginate | awk '{print $NF}')"
+  "$(gh_args | grep -F "$pulls?" | awk '{print $NF}')"
+check "never through --paginate, which reads every page" '' "$(gh_args | grep -F "$pulls?" | grep -F -- --paginate)"
 
 out=$(bash "$s" candidates --days 14)
 check "--days widens the window" '[11,12,13,14,15,17,18,20,23,25]' "$(jq -c '[.candidates[].number]' <<<"$out")"
@@ -161,8 +162,8 @@ out=$(bash "$s" candidates 2>/dev/null); rc=$?
 check_rc "a refused pulls page exits 1" 1 "$rc"
 check "naming the read" 'merged PRs: gh: Not Found (HTTP 404)' "$(jq -r .error <<<"$out")"
 
-# A full first page: #100 merged in the window, 99 closed unmerged ones updated
-# in it. The query-less route answers every later page: #31 merged in the window.
+# A full first page: PR 100 merged in the window, 99 closed unmerged ones updated
+# in it. The query-less route answers every later page: PR 31 merged in the window.
 page1="$pulls?state=closed&sort=updated&direction=desc&per_page=100&page=1"
 full=$(jq -cn --arg r "$(ago 1)" '[range(100) as $i | {number: (100 + $i), title: "PR \(100 + $i)",
   html_url: "https://github.com/o/r/pull/\(100 + $i)", user: {login: "owner"}, body: "",
@@ -183,5 +184,16 @@ out=$(bash "$s" candidates); rc=$?
 check_rc "a full page reaching past the window answers" 0 "$rc"
 check "and is the last page read" 1 "$(gh_args | grep -cF "$pulls?")"
 check "so the next page's PRs are never read" '{"merged":1,"candidates":[]}' "$(jq -c '{merged, candidates: [.candidates[].number]}' <<<"$out")"
+
+gh_route "$page1" "$full"
+gh_route "$pulls" ''
+out=$(bash "$s" candidates 2>/dev/null); rc=$?
+check_rc "an empty later page exits 2" 2 "$rc"
+check "naming the read" 'merged PRs: unreadable answer from gh' "$(jq -r .error <<<"$out")"
+
+rm "$GH_ROUTES/${pulls//\//_}"
+out=$(bash "$s" candidates 2>/dev/null); rc=$?
+check_rc "a refused later page exits 1" 1 "$rc"
+check "naming the read" 'merged PRs: gh: Not Found (HTTP 404)' "$(jq -r .error <<<"$out")"
 
 finish

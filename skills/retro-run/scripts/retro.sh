@@ -125,21 +125,24 @@ fi
 
 since=$(jq -nr --argjson d "$days" 'now - $d * 86400 | todate')
 # The closed pulls, last updated first, a page at a time: a cloud session's
-# proxy refuses every path outside repos/{owner}/{repo}/, search included. A
-# PR is never updated before it merged, so the first page reaching back past
-# the window start is the last one that can hold a PR merged inside it.
+# proxy answers 403 to any path outside repos/{owner}/{repo}/, search included
+# (#988). A PR is never updated before it merged, so the first page reaching
+# back past the window start is the last one that can hold a PR merged inside
+# it. Not get's --paginate, which would read every closed PR the repo has.
 pages='' page=1
 while :; do
   got=$(gh api "repos/{owner}/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page=$page" 2>&1 </dev/null) \
     || fail "merged PRs: $(tail -1 <<<"$got")"
+  more=$(jq --arg since "$since" 'if type == "array" then length == 100 and all(.[]; .updated_at >= $since) else error end' \
+    <<<"$got" 2>/dev/null)
+  [ -n "$more" ] || tooling "merged PRs: unreadable answer from gh"
   pages+=$got$'\n'
-  jq -e --arg since "$since" 'length == 100 and all(.[]; .updated_at >= $since)' <<<"$got" >/dev/null 2>&1 || break
+  [ "$more" = true ] || break
   page=$((page + 1))
 done
-# An unmerged PR's null merged_at sorts before every time.
+# jq orders null below every string, so the merged_at comparison drops an unmerged PR.
 prs=$(jq -cs --arg since "$since" '
-  if length == 0 then error else . end
-  | [add[] | select(.merged_at >= $since)
+  [add[] | select(.merged_at >= $since)
     | {number, title, url: .html_url, author: .user.login, body: (.body // "" | gsub("\r"; ""))}]
   | if all(.[]; (.number | type) == "number" and (.title | type) == "string" and (.author | type) == "string")
     then sort_by(.number) else error end' <<<"$pages" 2>/dev/null) \

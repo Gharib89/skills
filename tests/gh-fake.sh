@@ -22,10 +22,10 @@
 #
 # `GH_ROUTES` set to a directory answers each call by its endpoint instead, for
 # a script that makes several different reads: `gh_route <endpoint> <body>`
-# writes the body one endpoint answers (an empty body too), matched on the whole
-# endpoint first and then with the call's query string ignored, so a route with
-# a query (`...&page=2`) answers apart, and an endpoint with no route fails the way
-# gh's 404 does. A call with `-X`/`--method` other than GET is matched by
+# writes the body one endpoint answers (an empty body too). A call matches the
+# route for its whole endpoint first, then the route for it with the query
+# string ignored, so a route with a query (`...&page=2`) answers apart. An
+# endpoint with no route fails the way gh's 404 does. A call with `-X`/`--method` other than GET is matched by
 # `<METHOD> <endpoint>`, so a read and a write of one endpoint answer apart.
 # `gh_args` lists each call's arguments, one line per call.
 gh_fake_install() { # <dir>
