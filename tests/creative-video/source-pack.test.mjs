@@ -258,7 +258,7 @@ test("a malformed draft gets a pack line to fix, not a crash", () => {
   }
 });
 
-test("the merge numbers every excerpt across the pack and writes the excerpts and the outline, both committed", () => {
+test("the merge numbers every excerpt across the pack and writes the excerpts and the outline, the recipe staying committed", () => {
   const fx = fixture();
   const a = write(
     fx,

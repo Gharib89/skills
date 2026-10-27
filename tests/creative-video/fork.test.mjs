@@ -26,17 +26,18 @@ const files = (dir) =>
         : [path.join(dir, e.name)],
     );
 
-// A quote, backtick or separator before `explainer-video` or its `explainers`
-// run folder, a separator after that folder, or its environment variable. In
-// Markdown a backtick marks code in prose, not a path, so it is left out there.
+// A quote, backtick or separator before or a separator after `explainer-video`
+// or its `explainers` run folder, or its environment variable. In Markdown a
+// backtick marks code in prose, not a path, so it is left out there; in code a
+// backticked name is a template literal, so prose naming it there hits too.
 const CODE =
-  /["'`/\\](explainer-video|explainers)\b|\bexplainers[/\\]|EXPLAINER_VIDEO_/;
+  /["'`/\\](explainer-video|explainers)\b|\b(explainer-video|explainers)[/\\]|EXPLAINER_VIDEO_/;
 const MARKDOWN =
-  /["'/\\](explainer-video|explainers)\b|\bexplainers[/\\]|EXPLAINER_VIDEO_/;
+  /["'/\\](explainer-video|explainers)\b|\b(explainer-video|explainers)[/\\]|EXPLAINER_VIDEO_/;
 const reaches = (file, line) =>
   (file.endsWith(".md") ? MARKDOWN : CODE).test(line);
 
-test("the reach matcher hits every way code names explainer-video's paths, and not prose", () => {
+test("the reach matcher hits every way code names explainer-video's paths, and not unquoted prose", () => {
   for (const l of [
     'import { x } from "../../explainer-video/scripts/lib/paths.mjs";',
     'path.join(skill, "..", "explainer-video", "scripts")',
@@ -48,6 +49,8 @@ test("the reach matcher hits every way code names explainer-video's paths, and n
   ])
     assert.ok(reaches("x.mjs", l), l);
   assert.ok(reaches("x.md", "Read `../explainer-video/SKILL.md`."));
+  assert.ok(reaches("x.md", "Read `explainer-video/SKILL.md`."));
+  assert.ok(reaches("x.mjs", "cd explainer-video/scripts"));
   for (const l of [
     "// forked from explainer-video's plumbing",
     "// the explainers stage",
