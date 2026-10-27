@@ -56,9 +56,7 @@ Instructions: AGENTS.md
 
 Native Codex code review through the ChatGPT Codex Connector GitHub app, on the maintainer's ChatGPT subscription: no API key, no Actions workflow. This repo's primary reviewer, driven on every run and capped at two rounds; `claude` below stands in for it when it exits `not reviewed`, is capped with findings, or stops `not landed`. `request-review --reviewer codex` posts the phrase; Codex answers under `chatgpt-codex-connector[bot]` with 👀 on the request comment (removed when the round ends) and a status comment it edits in place, then posts findings as a `COMMENTED` review with inline threads badged by priority (P1 and P2 observed), or, clean, a `Codex Review: Didn't find any major issues` comment and 👍 on the PR with no review at all. `Workflow: native codex` is what tells `poll-pr --reviewer codex` to read those signals off the PR instead of a run, so a clean round lands as a round and a reply that is neither (a refusal) reads `not reviewed: blocked` with its text. The review rules Codex reads are the `## Code Review Rules` section of the root `AGENTS.md`.
 
-Setup, once, on the maintainer's ChatGPT account: install the ChatGPT Codex Connector app on the repository (the **Connect GitHub** button in the environment picker on chatgpt.com/codex), turn code review on for this repository at chatgpt.com/codex/settings/code-review, and leave automatic review off there, both for the repository and in personal preferences, so a round runs only when requested. A round run through GitHub counts as Code Review usage against the subscription's Codex allowance, shown on the usage dashboard at chatgpt.com/codex/settings/usage. To disable the reviewer, delete this block. Turning code review off in those settings instead leaves ship requesting rounds that nothing answers, each one a window that closes `never-queued` (unprobed).
-
-Observed on the probe PRs #504 and #505 for #500, where the docs say otherwise: P2 findings are posted, not only P0 and P1; a draft PR is reviewed on request; the footer saying reviews start when a PR opens describes automatic review, which is off here. Codex acknowledged a request within 11 s on both, inside the 60 s a comment-transport poll allows for one. A mention of Codex on an issue drew a reply asking for a Codex environment, which is no review.
+Setup, disabling it and probe evidence: [ship-reviewers.md](ship-reviewers.md).
 
 ### claude
 
@@ -131,6 +129,17 @@ Without it: hand-off
 Also proven by CI: None.
 Claims to probe: that HyperFrames renders `ceil(duration * fps)` frames and has no frame-range flag (both held on 0.8.169, 2026-10-19).
 Paths: skills/explainer-video/scripts/render/**, skills/explainer-video/scripts/gates/**, skills/explainer-video/scripts/lib/**, skills/explainer-video/maintainer/**, skills/explainer-video/package*.json
+
+### creative-real-render
+
+Proves: creative-video's frame grid holds under real HyperFrames through its own stages on authored scenes: the delivered MP4 has the grid's frame count, three renders match frame for frame, and two chapters joined by its chapter join have the sum of their frames and a mark each.
+Applies when: the change touches a file in `Paths:`.
+Run: `node skills/creative-video/maintainer/real-render.mjs` after `node skills/creative-video/scripts/setup.mjs install` has installed the worktree's lock (a new pin is a new cache). Outside `tests/run.sh` (it needs real Chrome). Exit 0 is `pass`, 1 `fail`, 2 a missing tool row.
+Needs: the `npm-packages` and `chrome` rows installed, and `ffmpeg`.
+Without it: hand-off
+Also proven by CI: None.
+Claims to probe: that HyperFrames renders `ceil(duration * fps)` frames, absorbing an overshoot of 1e-5 frame but not 1e-3 (held on 0.8.206, 2026-10-27).
+Paths: skills/creative-video/scripts/render/**, skills/creative-video/scripts/gates/**, skills/creative-video/scripts/lib/**, skills/creative-video/maintainer/**, skills/creative-video/package*.json
 
 ## Versioning and changelog
 
