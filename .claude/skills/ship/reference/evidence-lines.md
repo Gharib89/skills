@@ -24,9 +24,10 @@ self-review's judgment, recorded in the Run file where it helps the summary.
   - Exit 1 means the test stayed green: it proves nothing, so fix the test. It
     is also exit 1 when its log names a file or module the fix added as
     missing, whatever else failed: any test that reads the file goes red
-    without it. The route out is a stub: commit the new file with the lines
-    the test reads stubbed, commit those lines, and prove that commit with
-    `--fix <commit>`; or revert a path the fix changed.
+    without it. The route out: commit the new file with the lines the test
+    reads stubbed, then commit their real body and prove that second commit
+    with `--fix <commit>`; or revert a path the fix changed and the test
+    reads.
   - A fix commit from a self-review round or a phase-7 round is proven alone
     with `--fix <fix commit>`: only that commit's own change to each path is
     taken out, not the merge base's copy, so each of two fix commits is judged

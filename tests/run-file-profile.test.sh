@@ -165,7 +165,7 @@ at "$repo" open 3 --file "$sk" >/dev/null
 before=$(cat "$sk")
 check_rc "skip 3 over an open phase 3 is refused" 1 "$(inrc "$repo" skip 3 'docs class' --file "$sk")"
 check "the refusal names the open phase" \
-  "phase 3 is open; close it before skipping it: an open phase 3 settles with \`close 3 --result <name>=n/a\` per pending Verification" "$(inerr "$repo" skip 3 'docs class' --file "$sk")"
+  "phase 3 is open, so it cannot be skipped: close it with \`close 3 --result <name>=n/a\` per pending Verification" "$(inerr "$repo" skip 3 'docs class' --file "$sk")"
 check "the refused skip left the Run file byte-for-byte" "$before" "$(cat "$sk")"
 sk2=$(at "$repo" init 62 --from-profile "$spaced" | jq -r .run_file)
 before=$(cat "$sk2")
