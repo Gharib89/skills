@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.51.2 (2026-10-27)
+
+### Bug Fixes
+
+- **ship**: Revert-red and run-file skip refusals name the route out
+  ([#995](https://github.com/Gharib89/skills/pull/995),
+  [`fe21ab2`](https://github.com/Gharib89/skills/commit/fe21ab206de985a45437148b81e7a4ad6a6cc0cb))
+
+
 ## v0.51.1 (2026-10-27)
 
 ### Bug Fixes
