@@ -106,7 +106,7 @@ check "its verdict says red false" \
   '{"test":"tests/extra.test.sh","paths":["extra.sh"],"red":false,"command":["bash","tests/extra.test.sh"]}' \
   "$(out_of tests/extra.test.sh extra.sh | jq -c .)"
 check "and the refusal names the missing file" \
-  "revert-red: tests/extra.test.sh goes red with extra.sh reverted, but its error names extra.sh as missing, which says nothing about the fix's behaviour: revert a hunk inside it, or a path the fix changed and the test reads." \
+  "revert-red: tests/extra.test.sh goes red with extra.sh reverted, but its error names extra.sh as missing, which says nothing about the fix's behaviour: commit extra.sh with the lines the test reads stubbed, then commit their real body and prove that second commit with --fix <commit>; or revert a path the fix changed and the test reads." \
   "$(err_of tests/extra.test.sh extra.sh | tail -n 1)"
 check_rc "a refused red with another path reverted beside the file is refused too" \
   1 "$(rc_of tests/extra.test.sh lib.sh extra.sh)"

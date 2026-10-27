@@ -31,6 +31,14 @@
 # mechanic renames a reworded section back. No profile or `Template: None.` is
 # no check; a profile or template file that cannot be read is refused, exit 2.
 #
+# Body check. The repo's own body checker, the profile's `## PR` `Body-check:`
+# line, then runs on the body file before the push, as update-pr-body runs it
+# before a write (ship_require_body_check). A checker exit 1 refuses the call
+# with the checker's stdout, so a body it rejects is fixed before any PR exists,
+# not at the first phase-7 body write. Any other checker exit is tooling, exit
+# 2. No profile, no line or `None.` is no check. `--rework` takes no body file
+# and runs none.
+#
 # `created_at` is the PR's creation time, which is when an `auto-once` reviewer
 # fires: phase 7 passes it to `poll-pr --since` so that one round counts on
 # whatever head it lands on.
@@ -40,7 +48,7 @@
 # failure.
 #
 # stdout: {number, url, created_at, branch, base}
-# exit: 0 · 1 title grades below the recorded Grade, body lacks a template heading, push or create failed, or for --rework no open PR on the branch · 2 usage, wrong branch, the recorded grade, the profile or its PR template or (--rework) the PR could not be read
+# exit: 0 · 1 title grades below the recorded Grade, body lacks a template heading, the body checker refused the body, push or create failed, or for --rework no open PR on the branch · 2 usage, wrong branch, the recorded grade, the profile or its PR template or (--rework) the PR could not be read, or the body checker could not answer
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: open-pr <issue|none> --title "<subject>" --body-file <path> | open-pr <issue> --rework'
@@ -75,6 +83,7 @@ $rework || [ "$n" = none ] || ship_require_grade "$n" "$title"
 if ! $rework; then
   lacks=$(ship_template_missing "$(cat "$file")") || ship_tooling "cannot read $lacks"
   [ "$lacks" = '[]' ] || ship_fail "body lacks the template headings: $(jq -r 'join(", ")' <<<"$lacks")"
+  ship_require_body_check "$file"
 fi
 
 if $rework; then

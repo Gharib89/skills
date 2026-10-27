@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.25.3 (2026-10-27)
+
+### Bug Fixes
+
+- **ship**: Open-pr runs the repo's body check before the push
+  ([#993](https://github.com/Gharib89/skills/pull/993),
+  [`2c04e92`](https://github.com/Gharib89/skills/commit/2c04e92a7c45d4aee8f74f8ce87f888b35aef2b8))
+
+
 ## v0.25.2 (2026-10-18)
 
 ### Bug Fixes

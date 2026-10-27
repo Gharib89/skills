@@ -7,6 +7,24 @@ released version. See
 
 <!-- version list -->
 
+## v0.51.2 (2026-10-27)
+
+### Bug Fixes
+
+- **ship**: Revert-red and run-file skip refusals name the route out
+  ([#995](https://github.com/Gharib89/skills/pull/995),
+  [`fe21ab2`](https://github.com/Gharib89/skills/commit/fe21ab206de985a45437148b81e7a4ad6a6cc0cb))
+
+
+## v0.51.1 (2026-10-27)
+
+### Bug Fixes
+
+- **ship**: Open-pr runs the repo's body check before the push
+  ([#993](https://github.com/Gharib89/skills/pull/993),
+  [`2c04e92`](https://github.com/Gharib89/skills/commit/2c04e92a7c45d4aee8f74f8ce87f888b35aef2b8))
+
+
 ## v0.51.0 (2026-10-25)
 
 ### Features

@@ -251,11 +251,16 @@ skip)
   parse_file "$@"
   no_extra
   take_row "$n"
-  is_open "$line" && ship_fail "phase $n is open; close it before skipping it"
+  # An open phase 3 is settled by closing it, so its refusals name how (#989).
+  route3='`close 3 --result <name>=n/a` per pending Verification'
+  if is_open "$line"; then
+    [ "$n" = 3 ] && ship_fail "phase 3 is open, so it cannot be skipped: close it with $route3"
+    ship_fail "phase $n is open; close it before skipping it"
+  fi
   # Rows 5 to 8 wait behind phase 3, as `open` and `close` hold them; a skip
   # was the way round (#933).
   case $n in
-    [5-8]) case " $(open_phases | tr '\n' ' ') " in *" 3 "*) ship_fail "phase 3 is open; close it before skipping $n" ;; esac ;;
+    [5-8]) case " $(open_phases | tr '\n' ' ') " in *" 3 "*) ship_fail "phase 3 is open; close it with $route3 before skipping $n" ;; esac ;;
   esac
   # The marker is the mechanic's own record that the phase is done, so it
   # answers before the stamps do: a phase rebuilt as `done` carries no range.
