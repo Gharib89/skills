@@ -16,7 +16,6 @@ export GH_ROUTES=$tmp/routes
 gh_reset
 
 issues='repos/{owner}/{repo}/issues'
-gh_route 'repos/{owner}/{repo}' '{"full_name": "o/r"}'
 gh_route "$issues" '[
   {"number": 900, "state": "closed", "body": "Class: unpaged-list-read\n"},
   {"number": 901, "state": "open", "body": "Class: brief-path-moved\r\n"}]'
@@ -53,7 +52,7 @@ check "no GraphQL call" '' "$(gh_args | grep -F graphql)"
 
 # The body's class keys round-trip: a later `candidates` reads them as filed.
 gh_route "$issues" "$(jq -c '[{number: 950, state: "open", body: .body}]' <<<"$body")"
-gh_route 'search/issues' '{"total_count": 0, "items": []}'
+gh_route 'repos/{owner}/{repo}/pulls' '[]'
 check "candidates reads the filed keys back" '["stale-head","missing-retry"]' \
   "$(bash "$s" candidates | jq -c '.filed[0].classes')"
 
