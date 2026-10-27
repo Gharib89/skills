@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.53.4 (2026-10-27)
+
+### Bug Fixes
+
+- **explainer-video**: Components declare their techniques; every reveal takes grammar.ease
+  ([#1004](https://github.com/Gharib89/skills/pull/1004),
+  [`82c4959`](https://github.com/Gharib89/skills/commit/82c49592c59131ad1681a3891cd00eb74058ecad))
+
+
 ## v0.53.3 (2026-10-27)
 
 ### Bug Fixes
