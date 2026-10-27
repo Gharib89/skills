@@ -4,7 +4,8 @@
 # because nothing looked for one; a stray file is invisible in a diff nobody
 # scrolls to the end of. The allowlist, whole: the top-level directories `.claude/`,
 # `.github/`, `.out-of-scope/`, `.release/`, `docs/`, `scripts/`, `skills/` and `tests/`, and
-# the root files `.gitattributes`, `.gitignore`, `.pre-commit-config.yaml`, `.shellcheckrc` (the
+# the root files `.gitattributes`, `.gitignore`, `.gitleaks.toml` (the secrets
+# gate's allowlist for a vendored skill's public key), `.pre-commit-config.yaml`, `.shellcheckrc` (the
 # source-path ShellCheck needs to follow the split libraries), `AGENTS.md` (the Code
 # Review Rules native Codex review reads), `CLAUDE.md`, `GLOSSARY.md` and
 # `skills-lock.json`, which is `dirs` and `files` below. A new top-level entry
@@ -21,7 +22,7 @@ root=${1:-.}
 [ -d "$root" ] || { printf 'not a directory: %s\n' "$root" >&2; exit 2; }
 
 dirs=" .claude .github .out-of-scope .release docs scripts skills tests "
-files=" .gitattributes .gitignore .pre-commit-config.yaml .shellcheckrc AGENTS.md CLAUDE.md GLOSSARY.md skills-lock.json "
+files=" .gitattributes .gitignore .gitleaks.toml .pre-commit-config.yaml .shellcheckrc AGENTS.md CLAUDE.md GLOSSARY.md skills-lock.json "
 
 # The index, not the working tree: scratch a run leaves behind is not a stray,
 # and a `git ls-files` outside a checkout is tooling rather than a clean answer.
