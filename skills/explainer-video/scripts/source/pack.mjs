@@ -12,14 +12,18 @@
 // share of the budget. With <id>, checks that draft alone and writes nothing.
 // stdout: `pack <id>: <n> of <share> excerpt(s): pass` per draft, then
 //         `pack: <n> excerpt(s) from <m> source(s) -> excerpts.json, outline.md`
-// stderr: `pack <id>: [excerpt <k>: ]<why>` per problem
+// stderr: `pack <id>: [excerpt <k>: ]<why>` per problem, or
+//         `pack: snapshots/sources.json: <field> <problem>` when it is malformed
 // writes: <run>/excerpts.json, <run>/outline.md, explainers/.gitignore
 // exit:   0 pass · 1 a problem · 2 usage
 import fs from "node:fs";
 import path from "node:path";
+import { readJson } from "../lib/json.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
+import { stage } from "../lib/stage.mjs";
 import { segment, squash, stored } from "./locators.mjs";
 
+stage("pack");
 const [run, only, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
   console.error("usage: node pack.mjs <run-folder> [<id>]");
@@ -30,7 +34,7 @@ if (!fs.existsSync(index)) {
   console.error("pack: no snapshots/sources.json: run snapshot.mjs first");
   process.exit(1);
 }
-const { minutes, budget, sources } = JSON.parse(fs.readFileSync(index, "utf8"));
+const { minutes, budget, sources } = readJson(run, "snapshots/sources.json");
 const chosen = only ? sources.filter((s) => s.id === only) : sources;
 if (!chosen.length) {
   console.error(

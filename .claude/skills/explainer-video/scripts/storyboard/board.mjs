@@ -36,7 +36,9 @@ import path from "node:path";
 import { knobOffer, voices } from "../brief/knobs.mjs";
 import { estimate, loadRates } from "../lib/estimate.mjs";
 import { scriptHash, stopped } from "../lib/gatestop.mjs";
+import { maybeJson, readJson } from "../lib/json.mjs";
 import { recordAssets, writeIgnore } from "../lib/runfolder.mjs";
+import { stage } from "../lib/stage.mjs";
 import { grammar, loadStyle } from "../lib/style.mjs";
 import { loadBackend, skill } from "../lib/tools.mjs";
 import { VISUALS, isWebgl } from "../lib/visuals.mjs";
@@ -47,6 +49,7 @@ import { applyAnswers } from "./apply.mjs";
 import { cardMenus } from "./menus.mjs";
 import { narrationBlocks } from "./script-text.mjs";
 
+stage("board");
 const [run, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
   console.error(
@@ -142,7 +145,7 @@ const copySiblings = (dir) => {
 function needScript() {
   if (!fs.existsSync(at("script.json")))
     fail("no script.json: run the compile stage first (script/compile.mjs)");
-  return json(at("script.json"));
+  return readJson(run, "script.json");
 }
 
 if (cmd === "page") {
@@ -156,7 +159,7 @@ if (cmd === "page") {
   } else {
     if (!url.startsWith("https://")) fail(`${url} is not an https:// URL`);
     const file = at("manifest.json");
-    write(file, { ...maybe(file), board: url });
+    write(file, { ...maybeJson(run, "manifest.json"), board: url });
     console.log(`board: page ${url} -> manifest.json`);
   }
   process.exit(0);
@@ -190,7 +193,7 @@ if (cmd === "apply") {
 // build
 const script = needScript();
 writeIgnore(run);
-const voice = maybe(at("voice.json"));
+const voice = maybeJson(run, "voice.json");
 if (
   !voice ||
   voice.scenes.length !== script.scenes.length ||
@@ -199,22 +202,19 @@ if (
   fail(
     "no voice.json for this script: run the voice stage first (voice/voice.mjs)",
   );
-const stills = maybe(at("stills.json"));
+const stills = maybeJson(run, "stills.json");
 for (const s of script.scenes) {
   const f = stills?.scenes.find((x) => x.id === s.id)?.still;
   if (!f || !fs.existsSync(at(f)))
     fail(`no still for scene ${s.id}: run node render.mjs ${run} --stills`);
 }
 // The stills run writes the timeline and the composition the live build plays.
-const timeline = maybe(at("timeline.json"));
-if (
-  !Array.isArray(timeline?.scenes) ||
-  !fs.existsSync(at("composition", "index.html"))
-)
+const timeline = maybeJson(run, "timeline.json");
+if (!timeline || !fs.existsSync(at("composition", "index.html")))
   fail(`no composition: run node render.mjs ${run} --stills`);
 
 const slug = path.basename(path.resolve(run));
-const manifest = maybe(at("manifest.json")) ?? {};
+const manifest = maybeJson(run, "manifest.json") ?? {};
 const mp4 = at("out", `${slug}.mp4`);
 // Delivered while the MP4 is at least as new as the stills: a render writes
 // the stills first, and `render --stills` after it starts a new review.
@@ -225,19 +225,18 @@ const delivered =
 const kind = delivered ? "delivered" : "review";
 // A review board posts only after the sampling pass ran on these stills, so a
 // red it left reaches its card; a delivered one passed every video gate.
-const sampled = delivered ? null : maybe(at("samples.json"));
+const sampled = delivered ? null : maybeJson(run, "samples.json");
 if (!delivered) {
   if (!sampled)
     fail(`no samples.json: run node gates/samples.mjs ${run} first`);
-  // One record per script scene, each with a findings list: a missing one
-  // would read as a clean scene and recommend Approve.
+  // One record per script scene: a missing one would read as a clean scene
+  // and recommend Approve.
   const gap = script.scenes.find(
-    (s) =>
-      !Array.isArray(sampled.scenes?.find?.((x) => x.id === s.id)?.findings),
+    (s) => !sampled.scenes.some((x) => x.id === s.id),
   );
   if (gap)
     fail(
-      `samples.json has no findings for scene ${gap.id}: run node gates/samples.mjs ${run} again`,
+      `samples.json has no record for scene ${gap.id}: run node gates/samples.mjs ${run} again`,
     );
   if (
     fs.statSync(at("samples.json")).mtimeMs <
@@ -254,9 +253,9 @@ const profile = maybe(at("style.json"))?.name ?? script.style ?? "claude-code";
 // A card's place in the build: where its scene starts and how long its slot is.
 const loop = (id) => {
   const t = timeline.scenes.find((x) => x.id === id);
-  if (!Number.isFinite(t?.start) || !Number.isFinite(t?.slot))
+  if (!t)
     fail(
-      `timeline.json has no start and slot for scene ${id}: run node render.mjs ${run} --stills`,
+      `timeline.json has no scene ${id}: run node render.mjs ${run} --stills`,
     );
   return { start: t.start, slot: t.slot };
 };
@@ -349,7 +348,7 @@ const answered = maybe(answersFile);
 // Gate stop: the gates record's script hash says it is of this script; its
 // evidence names the scenes to reopen. Answers written after the record
 // spent it: the revision's board waits for the next render's record.
-const gates = delivered ? null : maybe(at("gates.json"));
+const gates = delivered ? null : maybeJson(run, "gates.json");
 const red = Object.entries(gates?.gates ?? {}).filter(
   ([, g]) => g.status === "fail",
 );
@@ -424,7 +423,7 @@ try {
   fail(e.message);
 }
 const { texture } = grammar(style);
-const brief = maybe(at("brief.json"));
+const brief = maybeJson(run, "brief.json");
 const estimated = estimate(
   cards.map((c, i) => ({
     id: c.id,
@@ -441,7 +440,7 @@ const estimated = estimate(
 );
 for (const c of cards) if (c.rich) c.adds = estimated.adds[c.id];
 
-const pack = maybe(at("excerpts.json"));
+const pack = maybeJson(run, "excerpts.json");
 const doc = {
   version: prev + 1,
   kind,

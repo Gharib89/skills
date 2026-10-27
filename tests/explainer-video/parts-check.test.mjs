@@ -148,16 +148,17 @@ test("a parts.json that is not a plan is refused by name, never as a stack trace
   };
   const pack = held("excerpts.json")('{"x":1}');
   assert.equal(pack.code, 1);
-  assert.match(pack.err, /^parts: excerpts\.json holds no excerpts list$/m);
+  assert.match(pack.err, /^parts: excerpts\.json: excerpts is not a list$/m);
   assert.doesNotMatch(pack.err, /\n\s+at /, pack.err);
-  for (const entry of ["null", '"ex-1"', "{}", '{"id":3}']) {
+  for (const [entry, why] of [
+    ["null", "excerpts\\[0\\] is not an object"],
+    ['"ex-1"', "excerpts\\[0\\] is not an object"],
+    ["{}", "excerpts\\[0\\]\\.id is not text"],
+    ['{"id":3}', "excerpts\\[0\\]\\.id is not text"],
+  ]) {
     const r = held("excerpts.json")(`{"excerpts":[${entry}]}`);
     assert.equal(r.code, 1, entry);
-    assert.match(
-      r.err,
-      /^parts: excerpts\.json excerpt 1 is not an object with an id$/m,
-      entry,
-    );
+    assert.match(r.err, new RegExp(`^parts: excerpts\\.json: ${why}$`, "m"));
     assert.doesNotMatch(r.err, /\n\s+at /, r.err);
   }
   const brief = JSON.parse(
@@ -165,7 +166,7 @@ test("a parts.json that is not a plan is refused by name, never as a stack trace
   );
   const must = held("brief.json")(JSON.stringify({ ...brief, must: "x" }));
   assert.equal(must.code, 1);
-  assert.match(must.err, /^parts: brief\.json must is not a list$/m);
+  assert.match(must.err, /^parts: brief\.json: must is not a list$/m);
   assert.doesNotMatch(must.err, /\n\s+at /, must.err);
   assert.equal(parts(fx, "check").code, 0);
   fs.rmSync(path.join(fx.dir, "excerpts.json"));

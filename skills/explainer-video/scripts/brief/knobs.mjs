@@ -45,8 +45,11 @@ export function knobOffer(knob, run, brief) {
     case "style": {
       const held = path.join(run, "style.json");
       const styles = new Set(stores(explainersDir(run)).flatMap(names));
-      if (fs.existsSync(held))
-        styles.add(JSON.parse(fs.readFileSync(held, "utf8")).name);
+      // A style.json holding no profile names none.
+      const name = fs.existsSync(held)
+        ? JSON.parse(fs.readFileSync(held, "utf8"))?.name
+        : null;
+      if (typeof name === "string") styles.add(name);
       return { type: "menu", options: [...styles].sort() };
     }
     case "voice":

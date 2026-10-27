@@ -18,11 +18,14 @@
 //         a change the script stage redoes removes <run>/check.json, so the
 //         new script's support fix attempts count from none
 // exit:   0 written · 1 a value this version cannot make, `brief <knob>
-//         <value>: <why>` on stderr · 2 usage
+//         <value>: <why>` on stderr, or an earlier brief.json that is
+//         malformed, `brief: brief.json: <field> <problem>` · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { OWN_PREFIX, narrator, narrators } from "../lib/narrators.mjs";
+import { maybeJson } from "../lib/json.mjs";
 import { explainersDir } from "../lib/runfolder.mjs";
+import { stage } from "../lib/stage.mjs";
 import { defaultStyle, stores } from "../lib/style.mjs";
 import { loadBackend, unavailable } from "../lib/tools.mjs";
 import { ASPECTS, SCORES } from "./knobs.mjs";
@@ -53,6 +56,7 @@ const FEEDS = {
   avoid: "script",
 };
 
+stage("brief");
 const [run, ...args] = process.argv.slice(2);
 const usage = () => {
   console.error(
@@ -63,9 +67,7 @@ const usage = () => {
 if (!run) usage();
 
 const file = path.join(run, "brief.json");
-const old = fs.existsSync(file)
-  ? JSON.parse(fs.readFileSync(file, "utf8"))
-  : null;
+const old = maybeJson(run, "brief.json");
 const given = {};
 const lists = {};
 for (const a of args) {
@@ -130,7 +132,7 @@ if (!narrator(brief.voice, brief.language))
 const own = path.join(run, "style.json");
 const held =
   fs.existsSync(own) &&
-  JSON.parse(fs.readFileSync(own, "utf8")).name === brief.style;
+  JSON.parse(fs.readFileSync(own, "utf8"))?.name === brief.style;
 if (
   !held &&
   !styles.some((d) => fs.existsSync(path.join(d, `${brief.style}.json`)))

@@ -16,7 +16,8 @@
 // stdout: `compile: <n> scene(s) -> script.json`
 // writes: <run>/script.json, and explainers/.gitignore
 // exit:   0 compiled · 1 the file is malformed, `compile: [<scene>: ]<what>`
-//         on stderr · 2 usage
+//         on stderr, or brief.json is, `compile: brief.json: <field>
+//         <problem>` · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { writeIgnore } from "../lib/runfolder.mjs";
@@ -26,7 +27,10 @@ import { resolveExcerpts } from "../lib/excerpt.mjs";
 import { findStyle } from "../lib/style.mjs";
 import { checkVisual } from "../lib/visuals.mjs";
 import { BRACES, endsLatin, isLatin, keptTerms } from "../lib/terms.mjs";
+import { maybeJson } from "../lib/json.mjs";
+import { stage } from "../lib/stage.mjs";
 
+stage("compile");
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
   console.error("usage: node compile.mjs <run-folder>");
@@ -107,9 +111,8 @@ if (!title) fail(null, "no `# <title>` line");
 if (!scenes.length) fail(null, "no `## Scene <id> · <title>` heading");
 
 // The brief, when the run has one, decides the header.
-const briefFile = path.join(run, "brief.json");
-if (fs.existsSync(briefFile)) {
-  const brief = JSON.parse(fs.readFileSync(briefFile, "utf8"));
+const brief = maybeJson(run, "brief.json");
+if (brief) {
   for (const [key, knob] of [
     ["language", "language"],
     ["narrator", "voice"],

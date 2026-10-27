@@ -98,10 +98,7 @@ test("a Gemini narrator with no GEMINI_API_KEY is refused with where to get one,
 
 test("a narrator who does not speak the script's language is refused before any synthesis", () => {
   const fx = fixture(AR_SCENES, "ar");
-  fs.writeFileSync(
-    path.join(fx.dir, "script.json"),
-    JSON.stringify({ language: "ar", narrator: "bf_emma", scenes: AR_SCENES }),
-  );
+  write(fx, AR_SCENES, "ar", { narrator: "bf_emma" });
   const r = run(fx, KEY);
   assert.equal(r.code, 1, r.out + r.err);
   assert.match(r.err, /^voice: no narrator bf_emma for ar$/m);
@@ -166,14 +163,7 @@ test("a Gemini quota stop keeps the scenes voiced before it, and the next run vo
 });
 
 const ELEVEN = (fx) =>
-  fs.writeFileSync(
-    path.join(fx.dir, "script.json"),
-    JSON.stringify({
-      language: "en",
-      narrator: "elevenlabs-george",
-      scenes: SCENES,
-    }),
-  );
+  write(fx, SCENES, "en", { narrator: "elevenlabs-george" });
 
 test("an ElevenLabs narrator with no ELEVENLABS_API_KEY is refused with where to get one, before any synthesis", () => {
   const fx = fixture();

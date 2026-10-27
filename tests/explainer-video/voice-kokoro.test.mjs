@@ -172,10 +172,7 @@ test("a rerun that fails QC removes the timeline the last pass wrote", () => {
 test("a rerun refused for its input removes the timeline the last pass wrote", () => {
   const fx = fixture();
   assert.equal(run(fx).code, 0);
-  fs.writeFileSync(
-    path.join(fx.dir, "script.json"),
-    JSON.stringify({ language: "en", narrator: "nobody", scenes: SCENES }),
-  );
+  write(fx, SCENES, "en", { narrator: "nobody" });
   const r = run(fx);
   assert.equal(r.code, 1);
   assert.match(r.err, /no narrator nobody/);
@@ -197,7 +194,18 @@ test("with a brief, the voiced timeline and the closing hold must land within 10
   const fx = fixture(long(4));
   fs.writeFileSync(
     path.join(fx.dir, "brief.json"),
-    JSON.stringify({ length: 1 }),
+    JSON.stringify({
+      focus: "the demo",
+      length: 1,
+      audience: "developers",
+      language: "en",
+      style: "claude",
+      voice: "bf_emma",
+      aspect: "16:9",
+      score: "on",
+      must: [],
+      avoid: [],
+    }),
   );
   let r = run(fx);
   assert.equal(r.code, 0, r.out + r.err);

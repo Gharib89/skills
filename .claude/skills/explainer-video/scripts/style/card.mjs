@@ -58,7 +58,9 @@ import {
 import { esc, framePage, sceneFile, stillsPage } from "../render/compose.mjs";
 import { liveBuild } from "./card-live.mjs";
 import { grammarRows } from "./grammar.mjs";
+import { stage } from "../lib/stage.mjs";
 
+stage("card");
 const [run, draftName, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
   console.error(

@@ -57,7 +57,9 @@ import {
   judgedProblems,
   measuredFields,
 } from "./grammar.mjs";
+import { stage } from "../lib/stage.mjs";
 
+stage("style");
 const [run, name] = process.argv.slice(2);
 if (!run || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name ?? "")) {
   console.error("usage: node draft.mjs <run-folder> <kebab-case-name>");

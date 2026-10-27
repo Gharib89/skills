@@ -17,14 +17,17 @@
 // exit:   0 no finding · 1 a finding, or `samples: <why>` on stderr · 2 usage
 import fs from "node:fs";
 import path from "node:path";
+import { readJson } from "../lib/json.mjs";
 import { judge } from "../lib/layout.mjs";
 import { sampleTimes } from "../lib/motion.mjs";
+import { stage } from "../lib/stage.mjs";
 import { floors, loadStyle } from "../lib/style.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
 import { FPS } from "../render/compose.mjs";
 import { sceneEvents } from "./events.mjs";
 import { readingFindings } from "./reading.mjs";
 
+stage("samples");
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
   console.error("usage: node samples.mjs <run-folder>");
@@ -50,8 +53,8 @@ for (const f of [
 ])
   if (!fs.existsSync(at(f)))
     fail(`no ${f}: run node render.mjs ${run} --stills`);
-const script = JSON.parse(fs.readFileSync(at("script.json"), "utf8"));
-const timeline = JSON.parse(fs.readFileSync(at("timeline.json"), "utf8"));
+const script = readJson(run, "script.json");
+const timeline = readJson(run, "timeline.json");
 let floor;
 try {
   floor = floors(loadStyle(run, script.style));

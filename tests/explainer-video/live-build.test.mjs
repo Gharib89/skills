@@ -225,11 +225,11 @@ test("a timeline of the wrong shape is refused by name, not with a stack", () =>
   fs.writeFileSync(path.join(fx.dir, "timeline.json"), "{}");
   const r = board(fx, "build");
   assert.equal(r.code, 1);
-  assert.match(r.err, /no composition: run node render\.mjs/);
+  assert.match(r.err, /^board: timeline\.json: total is not a number$/m);
   assert.doesNotMatch(r.err, /TypeError/);
 });
 
-test("a timeline missing a scene's slot, or a scene file with no template, is refused by name", async () => {
+test("a timeline missing a scene or a scene's slot, or a scene file with no template, is refused by name", async () => {
   const fx = fixture();
   prep(fx);
   const file = path.join(fx.dir, "timeline.json");
@@ -238,7 +238,15 @@ test("a timeline missing a scene's slot, or a scene file with no template, is re
   fs.writeFileSync(file, JSON.stringify(tl));
   const r = board(fx, "build");
   assert.equal(r.code, 1);
-  assert.match(r.err, /timeline\.json has no start and slot for scene hook/);
+  assert.match(
+    r.err,
+    /^board: timeline\.json: scenes\[0\]\.slot is not a number$/m,
+  );
+  fs.writeFileSync(file, JSON.stringify({ ...tl, scenes: tl.scenes.slice(1) }));
+  assert.match(
+    board(fx, "build").err,
+    /^board: timeline\.json has no scene hook: run node render\.mjs/m,
+  );
   const { liveScript } = await import(
     path.join(skill, "scripts", "render", "live.mjs")
   );
@@ -254,6 +262,6 @@ test("a timeline missing a scene's slot, or a scene file with no template, is re
   fs.writeFileSync(file, JSON.stringify(tl));
   const r2 = board(fx, "build");
   assert.equal(r2.code, 1);
-  assert.match(r2.err, /^board: .*(holds no <template>|no start and slot)/m);
+  assert.match(r2.err, /^board: .*(holds no <template>|has no scene)/m);
   assert.doesNotMatch(r2.err, /\n\s+at /);
 });
