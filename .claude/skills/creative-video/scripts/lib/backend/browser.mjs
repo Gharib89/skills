@@ -47,17 +47,21 @@ export async function ensureChrome(nodeDir, home, env) {
 // `env` (Chrome's home, the no-telemetry variables); `stdio` is quiet unless a
 // caller wants the tool's output on its own terminal.
 export async function hyperframes(args, { cwd, env, stdio = quiet }) {
-  const cli = path.join(
+  return (
+    spawnSync(process.execPath, [cliPath(), ...args], { cwd, env, stdio })
+      .status ?? 1
+  );
+}
+
+// The CLI in the tool cache's npm install.
+export const cliPath = () =>
+  path.join(
     toolPaths().node,
     "node_modules",
     "hyperframes",
     "bin",
     "hyperframes.mjs",
   );
-  return (
-    spawnSync(process.execPath, [cli, ...args], { cwd, env, stdio }).status ?? 1
-  );
-}
 
 export function findChrome(home) {
   const root = path.join(home, ".cache", "hyperframes", "chrome");

@@ -20,11 +20,30 @@ test("a render with no gates.json, or after the project changed, or on a red rec
   assert.equal(runGates(fx).code, 0);
   compose(fx, "hook", "<p>changed after the gates</p>");
   r = exec(render, fx);
+  assert.equal(r.code, 1);
   assert.match(r.err, REFUSED);
   compose(fx, "hook", "<p>a clipped line</p>");
   assert.equal(runGates(fx).code, 1);
   r = exec(render, fx);
+  assert.equal(r.code, 1);
   assert.match(r.err, REFUSED);
+  assert.ok(!rendered(fx));
+});
+
+test("a gates.json that is not JSON, or lacks its gates, is refused by name before any render", () => {
+  const fx = timed();
+  const record = path.join(fx.dir, "gates.json");
+  fs.writeFileSync(record, "{ not json");
+  let r = exec(render, fx);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^render: gates\.json: is not valid JSON \(/);
+  fs.writeFileSync(
+    record,
+    JSON.stringify({ inputs: "0123456789abcdef", script: "0123456789abcdef" }),
+  );
+  r = exec(render, fx);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^render: gates\.json: gates is not an object/);
   assert.ok(!rendered(fx));
 });
 

@@ -2,18 +2,24 @@
 // their pixels, answering from the authored scene files. A scene file built to
 // fail holds a marker word, its passing twin the same file without it:
 //   clipped       a text_box_overflow layout error on the scene
+//   once-clip, once-overlap, once-spill  a text_box_overflow, content_overlap
+//                 or container_overflow seen at the key sample only, which
+//                 HyperFrames grades info
 //   low-contrast  a contrast_aa_failure (a warning, as HyperFrames grades it)
 //   in-band       the text sits at y 900, in the bottom 220 px
 //   tiny          12 px text; `edge` sits at x 40, outside the safe margin
 //   faint         opacity 0.5; `blink` is shown only 0.25 to 0.75 s into its scene
-//   Math.random() the scene's snapshots differ between two launches
+//   tl.<call>(... Date.now() or performance.now() ...) the scene's snapshots
+//                 differ between two launches
 //   at("<id>", "<word>")  a word the timeline lacks is a console_error, as the
 //                 browser running the scene's script reports it
+//   throw new Error("<text>")  the same console_error with the thrown text
 //   data-tween="<a>-<b>" and data-sound="<t>" the scene's tween windows and
 //                 sounds, in scene seconds (no tween: one across the scene)
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { NO_WORD } from "../../skills/creative-video/scripts/render/anchors.mjs";
 import { log } from "./fake-backend-log.mjs";
 
 const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
@@ -76,6 +82,15 @@ function texts(m, local) {
     });
 }
 
+// The console error the browser reports when a scene's script throws.
+const scriptError = (scene, what) => ({
+  code: "console_error",
+  severity: "error",
+  time: 0,
+  sourceFile: "index.html",
+  message: `[HyperFrames] composition script error: ${scene} ${what}`,
+});
+
 export async function check(dir, times) {
   log({ call: "check", times });
   const layout = [];
@@ -98,6 +113,23 @@ export async function check(dir, times) {
           text: e.text,
           sourceFile: `compositions/${m.id}.html`,
         });
+    const once = {
+      "once-clip": "text_box_overflow",
+      "once-overlap": "content_overlap",
+      "once-spill": "container_overflow",
+    };
+    for (const [marker, code] of Object.entries(once))
+      for (const e of found(marker))
+        if (mine.length > 1)
+          layout.push({
+            code,
+            severity: "info",
+            time: mine[1],
+            times: [mine[1]],
+            occurrences: 1,
+            text: e.text,
+            sourceFile: `compositions/${m.id}.html`,
+          });
     for (const e of found("low-contrast"))
       if (mine.length)
         contrast.push({
@@ -116,14 +148,15 @@ export async function check(dir, times) {
         timeline.scenes.find((s) => s.id === a[1])?.words ?? []
       ).filter((w) => norm(w.text) === norm(a[2]));
       if (!words[(+a[3] || 1) - 1])
-        runtime.push({
-          code: "console_error",
-          severity: "error",
-          time: 0,
-          sourceFile: "index.html",
-          message: `[HyperFrames] composition script error: ${m.id} Error: at: no word "${a[2]}" (${+a[3] || 1}) in scene ${a[1]}`,
-        });
+        runtime.push(
+          scriptError(
+            m.id,
+            `Error: ${NO_WORD} "${a[2]}" (${+a[3] || 1}) in scene ${a[1]}`,
+          ),
+        );
     }
+    for (const t of m.html.matchAll(/throw new Error\("([^"]*)"\)/g))
+      runtime.push(scriptError(m.id, `Error: ${t[1]}`));
   }
   const section = (findings) => ({ ok: !findings.length, findings });
   return {
@@ -165,8 +198,8 @@ export async function probe(dir, times) {
   return { frames, events };
 }
 
-// Each frame's "pixels" are its time and scene; a scene drawing Math.random()
-// adds a fresh draw, so two launches disagree.
+// Each frame's "pixels" are its time and scene; a scene whose timeline reads the
+// wall clock adds a fresh draw, so two launches disagree.
 export async function snapshot(dir, times, outDir) {
   log({ call: "snapshot", times, outDir });
   fs.mkdirSync(outDir, { recursive: true });
@@ -176,7 +209,9 @@ export async function snapshot(dir, times, outDir) {
       `frame-${String(i).padStart(2, "0")}-at-${time}s.png`,
     );
     const m = sceneAt(dir, time);
-    const draw = m?.html.includes("Math.random()") ? Math.random() : "";
+    const draw = /\btl\.[^;]*\b(Date|performance)\.now\(\)/.test(m?.html ?? "")
+      ? Math.random()
+      : "";
     fs.writeFileSync(file, `pixels ${m?.id} ${time} ${draw}`);
     return { path: file, time };
   });

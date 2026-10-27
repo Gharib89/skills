@@ -29,6 +29,28 @@ test("an at() naming a word the scene lacks fails anchors by scene and word, and
   assert.equal(runGates(anchored("profile")).code, 0);
 });
 
+test("a scene whose script throws fails script errors by scene and message, not anchors, and a script that runs passes", () => {
+  const fx = timed();
+  compose(
+    fx,
+    "context",
+    "<p>context line</p>",
+    'throw new Error("no such element");',
+  );
+  const r = runGates(fx);
+  assert.equal(r.code, 1);
+  only(r, "script errors");
+  assert.match(
+    gateLine(r, "script errors"),
+    /^fail: 1 finding\(s\), first: context: Error: no such element vs every scene's script runs$/,
+  );
+  assert.equal(
+    runGates(anchored("profile")).code,
+    0,
+    "a script that runs passes",
+  );
+});
+
 const BRIEF = (extra) => ({ brief: { length: 0.2, ...extra } });
 
 test("a must word said or shown passes, one neither said nor shown fails", () => {
@@ -82,4 +104,23 @@ test("a brief with no must and no avoid passes the gate, and a list that is not 
   const bad = runGates(fx);
   assert.equal(bad.code, 1);
   assert.match(bad.err, /^gates: brief\.json: must is not a list/);
+});
+
+test("a must or avoid entry with no letter or digit is refused, since it would match everywhere", () => {
+  for (const [key, entry] of [
+    ["must", ""],
+    ["avoid", "..."],
+  ]) {
+    const fx = timed({}, BRIEF({}));
+    fs.writeFileSync(
+      path.join(fx.dir, "brief.json"),
+      JSON.stringify({ length: 0.2, [key]: ["real", entry] }),
+    );
+    const r = runGates(fx);
+    assert.equal(r.code, 1);
+    assert.match(
+      r.err,
+      new RegExp(`^gates: brief\\.json: ${key}\\[1\\] has no letter or digit`),
+    );
+  }
 });

@@ -7,12 +7,13 @@
 // `avoid` word lists) and <run>/project/. Samples each scene 0.3 s in, at its
 // middle and on its last frame (gates/samples.mjs), and measures the samples
 // with HyperFrames' check, a text probe (one launch, over the samples and a
-// 0.25 s grid) and two snapshot launches. Seven gates judge the project, each a
+// 0.25 s grid) and two snapshot launches. Eight gates judge the project, each a
 // hard fail: determinism (the same pixels twice), layout, contrast, reading
-// time, the caption band, anchors (an at() naming a word the narration lacks)
-// and must and avoid. Length, loudness and voice QC are the voice and render
-// stages' own. Advisory warnings never change the exit: effect rate, effect
-// onset, scene length, long sentences, pacing, and the clock and random scan.
+// time, the caption band, anchors (an at() naming a word the narration lacks),
+// script errors (a scene's script that throws) and must and avoid. Length,
+// loudness and voice QC are the voice and render stages' own. Advisory warnings
+// (gates/warnings.mjs) never change the exit: effect rate, effect onset, scene
+// length, sentences, pacing and clock.
 // stdout: `gate <name>: pass|fail: <measured> vs <floor>` per gate (the rest of
 //         a failing gate's findings indented under it), `warn <name>: <detail>`
 //         per warning, then `gates: <n> pass, <m> fail`, when red ending `; next:
@@ -27,14 +28,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { maybeJson, readJson } from "../lib/json.mjs";
-import { sentences } from "../lib/length.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
+import { NO_WORD, NO_WORD_RE } from "../render/anchors.mjs";
 import { HEIGHT, WIDTH, writeRoot } from "../render/root.mjs";
 import { inputsHash, scriptHash } from "./inputs.mjs";
 import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
+import { warnings } from "./warnings.mjs";
 
 stage("gates");
 const [run, ...rest] = process.argv.slice(2);
@@ -57,18 +59,15 @@ async function orFail(call) {
 // The floors: type of at least 18 px inside a margin of 5% of each side, the
 // bottom 220 px left to the captions, at most two fix attempts.
 const TEXT_PX = 18;
-const MX = Math.round(WIDTH * 0.05);
-const MY = Math.round(HEIGHT * 0.05);
+const MARGIN_X = Math.round(WIDTH * 0.05);
+const MARGIN_Y = Math.round(HEIGHT * 0.05);
 const BAND = HEIGHT - 220;
 const MAX_ATTEMPTS = 2;
 
 const { timeline } = readTimeline(run, fail);
 const script = readJson(run, "script.json");
 const brief = maybeJson(run, "brief.json");
-const record = path.join(run, "gates.json");
-const prev = fs.existsSync(record)
-  ? JSON.parse(fs.readFileSync(record, "utf8"))
-  : null;
+const prev = maybeJson(run, "gates.json");
 writeIgnore(run);
 writeRoot(run);
 const inputs = inputsHash(run);
@@ -87,8 +86,9 @@ const plan = timeline.scenes.map((sc) => {
 const sampled = uniq(plan.flatMap((p) => p.samples));
 const sceneAt = (t) =>
   (plan.find((p) => t >= p.sc.start - 1e-6 && t < p.end) ?? plan.at(-1)).sc.id;
-const sceneOf = (f) =>
-  f.sourceFile?.match(/^compositions\/(.+)\.html$/)?.[1] ?? sceneAt(f.time);
+const sourceScene = (f) =>
+  f.sourceFile?.match(/^compositions\/(.+)\.html$/)?.[1];
+const sceneOf = (f) => sourceScene(f) ?? sceneAt(f.time);
 const quote = (t) => `"${t.length > 40 ? `${t.slice(0, 40)}...` : t}"`;
 
 const checked = await orFail(() => backend.check(proj, sampled, { env }));
@@ -151,13 +151,23 @@ function collect() {
   };
 }
 
-// Layout: HyperFrames' errors (it grades a defect seen at one sample only as
-// info, a flicker rather than a defect), and the probe's readable text at the
-// samples. The caption band is the same text against the bottom 220 px.
+// Layout: HyperFrames' errors, and the probe's readable text at the samples.
+// HyperFrames grades a clip or an overlap seen at one sample only as info, a
+// flicker; the samples are a scene's in, key and out, so one sample is a frame
+// the viewer holds, and the gate counts it. The caption band is the same text
+// against the bottom 220 px.
+const ONCE_COUNTED = new Set([
+  "clipped_text",
+  "text_box_overflow",
+  "content_overlap",
+]);
 const layout = collect();
 const band = collect();
 for (const f of checked.layout.findings)
-  if (f.severity === "error")
+  if (
+    f.severity === "error" ||
+    (f.occurrences === 1 && ONCE_COUNTED.has(f.code))
+  )
     layout.add(
       f.time,
       sceneOf(f),
@@ -167,7 +177,12 @@ for (const p of plan)
   for (const t of p.samples)
     for (const e of textsAt(t).filter(readable)) {
       const { left, top, right, bottom } = e.rect;
-      if (left < MX || top < MY || right > WIDTH - MX || bottom > HEIGHT - MY)
+      if (
+        left < MARGIN_X ||
+        top < MARGIN_Y ||
+        right > WIDTH - MARGIN_X ||
+        bottom > HEIGHT - MARGIN_Y
+      )
         layout.add(t, p.sc.id, `${quote(e.text)} is outside the safe margin`);
       if (e.fontPx < TEXT_PX)
         layout.add(
@@ -205,18 +220,36 @@ const reading = plan.flatMap((p) =>
   }),
 );
 
-// Anchors: a scene script's at() threw for a word the alignment lacks.
+// The runtime errors the browser reports while mounting the scenes. An at()
+// naming a word the alignment lacks is an anchor; any other error a scene's
+// script raises is a script error, which would otherwise render a static frame
+// and pass every gate. `[HyperFrames] composition script error: <scene> <error>`
+// names the scene.
+const SCRIPT_ERROR = /^\[HyperFrames\] composition script error: (\S+)\s*/;
 const anchors = [];
+const scriptErrors = [];
+const addOnce = (list, line) => list.includes(line) || list.push(line);
 for (const f of checked.runtime.findings) {
-  const m = f.message?.match(/at: no word "(.*?)" \(\d+\) in scene (\S+)/);
-  const start = timeline.scenes.find((s) => s.id === m?.[2])?.start ?? 0;
-  const line = m && `${start.toFixed(2)} s ${m[2]}: at: no word "${m[1]}"`;
-  if (line && !anchors.includes(line)) anchors.push(line);
+  const anchor = f.message?.match(NO_WORD_RE);
+  if (anchor) {
+    const start = timeline.scenes.find((s) => s.id === anchor[2])?.start ?? 0;
+    addOnce(
+      anchors,
+      `${start.toFixed(2)} s ${anchor[2]}: ${NO_WORD} "${anchor[1]}"`,
+    );
+  } else if (f.severity === "error") {
+    const named = f.message?.match(SCRIPT_ERROR);
+    const what = (named ? f.message.slice(named[0].length) : f.message) ?? "";
+    addOnce(
+      scriptErrors,
+      `${named?.[1] ?? sourceScene(f) ?? "project"}: ${what.split("\n")[0].trim().slice(0, 120)}`,
+    );
+  }
 }
 
 // Must and avoid, carried from explainer-video's script check: a whole-word
 // match over each scene's narration and the text its samples show.
-const has = (corpus, item) =>
+const hasWord = (corpus, item) =>
   new RegExp(
     `(?<![\\p{L}\\p{N}])${item.toLowerCase().replace(/[.*+?^$|()[\]{}\\]/g, "\\$&")}(?![\\p{L}\\p{N}])`,
     "u",
@@ -232,10 +265,10 @@ const corpus = plan.map((p) => ({
 }));
 const coverage = [];
 for (const m of brief?.must ?? [])
-  if (!corpus.some((c) => has(c.text, m)))
+  if (!corpus.some((c) => hasWord(c.text, m)))
     coverage.push(`must "${m}" is not said or shown`);
 for (const x of brief?.avoid ?? []) {
-  const hit = corpus.filter((c) => has(c.text, x));
+  const hit = corpus.filter((c) => hasWord(c.text, x));
   if (hit.length)
     coverage.push(`avoid "${x}" is in ${hit.map((c) => c.id).join(", ")}`);
 }
@@ -252,6 +285,7 @@ const judged = {
   ],
   "caption band": [band.lines(), "no readable text in the bottom 220 px"],
   anchors: [anchors, "every anchor names an aligned word"],
+  "script errors": [scriptErrors, "every scene's script runs"],
   "must and avoid": [
     coverage,
     "every must said or shown, no avoid said or shown",
@@ -268,107 +302,29 @@ const gates = Object.fromEntries(
     },
   ]),
 );
-const red = Object.values(gates).filter((g) => g.status === "fail").length;
+const failing = Object.values(gates).filter((g) => g.status === "fail").length;
 
-// Advisory: reported, never a refusal.
-const warnings = new Set();
-const warn = (name, detail) => warnings.add(`${name}: ${detail}`);
-const mine = (id) => events[id] ?? { tweens: [], sounds: [] };
-const sounds = plan.flatMap((p) =>
-  mine(p.sc.id).sounds.map((s) => p.sc.start + s),
-);
-let busiest = { n: 0, t: 0 };
-for (const t of sounds) {
-  const n = sounds.filter((o) => o >= t && o < t + 60).length;
-  if (n > busiest.n) busiest = { n, t };
-}
-if (busiest.n > 24)
-  warn(
-    "effect rate",
-    `${busiest.n} sounds in the minute from ${busiest.t.toFixed(2)} s, over 24 a minute`,
-  );
-let starts = 0;
-const dead = [];
-for (const p of plan) {
-  const { tweens, sounds: own } = mine(p.sc.id);
-  starts += tweens.length;
-  for (const s of own) {
-    const gap = Math.min(...tweens.map(([from]) => Math.abs(s - from)));
-    if (tweens.length && gap > 0.15 + 1e-6)
-      warn(
-        "effect onset",
-        `${p.sc.id}: the sound at ${s.toFixed(2)} s is ${gap.toFixed(2)} s from the nearest tween start`,
-      );
-  }
-  if (p.sc.duration > 30)
-    warn(
-      "scene length",
-      `${p.sc.id}: ${p.sc.duration.toFixed(1)} s, over 30 s`,
-    );
-  // A dead stretch: 2 s or more with no tween running.
-  let at = 0;
-  for (const [from, to] of [...tweens]
-    .sort((x, y) => x[0] - y[0])
-    .concat([[p.sc.duration, p.sc.duration]])) {
-    if (from - at >= 2)
-      dead.push(
-        `dead ${(p.sc.start + at).toFixed(2)}-${(p.sc.start + from).toFixed(2)} s in ${p.sc.id}`,
-      );
-    at = Math.max(at, to);
-  }
-}
-for (const s of script.scenes)
-  for (const line of s.narration)
-    for (const sentence of sentences(line)) {
-      const words = sentence.split(/\s+/).filter(Boolean);
-      if (words.length > 25)
-        warn(
-          "sentences",
-          `${s.id}: "${words.slice(0, 5).join(" ")}..." is ${words.length} words, over 25`,
-        );
-    }
-warn(
-  "pacing",
-  `${((starts + sounds.length) / (timeline.total / 60)).toFixed(1)} change events a minute; ${dead.join("; ") || "no dead stretch"}`,
-);
-// The one place a gate reads scene code (ADR 0019): a clock or random read may
-// break determinism, which the frames judge, so it is named, never refused.
-const CLOCK = [
-  ["Math.random", /Math\.random\b/],
-  ["Date.now", /Date\.now\b/],
-  ["new Date", /new Date\b/],
-  ["performance.now", /performance\.now\b/],
-  ["setTimeout", /\bsetTimeout\b/],
-  ["setInterval", /\bsetInterval\b/],
-  ["requestAnimationFrame", /\brequestAnimationFrame\b/],
-];
-const listed = (dir) =>
-  fs.existsSync(path.join(proj, dir))
-    ? fs
-        .readdirSync(path.join(proj, dir), { withFileTypes: true })
-        .filter((e) => e.isFile() && e.name !== "captions.html")
-        .map((e) => `${dir}/${e.name}`)
-        .sort()
-    : [];
-for (const f of [...listed("compositions"), ...listed("kit")]) {
-  const code = fs.readFileSync(path.join(proj, f), "utf8");
-  const found = CLOCK.filter(([, re]) => re.test(code)).map(([name]) => name);
-  if (found.length) warn("clock", `${f} reads ${found.join(", ")}`);
-}
+const warned = warnings({
+  plan,
+  events,
+  script,
+  total: timeline.total,
+  proj,
+});
 
 // The fix cap: a red run on one script is one fix attempt, the same inputs
 // judged again are none, and a pass or a changed script starts the count again.
 const scriptKey = scriptHash(script);
-const same = prev?.script === scriptKey;
-const attempts = !red
+const sameScript = prev?.script === scriptKey;
+const attempts = !failing
   ? 0
-  : same && prev.inputs === inputs
+  : sameScript && prev.inputs === inputs
     ? Math.max(prev.attempts ?? 0, 1)
-    : (same ? (prev.attempts ?? 0) : 0) + 1;
+    : (sameScript ? (prev.attempts ?? 0) : 0) + 1;
 fs.writeFileSync(
-  record,
+  path.join(run, "gates.json"),
   JSON.stringify(
-    { inputs, script: scriptKey, attempts, gates, warnings: [...warnings] },
+    { inputs, script: scriptKey, attempts, gates, warnings: warned },
     null,
     2,
   ) + "\n",
@@ -378,14 +334,14 @@ for (const [name, g] of Object.entries(gates)) {
   console.log(`gate ${name}: ${g.status}: ${g.measured} vs ${g.floor}`);
   for (const e of g.evidence.slice(1)) console.log(`  ${e}`);
 }
-for (const w of warnings) console.log(`warn ${w}`);
+for (const w of warned) console.log(`warn ${w}`);
 console.log(
-  `gates: ${Object.keys(gates).length - red} pass, ${red} fail${
-    red
+  `gates: ${Object.keys(gates).length - failing} pass, ${failing} fail${
+    failing
       ? attempts > MAX_ATTEMPTS
         ? "; stop: red after two fix attempts, no video"
         : `; next: fix attempt ${attempts} of ${MAX_ATTEMPTS}`
       : ""
   }`,
 );
-process.exit(red ? 1 : 0);
+process.exit(failing ? 1 : 0);

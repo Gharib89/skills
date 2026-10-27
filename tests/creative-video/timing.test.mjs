@@ -12,6 +12,10 @@ import {
   gridScenes,
   written,
 } from "../../skills/creative-video/scripts/render/grid.mjs";
+import {
+  NO_WORD,
+  NO_WORD_RE,
+} from "../../skills/creative-video/scripts/render/anchors.mjs";
 import { wavSeconds } from "../../skills/creative-video/scripts/render/narration.mjs";
 import { SCENES, write } from "./voice-lib.mjs";
 import {
@@ -167,6 +171,21 @@ test("timing.js answers at() with the local start of the nth matching word and t
   });
   assert.throws(() => window.at("context", "it", 4), /no word "it" \(4\)/);
   assert.throws(() => window.at("nope", "it"), /in scene nope/);
+});
+
+test("the message at() throws in timing.js is the one the gates stage's anchors pattern reads back", () => {
+  const fx = voiced();
+  assert.equal(exec(timing, fx).code, 0);
+  const window = {};
+  vm.runInNewContext(read(project(fx, "timing.js")), { window });
+  let message;
+  try {
+    window.at("context", "nowhere", 2);
+  } catch (e) {
+    message = e.message;
+  }
+  assert.ok(message.startsWith(NO_WORD), message);
+  assert.deepEqual(message.match(NO_WORD_RE).slice(1), ["nowhere", "context"]);
 });
 
 test("captions.html reads back through the caption gate's cuesOf as the timeline's cues", () => {

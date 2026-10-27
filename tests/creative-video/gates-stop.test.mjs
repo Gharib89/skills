@@ -16,7 +16,7 @@ test("a red run is attempt 1 of 2, the same inputs judged again add none, and ch
   const fx = timed({ context: RED });
   let r = runGates(fx);
   assert.equal(r.code, 1);
-  assert.match(r.out, /^gates: 6 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.match(r.out, /^gates: 7 pass, 1 fail; next: fix attempt 1 of 2$/m);
   assert.equal(record(fx).attempts, 1);
   r = runGates(fx);
   assert.match(r.out, /; next: fix attempt 1 of 2$/m);
@@ -29,7 +29,7 @@ test("a red run is attempt 1 of 2, the same inputs judged again add none, and ch
   assert.equal(r.code, 1);
   assert.match(
     r.out,
-    /^gates: 6 pass, 1 fail; stop: red after two fix attempts, no video$/m,
+    /^gates: 7 pass, 1 fail; stop: red after two fix attempts, no video$/m,
   );
   assert.equal(record(fx).attempts, 3);
 });
@@ -51,7 +51,7 @@ test("a pass resets the count, and so does a changed script", () => {
   compose(fx, "context", GREEN);
   const ok = runGates(fx);
   assert.equal(ok.code, 0, ok.out);
-  assert.match(ok.out, /^gates: 7 pass, 0 fail$/m);
+  assert.match(ok.out, /^gates: 8 pass, 0 fail$/m);
   assert.equal(record(fx).attempts, 0);
 });
 
@@ -68,6 +68,7 @@ test("gates.json records the inputs, the script, each gate's verdict with its ev
     "reading",
     "caption band",
     "anchors",
+    "script errors",
     "must and avoid",
   ]);
   assert.equal(rec.gates.layout.status, "fail");
@@ -83,6 +84,23 @@ test("gates.json records the inputs, the script, each gate's verdict with its ev
   assert.notEqual(record(fx).inputs, before);
 });
 
+test("a gates.json that is not JSON, or whose gates are not an object, is refused by name before any backend call", () => {
+  const fx = timed();
+  const record = path.join(fx.dir, "gates.json");
+  fs.writeFileSync(record, "{ not json");
+  let r = runGates(fx);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^gates: gates\.json: is not valid JSON \(/);
+  fs.writeFileSync(record, JSON.stringify({ inputs: "x", gates: [] }));
+  r = runGates(fx);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^gates: gates\.json: script is not text/);
+  assert.deepEqual(
+    calls(fx).filter((c) => ["check", "probe", "snapshot"].includes(c.call)),
+    [],
+  );
+});
+
 test("a project missing its timeline, with a stale one, or short of a scene file is refused before any backend call", () => {
   const fx = timed();
   fs.rmSync(path.join(fx.dir, "timeline.json"));
@@ -95,6 +113,7 @@ test("a project missing its timeline, with a stale one, or short of a scene file
   assert.equal(exec(timing, fx).code, 0);
   fs.appendFileSync(path.join(fx.dir, "voice.json"), "\n");
   r = runGates(fx);
+  assert.equal(r.code, 1);
   assert.match(
     r.err,
     /^gates: timeline\.json is from an older voice\.json: run render\/timing\.mjs again/,
@@ -102,6 +121,7 @@ test("a project missing its timeline, with a stale one, or short of a scene file
   assert.equal(exec(timing, fx).code, 0);
   fs.rmSync(project(fx, "compositions", "hook.html"));
   r = runGates(fx);
+  assert.equal(r.code, 1);
   assert.match(
     r.err,
     /^gates: no compositions\/hook\.html: author each scene file/,

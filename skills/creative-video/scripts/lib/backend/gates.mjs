@@ -5,20 +5,14 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
+import { HEIGHT, WIDTH } from "../../render/root.mjs";
 import { toolPaths } from "../tools.mjs";
-import { findChrome } from "./browser.mjs";
+import { cliPath, findChrome } from "./browser.mjs";
 import { fromCache } from "./common.mjs";
 
 // The pinned CLI run in the project with its output captured.
 function captured(args, { dir, env }) {
-  const cli = path.join(
-    toolPaths().node,
-    "node_modules",
-    "hyperframes",
-    "bin",
-    "hyperframes.mjs",
-  );
-  return spawnSync(process.execPath, [cli, ...args], {
+  return spawnSync(process.execPath, [cliPath(), ...args], {
     cwd: dir,
     env,
     encoding: "utf8",
@@ -153,7 +147,7 @@ async function open(dir, env) {
       args: ["--no-sandbox", "--font-render-hinting=none"],
     });
     const page = await browser.newPage();
-    await page.setViewport({ width: 1920, height: 1080 });
+    await page.setViewport({ width: WIDTH, height: HEIGHT });
     await page.goto(`http://127.0.0.1:${server.address().port}/`, {
       waitUntil: "domcontentloaded",
     });

@@ -25,6 +25,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { captionFindings, cuesOf } from "../gates/captions.mjs";
 import { inputsHash } from "../gates/inputs.mjs";
+import { maybeJson } from "../lib/json.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend, lockHash } from "../lib/tools.mjs";
@@ -55,9 +56,7 @@ const { timeline, voice } = readTimeline(run, fail);
 writeIgnore(run);
 writeRoot(run);
 // The gates stage's record must be of this very project and have passed.
-const record = fs.existsSync(path.join(run, "gates.json"))
-  ? JSON.parse(fs.readFileSync(path.join(run, "gates.json"), "utf8"))
-  : null;
+const record = maybeJson(run, "gates.json");
 if (
   record?.inputs !== inputsHash(run) ||
   Object.values(record.gates).some((g) => g.status !== "pass")
@@ -104,7 +103,7 @@ const { size, fps, ratio } = videoFacts(probe);
 const seconds = +probe.format.duration;
 // The captions the video draws (the composition's cues) against the timeline's
 // words and the SRT delivered beside it.
-const caps = captionFindings({
+const captionIssues = captionFindings({
   timeline,
   cues: cuesOf(
     fs.readFileSync(
@@ -131,7 +130,9 @@ const checks = [
   ],
   [
     "captions",
-    caps.length ? `${caps.length} finding(s), first: ${caps[0]}` : "none",
+    captionIssues.length
+      ? `${captionIssues.length} finding(s), first: ${captionIssues[0]}`
+      : "none",
     "none",
   ],
   [

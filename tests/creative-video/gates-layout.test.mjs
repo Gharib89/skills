@@ -12,6 +12,7 @@ const GATES = [
   "reading",
   "caption band",
   "anchors",
+  "script errors",
   "must and avoid",
 ];
 
@@ -19,7 +20,7 @@ test("a project of readable lines in the clear passes every gate, captions in th
   const r = runGates(timed());
   assert.equal(r.code, 0, r.out + r.err);
   for (const g of GATES) assert.equal(gateLine(r, g)?.slice(0, 4), "pass", g);
-  assert.match(r.out, /^gates: 7 pass, 0 fail$/m);
+  assert.match(r.out, /^gates: 8 pass, 0 fail$/m);
 });
 
 test("a clipped line fails layout, naming its time and scene, and its fitting twin passes", () => {
@@ -31,6 +32,25 @@ test("a clipped line fails layout, naming its time and scene, and its fitting tw
     /^fail: 1 finding\(s\), first: \d+\.\d\d s context: text_box_overflow: "a clipped line" vs none, text >= 18 px, margin 5%$/,
   );
   assert.equal(runGates(timed({ context: "<p>a fitting line</p>" })).code, 0);
+});
+
+test("a clip or overlap seen at the key sample only fails layout, a container spill seen once does not", () => {
+  for (const [marker, code] of [
+    ["once-clip", "text_box_overflow"],
+    ["once-overlap", "content_overlap"],
+  ]) {
+    const r = runGates(timed({ context: `<p>a ${marker} line</p>` }));
+    assert.equal(r.code, 1, marker);
+    only(r, "layout");
+    assert.match(
+      gateLine(r, "layout"),
+      new RegExp(
+        `^fail: 1 finding\\(s\\), first: \\d+\\.\\d\\d s context: ${code}: `,
+      ),
+    );
+  }
+  const spill = runGates(timed({ context: "<p>a once-spill line</p>" }));
+  assert.equal(spill.code, 0, spill.out + spill.err);
 });
 
 test("text under 18 px or outside the 5% margin fails layout, and text still fading in does not", () => {

@@ -1,5 +1,5 @@
-// The stills a scene is judged on, shared by the gates and the storyboard's
-// cards: 0.3 s in, the middle, and the last frame.
+// The three stills the gates judge a scene on: 0.3 s in, the middle, and the
+// last frame.
 import { FPS, frames } from "../render/grid.mjs";
 
 // A whole frame's time, written to 3 places and rounded up: a seek that floors

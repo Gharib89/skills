@@ -2,9 +2,11 @@
 // and render stages with real HyperFrames, and prove what the fake backend
 // cannot: the delivered MP4 has exactly the frame grid's frames, three renders
 // match frame for frame, two chapters rendered apart and joined by the chapter
-// join have the sum of their frames and a chapter mark each, and each hard gate
-// that measures a rendered frame fails a fixture built to fail it and passes
-// the same fixture without the defect.
+// join have the sum of their frames and a chapter mark each, and five hard
+// gates (determinism, layout, caption band, anchors, script errors) each fail a
+// fixture built to fail them and pass the same fixture without the defect,
+// layout also on a clip held at the key or the out sample only. Contrast,
+// reading and must and avoid have no real-render fixture.
 //
 //   node maintainer/real-render.mjs
 //
@@ -163,27 +165,49 @@ const [, got, wanted, marked] = chapterCheck(
 );
 check("chapter marks", marked, `${got} vs ${wanted}`);
 
-// Each gate that measures a rendered frame, on a one-scene fixture built to
-// fail it and the same fixture without the defect. The gate line is read from
-// the stage's stdout, since a red gate exits 1.
+// Five gates, each on a one-scene fixture built to fail it and the same fixture
+// without the defect, layout twice more on a clip seen at one sample only. The gate line is read from the stage's stdout, since a
+// red gate exits 1. Determinism's failing twin reads the wall clock.
 const BOX =
   '<div id="b" style="position:absolute;left:160px;top:600px;width:200px;height:200px;background:#7cc"></div>';
 const slide = (x) => `tl.to("#b", { x: ${x}, duration: 3, ease: "none" }, 0);`;
 const line = (top, width = 1200) =>
-  `<div style="position:absolute;left:200px;top:${top}px;width:${width}px;overflow:hidden;white-space:nowrap;font:700 60px Inter,sans-serif;color:#fff"><span>A line the viewer reads</span></div>`;
+  `<div id="l" style="position:absolute;left:200px;top:${top}px;width:${width}px;overflow:hidden;white-space:nowrap;font:700 60px Inter,sans-serif;color:#fff"><span>A line the viewer reads</span></div>`;
+// The line clipped from `from` to `to` s only: the 4 s scene's key sample is
+// at 2 s, its out at 3.967 s.
+const clipped = (from, to) =>
+  `tl.set("#l", { width: 200 }, ${from});` +
+  (to ? ` tl.set("#l", { width: 1200 }, ${to});` : "");
 const pairs = [
   {
     gate: "determinism",
-    bad: [BOX, slide("Math.random() * 600")],
+    bad: [BOX, slide("Date.now() % 600")],
     good: [BOX, slide(600)],
     warn: "clock",
   },
   { gate: "layout", bad: [line(300, 200)], good: [line(300)] },
+  {
+    gate: "layout",
+    name: "layout at key only",
+    bad: [line(300), clipped(1.8, 2.2)],
+    good: [line(300)],
+  },
+  {
+    gate: "layout",
+    name: "layout at out only",
+    bad: [line(300), clipped(3.6)],
+    good: [line(300)],
+  },
   { gate: "caption band", bad: [line(900)], good: [line(300)] },
   {
     gate: "anchors",
     bad: [BOX + line(300), 'tl.to("#b", { x: 300 }, at("one", "nosuchword"));'],
     good: [BOX + line(300), 'tl.to("#b", { x: 300 }, at("one", "Scene"));'],
+  },
+  {
+    gate: "script errors",
+    bad: [line(300), 'throw new Error("no such element");'],
+    good: [line(300)],
   },
 ];
 let fixture = 0;
@@ -206,11 +230,11 @@ function gateOf(gate, [body, js]) {
     );
   return { status: m[1], measured: m[2], out: r.stdout };
 }
-for (const { gate, bad, good, warn } of pairs) {
+for (const { gate, name = gate, bad, good, warn } of pairs) {
   const [b, g] = [gateOf(gate, bad), gateOf(gate, good)];
   const warned = (r) => new RegExp(`^warn ${warn}:`, "m").test(r.out);
   check(
-    `gate ${gate}`,
+    `gate ${name}`,
     b.status === "fail" &&
       g.status === "pass" &&
       (!warn || (warned(b) && !warned(g))),

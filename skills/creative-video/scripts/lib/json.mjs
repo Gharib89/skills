@@ -13,6 +13,11 @@ import path from "node:path";
 const field = (at, key) => (at ? `${at}.${key}` : key);
 const text = (v, at) => (typeof v === "string" ? null : [at, "is not text"]);
 const number = (v, at) => (Number.isFinite(v) ? null : [at, "is not a number"]);
+// Text a reader matches whole words against: an empty or punctuation-only
+// entry would match at every word boundary.
+const word = (v, at) =>
+  text(v, at) ??
+  (/[\p{L}\p{N}]/u.test(v) ? null : [at, "has no letter or digit"]);
 const opt = (shape) => (v, at) => (v === undefined ? null : shape(v, at));
 const isObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const list = (of) => (v, at) => {
@@ -27,6 +32,15 @@ const obj = (fields) => (v, at) => {
   if (!isObject(v)) return [at, "is not an object"];
   for (const [k, shape] of Object.entries(fields)) {
     const bad = shape(v[k], field(at, k));
+    if (bad) return bad;
+  }
+  return null;
+};
+// An object keyed by a name, every value held to `of`.
+const map = (of) => (v, at) => {
+  if (!isObject(v)) return [at, "is not an object"];
+  for (const [k, x] of Object.entries(v)) {
+    const bad = of(x, field(at, k));
     if (bad) return bad;
   }
   return null;
@@ -48,8 +62,16 @@ export const SHAPES = {
   // avoid words.
   "brief.json": obj({
     length: number,
-    must: opt(list(text)),
-    avoid: opt(list(text)),
+    must: opt(list(word)),
+    avoid: opt(list(word)),
+  }),
+  // The gates stage's record: what it is of and each gate's verdict, which the
+  // render reads to refuse a project the gates have not passed.
+  "gates.json": obj({
+    inputs: text,
+    script: text,
+    attempts: opt(number),
+    gates: map(obj({ status: text })),
   }),
   // The voice stage's input.
   "script.json": obj({

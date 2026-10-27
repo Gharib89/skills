@@ -124,14 +124,16 @@ failing one indented under it. Each is a hard fail:
 
 - `determinism`: the same frames in two separate launches. A clock or a random
   draw in a scene makes them differ.
-- `layout`: no HyperFrames layout error (HyperFrames grades a finding seen at
-  one sample only as info, so hold the defect and it counts), no readable text
-  under 18 px or outside a margin of 5% of each side.
+- `layout`: no HyperFrames layout error, and no clipped or overlapping text in
+  any one sample frame (HyperFrames grades those info, the gate fails them), no
+  readable text under 18 px or outside a margin of 5% of each side.
 - `contrast`: WCAG AA, 4.5:1, 3:1 for large text.
 - `reading`: each text stays fully visible for 0.8 s up to 3 words, else 0.3 s
   a word and at least 1.2 s.
 - `caption band`: no readable text in the bottom 220 px, the captions' own.
 - `anchors`: every `at(scene, word)` names a word the narration holds.
+- `script errors`: no scene's script throws (an error HyperFrames reports from
+  running it, other than an anchor), each named `<scene>: <message>`.
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no
   `avoid` word is.
 
@@ -140,16 +142,21 @@ never change the exit: `effect rate` (over 24 sounds in a minute), `effect
 onset` (a sound over 0.15 s from the nearest tween start), `scene length`
 (over 30 s), `sentences` (over 25 words), `pacing` (always printed: the change
 events a minute, and each dead stretch of 2 s or more with no tween running)
-and `clock` (a scene or kit file naming `Date`, `performance.now`,
-`setTimeout` or `Math.random`).
+and `clock` (a scene or kit file naming `Math.random`, `Date.now`, `new Date`,
+`performance.now`, `setTimeout`, `setInterval` or `requestAnimationFrame`).
 
-The last line is `gates: <p> pass, <f> fail`. A red run on an unchanged
-script counts as a fix attempt: after the first two it adds `; next: fix
-attempt <n> of 2`, and after a third it says `; stop: red after two fix
-attempts, no video`. Stop there and report the evidence. A pass, or a changed
-`script.json`, starts the count again. Gates judge the project as it is:
-change a scene, the kit or an asset after a pass and the render refuses until
-they pass again.
+The last line is `gates: <p> pass, <f> fail`. Each red run after a change to
+the project is one fix attempt; a re-run with nothing changed counts none. The
+first two red runs end `; next: fix attempt <n> of 2`, the third `; stop: red
+after two fix attempts, no video`. Stop there and report the findings. A pass,
+or a changed `script.json` (the narration, not a scene script), starts the
+count again. Gates judge the project as it is: change a scene, the kit or an
+asset after a pass and the render refuses until they pass again.
+
+Exit 1 with a `gates: <why>` line on stderr and no gate lines is a refusal (no
+timeline, a timing older than the voice, a missing scene file, a `gates.json`
+or `brief.json` that is malformed). Fix what it names and run again; it is not
+a fix attempt and not a red gate.
 
 ## Render
 
