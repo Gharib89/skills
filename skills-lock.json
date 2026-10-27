@@ -77,6 +77,13 @@
       "skillPath": "skills/hyperframes-cli/SKILL.md",
       "computedHash": "e28f813e80d5fa5e1049bfbe4bd1886437fd0cf7aa775dba7374c78f78b320f6"
     },
+    "media-use": {
+      "source": "heygen-com/hyperframes",
+      "ref": "9ebc1f8a13fc2c6756f92394688e35f9891eb5c8",
+      "sourceType": "github",
+      "skillPath": "skills/media-use/SKILL.md",
+      "computedHash": "372fda62380e0d70f540c4d413af8bc2d89b03c99d85cb557e0e1f0e3e7d79b5"
+    },
     "prototype": {
       "source": "mattpocock/skills",
       "ref": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",

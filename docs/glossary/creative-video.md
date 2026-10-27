@@ -1,6 +1,6 @@
 ### Creative video
 
-The sibling of `explainer-video` whose scenes the agent authors freely. Its name is not settled yet. Terms it shares with `explainer-video`, such as excerpt, claim and critic, keep their meaning from [Explainer video](explainer-video.md).
+The sibling of `explainer-video` whose scenes the agent authors freely, the `creative-video` skill. Terms it shares with `explainer-video`, such as excerpt, claim and critic, keep their meaning from [Explainer video](explainer-video.md).
 
 **Bed**:
 A recorded sound under a creative video's narration, drawn from the format concept's world (a kitchen's room tone, a studio crowd), kept well under the voice and taken out for the hardest step. It is not music unless the concept names a reason.
