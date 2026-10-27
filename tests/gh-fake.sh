@@ -22,8 +22,9 @@
 #
 # `GH_ROUTES` set to a directory answers each call by its endpoint instead, for
 # a script that makes several different reads: `gh_route <endpoint> <body>`
-# writes the body one endpoint answers (an empty body too), matched with the
-# call's query string ignored, and an endpoint with no route fails the way
+# writes the body one endpoint answers (an empty body too), matched on the whole
+# endpoint first and then with the call's query string ignored, so a route with
+# a query (`...&page=2`) answers apart, and an endpoint with no route fails the way
 # gh's 404 does. A call with `-X`/`--method` other than GET is matched by
 # `<METHOD> <endpoint>`, so a read and a write of one endpoint answer apart.
 # `gh_args` lists each call's arguments, one line per call.
@@ -57,8 +58,9 @@ for s in ${GH_STATUS_SEQ:-200}; do i=$((i + 1)); status=$s; [ "$i" -ge "$n" ] &&
 [ "$status" = none ] && { echo "gh: connection refused" >&2; exit 1; }
 out=${GH_BODY:-ok}
 if [ -n "${GH_ROUTES:-}" ] && [ "$status" -lt 400 ]; then
-  route=${endpoint%%\?*}
+  route=$endpoint
   [ "$method" = GET ] || route="$method $route"
+  [ -f "$GH_ROUTES/${route//\//_}" ] || route=${route%%\?*}
   route=$GH_ROUTES/${route//\//_}
   [ -f "$route" ] || { echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
   out=$(cat "$route")

@@ -123,17 +123,26 @@ if [ "$cmd" = file ]; then
   exit 0
 fi
 
-get "the repository" 'repos/{owner}/{repo}'
-repo=$(jq -er '.full_name | strings' <<<"$got" 2>/dev/null) || tooling "the repository: unreadable answer from gh"
 since=$(jq -nr --argjson d "$days" 'now - $d * 86400 | todate')
-# Search filters by day; the merged_at comparison makes the window exact.
-get "merged PRs" "search/issues?q=repo:$repo+is:pr+is:merged+merged:>=${since%%T*}&per_page=100"
+# The closed pulls, last updated first, a page at a time: a cloud session's
+# proxy refuses every path outside repos/{owner}/{repo}/, search included. A
+# PR is never updated before it merged, so the first page reaching back past
+# the window start is the last one that can hold a PR merged inside it.
+pages='' page=1
+while :; do
+  got=$(gh api "repos/{owner}/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100&page=$page" 2>&1 </dev/null) \
+    || fail "merged PRs: $(tail -1 <<<"$got")"
+  pages+=$got$'\n'
+  jq -e --arg since "$since" 'length == 100 and all(.[]; .updated_at >= $since)' <<<"$got" >/dev/null 2>&1 || break
+  page=$((page + 1))
+done
+# An unmerged PR's null merged_at sorts before every time.
 prs=$(jq -cs --arg since "$since" '
   if length == 0 then error else . end
-  | [.[].items[] | select(.pull_request.merged_at >= $since)
+  | [add[] | select(.merged_at >= $since)
     | {number, title, url: .html_url, author: .user.login, body: (.body // "" | gsub("\r"; ""))}]
   | if all(.[]; (.number | type) == "number" and (.title | type) == "string" and (.author | type) == "string")
-    then sort_by(.number) else error end' <<<"$got" 2>/dev/null) \
+    then sort_by(.number) else error end' <<<"$pages" 2>/dev/null) \
   || tooling "merged PRs: unreadable answer from gh"
 
 # One PR as a candidate, given {pr, comments}, or nothing when it carries no signal.
