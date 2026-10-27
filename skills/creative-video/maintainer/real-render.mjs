@@ -63,7 +63,7 @@ process.on("exit", () => fs.rmSync(work, { recursive: true, force: true }));
 function capture(cmd, args) {
   const r = spawnSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 });
   if (r.status !== 0) {
-    const files = args.filter((a) => path.isAbsolute(a)).map(path.basename);
+    const files = args.filter(path.isAbsolute).map((a) => path.basename(a));
     const said = [r.stdout, r.stderr].map((s) => s?.trim()).filter(Boolean);
     throw new Error(
       `${path.basename(cmd)} ${files.join(" ")}: ${said.join("\n") || r.error?.message}`,

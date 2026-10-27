@@ -57,28 +57,21 @@ test("differing names each frame whose hash differs, and each frame past the sho
   assert.deepEqual(differing([], []), []);
 });
 
-test("with the render rows not installed it exits 2 naming each one", () => {
-  const fx = fixture();
-  const r = exec(script, fx, []);
-  assert.equal(r.code, 2, r.out + r.err);
-  assert.match(r.err, /npm-packages, chrome not installed/);
-});
+// The stamp of the tool row `kind` under the fixture's cache.
+function stamp(fx, kind) {
+  const dir = path.join(fx.tmp, "cache", "creative-video", kind, lockHash);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, ".stamp"), "");
+}
 
-test("with ffmpeg off PATH it exits 2 naming the ffmpeg row alone", () => {
-  const fx = fixture();
-  install(fx);
-  const chrome = path.join(
-    fx.tmp,
-    "cache",
-    "creative-video",
-    "chrome",
-    lockHash,
-  );
-  fs.mkdirSync(chrome, { recursive: true });
-  fs.writeFileSync(path.join(chrome, ".stamp"), "");
+// The script run with PATH holding only stand-ins for `tools`, so what it
+// finds missing is the fixture's doing, not the machine's.
+function run(fx, tools) {
   const bin = path.join(fx.tmp, "bin");
   fs.mkdirSync(bin);
-  const r = spawnSync(process.execPath, [script], {
+  for (const t of tools)
+    fs.writeFileSync(path.join(bin, t), "#!/bin/sh\n", { mode: 0o755 });
+  return spawnSync(process.execPath, [script], {
     env: {
       PATH: bin,
       HOME: path.join(fx.tmp, "home"),
@@ -87,6 +80,29 @@ test("with ffmpeg off PATH it exits 2 naming the ffmpeg row alone", () => {
     encoding: "utf8",
     timeout: 60000,
   });
+}
+
+test("with the render rows not installed it exits 2 naming each one", () => {
+  const r = run(fixture(), ["ffmpeg", "ffprobe"]);
+  assert.equal(r.status, 2, r.stdout + r.stderr);
+  assert.match(r.stderr, /: npm-packages, chrome not installed/);
+});
+
+test("with ffmpeg off PATH it exits 2 naming the ffmpeg row alone", () => {
+  const fx = fixture();
+  stamp(fx, "node");
+  stamp(fx, "chrome");
+  const r = run(fx, []);
   assert.equal(r.status, 2, r.stdout + r.stderr);
   assert.match(r.stderr, /: ffmpeg not installed/);
+});
+
+test("a stage that fails exits 1 naming the stage and what it printed", () => {
+  const fx = fixture();
+  stamp(fx, "node");
+  stamp(fx, "chrome");
+  const r = run(fx, ["ffmpeg", "ffprobe"]);
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.match(r.stderr, /creative-real-render: node timing\.mjs whole: /);
+  assert.match(r.stderr, /gsap\.min\.js/);
 });
