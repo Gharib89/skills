@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.53.3 (2026-10-27)
+
+### Bug Fixes
+
+- **explainer-video**: Every stage refuses a malformed run-folder JSON file by name
+  ([#1003](https://github.com/Gharib89/skills/pull/1003),
+  [`016a2d2`](https://github.com/Gharib89/skills/commit/016a2d2679b1e5e59a7dcdcb51791c8ca66899d2))
+
+
 ## v0.53.2 (2026-10-23)
 
 ### Bug Fixes
