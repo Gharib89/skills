@@ -94,6 +94,26 @@ gives; offsets from an anchor (`- 0.1`, an event 0.5 s after a word) are
 yours. `window.TIMING.scenes[<id>].duration` is the scene's length, for an
 event that lands on its end.
 
+A sound that answers a word is an `<audio>` the scene script creates, since a
+start written in the HTML can come from no word:
+
+```js
+const ding = document.createElement("audio");
+ding.id = "kitchen-ding";
+ding.src = "assets/ding.wav";
+ding.dataset.start = window.TIMING.scenes["kitchen"].start + at("kitchen", "ticket");
+ding.dataset.duration = 0.4;
+document.querySelector('[data-composition-id="kitchen"]').append(ding);
+```
+
+The render plays a created `<audio>` at its `data-start` in seconds of the
+whole video, so add the scene's start (`TIMING.scenes[<id>].start`) to the
+word's time. Give each sound an id no other `<audio>` in the project has: the
+render drops one with no id, or with an id another carries. An `<audio>`
+written in the HTML keeps the `data-start` written there, in scene seconds,
+whatever the script sets later, so the `sounds` gate refuses a script that
+moves one.
+
 Readable text stays out of the caption band, the bottom 220 px: paint behind
 it, never write in it.
 
@@ -140,6 +160,11 @@ failing one indented under it. Each is a hard fail:
 - `script errors`: no scene's script throws (an error HyperFrames reports from
   running it, other than an anchor), each named `<scene>: <message>`, and
   every scene registers its timeline (one missing means its script stopped).
+- `sounds`: every `<audio>` renders where the gates judge it: one written in
+  the HTML keeps the `data-start` written there (a script that moves it is
+  refused, since the render reads the HTML's), and every one has an id, a
+  created one an id no other `<audio>` has (the render drops it otherwise).
+  See [Scenes on word times](#scenes-on-word-times).
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no
   `avoid` word is: said in the voiced narration (not `script.json`, which can
   change after the voice), shown fully drawn in a sample frame.

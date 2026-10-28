@@ -8,12 +8,13 @@ import { HEIGHT, WIDTH } from "../scripts/render/root.mjs";
 
 const RATE = 24000;
 
-// A mono 16-bit 220 Hz WAV exactly `n` frames long, the narration stand-in.
-export function tone(n) {
+// A mono 16-bit WAV of `hz` exactly `n` frames long: at 220 Hz the narration
+// stand-in.
+export function tone(n, hz = 220) {
   const pcm = Buffer.alloc(((n * RATE) / FPS) * 2);
   for (let i = 0; i < pcm.length / 2; i++)
     pcm.writeInt16LE(
-      Math.round(3000 * Math.sin((2 * Math.PI * 220 * i) / RATE)),
+      Math.round(3000 * Math.sin((2 * Math.PI * hz * i) / RATE)),
       i * 2,
     );
   const h = Buffer.alloc(44);

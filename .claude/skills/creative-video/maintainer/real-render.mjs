@@ -2,12 +2,14 @@
 // gates and render stages with real HyperFrames, and prove what the fake backend
 // cannot: the delivered MP4 has exactly the frame grid's frames, three renders
 // match frame for frame, two chapters rendered apart and joined by the chapter
-// join have the sum of their frames and a chapter mark each, and six hard gates
-// (determinism, layout, caption band, anchors, script errors, must and avoid)
-// each fail a fixture built to fail them and pass the same fixture without the
-// defect: layout also on a clip held at the key or the out sample only, script
-// errors beside a timeline no element carries, must and avoid on a word a
-// module script writes. Contrast and reading have no real-render fixture.
+// join have the sum of their frames and a chapter mark each, and seven hard
+// gates (determinism, layout, caption band, anchors, script errors, must and
+// avoid, sounds) each fail a fixture built to fail them and pass the same
+// fixture without the defect: layout also on a clip held at the key or the out
+// sample only, script errors beside a timeline no element carries, must and
+// avoid on a word a module script writes, sounds on a start a script moves,
+// its passing twin a sound the script creates, which renders where the gates
+// placed it. Contrast and reading have no real-render fixture.
 //
 //   node maintainer/real-render.mjs
 //
@@ -288,6 +290,9 @@ function gateOf(gate, [body, js, setup]) {
   ]);
   setup?.(run);
   runStage("render/timing.mjs", run);
+  return judged(gate, run);
+}
+function judged(gate, run) {
   const r = spawnSync(
     process.execPath,
     [path.join(skill, "scripts", "gates", "gates.mjs"), run],
@@ -313,4 +318,72 @@ for (const { gate, name = gate, bad, good, warn } of pairs) {
     `failing twin: ${b.measured}; passing twin: ${g.measured}`,
   );
 }
+
+// The sounds gate on a scene that starts 1.5 s in: a 2 kHz beep written at
+// 0.3 s that the script moves to 1 s fails it, since the render plays 0.3 s;
+// the beep the script creates at the scene's start plus 1 s passes every gate
+// and renders there, its onset read from the MP4 above 1.5 kHz, where the
+// 220 Hz narration is silent.
+function sounded(name, body, js) {
+  const run = runFolder(work, name, [
+    { id: "lead", frames: 45 },
+    {
+      id: "two",
+      frames: 90,
+      html: authored(
+        "two",
+        BOX + body,
+        `tl.to("#b", { x: 300, duration: 0.3 }, 1); ${js}`,
+      ),
+    },
+  ]);
+  fs.mkdirSync(path.join(run, "project", "assets"), { recursive: true });
+  fs.writeFileSync(
+    path.join(run, "project", "assets", "beep.wav"),
+    tone(9, 2000),
+  );
+  runStage("render/timing.mjs", run);
+  return run;
+}
+const moved = judged(
+  "sounds",
+  sounded(
+    "sounds-moved",
+    '<audio id="ding" src="assets/beep.wav" data-start="0.3" data-duration="0.3"></audio>',
+    'document.querySelector("#ding").dataset.start = 1;',
+  ),
+);
+const created = sounded(
+  "sounds-created",
+  "",
+  `const ding = document.createElement("audio");
+    ding.id = "ding";
+    ding.src = "assets/beep.wav";
+    ding.dataset.start = window.TIMING.scenes.two.start + 1;
+    ding.dataset.duration = 0.3;
+    document.querySelector('[data-composition-id="two"]').append(ding);`,
+);
+gatesPass(created);
+const heard = spawnSync(
+  "ffmpeg",
+  [
+    ...["-hide_banner", "-i", runStage("render/render.mjs", created)],
+    ...["-af", "highpass=f=1500,highpass=f=1500,silencedetect=n=-40dB:d=0.05"],
+    ...["-f", "null", "-"],
+  ],
+  { encoding: "utf8" },
+).stderr.match(/silence_end: ([\d.]+)/)?.[1];
+const placed =
+  JSON.parse(fs.readFileSync(path.join(created, "timeline.json"))).scenes[1]
+    .start + 1;
+check(
+  "gate sounds",
+  moved.status === "fail",
+  `failing twin: ${moved.measured}; passing twin: every gate passes`,
+);
+check(
+  "sound onset",
+  heard !== undefined && Math.abs(+heard - placed) <= 1 / FPS,
+  `the created beep starts at ${heard ?? "no"} s in the MP4 vs ${placed} s placed`,
+);
 process.exit(failed ? 1 : 0);

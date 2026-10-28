@@ -1,10 +1,12 @@
 // The gates stage's advisory warnings: reported, never a refusal. Each is a
 // `<name>: <detail>` line, over the plan (each scene's window), the probe's
-// events (each scene's tween windows and sound starts, in its own seconds), the
-// script and, for the clock scan, the project's scene and kit files.
+// events (each scene's tween windows in its own seconds, and its sounds, judged
+// in its own seconds by gates/sounds.mjs), the script and, for the clock scan,
+// the project's scene and kit files.
 import fs from "node:fs";
 import path from "node:path";
 import { sentences } from "../lib/length.mjs";
+import { sceneSeconds } from "./sounds.mjs";
 
 // The one place a gate reads scene code (ADR 0019): a clock or random read may
 // break determinism, which the frames judge, so it is named, never refused.
@@ -44,7 +46,8 @@ function effectRate(sounds) {
 
 // A sound more than 0.15 s from its scene's nearest tween start.
 function effectOnset({ sc }, { tweens, sounds }) {
-  return sounds.flatMap((s) => {
+  return sounds.flatMap((sound) => {
+    const s = sceneSeconds(sc, sound);
     const gap = Math.min(...tweens.map(([from]) => Math.abs(s - from)));
     return tweens.length && gap > 0.15 + 1e-6
       ? [
@@ -96,7 +99,7 @@ const clockReads = (proj) =>
 export function warnings({ plan, events, script, total, proj }) {
   const eventsOf = (id) => events[id] ?? { tweens: [], sounds: [] };
   const sounds = plan.flatMap((p) =>
-    eventsOf(p.sc.id).sounds.map((s) => p.sc.start + s),
+    eventsOf(p.sc.id).sounds.map((s) => p.sc.start + sceneSeconds(p.sc, s)),
   );
   const out = effectRate(sounds);
   let starts = 0;
