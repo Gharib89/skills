@@ -12,8 +12,8 @@ import { FPS, written } from "./grid.mjs";
 // the scenes' `grid` (render/grid.mjs's gridScenes). `fail(why)` stops the
 // run on a plan that leaves a scene out, names one twice or not at all, runs
 // out of scene order (which also covers a chapter that is not contiguous), has
-// a blank title or no scenes, or, with two or more chapters, runs under 2 or
-// over 6 minutes within 10 percent. One chapter has no length rule: it is a
+// a blank title or no scenes, or runs over 6 minutes within 10 percent, or,
+// with two or more chapters, under 2. A lone chapter has no minimum: it is a
 // video that is not long.
 export function planChapters(chapters, ids, grid, fail) {
   const seen = new Set();
@@ -42,7 +42,7 @@ export function planChapters(chapters, ids, grid, fail) {
     const [from, to] = [first.start, last.start + last.frames];
     const seconds = (to - from) / FPS;
     const [min, max] = CHAPTER_SECONDS;
-    if (chapters.length > 1 && (seconds < min || seconds > max))
+    if ((chapters.length > 1 && seconds < min) || seconds > max)
       fail(
         `chapter ${i + 1} "${c.title}" is ${seconds.toFixed(2)} s, outside 2 to 6 minutes within 10% (${min} to ${max} s)`,
       );

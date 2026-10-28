@@ -1,19 +1,21 @@
 // The render estimate (lib/estimate.mjs): the rates table's refusals, the
-// estimate and budget arithmetic, the m:ss clock, and the calibrator's rate
-// math.
+// estimate and budget arithmetic, the m:ss formatter (lib/length.mjs), and the
+// calibrator's rate math (maintainer/render-rates-lib.mjs).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
-  BUDGET,
-  clock,
-  estimate,
-  loadRates,
   median,
   ratesFrom,
+} from "../../skills/creative-video/maintainer/render-rates-lib.mjs";
+import {
+  BUDGET,
+  estimate,
+  loadRates,
 } from "../../skills/creative-video/scripts/lib/estimate.mjs";
+import { mmss } from "../../skills/creative-video/scripts/lib/length.mjs";
 
 function table(t, body) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "creative-rates-"));
@@ -65,6 +67,18 @@ test("a table that is missing, not JSON or of the wrong shape is refused, naming
   assert.deepEqual(loadRates(table(t, ok)), ok);
 });
 
+// A HyperFrames bump fails here until maintainer/calibrate-render-rates.mjs
+// measures the new pin, so the shipped estimate never reads another engine's
+// rates.
+test("the shipped table was measured on the HyperFrames version the skill pins", () => {
+  const skill = path.join(import.meta.dirname, "../../skills/creative-video");
+  const read = (f) => JSON.parse(fs.readFileSync(path.join(skill, f), "utf8"));
+  assert.equal(
+    read("render-rates.json").hyperframes,
+    read("package.json").dependencies.hyperframes,
+  );
+});
+
 test("the estimate is the chapters to render at the render rate plus the whole video at the audio rate, against 5 times the video", () => {
   const rates = { render: 4, audio: 0.5 };
   assert.deepEqual(estimate(120, 240, rates), {
@@ -75,12 +89,12 @@ test("the estimate is the chapters to render at the render rate plus the whole v
   assert.deepEqual(estimate(0, 240, rates), { seconds: 120, budget: 1200 });
 });
 
-test("clock writes whole seconds as m:ss", () => {
-  assert.equal(clock(0), "0:00");
-  assert.equal(clock(59.4), "0:59");
-  assert.equal(clock(59.5), "1:00");
-  assert.equal(clock(605), "10:05");
-  assert.equal(clock(3725), "62:05");
+test("mmss writes whole seconds as m:ss", () => {
+  assert.equal(mmss(0), "0:00");
+  assert.equal(mmss(59.4), "0:59");
+  assert.equal(mmss(59.5), "1:00");
+  assert.equal(mmss(605), "10:05");
+  assert.equal(mmss(3725), "62:05");
 });
 
 test("the rates are the cold median less the cached median over the video, the audio the cached median over it, and a negative delta is zero", () => {

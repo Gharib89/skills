@@ -6,10 +6,9 @@
 // on the same clock, a captions.html of its shifted cues, and symlinks to the
 // project's scene files, kit/ and assets/, so a scene's own script runs as it
 // does in the whole.
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { walk } from "../gates/inputs.mjs";
+import { hashFiles, walk } from "../gates/inputs.mjs";
 import { readJson } from "../lib/json.mjs";
 import { lockHash } from "../lib/tools.mjs";
 import { FPS, written } from "./grid.mjs";
@@ -85,18 +84,14 @@ export function writeChapter(run, { timeline, voice }, n) {
 
 // The 16 hex digits of the hash over the files a chapter folder loads.
 function chapterKey(dir) {
-  const h = crypto.createHash("sha256").update(lockHash);
   const files = walk(dir)
-    .map((f) => path.relative(dir, f))
-    .filter(
-      (f) =>
-        f.split(path.sep)[0] !== ".hyperframes" &&
-        f !== path.join("assets", "narration.wav"),
-    )
+    .filter((f) => {
+      const rel = path.relative(dir, f);
+      return (
+        rel.split(path.sep)[0] !== ".hyperframes" &&
+        rel !== path.join("assets", "narration.wav")
+      );
+    })
     .sort();
-  for (const f of files)
-    h.update(f)
-      .update("\0")
-      .update(fs.readFileSync(path.join(dir, f)));
-  return h.digest("hex").slice(0, 16);
+  return hashFiles(dir, files, lockHash);
 }

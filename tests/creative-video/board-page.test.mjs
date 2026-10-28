@@ -134,18 +134,26 @@ test("the look can be approved only while nothing is commented or picked", () =>
   assert.equal(B.answersDoc(S).approve, false);
 });
 
-test("a version answered in the database is approved only by an approving document of that version", () => {
+test("a chapter is approved by an approving document in the database, and not by one that approves nothing", () => {
   const S = B.newState(clone(doc));
   assert.equal(B.statusOf(S, 1), "awaiting you");
   B.setAnswers(S, [{ version: 1, approve: false }]);
-  assert.equal(B.statusOf(S, 1), "awaiting you");
-  B.setAnswers(S, [{ version: 0, approve: true }]);
   assert.equal(B.statusOf(S, 1), "awaiting you");
   B.setAnswers(S, [{ version: 1, approve: true }]);
   assert.equal(B.statusOf(S, 1), "approved");
   const v = B.view(S);
   assert.match(v, /approved/);
   assert.doesNotMatch(v, /awaiting you/);
+});
+
+test("an approval of an earlier board still reads approved on a later board", () => {
+  const later = clone(doc);
+  later.version = 3;
+  const S = B.newState(later);
+  B.setAnswers(S, [{ version: 1, approve: true }]);
+  assert.equal(B.statusOf(S, 1), "approved");
+  B.setAnswers(S, [{ version: 2, approve: false }]);
+  assert.equal(B.statusOf(S, 1), "awaiting you");
 });
 
 test("a local page reads approved once its approval is asked for, and not after a comment", () => {
@@ -234,7 +242,7 @@ test("a video in chapters has a tab per chapter with its status, cards under the
   chaptered.chapters = [
     { n: 1, title: "The loop", status: "awaiting" },
     { n: 2, title: "The wrap", status: "authoring" },
-    { n: 3, title: "The last", status: "awaiting" },
+    { n: 3, title: "The last", status: "authoring" },
   ];
   chaptered.plan = chaptered.chapters.map((c) => ({
     chapter: c.n,

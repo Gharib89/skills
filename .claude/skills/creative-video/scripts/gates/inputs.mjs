@@ -4,7 +4,14 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-const hex = (h) => h.digest("hex").slice(0, 16);
+// The 16 hex digits of a SHA-256 over `files` (absolute paths) in order, each as
+// its path relative to `base`, a NUL and its bytes, after `seed`.
+export function hashFiles(base, files, seed = "") {
+  const h = crypto.createHash("sha256").update(seed);
+  for (const f of files)
+    h.update(path.relative(base, f)).update("\0").update(fs.readFileSync(f));
+  return h.digest("hex").slice(0, 16);
+}
 
 // The files under `dir`, through symlinks to files and folders, since the
 // project loads what a link points at; a folder seen before is walked once, so
@@ -26,7 +33,6 @@ export function walk(dir, seen = new Set()) {
 // project but the CLI's own state. A render of other inputs than the gates
 // passed is refused.
 export function inputsHash(run) {
-  const h = crypto.createHash("sha256");
   const files = [
     "timeline.json",
     "script.json",
@@ -44,7 +50,5 @@ export function inputsHash(run) {
       )
       .sort(),
   );
-  for (const f of files)
-    h.update(path.relative(run, f)).update("\0").update(fs.readFileSync(f));
-  return hex(h);
+  return hashFiles(run, files);
 }

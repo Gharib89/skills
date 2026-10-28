@@ -91,7 +91,7 @@ test("a blank title or a chapter with no scenes is refused", () => {
   );
 });
 
-test("a chapter of 108 s passes and one frame less is refused, the closing hold counted on the last chapter, naming the chapter and its seconds; a single chapter has no length rule", () => {
+test("a chapter of 108 s passes and one frame less is refused, the closing hold counted on the last chapter, naming the chapter and its seconds; a single chapter has no minimum", () => {
   // Chapter 2 is c and d and the 30 frame hold: 1800 + d + 30 frames.
   const lastScene = (d) =>
     chaptered(four([1800, 1800, 1800, d]), { chapters: PLAN });
@@ -107,6 +107,13 @@ test("a chapter of 108 s passes and one frame less is refused, the closing hold 
   });
   assert.equal(exec(timing, one).code, 0);
   assert.equal(timeline(one).chapters.length, 1);
+});
+
+test("a one-chapter plan over 6 minutes is refused, the 6 minute cap applying to every chapter", () => {
+  const fx = chaptered(four([5400, 5400, 5400, 5400]), {
+    chapters: [chapter("All", "a", "b", "c", "d")],
+  });
+  refused(fx, /^timing: chapter 1 "All" is 721\.00 s, outside 2 to 6/);
 });
 
 test("a chapter of 396 s passes and one frame more is refused", () => {

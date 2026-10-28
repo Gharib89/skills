@@ -46,7 +46,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { maybeJson, readJson } from "../lib/json.mjs";
-import { voiceHash, writeIgnore } from "../lib/runfolder.mjs";
+import { mmss } from "../lib/length.mjs";
+import { readTimed, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend, skill } from "../lib/tools.mjs";
 import { sampleTimes } from "../gates/samples.mjs";
@@ -88,8 +89,6 @@ const readBoard = (n) =>
 
 const sha = (bytes) =>
   crypto.createHash("sha256").update(bytes).digest("hex").slice(0, 16);
-const mmss = (s) =>
-  `${Math.floor(Math.round(s) / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
 
 // Every file under kit/, nested ones too: each one's name and bytes, sorted.
 function kitHash(proj) {
@@ -118,21 +117,6 @@ function assetHashes(proj) {
       )
       .map((f) => [f, sha(fs.readFileSync(path.join(dir, f)))]),
   );
-}
-
-// timeline.json and voice.json, checked as lib/runfolder.mjs's readTimeline
-// checks them but for the scene files, which the board judges itself: a later
-// chapter may still be being authored.
-function readTimed() {
-  if (!fs.existsSync(path.join(run, "timeline.json")))
-    fail("timeline.json is missing: run render/timing.mjs first");
-  const timeline = readJson(run, "timeline.json");
-  const voice = readJson(run, "voice.json");
-  if (timeline.voice !== voiceHash(run))
-    fail(
-      "timeline.json is from an older voice.json: run render/timing.mjs again",
-    );
-  return { timeline, voice };
 }
 
 // storyboard.json held to what the stage relies on beyond its shape; `shown`
@@ -246,7 +230,7 @@ ${host(id, 0, 2, 1, "graphics")}
 }
 
 async function build() {
-  const { timeline, voice } = readTimed();
+  const { timeline, voice } = readTimed(run, fail);
   const proj = path.join(path.resolve(run), "project");
   const has = (id) =>
     fs.existsSync(path.join(proj, "compositions", `${id}.html`));
@@ -370,10 +354,7 @@ async function build() {
     });
 
   // A chapter some of whose scene files are missing is being authored.
-  const status = (c) => {
-    const have = c.scenes.filter(has).length;
-    return have && have < c.scenes.length ? "authoring" : "awaiting";
-  };
+  const status = (c) => (c.scenes.every(has) ? "awaiting" : "authoring");
   const doc = {
     version: n,
     title: sb.title,

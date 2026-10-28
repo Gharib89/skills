@@ -39,7 +39,7 @@ nothing outside this table, and every field below is in every board.
 | `board.chapters` | array | One entry per chapter of the plan (`script.json`'s `chapters`, `timeline.json`'s); a video with none has one, titled as the video. |
 | `board.chapters[].n` | number | The chapter's number, from 1. |
 | `board.chapters[].title` | string | The chapter's title. |
-| `board.chapters[].status` | string | `awaiting` when every scene file of the chapter exists (until the look is approved) or none does yet (a later chapter not started: it has no cards); `authoring` when some of its scene files exist and some do not. Chapter 1's files all exist, so it is never `authoring`. The page shows `being authored` for `authoring` and for a chapter with no card, and `approved` once the database holds an approving answers document of this version, or, on a local page, once the person asks for the approval. |
+| `board.chapters[].status` | string | `awaiting` when every scene file of the chapter exists, `authoring` when any is missing (chapter 1's all exist, so it is never `authoring`). The page shows `being authored` for `authoring`, and `approved` once the database holds an approving answers document of any board version, or, on a local page, once the person asks for the approval. |
 | `board.plan` | array | The chapter plan, one row per chapter. |
 | `board.plan[].chapter` | number | The row's chapter. |
 | `board.plan[].title` | string | The chapter's title. |

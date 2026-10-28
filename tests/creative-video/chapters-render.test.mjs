@@ -10,10 +10,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { authored } from "../../skills/creative-video/maintainer/real-render-lib.mjs";
 import {
-  clock,
   estimate,
   loadRates,
 } from "../../skills/creative-video/scripts/lib/estimate.mjs";
+import { mmss } from "../../skills/creative-video/scripts/lib/length.mjs";
 import { chapter, chaptered } from "./chapters-lib.mjs";
 import { runGates, supported } from "./gates-lib.mjs";
 import {
@@ -206,7 +206,7 @@ test("the estimate is printed before any render, from the chapters not cached an
   const tl = timeline(fx);
   const line = (k) => {
     const { seconds, budget } = estimate(k ? tl.total : 0, tl.total, rates);
-    return `render: ${k} of 2 chapter(s) to render, estimate ${clock(seconds)}, budget ${clock(budget)}\n`;
+    return `render: ${k} of 2 chapter(s) to render, estimate ${mmss(seconds)}, budget ${mmss(budget)}\n`;
   };
   const r = exec(render, fx);
   assert.equal(r.code, 0, r.out + r.err);

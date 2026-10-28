@@ -9,7 +9,8 @@ the chapter plan as a table, with no stop of its own; and on chapter 1's board
 the three directions as one frame each. In a video in chapters the person
 approves on chapter 1's board alone; a later chapter shows in the plan and its
 tab while its author works, and its cards appear on the board built once it
-replies. The page is a claude.ai artifact, or a
+replies. A later chapter's board needs no new approval, and an approval
+submitted on it changes nothing. The page is a claude.ai artifact, or a
 local file when the session has no artifact tools.
 [board/board-data.md](../board/board-data.md) holds the board and answers
 documents. Each version of the storyboard is a **board**, numbered from 1.
@@ -73,7 +74,9 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
    board is posted, or once the gates begin.
 6. **Act on it.** `board apply` prints what the answers ask; act on every line
    it prints:
-   - `board: approved`: go on to SKILL.md step 12.
+   - `board: approved`: go on to SKILL.md step 12, unless this is a later
+     chapter's board (SKILL.md step 11): then change nothing and wait for that
+     step's replies.
    - `board: these answers approve nothing and comment on nothing`: tell the
      person, and end the turn with the board still posted.
    - `board: direction <id>`: set `picked` to it in `storyboard.json` and write

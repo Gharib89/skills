@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { authored } from "../../skills/creative-video/maintainer/real-render-lib.mjs";
 import { chapter, chaptered } from "./chapters-lib.mjs";
 import {
+  compose,
   gateLine,
   only,
   record,
@@ -17,8 +18,8 @@ import {
 import { exec, timing } from "./timing-lib.mjs";
 
 // Four scenes in two chapters; `a` and `c` open them and draw `drawn.a` and
-// `drawn.c`, the others one line.
-function run(titles, drawn) {
+// `drawn.c`, the others one line; `over` is over.html's markup, if any.
+function run(titles, drawn, over) {
   const html = (id) => authored(id, `<p>${drawn[id] ?? `${id} line`}</p>`);
   const fx = chaptered(
     ["a", "b", "c", "d"].map((id) => ({ id, frames: 1800, html: html(id) })),
@@ -28,6 +29,7 @@ function run(titles, drawn) {
   );
   supported(fx);
   assert.equal(exec(timing, fx).code, 0);
+  if (over) compose(fx, "over", over);
   return runGates(fx);
 }
 const FLOOR = "each chapter's first frame draws every word of its title";
@@ -62,6 +64,28 @@ test("a title drawn at opacity 0 on the first frame is not drawn", () => {
     gateLine(r, "chapter titles"),
     /first: 0\.00 s a: chapter 1 "Hidden" is not drawn on its first frame, missing hidden/,
   );
+});
+
+const OPENERS = { a: "Why", c: "How" };
+const BED = '<audio id="bed" data-sound="0"></audio>';
+
+test("an over.html that draws an element fails the sound only gate in a video in chapters, naming the element", () => {
+  const r = run(["Why", "How"], OPENERS, `<p>a drawn bed</p>${BED}`);
+  assert.equal(r.code, 1, r.out + r.err);
+  only(r, "sound only");
+  assert.match(
+    gateLine(r, "sound only"),
+    /^fail: 1 finding\(s\), first: over\.html draws <p>/,
+  );
+});
+
+test("an over.html of only <audio> passes the sound only gate, and a video without chapters has no such gate", () => {
+  const r = run(["Why", "How"], OPENERS, BED);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(gateLine(r, "sound only"), /^pass: 0 finding\(s\)/);
+  const fx = timed();
+  compose(fx, "over", "<p>a drawn bed</p>");
+  assert.equal(gateLine(runGates(fx), "sound only"), undefined);
 });
 
 test("a video without chapters has no chapter titles gate", () => {

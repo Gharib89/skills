@@ -29,7 +29,6 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { ratesFrom } from "../scripts/lib/estimate.mjs";
 import { stage } from "../scripts/lib/stage.mjs";
 import { skill } from "../scripts/lib/tools.mjs";
 import { FPS } from "../scripts/render/grid.mjs";
@@ -40,6 +39,7 @@ import {
   runFolder,
   runStage,
 } from "./real-render-lib.mjs";
+import { ratesFrom } from "./render-rates-lib.mjs";
 
 const NAME = "calibrate-render";
 stage(NAME);

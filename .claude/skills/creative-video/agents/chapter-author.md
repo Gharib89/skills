@@ -44,11 +44,14 @@ yours: when one needs a change, say so in your reply instead.
 ## Look
 
 Run `node {skill}/scripts/hf.mjs {run} check --json` until it reports no error
-in your scenes, then `node {skill}/scripts/hf.mjs {run} snapshot --range
-<start>,<end> --json` over your chapter's time (`{run}/timeline.json`'s
-`chapters` entry for `{chapter}`), read each frame, and fix what a stranger
-would not understand, any default from the `hyperframes` BANNED list, and any
-text in the bottom 220 px.
+in your scenes. Then take frames over your chapter's time
+(`{run}/timeline.json`'s `chapters` entry for `{chapter}`): `node
+{skill}/scripts/hf.mjs {run} snapshot --range <start>,<end> --frames <n>
+--json` with `<n>` at least three a scene (the default is five frames for the
+whole chapter, too few to reach every scene), and `node {skill}/scripts/hf.mjs
+{run} snapshot --at <start> --no-end --json` for the title's frame. Read each
+frame, and fix what a stranger would not understand, any default from the
+`hyperframes` BANNED list, and any text in the bottom 220 px.
 
 ## Reply
 

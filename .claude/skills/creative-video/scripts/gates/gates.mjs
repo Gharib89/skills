@@ -17,8 +17,9 @@
 // claims check passed on the voiced narration) and the critic
 // (gates/critic.mjs), pending until each scene's verdict is written. Length,
 // loudness and voice QC are the voice and render stages' own. A video in
-// chapters adds a twelfth gate, chapter titles: each chapter's first frame
-// draws every word of its title. Advisory warnings
+// chapters adds two gates: chapter titles (each chapter's first frame draws
+// every word of its title) and sound only (over.html draws no element, since a
+// chapter renders without it). Advisory warnings
 // (gates/warnings.mjs) never change the exit: effect rate, effect onset, scene
 // length, sentences, pacing and clock.
 // stdout: `gate <name>: pass|fail|pending: <measured> vs <floor>` per gate (the
@@ -328,6 +329,30 @@ const titles = (timeline.chapters ?? []).flatMap((ch) => {
     : [];
 });
 
+// Sound only, in a video in chapters: a chapter renders without over.html (its
+// sound plays in the one mix), so a drawn element in it never reaches the video.
+// Scripts, styles and <audio> are no drawing; the file's own root host is none.
+const overFile = path.join(proj, "compositions", "over.html");
+const drawnByOver =
+  timeline.chapters && fs.existsSync(overFile)
+    ? [
+        ...fs
+          .readFileSync(overFile, "utf8")
+          .replace(
+            /<!--[\s\S]*?-->|<(script|style|audio)\b[\s\S]*?<\/\1>/gi,
+            "",
+          )
+          .matchAll(/<(?!template\b)([a-z][\w-]*)\b([^>]*)>/gi),
+      ]
+        .filter((m) => !m[2].includes("data-composition-id"))
+        .map((m) => `<${m[1]}>`)
+    : [];
+const overDrawing = drawnByOver.length
+  ? [
+      `over.html draws ${[...new Set(drawnByOver)].join(", ")}: a chapter renders without it, so move the drawing into a scene file`,
+    ]
+  : [];
+
 // Support: the claims check (source/claims.mjs) passed on the narration and the
 // source pack as they stand, so every sentence stating a fact cites excerpts
 // that support it, and that narration is the one voiced, so the render speaks
@@ -384,6 +409,7 @@ const judged = {
       titles,
       "each chapter's first frame draws every word of its title",
     ],
+    "sound only": [overDrawing, "over.html holds <audio> and no drawn element"],
   }),
   support: [support, "the claims check passed on this script and source pack"],
 };

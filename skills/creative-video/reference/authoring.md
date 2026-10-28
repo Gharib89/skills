@@ -93,9 +93,9 @@ before any scene:
 
 Every scene sits in one chapter, the chapters in scene order. Timing refuses a
 brief longer than six minutes with no plan, a scene in no chapter or in two,
-and, with two chapters or more, a chapter shorter than about two minutes or
-longer than about six, as voiced. It writes each chapter's start and end into
-`timeline.json`.
+a chapter longer than about six minutes, as voiced (a lone chapter included),
+and, with two chapters or more, one shorter than about two. It writes each
+chapter's start and end into `timeline.json`.
 
 A chapter opens on a hard cut into a scene you author freely, whose very first
 frame draws the chapter's title in full: the delivered video's chapter mark
@@ -222,6 +222,8 @@ failing one indented under it. Each is a hard fail:
   scores.
 - `chapter titles` (a video in chapters): every word of each chapter's title
   is drawn on that chapter's first frame.
+- `sound only` (a video in chapters): `over.html` holds `<audio>` and draws no
+  element, since a chapter renders without it.
 
 Warnings print as `warn <name>: <detail>`, are recorded in `gates.json` and
 never change the exit: `effect rate` (over 24 sounds in a minute), `effect
@@ -277,12 +279,13 @@ loudness:` line with both values, `delivered: <path of out/<slug>.mp4>`, then
 `render: <slug>.mp4 <seconds> s, <n> scene(s)`.
 
 A video in chapters renders each chapter on its own, one at a time, video
-only, and keeps each part under `.cache/render/` by everything that chapter
-loads: its scenes, captions, the kit and the assets. A later render renders
-only the chapters whose part changed, so a fix to one scene costs one chapter,
-and a change to the kit or an asset costs them all. The narration and every
-sound are mixed once over the whole video, the parts joined by stream copy at
-the hard cuts, and the audio encoded once with a chapter mark at each
+only, and keeps each chapter video under `.cache/render/` by everything that
+chapter loads: its scenes, captions, the kit and the assets. A later render
+renders only the chapters whose video changed, so a fix to one scene costs one
+chapter, and a change to the kit or an asset costs them all. `over.html` is no
+chapter's input: a change to it changes only the mix. The narration and every
+sound are mixed once over the whole video, the chapter videos joined by stream
+copy at the hard cuts, and the audio encoded once with a chapter mark at each
 chapter's first frame; a `delivery chapters` line checks the marks. Before it
 renders it prints `render: <k> of <n> chapter(s) to render, estimate <m:ss>,
 budget <m:ss>`, the estimate from `render-rates.json`, the budget 5 minutes a

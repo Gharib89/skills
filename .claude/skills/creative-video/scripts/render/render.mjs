@@ -41,8 +41,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { captionFindings, cuesOf } from "../gates/captions.mjs";
 import { inputsHash } from "../gates/inputs.mjs";
-import { clock, estimate, loadRates } from "../lib/estimate.mjs";
+import { estimate, loadRates } from "../lib/estimate.mjs";
 import { maybeJson } from "../lib/json.mjs";
+import { mmss } from "../lib/length.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend, lockHash } from "../lib/tools.mjs";
@@ -103,7 +104,7 @@ function chapterParts() {
     rates,
   );
   console.log(
-    `render: ${todo.length} of ${parts.length} chapter(s) to render, estimate ${clock(seconds)}, budget ${clock(budget)}`,
+    `render: ${todo.length} of ${parts.length} chapter(s) to render, estimate ${mmss(seconds)}, budget ${mmss(budget)}`,
   );
   return parts;
 }

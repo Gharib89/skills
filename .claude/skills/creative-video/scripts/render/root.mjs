@@ -7,7 +7,7 @@
 // A video in chapters has chapter 1's scene files before the rest, and a host
 // naming a file that is not there breaks the CLI, so the root hosts only the
 // files that exist: the gates and the render refuse a missing file themselves.
-// rootHtml is the shape a chapter's root (render/chapters.mjs) shares.
+// rootHtml is the shape a chapter's root (render/chapter-project.mjs) shares.
 import fs from "node:fs";
 import path from "node:path";
 import { readJson } from "../lib/json.mjs";

@@ -58,7 +58,7 @@ const GROWING = [
   { title: "Two", focus: "second", scenes: ["context", "recap"] },
 ];
 
-test("two chapters with only the first authored: both listed, cards for the first alone, the later one awaiting", () => {
+test("two chapters with only the first authored: both listed, cards for the first alone, the later one authoring", () => {
   const fx = chaptered(TWO, ["recap"]);
   const r = build(fx);
   ok(r);
@@ -66,7 +66,7 @@ test("two chapters with only the first authored: both listed, cards for the firs
   const tl = timeline(fx);
   assert.deepEqual(doc.chapters, [
     { n: 1, title: "The loop", status: "awaiting" },
-    { n: 2, title: "The wrap", status: "awaiting" },
+    { n: 2, title: "The wrap", status: "authoring" },
   ]);
   assert.deepEqual(
     doc.scenes.map((s) => [s.id, s.chapter]),
@@ -79,7 +79,7 @@ test("two chapters with only the first authored: both listed, cards for the firs
     doc.plan.map((p) => [p.chapter, p.title, p.focus, p.status]),
     [
       [1, "The loop", "what a loop is", "awaiting"],
-      [2, "The wrap", "how it ends", "awaiting"],
+      [2, "The wrap", "how it ends", "authoring"],
     ],
   );
   assert.equal(doc.length, mmss(tl.total));
@@ -96,7 +96,7 @@ test("two chapters with only the first authored: both listed, cards for the firs
   assert.match(r.out, /\(2 scenes, \d+ stills, 0 changed\)/);
 });
 
-test("three chapters with only the first authored: every chapter in the plan, one card, the later two awaiting", () => {
+test("three chapters with only the first authored: every chapter in the plan, one card, the later two authoring", () => {
   const fx = chaptered(THREE, ["context", "recap"]);
   ok(build(fx));
   const doc = built(fx);
@@ -104,8 +104,8 @@ test("three chapters with only the first authored: every chapter in the plan, on
     doc.chapters.map((c) => [c.n, c.title, c.status]),
     [
       [1, "One", "awaiting"],
-      [2, "Two", "awaiting"],
-      [3, "Three", "awaiting"],
+      [2, "Two", "authoring"],
+      [3, "Three", "authoring"],
     ],
   );
   assert.deepEqual(

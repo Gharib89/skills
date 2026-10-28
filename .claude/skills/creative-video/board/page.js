@@ -38,19 +38,14 @@ function setAnswers(S, docs) {
   S.answers = docs;
 }
 const cardsOf = (S, n) => S.board.scenes.filter((c) => c.chapter === n);
-// A chapter with no card yet, or only some, is still being authored: there is nothing in it to approve.
-// Otherwise it is approved once an approving answers document of the latest version is in the database,
-// or, on a local page, which has no database, once its approval is asked for.
+// A chapter the board marks authoring (a scene file missing) is still being authored: there is nothing in
+// it to approve. Otherwise it is approved once any approving answers document, of any board version, is in
+// the database (a later board's chapters need no new approval), or, on a local page, which has no database,
+// once its approval is asked for.
 function statusOf(S, n) {
   const c = S.board.chapters.find((x) => x.n === n);
-  if (c.status === "authoring" || !cardsOf(S, n).length)
-    return "being authored";
-  if (
-    S.answers.some(
-      (a) => a.version === S.board.version && a.approve === true,
-    ) ||
-    (S.local && approving(S))
-  )
+  if (c.status === "authoring") return "being authored";
+  if (S.answers.some((a) => a.approve === true) || (S.local && approving(S)))
     return "approved";
   return c.status === "awaiting" ? "awaiting you" : c.status;
 }
