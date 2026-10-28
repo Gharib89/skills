@@ -146,12 +146,14 @@ export const SHAPES = {
   "voice.json": obj({
     narrator: text,
     language: text,
+    voices: map(obj({ narrator: text })),
     scenes: list(
       obj({
         id: text,
         audio: text,
         duration: number,
         words,
+        roles: list(text),
         qc: obj({ failures: list(text) }),
       }),
     ),
