@@ -67,6 +67,19 @@ test("a cited sentence its excerpts do not support, or an uncited one stating a 
   }
 });
 
+test("several failing sentences print on one support line, joined in narration order", () => {
+  const r = runCheck(
+    run(cited(SCENES, CITES), {
+      "recap 1": "unmarked",
+      "hook 1": "unsupported",
+    }),
+  );
+  assert.equal(
+    gate(r, "support"),
+    "fail: hook 1 unsupported: fixture; recap 1 unmarked: fixture",
+  );
+});
+
 test("a red support verdict is fix attempt 1, again 1, a new failing set 2, then stop", () => {
   const scenes = cited(SCENES, CITES);
   const fx = run(scenes, { "hook 1": "unsupported" });
