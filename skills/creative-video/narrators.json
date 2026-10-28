@@ -528,127 +528,177 @@
     {
       "id": "af_alloy",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 16.81,
+      "pause": 0.55
     },
     {
       "id": "af_aoede",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 15.4,
+      "pause": 0.73
     },
     {
       "id": "af_bella",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 15.02,
+      "pause": 0.93
     },
     {
       "id": "af_jessica",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 17.81,
+      "pause": 0.6
     },
     {
       "id": "af_kore",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 15.59,
+      "pause": 0.6
     },
     {
       "id": "af_nicole",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 10.31,
+      "pause": 1.45
     },
     {
       "id": "af_nova",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 17.26,
+      "pause": 0.6
     },
     {
       "id": "af_river",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 17.91,
+      "pause": 0.53
     },
     {
       "id": "af_sarah",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 15.56,
+      "pause": 0.85
     },
     {
       "id": "af_sky",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 16.18,
+      "pause": 0.73
     },
     {
       "id": "am_adam",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 15.83,
+      "pause": 0.74
     },
     {
       "id": "am_echo",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 16.94,
+      "pause": 0.62
     },
     {
       "id": "am_eric",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 18.07,
+      "pause": 0.59
     },
     {
       "id": "am_liam",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 17.39,
+      "pause": 0.62
     },
     {
       "id": "am_michael",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 13.59,
+      "pause": 0.83
     },
     {
       "id": "am_onyx",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 17.08,
+      "pause": 0.59
     },
     {
       "id": "am_puck",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 16.48,
+      "pause": 0.61
     },
     {
       "id": "am_santa",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 14.88,
+      "pause": 0.59
     },
     {
       "id": "bf_alice",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 15.5,
+      "pause": 0.56
     },
     {
       "id": "bf_isabella",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 16.46,
+      "pause": 0.77
     },
     {
       "id": "bf_lily",
       "gender": "female",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 15.74,
+      "pause": 0.6
     },
     {
       "id": "bm_daniel",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 17.04,
+      "pause": 0.55
     },
     {
       "id": "bm_fable",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 17.81,
+      "pause": 0.69
     },
     {
       "id": "bm_george",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 14.02,
+      "pause": 0.68
     },
     {
       "id": "bm_lewis",
       "gender": "male",
-      "backend": "kokoro"
+      "backend": "kokoro",
+      "rate": 14.41,
+      "pause": 0.83
     }
   ]
 }
