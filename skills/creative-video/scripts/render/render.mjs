@@ -15,13 +15,14 @@
 // check empties out/ and delivers nothing.
 // A timeline with `chapters` renders in chapters instead (render/chapter-
 // project.mjs): each chapter, one at a time, from its own folder
-// <run>/.cache/render/chapter-<n>/ to the part chapter-<n>-<key>.mp4, <key>
-// the hash of everything that folder loads, so a chapter unchanged since its
-// part was rendered is not rendered again and a changed one's stale part is
-// removed. The whole project is rendered once more at 1 fps, draft quality
-// (its audio is the 30 fps render's, bit for bit, measured on HyperFrames
+// <run>/.cache/render/chapter-<n>/ to the chapter render
+// chapter-<n>-<key>.mp4, <key> the hash of everything that folder loads, so a
+// chapter unchanged since it was rendered is not rendered again and a changed
+// one's stale render is removed. The whole project is rendered once more at
+// 1 fps, draft quality (its audio is the 30 fps render's, bit for bit, measured
+// on HyperFrames
 // 0.8.206) to audio.mp4, its audio mastered to the targets above into audio.wav
-// the length of the timeline, and the parts and that mix join into
+// the length of the timeline, and the chapter renders and that mix join into
 // out/<slug>.mp4 with a chapter mark each (render/chapters.mjs). The checks add
 // `chapters`. Before any chapter renders it prints its estimate from
 // render-rates.json; `--estimate` prints that line and exits 0, rendering
@@ -81,9 +82,9 @@ const chapters = timeline.chapters;
 if (estimateOnly && !chapters)
   fail("--estimate is for a video in chapters: this timeline has none");
 
-// A video in chapters: each chapter's folder written and its part's path, the
-// part cached when it is there, and the estimate line printed, whose rendered
-// seconds are the chapters not cached.
+// A video in chapters: each chapter's folder written and its render's path,
+// the render cached when it is there, and the estimate line printed, whose
+// rendered seconds are the chapters not cached.
 function chapterParts() {
   fs.mkdirSync(cache, { recursive: true });
   const parts = chapters.map(({ n }) => {
@@ -148,8 +149,8 @@ const marks = chapters?.map(({ start, end, title }) => ({
   title,
 }));
 if (parts) {
-  // A part is a render of exactly the folder its key hashes: another key's, and
-  // a half-written one a failed render left, are stale.
+  // A chapter render is of exactly the folder its key hashes: another key's,
+  // and a half-written one a failed render left, are stale.
   const current = new Set(parts.map((p) => path.basename(p.part)));
   for (const f of fs.readdirSync(cache))
     if (/^chapter-\d+-[0-9a-f]{16}(\.part)?\.mp4$/.test(f) && !current.has(f))

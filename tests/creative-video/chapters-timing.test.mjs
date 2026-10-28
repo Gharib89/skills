@@ -113,7 +113,10 @@ test("a one-chapter plan over 6 minutes is refused, the 6 minute cap applying to
   const fx = chaptered(four([5400, 5400, 5400, 5400]), {
     chapters: [chapter("All", "a", "b", "c", "d")],
   });
-  refused(fx, /^timing: chapter 1 "All" is 721\.00 s, outside 2 to 6/);
+  refused(
+    fx,
+    /^timing: chapter 1 "All" is 721\.00 s, over 6 minutes within 10% \(396 s\): a video this long plans 2 or more chapters$/m,
+  );
 });
 
 test("a chapter of 396 s passes and one frame more is refused", () => {

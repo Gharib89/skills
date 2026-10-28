@@ -16,8 +16,8 @@
 // gate included) judge it as they judge a video. It is then rendered `--runs`
 // times (default 3), the median kept, each run clearing the render cache and
 // running render.mjs, which renders both chapters, then the audio pass; a second
-// render.mjs on the cached parts times the audio pass, its mastering and join
-// alone. The rates, in render seconds per video second:
+// render.mjs on the cached chapters times the audio pass, its mastering and
+// join alone. The rates, in render seconds per video second:
 //   render  (cold render - cached render) / video s
 //   audio   cached render / video s
 // stdout: `calibrate-render run <i>/<n>: chapters <s> s, audio pass <s> s over
@@ -123,7 +123,7 @@ for (let i = 1; i <= runs; i++) {
     .readdirSync(path.join(run, ".cache", "render"))
     .filter((f) => /^chapter-\d+-[0-9a-f]{16}\.mp4$/.test(f));
   if (parts.length !== 2)
-    throw new Error(`rendered ${parts.length} of 2 chapter parts`);
+    throw new Error(`rendered ${parts.length} of 2 chapter renders`);
   cached.push(timed());
   console.log(
     `${NAME} run ${i}/${runs}: chapters ${r2(cold.at(-1) - cached.at(-1))} s, audio pass ${r2(cached.at(-1))} s over ${r2(timeline.total)} s of video`,

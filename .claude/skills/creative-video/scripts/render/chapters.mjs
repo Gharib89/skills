@@ -42,9 +42,12 @@ export function planChapters(chapters, ids, grid, fail) {
     const [from, to] = [first.start, last.start + last.frames];
     const seconds = (to - from) / FPS;
     const [min, max] = CHAPTER_SECONDS;
-    if ((chapters.length > 1 && seconds < min) || seconds > max)
+    const lone = chapters.length === 1;
+    if ((!lone && seconds < min) || seconds > max)
       fail(
-        `chapter ${i + 1} "${c.title}" is ${seconds.toFixed(2)} s, outside 2 to 6 minutes within 10% (${min} to ${max} s)`,
+        lone
+          ? `chapter 1 "${c.title}" is ${seconds.toFixed(2)} s, over 6 minutes within 10% (${max} s): a video this long plans 2 or more chapters`
+          : `chapter ${i + 1} "${c.title}" is ${seconds.toFixed(2)} s, outside 2 to 6 minutes within 10% (${min} to ${max} s)`,
       );
     return {
       n: i + 1,

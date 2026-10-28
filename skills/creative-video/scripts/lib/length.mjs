@@ -1,6 +1,7 @@
-// The brief's length, shared by the voice stage, the board and the render: the render
-// holds the last scene's frame HOLD seconds after its narration, and the
-// scenes with that hold land within 10 percent of the brief's `length`.
+// The video's lengths, shared by the voice stage, the timing, the board and the
+// render: the render holds the last scene's frame HOLD seconds after its
+// narration, and the scenes with that hold land within 10 percent of the
+// brief's `length`.
 export const HOLD = 1;
 
 // A chapter of a video in chapters runs 2 to 6 minutes within 10 percent: the

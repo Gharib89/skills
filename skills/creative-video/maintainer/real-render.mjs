@@ -114,7 +114,7 @@ check(
   diffs.join("; ") || `3 renders, ${first.length} frames each, identical`,
 );
 
-// Each chapter rendered on its own, the parts joined by the chapter join with
+// Each chapter rendered on its own, the renders joined by the chapter join with
 // one narration over the whole and a mark at each chapter's first frame.
 const parts = CHAPTERS.map((c, k) => {
   const run = runFolder(work, `chapter-${k + 1}`, c.scenes);

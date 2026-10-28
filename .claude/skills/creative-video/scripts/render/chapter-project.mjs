@@ -1,5 +1,5 @@
 // A chapter's own HyperFrames project, <run>/.cache/render/chapter-<n>/, which
-// the render stage renders to that chapter's video part: the root of only that
+// the render stage renders to that chapter's video: the root of only that
 // chapter's scene hosts and its caption cues with every time counted from the
 // chapter's first frame, no narration and no over.html (the one audio pass of
 // the whole project carries every sound), a timing.js of that chapter's scenes
@@ -22,7 +22,7 @@ export const chapterDir = (run, n) =>
 // returns `{ dir, seconds, key }`: `seconds` is the chapter's length on the
 // grid, `key` the 16 hex digits of a hash over every file the folder loads (its
 // index.html, timing.js, captions.html, its scene files, kit/ and assets/), so
-// a part rendered from it is reusable exactly while nothing it loads changed.
+// a chapter render from it is reusable exactly while nothing it loads changed.
 // The narration WAV and the HyperFrames CLI's own state are no input of a
 // video-only render, and the lockfile hash stands for the HyperFrames engine.
 export function writeChapter(run, { timeline, voice }, n) {

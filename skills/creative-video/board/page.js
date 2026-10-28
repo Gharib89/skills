@@ -47,7 +47,7 @@ function statusOf(S, n) {
   if (c.status === "authoring") return "being authored";
   if (S.answers.some((a) => a.approve === true) || (S.local && approving(S)))
     return "approved";
-  return c.status === "awaiting" ? "awaiting you" : c.status;
+  return "awaiting you";
 }
 
 const ACT = {
