@@ -85,7 +85,9 @@ export const authored = (id, body, js = "") => `<template>
 // The run folder `<dir>/<name>` as the voice stage and the agent leave it: one
 // scene per `{ id, frames, html }`, voiced by a tone exactly `frames` long with
 // its two words spread over it, and its composition authored (the sliding box,
-// or `html`). The timing stage times it, the render stage renders it.
+// or `html`). Each sentence states no fact, so it cites nothing and the support
+// checker's verdict is `connective`. The claims check passes it, the timing
+// stage times it, the render stage renders it.
 export function runFolder(dir, name, scenes) {
   const run = path.join(dir, name);
   const comps = path.join(run, "project", "compositions");
@@ -96,7 +98,28 @@ export function runFolder(dir, name, scenes) {
     path.join(run, "script.json"),
     JSON.stringify({
       language: "en",
-      scenes: scenes.map(({ id }) => ({ id, narration: [narration(id)] })),
+      scenes: scenes.map(({ id }) => ({
+        id,
+        narration: [narration(id)],
+        cites: [[]],
+      })),
+    }),
+  );
+  fs.writeFileSync(
+    path.join(run, "excerpts.json"),
+    JSON.stringify({ excerpts: [] }),
+  );
+  fs.writeFileSync(
+    path.join(run, "support.json"),
+    JSON.stringify({
+      sentences: scenes.map(({ id }) => ({
+        scene: id,
+        n: 1,
+        text: narration(id),
+        cites: [],
+        verdict: "connective",
+        why: "It names the scene and states no fact.",
+      })),
     }),
   );
   const voiced = scenes.map(({ id, frames, html }, i) => {

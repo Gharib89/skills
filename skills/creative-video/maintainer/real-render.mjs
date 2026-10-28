@@ -1,5 +1,5 @@
-// Maintainer only: render short fixtures through the skill's own timing, gates
-// and render stages with real HyperFrames, and prove what the fake backend
+// Maintainer only: render short fixtures through the skill's own claims, timing,
+// gates and render stages with real HyperFrames, and prove what the fake backend
 // cannot: the delivered MP4 has exactly the frame grid's frames, three renders
 // match frame for frame, two chapters rendered apart and joined by the chapter
 // join have the sum of their frames and a chapter mark each, and six hard gates
@@ -95,6 +95,35 @@ const hashes = (file) =>
     .split("\n")
     .filter((l) => l && !l.startsWith("#"))
     .map((l) => l.split(",").at(-1).trim());
+// The claims check and the gates passed on `run`. The critic gate waits on a
+// verdict per scene: a clean one is written for each pending scene, as
+// agents/critic.md writes one, since the critic's judgement is a live probe's
+// to prove, not this script's.
+function gatesPass(run) {
+  runStage("source/claims.mjs", run);
+  const gates = path.join(skill, "scripts", "gates", "gates.mjs");
+  spawnSync(process.execPath, [gates, run], { maxBuffer: 1 << 26 });
+  const record = path.join(run, "gates.json");
+  const critic =
+    fs.existsSync(record) &&
+    JSON.parse(fs.readFileSync(record, "utf8")).gates.critic;
+  if (critic?.status === "pending") {
+    const dir = path.join(run, critic.stills);
+    const set = JSON.parse(fs.readFileSync(path.join(dir, "stills.json")));
+    for (const [id, stills] of Object.entries(set))
+      fs.writeFileSync(
+        path.join(dir, `${id}.json`),
+        JSON.stringify({
+          stills: stills.map(({ t }) => ({
+            t,
+            sees: "a box on a dark ground",
+          })),
+          failures: [],
+        }),
+      );
+  }
+  runStage("gates/gates.mjs", run);
+}
 const grid = (scenes) =>
   gridScenes(
     scenes.map((s) => s.frames / FPS),
@@ -105,7 +134,7 @@ const grid = (scenes) =>
 // the first, frame for frame.
 const whole = runFolder(work, "whole", WHOLE);
 runStage("render/timing.mjs", whole);
-runStage("gates/gates.mjs", whole);
+gatesPass(whole);
 const mp4 = runStage("render/render.mjs", whole);
 const frames = count(mp4);
 const want = grid(WHOLE);
@@ -132,7 +161,7 @@ check(
 const parts = CHAPTERS.map((c, k) => {
   const run = runFolder(work, `chapter-${k + 1}`, c.scenes);
   runStage("render/timing.mjs", run);
-  runStage("gates/gates.mjs", run);
+  gatesPass(run);
   return runStage("render/render.mjs", run);
 });
 const sizes = parts.map(count);

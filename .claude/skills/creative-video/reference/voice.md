@@ -6,9 +6,20 @@ The shape of `script.json` in the run folder:
 {
   "language": "en",
   "narrator": "am_fenrir",
-  "scenes": [{ "id": "hook", "narration": ["First sentence.", "Second."] }]
+  "scenes": [
+    {
+      "id": "hook",
+      "narration": ["First sentence.", "Second."],
+      "cites": [["ex-1"], []]
+    }
+  ]
 }
 ```
+
+`cites` holds one list of excerpt ids per sentence, from `excerpts.json`: the
+excerpts a sentence stating a fact stands on, `[]` for a sentence stating none.
+The claims check and the gates read it; the voice stage does not, and a
+narration you wrote yourself, with no source pack, carries none.
 
 `narrator` is optional: without it the stage takes the language's first default
 in `<skill>/narrators.json` (`af_heart` for `en`, `ar-eg-csagent-2` for `ar`).

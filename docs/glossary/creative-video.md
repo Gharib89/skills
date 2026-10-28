@@ -1,6 +1,6 @@
 ### Creative video
 
-The sibling of `explainer-video` whose scenes the agent authors freely, the `creative-video` skill. Terms it shares with `explainer-video`, such as excerpt, claim and critic, keep their meaning from [Explainer video](explainer-video.md).
+The sibling of `explainer-video` whose scenes the agent authors freely, the `creative-video` skill. Terms it shares with `explainer-video`, such as excerpt and claim, keep their meaning from [Explainer video](explainer-video.md); its critic is its own, below.
 
 **Bed**:
 A recorded sound under a creative video's narration, drawn from the format concept's world (a kitchen's room tone, a studio crowd), kept well under the voice and taken out for the hardest step. It is not music unless the concept names a reason.
@@ -21,6 +21,10 @@ _Avoid_: section (that is an explainer video's), part (that is a separate video)
 **Chapter plan**:
 How a creative video is divided into chapters: each chapter's title, focus, length and the sources it draws on. The agent writes it before the script, and the owner meets it on the storyboard rather than at a stop of its own.
 _Avoid_: part plan (that is an explainer video's), outline, table of contents
+
+**Critic**:
+A subagent per scene that reads a creative video's sample frames with the narration and the excerpts it cites, describes each still as a stranger would, and names its hard failures: unreadable text, an invented fact on screen (never staging) and a broken right-to-left layout. Its hard failures block like a gate; it gives no scores.
+_Avoid_: judge, grader, stills review (the advisory read before the gates)
 
 **Direction**:
 One candidate format concept for a creative video, written before any scene with its arc, cast, audience device, sound and colour. A run writes three that differ in kind, not in palette, and marks one recommended; the person picks, or an unattended run takes the recommended one and writes why.
@@ -52,4 +56,4 @@ _Avoid_: decoration, decorative number, prop
 
 **Stills review**:
 A fresh subagent's read of a creative video's contact sheets before the full render, given the sheets and nothing of the plan: what a stranger sees in each frame, the defaults it spots, and notes ranked P0 and P1. It gives no score.
-_Avoid_: critic (that is an explainer video's), QA pass
+_Avoid_: critic (the gate that blocks on hard failures), QA pass

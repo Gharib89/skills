@@ -73,12 +73,32 @@ export const SHAPES = {
     attempts: opt(number),
     gates: map(obj({ status: text })),
   }),
-  // The voice stage's input.
+  // The voice stage's input; the claims check reads each sentence's cites,
+  // excerpt ids, which a script voiced alone may leave out.
   "script.json": obj({
     language: text,
     narrator: opt(text),
-    scenes: list(obj({ id: text, narration: list(text) })),
+    scenes: list(
+      obj({ id: text, narration: list(text), cites: opt(list(list(text))) }),
+    ),
   }),
+  // The source pack, read by the claims check and the gates.
+  "excerpts.json": obj({ excerpts: list(obj({ id: text, text })) }),
+  // The support checker's verdicts (agents/support-checker.md).
+  "support.json": obj({
+    sentences: list(
+      obj({
+        scene: text,
+        n: number,
+        text,
+        cites: list(text),
+        verdict: text,
+        why: text,
+      }),
+    ),
+  }),
+  // The claims check's record (source/claims.mjs), read by the support gate.
+  "claims.json": obj({ passed: opt(text) }),
   // The voice stage.
   "voice.json": obj({
     narrator: text,
