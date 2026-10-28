@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.7.0 (2026-10-28)
+
+### Features
+
+- **creative-video**: Long videos in chapters
+  ([#1037](https://github.com/Gharib89/skills/pull/1037),
+  [`f6a3a4d`](https://github.com/Gharib89/skills/commit/f6a3a4d85bea9dd0bb965fa3e4066ce68767a0ef))
+
+
 ## v0.6.0 (2026-10-28)
 
 ### Features
