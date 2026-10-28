@@ -1,7 +1,7 @@
-// The parts of a run's format kit (<run>/project/kit/) the stages read as data:
-// cast.json, each role's voice per language and the style it speaks in, and
-// sound.json, the bed and the sound palette; and the cast as voice.json
-// recorded it.
+// The run's cast and sound as the stages read them: the format kit's
+// (<run>/project/kit/) cast.json, each role's voice per language and the style
+// it speaks in, and sound.json, the bed and the sound palette; and the cast as
+// <run>/voice.json recorded it.
 import { maybeJson } from "./json.mjs";
 import { narrator as findNarrator } from "./narrators.mjs";
 
