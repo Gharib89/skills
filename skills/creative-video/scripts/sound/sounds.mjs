@@ -9,7 +9,8 @@
 // result a query of that kind chose before, on any run) is copied again. Else
 // Openverse is searched for CC0 audio (the bed for medium-length clips), a
 // search failing after 30 s tried once more, and the first result in a format
-// the render plays is downloaded into the store. Else the Kenney packs setup
+// the render plays is downloaded into the store (a failed download counts as
+// no result). Else the Kenney packs setup
 // installed are searched by their file names' words. Else the sound is dropped
 // from the kit into its `dropped` list, where it replaces an earlier drop of
 // its event, as a sound found does. The store is
@@ -76,7 +77,11 @@ async function fromOpenverse(query, medium) {
   if (!r) return "openverse found no usable CC0 result";
   const name = `${r.id}.${ext(r)}`;
   fs.mkdirSync(path.join(store, "openverse"), { recursive: true });
-  await backend.download(r.url, path.join(store, "openverse", name));
+  try {
+    await backend.download(r.url, path.join(store, "openverse", name));
+  } catch (e) {
+    return `openverse download failed (${e.message})`;
+  }
   return {
     source: `openverse:${r.id}`,
     file: `assets/sounds/${name}`,

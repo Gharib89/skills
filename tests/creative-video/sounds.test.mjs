@@ -159,6 +159,29 @@ test("two timeouts fall back to the Kenney pack whose file names match the query
   );
 });
 
+test("a failed download is dropped like a failed search, and falls back to Kenney once installed", () => {
+  const fx = fixture();
+  kit(fx, { palette: [{ event: "ticket", query: "paper tear" }] });
+  const dead = { ...hit("tear-1"), url: "https://cdn.example/dead/tear-1.mp3" };
+  const r = fetch(fx, { "paper tear": [[dead]] });
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(
+    kitOf(fx).dropped[0].why,
+    "openverse download failed (https://cdn.example/dead/tear-1.mp3: HTTP 404); the Kenney packs are not installed (run /creative-video setup)",
+  );
+  const pack = store(fx, "kenney", "rpg-audio");
+  fs.mkdirSync(pack, { recursive: true });
+  fs.writeFileSync(path.join(pack, "paperTear2.ogg"), "ogg");
+  fs.writeFileSync(store(fx, "kenney", ".stamp"), "");
+  kit(fx, { palette: [{ event: "ticket", query: "paper tear" }] });
+  const again = fetch(fx, { "paper tear": [[dead]] });
+  assert.equal(again.code, 0, again.out + again.err);
+  assert.equal(
+    again.out.trim(),
+    "sound ticket: kenney rpg-audio/paperTear2.ogg",
+  );
+});
+
 test("a sound found nowhere is dropped from the kit with why, and warned", () => {
   const fx = fixture();
   kit(fx);

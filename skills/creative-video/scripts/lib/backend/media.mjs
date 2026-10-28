@@ -169,11 +169,20 @@ export async function fontMeta(id) {
   return r.json();
 }
 
-// Streamed to disk: a model file can outgrow what one buffer holds.
+// Streamed to disk: a model file can outgrow what one buffer holds. It lands
+// as `<file>.part` and is renamed whole, so a stream that dies leaves nothing a
+// reader would take for the file.
 export async function download(url, file) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
-  await pipeline(Readable.fromWeb(r.body), fs.createWriteStream(file));
+  const part = `${file}.part`;
+  try {
+    await pipeline(Readable.fromWeb(r.body), fs.createWriteStream(part));
+  } catch (e) {
+    fs.rmSync(part, { force: true });
+    throw e;
+  }
+  fs.renameSync(part, file);
 }
 
 // onnxruntime's CUDA provider files from its NuGet package into `dir`, the

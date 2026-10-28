@@ -182,11 +182,12 @@ node <skill>/scripts/sound/sounds.mjs <run>
 ```
 
 For each sound it searches Openverse for CC0 audio (a search that fails after
-30 s is tried once more), then the Kenney packs setup installs
-(`sounds:kenney`) by their file names' words, copies what it finds into
-`project/assets/sounds/` and writes the sound's `file`, `source`, `licence`,
-`creator`, `url` and `attribution` into `sound.json`. A sound its query found
-before, on any run, is copied again with no search. It prints `sound <event>:
+30 s is tried once more, a failed download counts as no result), then the
+Kenney packs setup installs (`sounds:kenney`) by their file names' words,
+copies what it finds into `project/assets/sounds/` and writes the sound's
+`file`, `source`, `licence`, `creator`, `url` and `attribution` into
+`sound.json`. A sound its query found before, on any run, is copied again with
+no search. It prints `sound <event>:
 openverse <id> | kenney <pack>/<file> | cached | dropped: <why>` per sound. A
 sound found nowhere moves to `sound.json`'s `dropped` list with its reason, and
 prints `warn dropped sound: <event>: <why>`. To swap a found sound, change its
