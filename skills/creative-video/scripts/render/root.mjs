@@ -1,9 +1,13 @@
 // The project's root, <run>/project/index.html, from timeline.json and the
-// project as it stands: every scene host on the grid, over.html's host when
-// that file exists, the captions host, the narration, and the kit's .css and
-// .js sorted. timing.mjs writes it, and hf.mjs and render.mjs write it again
-// before they use it, so an over.html or a kit file authored after the timing
-// stage still reaches the check, the snapshots and the render.
+// project as it stands: every scene host on the grid whose file exists,
+// over.html's host when that file exists, the captions host, the narration, and
+// the kit's .css and .js sorted. timing.mjs writes it, and hf.mjs and render.mjs
+// write it again before they use it, so an over.html or a kit file authored
+// after the timing stage still reaches the check, the snapshots and the render.
+// A video in chapters has chapter 1's scene files before the rest, and a host
+// naming a file that is not there breaks the CLI, so the root hosts only the
+// files that exist: the gates and the render refuse a missing file themselves.
+// rootHtml is the shape a chapter's root (render/chapter-project.mjs) shares.
 import fs from "node:fs";
 import path from "node:path";
 import { readJson } from "../lib/json.mjs";
@@ -18,10 +22,14 @@ export const esc = (s) =>
 export const host = (id, start, duration, track, kind, style = "") =>
   `    <div id="${id}" data-composition-id="${id}" data-composition-src="compositions/${id}.html" data-start="${start}" data-duration="${duration}" data-track-index="${track}" data-track-kind="${kind}" data-width="${WIDTH}" data-height="${HEIGHT}"${style}></div>`;
 
-export function writeRoot(run) {
-  const { total, scenes } = readJson(run, "timeline.json");
-  const { language } = readJson(run, "script.json");
-  const proj = path.join(run, "project");
+// The captions' host, over every other, `duration` long.
+export const captionsHost = (duration) =>
+  host("captions", 0, duration, 3, "captions", ' style="z-index:10"');
+
+// A root of `hosts` in the project folder `proj`, `total` seconds long, its
+// <head> loading the kit's .css and .js sorted, with the narration clip unless
+// `narration` is false.
+export function rootHtml({ proj, title, language, total, hosts, narration }) {
   const kit = fs.existsSync(path.join(proj, "kit"))
     ? fs.readdirSync(path.join(proj, "kit")).sort()
     : [];
@@ -33,20 +41,14 @@ export function writeRoot(run) {
       .filter((f) => f.endsWith(".js"))
       .map((f) => `    <script src="kit/${f}"></script>`),
   ];
-  const hosts = [
-    ...scenes.map((s) => host(s.id, s.start, s.duration, 1, "graphics")),
-    ...(fs.existsSync(path.join(proj, "compositions", "over.html"))
-      ? [host("over", 0, total, 2, "graphics")]
-      : []),
-    host("captions", 0, total, 3, "captions", ' style="z-index:10"'),
-  ];
-  fs.writeFileSync(
-    path.join(proj, "index.html"),
-    `<!doctype html>
+  const clip = narration
+    ? `\n      <audio id="narration" class="clip" src="assets/narration.wav" data-start="0" data-duration="${total}" data-volume="1" data-track-index="4"></audio>`
+    : "";
+  return `<!doctype html>
 <html lang="${language}">
   <head>
     <meta charset="utf-8" />
-    <title>${esc(path.basename(path.resolve(run)))}</title>
+    <title>${esc(title)}</title>
     <style>
       body {
         margin: 0;
@@ -57,14 +59,38 @@ export function writeRoot(run) {
 ${[...head, "  </head>"].join("\n")}
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="${total}" data-width="${WIDTH}" data-height="${HEIGHT}">
-${hosts.join("\n")}
-      <audio id="narration" class="clip" src="assets/narration.wav" data-start="0" data-duration="${total}" data-volume="1" data-track-index="4"></audio>
+${hosts.join("\n")}${clip}
     </div>
     <script>
       window.__timelines["main"] = gsap.timeline({ paused: true });
     </script>
   </body>
 </html>
-`,
+`;
+}
+
+export function writeRoot(run) {
+  const { total, scenes } = readJson(run, "timeline.json");
+  const { language } = readJson(run, "script.json");
+  const proj = path.join(run, "project");
+  const has = (id) =>
+    fs.existsSync(path.join(proj, "compositions", `${id}.html`));
+  const hosts = [
+    ...scenes
+      .filter((s) => has(s.id))
+      .map((s) => host(s.id, s.start, s.duration, 1, "graphics")),
+    ...(has("over") ? [host("over", 0, total, 2, "graphics")] : []),
+    captionsHost(total),
+  ];
+  fs.writeFileSync(
+    path.join(proj, "index.html"),
+    rootHtml({
+      proj,
+      title: path.basename(path.resolve(run)),
+      language,
+      total,
+      hosts,
+      narration: true,
+    }),
   );
 }

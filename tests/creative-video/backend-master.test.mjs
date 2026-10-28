@@ -12,6 +12,7 @@ import {
   ffprobe,
   loudness,
   loudnorm,
+  masterAudio,
   poster,
 } from "../../skills/creative-video/scripts/lib/backend/media.mjs";
 
@@ -46,5 +47,36 @@ test(
     const png = path.join(dir, "poster.png");
     await poster(out, 1.5, png);
     assert.equal(fs.readFileSync(png).toString("ascii", 1, 4), "PNG");
+  },
+);
+
+test(
+  "masterAudio writes a 48 kHz WAV of exactly the seconds asked, padded or trimmed, at the loudness target",
+  { skip: !has && "ffmpeg is not on PATH" },
+  async (t) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "creative-master-"));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const src = path.join(dir, "src.mp4");
+    const made = spawnSync("ffmpeg", [
+      ...["-v", "error", "-y", "-f", "lavfi", "-i", "color=c=red:s=64x64:r=1"],
+      ...["-f", "lavfi", "-i", "sine=frequency=300:sample_rate=24000"],
+      ...["-t", "3", "-af", "volume=-30dB", "-c:v", "libx264", src],
+    ]);
+    assert.equal(made.status, 0, made.stderr?.toString());
+    for (const seconds of [4, 2]) {
+      const wav = path.join(dir, `${seconds}.wav`);
+      await masterAudio(src, wav, { lufs: -14, peak: -1.5, seconds });
+      const probe = await ffprobe(wav);
+      const [audio] = probe.streams;
+      assert.equal(audio.codec_name, "pcm_s16le");
+      assert.equal(audio.sample_rate, "48000");
+      assert.ok(
+        Math.abs(+probe.format.duration - seconds) < 0.01,
+        `${seconds} s asked, ${probe.format.duration} s written`,
+      );
+      const { lufs, peak } = await loudness(wav);
+      assert.ok(Math.abs(lufs + 14) < 1, `${lufs} LUFS`);
+      assert.ok(peak <= -1.0, `${peak} dBTP`);
+    }
   },
 );

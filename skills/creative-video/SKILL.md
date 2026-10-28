@@ -17,10 +17,11 @@ A **creative video** is a narrated video that teaches a concept, its scenes
 authored freely in HyperFrames rather than drawn from a fixed set of
 components, a long one split into **chapters**. Given a concept, a topic, a
 repo or a document (and optionally a language and a length), make one under
-[The stance](#the-stance), by the steps of [Make a video](#make-a-video). This
-version makes one video of up to about six minutes, without chapters: asked for
-a longer one or for chapters, say so and offer one of about six minutes. Run
-setup alone only when asked (`/creative-video setup`).
+[The stance](#the-stance), by the steps of [Make a video](#make-a-video). A
+video runs from about one minute to about 30 minutes, in chapters past about
+six minutes, so a fix re-renders one chapter, not the whole video: one video,
+never offered in parts. Run setup alone only when asked (`/creative-video
+setup`).
 
 ## The stance
 
@@ -169,7 +170,11 @@ render.
    posed before its answer, each metaphor's limit said. Every factual
    sentence comes from an excerpt in the outline and cites it: each scene's
    `cites` holds one list of excerpt ids per sentence, `[]` for a sentence
-   stating no fact. This version voices one narrator: anyone else in the cast
+   stating no fact. Past about six minutes, the video is in chapters of two to
+   six minutes, and the script carries the **chapter plan**, `chapters`
+   ([authoring.md](reference/authoring.md#chapters)): write the plan and the
+   whole script, every chapter's, before any scene, so the video keeps one
+   arc. This version voices one narrator: anyone else in the cast
    is drawn, or speaks in on-screen text. Run the claims check,
    `node <skill>/scripts/source/claims.mjs <run>`, and fix the cites until
    its `claims cites:` line passes. Then dispatch one subagent with
@@ -188,6 +193,8 @@ render.
 9. **Scenes.** Author `<run>/project/compositions/<id>.html` for every
    `to author` line timing printed, each event that answers a word placed at
    `at(scene, word)`, each effect's clip at the `at()` of the event it marks.
+   In chapters, author chapter 1's scenes only, its first frame drawing the
+   chapter's title; the other chapters wait for step 11's approval.
 10. **Look: the stills review.** `node <skill>/scripts/hf.mjs <run> check
     --json` until it reports no errors, then `node <skill>/scripts/hf.mjs
     <run> snapshot --review --json`, and describe each frame as a stranger
@@ -196,11 +203,27 @@ render.
     `{notes}` `<run>/.cache/review/stills-notes.md`, and nothing else from the
     run. Fix every P0 and every default it or you named, fix each P1 or write
     in `DELIVERY.md` why it stays, then snapshot what changed.
-11. **Storyboard.** Attended only: read
+11. **Storyboard.** Attended: read
     [reference/storyboard.md](reference/storyboard.md) and run its steps until
     `board apply` prints `board: approved`. That one look approval covers the
     whole video: the gates and the render follow with no further stop.
-    Unattended, skip this step.
+    Unattended, skip the storyboard.
+    **In chapters**, attended or not, once chapter 1 is approved (unattended:
+    once step 10 is done), dispatch one subagent per remaining chapter, all in
+    one turn, with `<skill>/agents/chapter-author.md` as its prompt, `{run}`,
+    `{skill}`, `{chapter}` its number and `{scenes}` its scene ids, then end
+    the turn. As each replies, run step 10 on its scenes: `hf.mjs <run> check
+    --json`, then `hf.mjs <run> snapshot --review --composition <id> --json`
+    once per scene, each `review.sheets` path going to the reviewer as
+    `{sheets}` (`--review` refuses `--range`, and without `--composition` it
+    reviews the whole film again). Attended, also write its scenes' `title` and
+    `notes` into `storyboard.json` (storyboard.md step 1), then build and post
+    the board again (storyboard.md steps 3 and 4) without waiting for an
+    answer: a comment that comes back is acted on as step 11 says. A change one
+    asks for outside its files is yours to make: nothing has rendered yet, so
+    one to the kit or an asset costs no extra render (step 13 estimates such a
+    change once chapters have rendered), and one to `over.html` changes only
+    the mix.
 12. **Gates.** `node <skill>/scripts/gates/gates.mjs <run>`
     ([the gates](reference/authoring.md#gates)); on exit 1 fix what each `gate
     <name>: fail` line and its indented findings name, then run it again. An
@@ -221,7 +244,14 @@ render.
     verdict; once it replies, run the gates again.
 13. **Render.** `node <skill>/scripts/render/render.mjs <run>`; it refuses
     until the gates pass on the current project. On exit 1 fix what it names
-    and render again.
+    and render again. In chapters it renders each chapter one at a time,
+    keeping each chapter's render, so a later render re-renders only the
+    chapters that changed; a change to the kit changes every chapter, one to
+    an asset only the chapters whose files name its path (every chapter when
+    no file names it, as a name a script builds). Before a render that
+    follows a change to the kit or an asset, run it with `--estimate` first
+    and tell the person the line it prints, in full:
+    `render: <k> of <n> chapter(s) to render, estimate <m:ss>, budget <m:ss>`.
 14. **Deliver.** Write `<run>/CREDITS.md` (each source cited with its
     locators, each sound with its source, licence and attribution, the voice,
     the faces and their licences) and `<run>/DELIVERY.md` (the concept and why

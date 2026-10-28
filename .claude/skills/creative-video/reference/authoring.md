@@ -4,6 +4,7 @@
 
 - [The run folder](#the-run-folder)
 - [Timing](#timing)
+- [Chapters](#chapters)
 - [Scenes on word times](#scenes-on-word-times)
 - [The pinned CLI](#the-pinned-cli)
 - [Gates](#gates)
@@ -42,7 +43,9 @@ What you write, all committed as the video's recipe:
   by its `id`.
 - `project/compositions/over.html` (optional): one composition across the
   whole video, over the scenes, for what crosses a cut: the bed, a score that
-  stays on screen, a host who never leaves.
+  stays on screen, a host who never leaves. In a video in chapters it holds
+  sound only: a chapter renders without it, and its sound plays in the one
+  mix of the whole video.
 - `project/assets/`: your media (recorded sounds, images, fonts).
 - `CREDITS.md` and `DELIVERY.md`, after the render.
 
@@ -74,6 +77,32 @@ host at its start and length, the narration, the captions on top),
 and one `timing: compositions/<id>.html to author` line per scene file not yet
 written. On exit 1, `timing: <why>` names what to fix: a `voice.json` that no
 longer matches `script.json` means voice again first.
+
+## Chapters
+
+A video past about six minutes is in chapters of two to six minutes each. The
+**chapter plan** is `script.json`'s `chapters`, written with the whole script
+before any scene:
+
+```json
+"chapters": [
+  {"title": "Why it stops", "focus": "the one line the chapter teaches",
+   "scenes": ["hook", "stop-sign"]}
+]
+```
+
+Every scene sits in one chapter, the chapters in scene order. Timing refuses a
+brief longer than six minutes with no plan, a scene in no chapter or in two,
+a chapter longer than about six minutes, as voiced (a lone chapter included),
+and, with two chapters or more, one shorter than about two. It writes each
+chapter's start and end into `timeline.json`.
+
+A chapter opens on a hard cut into a scene you author freely, whose very first
+frame draws the chapter's title in full: the delivered video's chapter mark
+lands on that frame, and the `chapter titles` gate fails a title not drawn
+there. Sound may cross a cut (`over.html`'s bed, a sound running on); no visual
+transition does. The kit is loaded by every chapter, so a device that recurs
+lives there, never copied into a scene.
 
 ## Scenes on word times
 
@@ -191,6 +220,10 @@ failing one indented under it. Each is a hard fail:
   they contradict; staging such as props, signs, scores and round numbers
   never is) and `rtl` (Arabic laid out the wrong way round). It gives no
   scores.
+- `chapter titles` (a video in chapters): every word of each chapter's title
+  is drawn on that chapter's first frame.
+- `sound only` (a video in chapters): `over.html` holds `<audio>` and draws no
+  element, since a chapter renders without it.
 
 Warnings print as `warn <name>: <detail>`, are recorded in `gates.json` and
 never change the exit: `effect rate` (over 24 sounds in a minute), `effect
@@ -243,7 +276,25 @@ or `delivery <check>: fail: <measured> vs <wanted>` line per check
 `captions` (the video's caption cues against the timeline's words and the
 SRT), `loudness` within 1 LU, `true peak` at most -1 dBTP), a `measured
 loudness:` line with both values, `delivered: <path of out/<slug>.mp4>`, then
-`render: <slug>.mp4 <seconds> s, <n> scene(s)`. On exit 1 nothing new is
+`render: <slug>.mp4 <seconds> s, <n> scene(s)`.
+
+A video in chapters renders each chapter on its own, one at a time, video
+only, and keeps each chapter video under `.cache/render/` by everything that
+chapter loads: its scenes, captions, the kit and the assets its files name by
+path (`assets/<file>`). A later render renders only the chapters whose video
+changed, so a fix to one scene costs one chapter, a new or changed asset the
+chapters that name it, and a change to the kit costs them all. Name an asset by
+its path in the file that uses it: one no file names (a name a script builds
+at run time) counts for every chapter. `over.html` is no
+chapter's input: a change to it changes only the mix. The narration and every
+sound are mixed once over the whole video, the chapter videos joined by stream
+copy at the hard cuts, and the audio encoded once with a chapter mark at each
+chapter's first frame; a `delivery chapters` line checks the marks. Before it
+renders it prints `render: <k> of <n> chapter(s) to render, estimate <m:ss>,
+budget <m:ss>`, the estimate from `render-rates.json`, the budget 5 minutes a
+video minute; `--estimate` prints that line and renders nothing.
+
+On exit 1 nothing new is
 delivered: a `render: <why>` refusal (a missing scene file, a timing older
 than the voice: run timing again) leaves `out/` as it was, and a failed
 render or `delivery` check empties it.

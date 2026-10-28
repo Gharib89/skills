@@ -86,6 +86,11 @@ export const SHAPES = {
     scenes: list(
       obj({ id: text, narration: list(text), cites: opt(list(list(text))) }),
     ),
+    // The chapter plan of a video in chapters: each chapter's title, focus and
+    // scene ids (render/timing.mjs holds them to the scenes).
+    chapters: opt(
+      list(obj({ title: text, focus: opt(text), scenes: list(text) })),
+    ),
   }),
   // The source pack, read by the claims check and the gates.
   "excerpts.json": obj({ excerpts: list(obj({ id: text, text })) }),
@@ -133,6 +138,17 @@ export const SHAPES = {
     total: number,
     scenes: list(obj({ id: text, start: number, duration: number })),
     cues: list(obj({ start: number, end: number, text })),
+    chapters: opt(
+      list(
+        obj({
+          n: number,
+          title: text,
+          start: number,
+          end: number,
+          scenes: list(text),
+        }),
+      ),
+    ),
   }),
   // What the storyboard shows beyond the scenes (board/board.mjs): the video's
   // title, the chapter's focus, the three directions and a title and notes per

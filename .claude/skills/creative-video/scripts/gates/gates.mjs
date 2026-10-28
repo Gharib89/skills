@@ -16,7 +16,10 @@
 // at the start the gates judge, gates/sounds.mjs), must and avoid, support (the
 // claims check passed on the voiced narration) and the critic
 // (gates/critic.mjs), pending until each scene's verdict is written. Length,
-// loudness and voice QC are the voice and render stages' own. Advisory warnings
+// loudness and voice QC are the voice and render stages' own. A video in
+// chapters adds two gates: chapter titles (each chapter's first frame draws
+// every word of its title) and sound only (over.html draws no element, since a
+// chapter renders without it). Advisory warnings
 // (gates/warnings.mjs) never change the exit: effect rate, effect onset, scene
 // length, sentences, pacing and clock.
 // stdout: `gate <name>: pass|fail|pending: <measured> vs <floor>` per gate (the
@@ -307,6 +310,35 @@ for (const x of brief?.avoid ?? []) {
     coverage.push(`avoid "${x}" is in ${hit.map((c) => c.id).join(", ")}`);
 }
 
+// Chapter titles, in a video in chapters: each chapter's first frame, its opener
+// scene's frame 0 (which the probe's grid holds), draws every word of the
+// chapter's title, compared as must and avoid compare words.
+const titles = (timeline.chapters ?? []).flatMap((ch) => {
+  const drawn = textsAt(ceil3(ch.start))
+    .filter(readable)
+    .map((e) => e.text)
+    .join("\n")
+    .toLowerCase();
+  const missing = (
+    ch.title.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
+  ).filter((w) => !hasWord(drawn, w));
+  return missing.length
+    ? [
+        `${ch.start.toFixed(2)} s ${ch.scenes[0]}: chapter ${ch.n} ${quote(ch.title)} is not drawn on its first frame, missing ${[...new Set(missing)].join(", ")}`,
+      ]
+    : [];
+});
+
+// Sound only, in a video in chapters: a chapter renders without over.html (its
+// sound plays in the one mix), so what it paints never reaches the video. The
+// probe measures what paints at each frame; a wrapper that draws nothing passes.
+const drawnByOver = timeline.chapters ? frames.flatMap((f) => f.over) : [];
+const overDrawing = drawnByOver.length
+  ? [
+      `over.html draws ${[...new Set(drawnByOver)].join(", ")}: a chapter renders without it, so move the drawing into a scene file`,
+    ]
+  : [];
+
 // Support: the claims check (source/claims.mjs) passed on the narration and the
 // source pack as they stand, so every sentence stating a fact cites excerpts
 // that support it, and that narration is the one voiced, so the render speaks
@@ -358,6 +390,13 @@ const judged = {
     coverage,
     "every must said or shown, no avoid said or shown",
   ],
+  ...(timeline.chapters && {
+    "chapter titles": [
+      titles,
+      "each chapter's first frame draws every word of its title",
+    ],
+    "sound only": [overDrawing, "over.html holds <audio> and no drawn element"],
+  }),
   support: [support, "the claims check passed on this script and source pack"],
 };
 const gates = Object.fromEntries(

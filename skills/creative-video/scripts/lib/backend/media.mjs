@@ -94,11 +94,10 @@ export async function loudness(file) {
   return { lufs: +lufs, peak: +peak };
 }
 
-// The MP4 `input` with its audio normalised to `lufs` integrated and `peak`
-// true peak (LRA 11) into `output`: two-pass loudnorm, pass 2 linear from pass
-// 1's measurements so speech keeps its dynamics. The video stream is copied,
-// the audio is AAC 192k at 48 kHz.
-export async function loudnorm(input, output, { lufs, peak }) {
+// The loudnorm filter of `input`'s audio at `lufs` integrated and `peak` true
+// peak (LRA 11), pass 2 linear from pass 1's measurements so speech keeps its
+// dynamics.
+function twoPass(input, { lufs, peak }) {
   const loud = `loudnorm=I=${lufs}:TP=${peak}:LRA=11`;
   const err = ffmpeg([
     ...["-i", input, "-vn", "-af", `${loud}:print_format=json`],
@@ -109,11 +108,33 @@ export async function loudnorm(input, output, { lufs, peak }) {
     throw new Error(`loudnorm pass 1 printed no measurements for ${input}`);
   const j = JSON.parse(m);
   const measured = `measured_I=${j.input_i}:measured_TP=${j.input_tp}:measured_LRA=${j.input_lra}:measured_thresh=${j.input_thresh}`;
+  return `${loud}:${measured}:offset=${j.target_offset}:linear=true`;
+}
+
+// The MP4 `input` with its audio normalised to `lufs` integrated and `peak`
+// true peak (LRA 11) into `output`: two-pass loudnorm. The video stream is
+// copied, the audio is AAC 192k at 48 kHz.
+export async function loudnorm(input, output, { lufs, peak }) {
   ffmpeg([
     ...["-y", "-i", input, "-map", "0:v", "-map", "0:a", "-c:v", "copy"],
-    ...["-af", `${loud}:${measured}:offset=${j.target_offset}:linear=true`],
+    ...["-af", twoPass(input, { lufs, peak })],
     ...["-c:a", "aac", "-b:a", "192k", "-ar", "48000"],
     ...["-movflags", "+faststart", output],
+  ]);
+}
+
+// The audio of `input` normalised as loudnorm does into a 48 kHz 16-bit WAV
+// `wav` of exactly `seconds`, padded with silence or trimmed: a video in
+// chapters carries one mix for the whole, which mux encodes once. The pad is
+// endless and `-t` cuts it; the timestamps are counted again from the samples
+// after loudnorm, whose output timestamps lag its samples, so `-t` would cut
+// the tail early.
+export async function masterAudio(input, wav, { lufs, peak, seconds }) {
+  const fix = "aresample=48000,asetpts=N/SR/TB,apad";
+  ffmpeg([
+    ...["-y", "-i", input, "-vn"],
+    ...["-af", `${twoPass(input, { lufs, peak })},${fix}`],
+    ...["-t", String(seconds), "-c:a", "pcm_s16le", wav],
   ]);
 }
 

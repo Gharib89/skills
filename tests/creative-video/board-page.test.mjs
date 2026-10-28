@@ -134,18 +134,26 @@ test("the look can be approved only while nothing is commented or picked", () =>
   assert.equal(B.answersDoc(S).approve, false);
 });
 
-test("a version answered in the database is approved only by an approving document of that version", () => {
+test("a chapter is approved by an approving document in the database, and not by one that approves nothing", () => {
   const S = B.newState(clone(doc));
   assert.equal(B.statusOf(S, 1), "awaiting you");
   B.setAnswers(S, [{ version: 1, approve: false }]);
-  assert.equal(B.statusOf(S, 1), "awaiting you");
-  B.setAnswers(S, [{ version: 0, approve: true }]);
   assert.equal(B.statusOf(S, 1), "awaiting you");
   B.setAnswers(S, [{ version: 1, approve: true }]);
   assert.equal(B.statusOf(S, 1), "approved");
   const v = B.view(S);
   assert.match(v, /approved/);
   assert.doesNotMatch(v, /awaiting you/);
+});
+
+test("an approval of an earlier board still reads approved on a later board", () => {
+  const later = clone(doc);
+  later.version = 3;
+  const S = B.newState(later);
+  B.setAnswers(S, [{ version: 1, approve: true }]);
+  assert.equal(B.statusOf(S, 1), "approved");
+  B.setAnswers(S, [{ version: 2, approve: false }]);
+  assert.equal(B.statusOf(S, 1), "awaiting you");
 });
 
 test("a local page reads approved once its approval is asked for, and not after a comment", () => {
@@ -224,6 +232,113 @@ test("the view shows the tab and plan, the directions, the scene cards and the s
       .length,
     1,
   );
+});
+
+test("a video in chapters has a tab per chapter with its status, cards under their own chapter's tab, and every chapter in the plan", () => {
+  const chaptered = clone(doc);
+  const [first, ...more] = chaptered.scenes;
+  first.chapter = 1;
+  more.forEach((s) => (s.chapter = 2));
+  chaptered.chapters = [
+    { n: 1, title: "The loop", status: "awaiting" },
+    { n: 2, title: "The wrap", status: "authoring" },
+    { n: 3, title: "The last", status: "authoring" },
+  ];
+  chaptered.plan = chaptered.chapters.map((c) => ({
+    chapter: c.n,
+    title: c.title,
+    length: "1:00",
+    focus: `focus ${c.n}`,
+    sources: [],
+    status: c.status,
+  }));
+  const S = B.newState(chaptered);
+  let v = B.view(S);
+  assert.equal((v.match(/role="tab"/g) ?? []).length, 3);
+  assert.equal((v.match(/data-card=/g) ?? []).length, 1);
+  assert.ok(v.includes(`data-card="${first.id}"`));
+  assert.equal((v.match(/<tr><td>/g) ?? []).length, 3);
+  assert.deepEqual(
+    [1, 2, 3].map((n) => B.statusOf(S, n)),
+    ["awaiting you", "being authored", "being authored"],
+  );
+  B.ACT.tab(S, { n: 2 });
+  v = B.view(S);
+  assert.equal((v.match(/data-card=/g) ?? []).length, more.length);
+  assert.ok(!v.includes(`data-card="${first.id}"`));
+  assert.doesNotMatch(v, /data-act="direction"/);
+  assert.match(v, /being authored: its scenes join the board/);
+  B.ACT.tab(S, { n: 3 });
+  assert.equal((B.view(S).match(/data-card=/g) ?? []).length, 0);
+  // The look's approval covers the video, but not a chapter with nothing to approve yet.
+  B.setAnswers(S, [{ version: 1, approve: true }]);
+  assert.deepEqual(
+    [1, 2, 3].map((n) => B.statusOf(S, n)),
+    ["approved", "being authored", "being authored"],
+  );
+});
+
+test("a board with no draft of its own restores the newest earlier board's draft; its own, even empty, comes first, and one that is not JSON is none", () => {
+  const draft = (look) => JSON.stringify({ direction: null, look, notes: {} });
+  const store = {
+    "board-draft-1": draft("older"),
+    "board-draft-2": draft("darker"),
+  };
+  const get = (k) => store[k] ?? null;
+  assert.equal(B.savedDraft(get, 3).look, "darker");
+  store["board-draft-3"] = draft("");
+  assert.equal(B.savedDraft(get, 3).look, "");
+  store["board-draft-3"] = "{not json";
+  assert.equal(B.savedDraft(get, 3).look, "darker");
+  delete store["board-draft-2"];
+  assert.equal(B.savedDraft(get, 3).look, "older");
+  assert.equal(
+    B.savedDraft(() => null, 3),
+    null,
+  );
+});
+
+test("a board keeps its draft until it is sent or answered, then keeps none of its own or an earlier board's; a local page keeps it; a store that refuses reads false", () => {
+  const store = new Map();
+  const local = {
+    setItem: (k, v) => store.set(k, v),
+    removeItem: (k) => store.delete(k),
+  };
+  const board2 = (lock) => {
+    const b = clone(doc);
+    b.version = 2;
+    const S = B.newState(b);
+    B.ACT.look(S, { value: "darker" });
+    lock(S);
+    store.set("board-draft-1", "{}");
+    store.set("board-draft-2", "{}");
+    assert.equal(
+      B.storeDraft(() => local, S),
+      true,
+    );
+    return S;
+  };
+  board2(() => {});
+  assert.equal(JSON.parse(store.get("board-draft-2")).look, "darker");
+  const locks = {
+    sending: (S) => (S.status = "sending"),
+    sent: (S) => (S.status = "sent"),
+    saved: (S) => (S.status = "saved"),
+    answered: (S) => B.setAnswers(S, [{ version: 2, approve: false }]),
+  };
+  for (const [name, lock] of Object.entries(locks)) {
+    board2(lock);
+    assert.deepEqual([...store.keys()], [], name);
+  }
+  const S = board2((S) => {
+    S.local = true;
+    S.status = "sent";
+  });
+  assert.equal(JSON.parse(store.get("board-draft-2")).look, "darker");
+  const refuses = () => {
+    throw new Error("SecurityError");
+  };
+  assert.equal(B.storeDraft(refuses, S), false);
 });
 
 test("the view escapes what the board holds", () => {

@@ -13,7 +13,10 @@
 // its file and by its narration. After answers that commented on scenes alone,
 // every build until the next answers refuses a change to any scene they did not
 // name, to the kit, to over.html or to an asset that board had, so a comment on
-// one scene re-authors only that scene.
+// one scene re-authors only that scene. A video in chapters (timeline.json's
+// `chapters`) is shown while its later chapters are still being authored: a card
+// exists for each scene whose file exists, chapter 1's files must all exist, and
+// a scene file of a later chapter the answered board did not have is no change.
 // apply reads an answers file, the answers document as JSON or the answers
 // text, and says what it asks: it accepts only answers to the latest board.
 // stdout: build, `board: <n> -> board/storyboard.html (<k> scenes, <m> stills,
@@ -33,7 +36,8 @@
 // exit:   0 ok · 1 refused, `board: <why>` on stderr (a missing timeline,
 //         scene file, storyboard.json, direction frame or gsap.min.js; an
 //         invalid storyboard.json; a script.json whose scenes are not the
-//         ones timed, in order, or whose narration is not the one voiced; a scene changed, added or gone, or
+//         ones timed, in order, or whose narration is not the one voiced; a scene changed, added (but
+//         for a later chapter's) or gone, or
 //         the kit, over.html or an asset changed or gone, that the comments
 //         did not name;
 //         answers of an older board, naming an unknown scene or direction or
@@ -42,7 +46,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { maybeJson, readJson } from "../lib/json.mjs";
-import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
+import { mmss } from "../lib/length.mjs";
+import { readTimed, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend, skill } from "../lib/tools.mjs";
 import { sampleTimes } from "../gates/samples.mjs";
@@ -84,8 +89,6 @@ const readBoard = (n) =>
 
 const sha = (bytes) =>
   crypto.createHash("sha256").update(bytes).digest("hex").slice(0, 16);
-const mmss = (s) =>
-  `${Math.floor(Math.round(s) / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
 
 // Every file under kit/, nested ones too: each one's name and bytes, sorted.
 function kitHash(proj) {
@@ -116,8 +119,9 @@ function assetHashes(proj) {
   );
 }
 
-// storyboard.json held to what the stage relies on beyond its shape.
-function readStoryboard(timeline) {
+// storyboard.json held to what the stage relies on beyond its shape; `shown`
+// are the timed scenes that have a file, the ones it must have an entry for.
+function readStoryboard(shown) {
   const sb = readJson(run, "storyboard.json");
   const { list, recommended, picked } = sb.directions;
   if (list.length !== 3)
@@ -135,7 +139,7 @@ function readStoryboard(timeline) {
       fail(
         `storyboard.json: directions.${key} "${id}" is not in directions.list`,
       );
-  for (const { id } of timeline.scenes)
+  for (const { id } of shown)
     if (!sb.scenes[id]) fail(`storyboard.json: no entry for scene ${id}`);
   for (const { id } of list.filter((d) => d.id !== picked))
     if (!fs.existsSync(path.join(run, "directions", `${id}.html`)))
@@ -147,8 +151,9 @@ function readStoryboard(timeline) {
 
 // After answers that commented on scenes, with no look or direction, only those
 // scenes may change: notes beside an approval win over it, as apply prints.
-// `scenes` maps each id to its file's hash and its narration.
-function guardScenes(scenes, kit, over, assets) {
+// `scenes` maps each id to its file's hash and its narration; `chapterOf`, each
+// timed id to its chapter.
+function guardScenes(scenes, kit, over, assets, chapterOf) {
   const k = latestAnswered();
   if (!k) return;
   const a = JSON.parse(
@@ -160,9 +165,13 @@ function guardScenes(scenes, kit, over, assets) {
     prev.scenes.map((s) => [s.id, `${s.hash} ${s.narration}`]),
   );
   const named = a.scenes.map((s) => s.id);
-  // A scene added or gone counts as changed.
+  // A scene added or gone counts as changed, but for a later chapter's file
+  // newly authored, as a new asset is.
   const changed = [...new Set([...was.keys(), ...Object.keys(scenes)])].filter(
-    (id) => !named.includes(id) && was.get(id) !== scenes[id],
+    (id) =>
+      !named.includes(id) &&
+      was.get(id) !== scenes[id] &&
+      !(!was.has(id) && chapterOf[id] > 1),
   );
   if (kit !== prev.kit) changed.push("the kit");
   if (over !== prev.over) changed.push("over.html");
@@ -221,7 +230,28 @@ ${host(id, 0, 2, 1, "graphics")}
 }
 
 async function build() {
-  const { timeline, voice } = readTimeline(run, fail);
+  const { timeline, voice } = readTimed(run, fail);
+  const proj = path.join(path.resolve(run), "project");
+  const has = (id) =>
+    fs.existsSync(path.join(proj, "compositions", `${id}.html`));
+  // A video with no chapters is one.
+  const chapters = timeline.chapters ?? [
+    {
+      n: 1,
+      title: null,
+      start: 0,
+      end: timeline.total,
+      scenes: timeline.scenes.map((s) => s.id),
+    },
+  ];
+  const missing = chapters[0].scenes
+    .filter((id) => !has(id))
+    .map((id) => `compositions/${id}.html`);
+  if (missing.length) fail(`no ${missing.join(", ")}: author each scene file`);
+  const shown = timeline.scenes.filter((s) => has(s.id));
+  const chapterOf = Object.fromEntries(
+    chapters.flatMap((c) => c.scenes.map((id) => [id, c.n])),
+  );
   const script = readJson(run, "script.json");
   // The board shows script.json's narration beside stills timed to voice.json:
   // a script edited after timing (a scene added, gone or moved, or its words
@@ -240,11 +270,10 @@ async function build() {
       fail(
         `script.json's scene ${id} is not the narration voiced: voice and time it again first`,
       );
-  const sb = readStoryboard(timeline);
+  const sb = readStoryboard(shown);
   const n = Math.max(0, ...versions()) + 1;
-  const proj = path.join(path.resolve(run), "project");
   const hashes = Object.fromEntries(
-    timeline.scenes.map((s) => [
+    shown.map((s) => [
       s.id,
       sha(fs.readFileSync(path.join(proj, "compositions", `${s.id}.html`))),
     ]),
@@ -254,17 +283,15 @@ async function build() {
   const over = fs.existsSync(overFile) ? sha(fs.readFileSync(overFile)) : null;
   const assets = assetHashes(proj);
   const seen = Object.fromEntries(
-    timeline.scenes.map((s) => [s.id, `${hashes[s.id]} ${voiced.get(s.id)}`]),
+    shown.map((s) => [s.id, `${hashes[s.id]} ${voiced.get(s.id)}`]),
   );
-  if (n > 1) guardScenes(seen, kit, over, assets);
+  if (n > 1) guardScenes(seen, kit, over, assets, chapterOf);
   writeIgnore(run);
   writeRoot(run);
 
   const backend = await loadBackend();
   const env = hyperframesEnv();
-  const at = Object.fromEntries(
-    timeline.scenes.map((s) => [s.id, sampleTimes(s)]),
-  );
+  const at = Object.fromEntries(shown.map((s) => [s.id, sampleTimes(s)]));
   const times = [
     ...new Set(Object.values(at).flatMap((t) => Object.values(t))),
   ].sort((a, b) => a - b);
@@ -297,9 +324,9 @@ async function build() {
   // again with no Submit still shows what their comments changed.
   const prev = n > 1 ? readBoard(latestAnswered() || n - 1) : null;
   const was = new Map(prev?.scenes.map((s) => [s.id, s.hash]));
-  const scenes = timeline.scenes.map((s) => ({
+  const scenes = shown.map((s) => ({
     id: s.id,
-    chapter: 1,
+    chapter: chapterOf[s.id],
     title: sb.scenes[s.id].title,
     timecode: `${mmss(s.start)} to ${mmss(s.start + s.duration)}`,
     narration: narrationOf.get(s.id).join(" "),
@@ -326,23 +353,26 @@ async function build() {
           : keep(await directionFrame(backend, env, d.id, script.language)),
     });
 
-  const length = mmss(timeline.total);
+  // A chapter some of whose scene files are missing is being authored.
+  const status = (c) => (c.scenes.every(has) ? "awaiting" : "authoring");
   const doc = {
     version: n,
     title: sb.title,
     language: script.language,
-    length,
-    chapters: [{ n: 1, title: sb.title, status: "awaiting" }],
-    plan: [
-      {
-        chapter: 1,
-        title: sb.title,
-        length,
-        focus: sb.focus,
-        sources: citedSources(script),
-        status: "awaiting",
-      },
-    ],
+    length: mmss(timeline.total),
+    chapters: chapters.map((c) => ({
+      n: c.n,
+      title: c.title ?? sb.title,
+      status: status(c),
+    })),
+    plan: chapters.map((c) => ({
+      chapter: c.n,
+      title: c.title ?? sb.title,
+      length: mmss(c.end - c.start),
+      focus: script.chapters?.[c.n - 1]?.focus ?? sb.focus,
+      sources: citedSources(script, c.scenes),
+      status: status(c),
+    })),
     directions,
     kit,
     over,
@@ -384,13 +414,14 @@ async function build() {
   console.log("board: files board/files.json");
 }
 
-// The titles of the sources the script cites, in the order first cited.
-function citedSources(script) {
+// The titles of the sources the script's scenes `ids` cite, in the order first cited.
+function citedSources(script, ids) {
   const pack = maybeJson(run, "excerpts.json");
   if (!pack) return [];
   const source = new Map(pack.excerpts.map((e) => [e.id, e.source]));
   const title = new Map((pack.sources ?? []).map((s) => [s.id, s.title]));
   const titles = script.scenes
+    .filter((s) => ids.includes(s.id))
     .flatMap((s) => (s.cites ?? []).flat())
     .map((id) => title.get(source.get(id)))
     .filter(Boolean);

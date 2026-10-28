@@ -37,18 +37,17 @@ const locked = (S) =>
 function setAnswers(S, docs) {
   S.answers = docs;
 }
-// A chapter is approved once an approving answers document of the latest version is in the database,
-// or, on a local page, which has no database, once its approval is asked for.
+const cardsOf = (S, n) => S.board.scenes.filter((c) => c.chapter === n);
+// A chapter the board marks authoring (a scene file missing) is still being authored: there is nothing in
+// it to approve. Otherwise it is approved once any approving answers document, of any board version, is in
+// the database (a later board's chapters need no new approval), or, on a local page, which has no database,
+// once its approval is asked for.
 function statusOf(S, n) {
-  if (
-    S.answers.some(
-      (a) => a.version === S.board.version && a.approve === true,
-    ) ||
-    (S.local && approving(S))
-  )
-    return "approved";
   const c = S.board.chapters.find((x) => x.n === n);
-  return c.status === "awaiting" ? "awaiting you" : c.status;
+  if (c.status === "authoring") return "being authored";
+  if (S.answers.some((a) => a.approve === true) || (S.local && approving(S)))
+    return "approved";
+  return "awaiting you";
 }
 
 const ACT = {
@@ -137,8 +136,8 @@ function view(S) {
     <nav class="tabs" role="tablist">${b.chapters.map((c) => tab(S, c)).join("")}</nav>
     <section class="chapter" role="tabpanel" aria-labelledby="tab-${esc(chapter.n)}">
       ${chapter.n === 1 ? directionsPanel(S, b) : ""}
-      <div class="cards">${b.scenes
-        .filter((c) => c.chapter === chapter.n)
+      ${statusOf(S, chapter.n) === "being authored" ? '<p class="lede">This chapter is being authored: its scenes join the board as they are made.</p>' : ""}
+      <div class="cards">${cardsOf(S, chapter.n)
         .map((c) => card(S, c))
         .join("")}</div>
     </section>
@@ -230,6 +229,41 @@ function status(S, b) {
   return "";
 }
 
+const draftKey = (version) => "board-draft-" + version;
+
+// The draft to restore on board `version`, read through `get` (localStorage's
+// getItem): its own, else the newest earlier board's, so a later chapter's
+// board posted while a comment was being written keeps that comment. A sent
+// or answered board keeps no draft (storeDraft), so only an unsent one carries
+// over.
+function savedDraft(get, version) {
+  for (let v = version; v > 0; v--) {
+    let d = null;
+    try {
+      d = JSON.parse(get(draftKey(v)) || "null");
+    } catch (e) {} // a draft that is not JSON is none
+    if (d && typeof d === "object") return d;
+  }
+  return null;
+}
+
+// Saves the draft to the store `getStore` returns (localStorage), or, once the
+// board is sent or answered, removes it and every earlier board's, so a later
+// board never restores a sent comment. A local page never locks: its copy is
+// never known to have landed, so it keeps its draft. False when the store refuses.
+function storeDraft(getStore, S) {
+  try {
+    const store = getStore(),
+      v = S.board.version;
+    if (locked(S)) {
+      for (let k = v; k > 0; k--) store.removeItem(draftKey(k));
+    } else store.setItem(draftKey(v), JSON.stringify(S.draft));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 globalThis.Board = {
   newState,
   ACT,
@@ -242,6 +276,8 @@ globalThis.Board = {
   statusOf,
   setAnswers,
   view,
+  savedDraft,
+  storeDraft,
 };
 
 /* ---- boot: the browser only. Wires the capability, the draft, Submit and the copy button. ---- */
@@ -258,25 +294,21 @@ async function boot() {
   const S = newState(embedded());
   S.mode = "loading";
   const app = document.getElementById("app");
-  const key = () => "board-draft-" + S.board.version;
-  const saveDraft = () => {
-    try {
-      localStorage.setItem(key(), JSON.stringify(S.draft));
-    } catch (e) {}
-  };
+  const saveDraft = () => storeDraft(() => localStorage, S);
   // Only what this board can take: a draft of another board's ids is dropped.
   function restoreDraft() {
     let saved = null;
     try {
-      saved = JSON.parse(localStorage.getItem(key()) || "null");
+      saved = savedDraft((k) => localStorage.getItem(k), S.board.version);
     } catch (e) {}
-    if (!saved || typeof saved !== "object") return;
+    if (!saved) return;
     const picks = S.board.directions.filter((d) => !d.picked).map((d) => d.id);
     if (picks.includes(saved.direction)) S.draft.direction = saved.direction;
     if (typeof saved.look === "string") S.draft.look = saved.look;
     for (const [id, v] of Object.entries(saved.notes || {}))
       if (S.board.scenes.some((c) => c.id === id) && typeof v === "string")
         S.draft.notes[id] = v;
+    saveDraft();
   }
   function render() {
     const f = document.activeElement,
@@ -363,6 +395,7 @@ async function boot() {
         S,
         snap.docs.map((d) => d.data()),
       );
+      saveDraft();
       render();
     },
     () => {},
@@ -405,6 +438,7 @@ async function boot() {
     const woke = await wake(anchor),
       text = answersText(doc);
     S.status = outcome(saved, woke, capped(text, doc.version) === text);
+    saveDraft();
     render();
   }
   async function rewake() {

@@ -54,11 +54,10 @@ export const voiceHash = (run) =>
     .digest("hex")
     .slice(0, 16);
 
-// timeline.json and voice.json once the run's project is ready to judge or
-// render: the timeline exists, answers to this voice.json, and every scene has
-// its file. The render and the gates refuse the same three ways; `fail` ends
-// the stage with the reason.
-export function readTimeline(run, fail) {
+// timeline.json and voice.json once the timeline exists and answers to this
+// voice.json; `fail` ends the stage with the reason. The storyboard reads them
+// so, since a later chapter's scene files may not be written yet.
+export function readTimed(run, fail) {
   if (!fs.existsSync(path.join(run, "timeline.json")))
     fail("timeline.json is missing: run render/timing.mjs first");
   const timeline = readJson(run, "timeline.json");
@@ -67,6 +66,14 @@ export function readTimeline(run, fail) {
     fail(
       "timeline.json is from an older voice.json: run render/timing.mjs again",
     );
+  return { timeline, voice };
+}
+
+// readTimed's pair once the run's project is ready to judge or render: every
+// scene has its file as well. The render and the gates refuse the same three
+// ways.
+export function readTimeline(run, fail) {
+  const { timeline, voice } = readTimed(run, fail);
   const missing = timeline.scenes
     .map((s) => `compositions/${s.id}.html`)
     .filter((f) => !fs.existsSync(path.join(run, "project", f)));

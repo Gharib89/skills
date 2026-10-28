@@ -245,6 +245,43 @@ function measureFrame() {
   return out;
 }
 
+// Runs in the page for one frame: the tag of each over.html element that paints
+// on it, shown with an area and drawing text, a fill, a border, a shadow, an
+// outline or replaced content. A wrapper that draws nothing is none.
+function overPaints() {
+  const out = [];
+  const replaced = ["img", "svg", "canvas", "video", "iframe", "object"];
+  for (const el of document.querySelectorAll(
+    '[data-composition-id="over"] *',
+  )) {
+    if (["audio", "script", "style", "template"].includes(el.localName))
+      continue;
+    if (
+      !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })
+    )
+      continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) continue;
+    const s = getComputedStyle(el);
+    const edge = ["Top", "Right", "Bottom", "Left"].some(
+      (k) => parseFloat(s[`border${k}Width`]) > 0,
+    );
+    if (
+      replaced.includes(el.localName) ||
+      [...el.childNodes].some(
+        (n) => n.nodeType === 3 && n.textContent.trim(),
+      ) ||
+      s.backgroundImage !== "none" ||
+      !/^(transparent|rgba\(.*,\s*0\))$/.test(s.backgroundColor) ||
+      edge ||
+      s.boxShadow !== "none" ||
+      (s.outlineStyle !== "none" && parseFloat(s.outlineWidth) > 0)
+    )
+      out.push(`<${el.localName}>`);
+  }
+  return out;
+}
+
 // Runs in the page: each scene's tween windows, in the scene's own seconds, and
 // its sounds as `{ id, start, authored }` (gates/sounds.mjs): the live
 // data-start, and the data-start its scene file gives the <audio> with that id
@@ -302,15 +339,20 @@ async function sceneEvents() {
   return out;
 }
 
-// The text the project shows at each of `times`, and what moves and sounds in
-// each scene: `{ frames: [{ t, texts }], events: { <scene>: { tweens, sounds } } }`.
+// The text the project shows at each of `times`, what over.html paints there,
+// and what moves and sounds in each scene:
+// `{ frames: [{ t, texts, over }], events: { <scene>: { tweens, sounds } } }`.
 export async function probe(dir, times, { env }) {
   const { page, close } = await open(dir, env);
   try {
     const frames = [];
     for (const t of times) {
       await seek(page, t);
-      frames.push({ t, texts: await page.evaluate(measureFrame) });
+      frames.push({
+        t,
+        texts: await page.evaluate(measureFrame),
+        over: await page.evaluate(overPaints),
+      });
     }
     return { frames, events: await page.evaluate(sceneEvents) };
   } finally {

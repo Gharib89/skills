@@ -36,16 +36,16 @@ nothing outside this table, and every field below is in every board.
 | `board.title` | string | The video's title, from `storyboard.json`. |
 | `board.language` | string | The narration's language code, from `script.json`. |
 | `board.length` | string | The video's length, `m:ss`. |
-| `board.chapters` | array | One entry per chapter; this version has one. |
+| `board.chapters` | array | One entry per chapter of the plan (`script.json`'s `chapters`, `timeline.json`'s); a video with none has one, titled as the video. |
 | `board.chapters[].n` | number | The chapter's number, from 1. |
 | `board.chapters[].title` | string | The chapter's title. |
-| `board.chapters[].status` | string | `awaiting` until the look is approved. The page shows `approved` once the database holds an approving answers document of this version, or, on a local page, once the person asks for the approval. |
+| `board.chapters[].status` | string | `awaiting` when every scene file of the chapter exists, `authoring` when any is missing (chapter 1's all exist, so it is never `authoring`). The page shows `being authored` for `authoring`, and `approved` once the database holds an approving answers document of any board version, or, on a local page, once the person asks for the approval. |
 | `board.plan` | array | The chapter plan, one row per chapter. |
 | `board.plan[].chapter` | number | The row's chapter. |
 | `board.plan[].title` | string | The chapter's title. |
-| `board.plan[].length` | string | The chapter's length, `m:ss`. |
-| `board.plan[].focus` | string | What the chapter teaches, one line, from `storyboard.json`. |
-| `board.plan[].sources` | array | The titles of the sources the script cites, in the order first cited, as strings; empty without `excerpts.json`. |
+| `board.plan[].length` | string | The chapter's length, `m:ss`, from the timeline's chapter `start` and `end`; the whole video's for a video with no chapters. |
+| `board.plan[].focus` | string | What the chapter teaches, one line: `script.json`'s chapter `focus`, else `storyboard.json`'s `focus`. |
+| `board.plan[].sources` | array | The titles of the sources the chapter's scenes cite, in the order first cited, as strings; empty without `excerpts.json`. |
 | `board.plan[].status` | string | As `board.chapters[].status`. |
 | `board.directions` | array | The three directions, in `storyboard.json`'s order. |
 | `board.directions[].id` | string | The direction's id, kebab-case. |
@@ -57,9 +57,9 @@ nothing outside this table, and every field below is in every board.
 | `board.kit` | string | The hash of the project's kit files; the guard compares it with the latest answered board's. |
 | `board.over` | string or null | The hash of `compositions/over.html`, null without one; the guard compares it with the latest answered board's. |
 | `board.assets` | object | Each file under `assets/` but `narration.wav` and `gsap.min.js`, by its path there, to its hash; the guard refuses one of the latest answered board's that changed or went. |
-| `board.scenes` | array | Every scene, in timeline order. |
+| `board.scenes` | array | Every scene whose composition file exists, in timeline order: all of chapter 1's, and a later chapter's as it is authored. |
 | `board.scenes[].id` | string | The scene's id. |
-| `board.scenes[].chapter` | number | The chapter it belongs to. |
+| `board.scenes[].chapter` | number | The chapter it belongs to, `board.chapters[].n`. |
 | `board.scenes[].title` | string | Its title, from `storyboard.json`. |
 | `board.scenes[].timecode` | string | `m:ss to m:ss`. |
 | `board.scenes[].narration` | string | Its sentences from `script.json`, joined by spaces. |

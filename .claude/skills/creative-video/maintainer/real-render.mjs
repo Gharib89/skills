@@ -29,10 +29,19 @@ import os from "node:os";
 import path from "node:path";
 import { HOLD } from "../scripts/lib/length.mjs";
 import { stage } from "../scripts/lib/stage.mjs";
-import { catalogue, dest, loadBackend, skill } from "../scripts/lib/tools.mjs";
+import { loadBackend, skill } from "../scripts/lib/tools.mjs";
 import { chapterCheck, joinChapters } from "../scripts/render/chapters.mjs";
 import { FPS, gridScenes } from "../scripts/render/grid.mjs";
-import { authored, differing, runFolder, tone } from "./real-render-lib.mjs";
+import {
+  authored,
+  capture,
+  differing,
+  gatesPass,
+  missingRows,
+  runFolder,
+  runStage,
+  tone,
+} from "./real-render-lib.mjs";
 
 const NAME = "creative-real-render";
 stage(NAME);
@@ -50,12 +59,7 @@ const check = (name, ok, detail) => {
   if (!ok) failed++;
   console.log(`${NAME} ${name}: ${ok ? "pass" : "fail"}: ${detail}`);
 };
-const missing = catalogue()
-  .filter((r) => ["npm", "chrome"].includes(r.kind))
-  .filter((r) => !fs.existsSync(path.join(dest(r), ".stamp")))
-  .map((r) => r.id);
-if (["ffmpeg", "ffprobe"].some((t) => spawnSync(t, ["-version"]).error))
-  missing.push("ffmpeg");
+const missing = missingRows();
 if (missing.length) {
   console.error(
     `${NAME}: ${missing.join(", ")} not installed: run /creative-video setup`,
@@ -66,25 +70,6 @@ if (missing.length) {
 const work = fs.mkdtempSync(path.join(os.tmpdir(), `${NAME}-`));
 process.on("exit", () => fs.rmSync(work, { recursive: true, force: true }));
 
-// The stdout of `cmd`; a failure throws with both streams, since the render
-// stage prints its delivery failures on stdout and its renderer on stderr.
-function capture(cmd, args) {
-  const r = spawnSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 });
-  if (r.status !== 0) {
-    const files = args.filter(path.isAbsolute).map((a) => path.basename(a));
-    const said = [r.stdout, r.stderr].map((s) => s?.trim()).filter(Boolean);
-    throw new Error(
-      `${path.basename(cmd)} ${files.join(" ")}: ${said.join("\n") || r.error?.message}`,
-    );
-  }
-  return r.stdout;
-}
-// Runs the skill's stage `script` (under scripts/) on `run`; the MP4 it would
-// deliver.
-function runStage(script, run) {
-  capture(process.execPath, [path.join(skill, "scripts", script), run]);
-  return path.join(run, "out", `${path.basename(run)}.mp4`);
-}
 const count = (file) =>
   +capture("ffprobe", [
     ...["-v", "error", "-count_frames", "-select_streams", "v:0"],
@@ -97,35 +82,6 @@ const hashes = (file) =>
     .split("\n")
     .filter((l) => l && !l.startsWith("#"))
     .map((l) => l.split(",").at(-1).trim());
-// The claims check and the gates passed on `run`. The critic gate waits on a
-// verdict per scene: a clean one is written for each pending scene, as
-// agents/critic.md writes one, since the critic's judgement is a live probe's
-// to prove, not this script's.
-function gatesPass(run) {
-  runStage("source/claims.mjs", run);
-  const gates = path.join(skill, "scripts", "gates", "gates.mjs");
-  spawnSync(process.execPath, [gates, run], { maxBuffer: 1 << 26 });
-  const record = path.join(run, "gates.json");
-  const critic =
-    fs.existsSync(record) &&
-    JSON.parse(fs.readFileSync(record, "utf8")).gates.critic;
-  if (critic?.status === "pending") {
-    const dir = path.join(run, critic.stills);
-    const set = JSON.parse(fs.readFileSync(path.join(dir, "stills.json")));
-    for (const [id, stills] of Object.entries(set))
-      fs.writeFileSync(
-        path.join(dir, `${id}.json`),
-        JSON.stringify({
-          stills: stills.map(({ t }) => ({
-            t,
-            sees: "a box on a dark ground",
-          })),
-          failures: [],
-        }),
-      );
-  }
-  runStage("gates/gates.mjs", run);
-}
 const grid = (scenes) =>
   gridScenes(
     scenes.map((s) => s.frames / FPS),
@@ -158,7 +114,7 @@ check(
   diffs.join("; ") || `3 renders, ${first.length} frames each, identical`,
 );
 
-// Each chapter rendered on its own, the parts joined by the chapter join with
+// Each chapter rendered on its own, the renders joined by the chapter join with
 // one narration over the whole and a mark at each chapter's first frame.
 const parts = CHAPTERS.map((c, k) => {
   const run = runFolder(work, `chapter-${k + 1}`, c.scenes);

@@ -1,7 +1,18 @@
-// The brief's length, shared by the voice stage and the render: the render
-// holds the last scene's frame HOLD seconds after its narration, and the
-// scenes with that hold land within 10 percent of the brief's `length`.
+// The video's lengths, shared by the stages that time, judge, show or render
+// it: the render holds the last scene's frame HOLD seconds after its
+// narration, and the scenes with that hold land within 10 percent of the
+// brief's `length`.
 export const HOLD = 1;
+
+// A chapter of a video in chapters runs 2 to 6 minutes within 10 percent: the
+// seconds it may take, the closing hold included on the last one.
+export const CHAPTER_SECONDS = [108, 396];
+
+// Whole seconds as m:ss, the way the board and the render's estimate print them.
+export function mmss(seconds) {
+  const s = Math.round(seconds);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
 
 // Whether `seconds` of scenes and the hold fit a brief `length` of `minutes`.
 export function fitsLength(seconds, minutes) {
