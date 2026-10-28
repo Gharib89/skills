@@ -78,3 +78,18 @@ export const voicesOf = (cast) =>
       { narrator: n.id, style: n.style },
     ]),
   );
+
+// The voices `voiced` (voice.json) records, by role: each role some sentence
+// speaks, as its narrators.json entry with the style it was voiced in. Not
+// cast.json's, which can be edited since, nor an unspoken narrator role.
+export function voicedCast(voiced) {
+  const spoken = new Set(voiced.scenes.flatMap((s) => s.roles));
+  return Object.fromEntries(
+    Object.entries(voiced.voices)
+      .filter(([role]) => spoken.has(role))
+      .map(([role, v]) => [
+        role,
+        { ...findNarrator(v.narrator, voiced.language), style: v.style },
+      ]),
+  );
+}

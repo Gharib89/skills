@@ -3,18 +3,18 @@
 //
 //   node credits.mjs <run-folder>
 //
-// Voices: each role script.json speaks (the narrator alone with no cast.json),
-// its voice id, backend and licence. Sound: the kit's bed and each palette
+// Voices: each role voice.json voiced some sentence in (the narrator alone with
+// no cast.json), its voice id, backend and licence. Sound: the kit's bed and each palette
 // sound with its event, source, licence, creator, url and attribution, then
 // each sound sounds.mjs dropped. Every other section of CREDITS.md (the
 // sources, the faces) is kept as it stands; the file is created when absent.
 // writes: <run>/CREDITS.md
-// exit:   0 written · 1 refused, `credits: <why>` on stderr (no script.json,
-//         a cast that does not fit it, a malformed sound.json) · 2 usage
+// exit:   0 written · 1 refused, `credits: <why>` on stderr (no voice.json, a
+//         malformed sound.json) · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { readJson } from "../lib/json.mjs";
-import { kitSounds, rolesOf, soundKit, voices } from "../lib/kit.mjs";
+import { kitSounds, soundKit, voicedCast } from "../lib/kit.mjs";
 import { stage } from "../lib/stage.mjs";
 
 stage("credits");
@@ -23,14 +23,12 @@ if (!run || rest.length) {
   console.error("usage: node credits.mjs <run-folder>");
   process.exit(2);
 }
-const script = readJson(run, "script.json");
-// `voices` keeps the narrator role even when every sentence is another's.
-const spoken = new Set(script.scenes.flatMap(rolesOf));
+const voiced = voicedCast(readJson(run, "voice.json"));
 const kit = soundKit(run);
 const sections = {
-  Voices: Object.entries(voices(run, script))
-    .filter(([role]) => spoken.has(role))
-    .map(([role, n]) => `- ${role}: ${n.id} (${n.backend}, ${n.licence})`),
+  Voices: Object.entries(voiced).map(
+    ([role, n]) => `- ${role}: ${n.id} (${n.backend}, ${n.licence})`,
+  ),
   Sound: [
     ...kitSounds(kit).map(
       (s) =>
