@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.0 (2026-10-28)
+
+### Features
+
+- **creative-video**: The sounds gate, a sound on a word created at its scene's start (#1028)
+  ([#1030](https://github.com/Gharib89/skills/pull/1030),
+  [`da1ece1`](https://github.com/Gharib89/skills/commit/da1ece1c934092ed4d2eb8e8ce50e5da66446e5a))
+
+
 ## v0.4.0 (2026-10-28)
 
 ### Features
