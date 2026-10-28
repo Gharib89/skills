@@ -149,6 +149,20 @@ test("a cast narrator with no key is refused naming cast.json as where to choose
   assert.equal(synths(fx).length, 0);
 });
 
+test("a narrator no sentence speaks needs no key", () => {
+  const fx = fixture([SCENES[1]]);
+  write(fx, [{ ...SCENES[1], roles: ["learner"] }], "en", {
+    narrator: "elevenlabs-george",
+  });
+  cast(fx, { learner: CAST.learner });
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(
+    synths(fx).map((c) => c.voice),
+    ["am_fenrir"],
+  );
+});
+
 test("a cast's fresh run keeps each scene voiced before a quota stop, so the next run voices only the rest", () => {
   const fx = fixture([
     {

@@ -7,7 +7,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseNarrators } from "../../skills/creative-video/scripts/lib/narrators.mjs";
-import { SCENES, fixture, run, synths, write } from "./voice-lib.mjs";
+import {
+  SCENES,
+  fixture,
+  run,
+  synths,
+  write,
+  writeCast,
+} from "./voice-lib.mjs";
 
 const file = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -160,6 +167,30 @@ test("the voice stage refuses a narrator with no calibrated rate, naming the cal
   );
   assert.equal(synths(fx).length, 0);
   assert.ok(!fs.existsSync(path.join(fx.dir, "voice.json")));
+});
+
+test("a narrator with no calibrated rate that no sentence speaks does not stop the voice stage", () => {
+  const uncalibrated = narrators.find((n) => n.rate === null);
+  const host = narrators.find(
+    (n) => n.language === uncalibrated.language && n.rate !== null,
+  );
+  const fx = fixture();
+  write(
+    fx,
+    [
+      {
+        id: "hook",
+        narration: ["شيب بياخد مهمة واحدة ويوصلها لحد pull request متراجع."],
+        roles: ["host"],
+      },
+    ],
+    uncalibrated.language,
+    { narrator: uncalibrated.id },
+  );
+  writeCast(fx, { host: { voices: { [host.language]: host.id } } });
+  const r = run(fx, { GEMINI_API_KEY: "fake" });
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual([...new Set(synths(fx).map((c) => c.voice))], [host.voice]);
 });
 
 test("the ElevenLabs narrator is opt-in: never a default, and its text leaves the machine", () => {

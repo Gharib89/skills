@@ -65,9 +65,13 @@ const { language } = script;
 // Each role's narrator, the narrator role's first.
 const cast = voices(run, script);
 const narrator = cast.narrator;
+// The roles some sentence speaks: `voices` keeps the narrator role even when
+// every sentence is another's, and a voice never heard is refused nothing.
+const spoken = new Set(script.scenes.flatMap(rolesOf));
+const speaking = Object.entries(cast).filter(([role]) => spoken.has(role));
 // A narrator new to narrators.json carries a null rate until calibrated, and a
 // script budgeted at none would be cut to NaN.
-for (const n of Object.values(cast))
+for (const [, n] of speaking)
   if (!Number.isFinite(n.rate)) {
     console.error(
       `voice: narrator ${n.id} has no calibrated rate; run maintainer/calibrate-rates.mjs ${language} ${n.id}`,
@@ -226,7 +230,7 @@ const missing = scenes.filter((s) => !s.cached);
 // backend's key row in setup/rows.json: no other narrator stands in, since
 // script.json or the cast names this narrator, and the refusal names which.
 const castFile = maybeJson(run, CAST);
-for (const [role, n] of Object.entries(cast)) {
+for (const [role, n] of speaking) {
   const keyRow = catalogue().find(
     (r) => r.kind === "key" && r.backend === n.backend,
   );
