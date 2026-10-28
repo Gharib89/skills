@@ -1,82 +1,654 @@
 {
+  "defaults": {
+    "kokoro": {
+      "language": "en",
+      "style": null,
+      "licence": "Apache-2.0",
+      "leavesMachine": false,
+      "rate": null,
+      "pause": null,
+      "default": false
+    },
+    "gemini": {
+      "language": "ar",
+      "style": "a clear, warm, friendly narrator explaining a software workflow",
+      "licence": "Gemini API terms",
+      "leavesMachine": true,
+      "rate": null,
+      "pause": null,
+      "default": false
+    },
+    "elevenlabs": {
+      "language": "en",
+      "style": null,
+      "licence": "ElevenLabs terms",
+      "leavesMachine": true,
+      "rate": null,
+      "pause": null,
+      "default": false
+    }
+  },
   "narrators": [
     {
       "id": "bf_emma",
-      "language": "en",
       "gender": "female",
       "backend": "kokoro",
-      "voice": "bf_emma",
-      "style": null,
-      "licence": "Apache-2.0",
-      "leavesMachine": false,
       "rate": 16.55,
-      "pause": 0.78,
-      "default": false
+      "pause": 0.78
     },
     {
       "id": "am_fenrir",
-      "language": "en",
       "gender": "male",
       "backend": "kokoro",
-      "voice": "am_fenrir",
-      "style": null,
-      "licence": "Apache-2.0",
-      "leavesMachine": false,
       "rate": 15.7,
-      "pause": 0.57,
-      "default": false
+      "pause": 0.57
     },
     {
       "id": "af_heart",
-      "language": "en",
       "gender": "female",
       "backend": "kokoro",
-      "voice": "af_heart",
-      "style": null,
-      "licence": "Apache-2.0",
-      "leavesMachine": false,
       "rate": 15.11,
       "pause": 0.81,
       "default": true
     },
     {
       "id": "ar-eg-csagent-2",
-      "language": "ar",
       "gender": "female",
       "backend": "gemini",
-      "voice": "ar-eg-csagent-2",
-      "style": "a clear, warm, friendly narrator explaining a software workflow",
-      "licence": "Gemini API terms",
-      "leavesMachine": true,
       "rate": 11.2,
       "pause": 0.7,
       "default": true
     },
     {
       "id": "ar-eg-commercial-11",
-      "language": "ar",
       "gender": "male",
       "backend": "gemini",
-      "voice": "ar-eg-commercial-11",
-      "style": "a clear, warm, friendly narrator explaining a software workflow",
-      "licence": "Gemini API terms",
-      "leavesMachine": true,
       "rate": 12.71,
       "pause": 0.68,
       "default": true
     },
     {
+      "id": "ar-eg-advisor-11",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-advisor-12",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-advisor-4",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-advisor-5",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-advisor-6",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-advisor-7",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-advisor-8",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-advisor-9",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-assistant-1",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-assistant-10",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-assistant-11",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-assistant-12",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-assistant-3",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-assistant-5",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-assistant-6",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-assistant-7",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-assistant-8",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-assistant-9",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-commercial-1",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-commercial-10",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-commercial-13",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-commercial-6",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-commercial-8",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-commercial-9",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-concierge-1",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-concierge-10",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-concierge-12",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-concierge-3",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-concierge-4",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-concierge-5",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-concierge-6",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-concierge-7",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-concierge-8",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-concierge-9",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-csagent-1",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-csagent-12",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-csagent-3",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-csagent-5",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-csagent-6",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-csagent-7",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-csagent-9",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-1",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-10",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-11",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-12",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-2",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-3",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-4",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-5",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-6",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-7",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-8",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-podcaster-9",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-1",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-10",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-11",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-12",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-2",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-3",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-4",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-5",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-6",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-7",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-8",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-storyteller-9",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-techagent-1",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-techagent-12",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-techagent-3",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-techagent-5",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-techagent-6",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-techagent-7",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-techagent-8",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-techagent-9",
+      "gender": "neutral",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-training-10",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-training-11",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-training-3",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-training-4",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-training-5",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-training-6",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-training-7",
+      "gender": "neutral",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-training-8",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-training-9",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-tutor-10",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-tutor-11",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-tutor-12",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-tutor-5",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-tutor-6",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-tutor-7",
+      "gender": "female",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-tutor-8",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
+      "id": "ar-eg-tutor-9",
+      "gender": "male",
+      "backend": "gemini"
+    },
+    {
       "id": "elevenlabs-george",
-      "language": "en",
       "gender": "male",
       "backend": "elevenlabs",
       "voice": "JBFqnCBsd6RMkjVDRZzb",
-      "style": null,
-      "licence": "ElevenLabs terms",
-      "leavesMachine": true,
       "rate": 13.38,
-      "pause": 0,
-      "default": false
+      "pause": 0
+    },
+    {
+      "id": "af_alloy",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "af_aoede",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "af_bella",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "af_jessica",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "af_kore",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "af_nicole",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "af_nova",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "af_river",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "af_sarah",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "af_sky",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "am_adam",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "am_echo",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "am_eric",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "am_liam",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "am_michael",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "am_onyx",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "am_puck",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "am_santa",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "bf_alice",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "bf_isabella",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "bf_lily",
+      "gender": "female",
+      "backend": "kokoro"
+    },
+    {
+      "id": "bm_daniel",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "bm_fable",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "bm_george",
+      "gender": "male",
+      "backend": "kokoro"
+    },
+    {
+      "id": "bm_lewis",
+      "gender": "male",
+      "backend": "kokoro"
     }
   ]
 }
