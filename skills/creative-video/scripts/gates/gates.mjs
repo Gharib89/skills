@@ -42,8 +42,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { claimsKey } from "../lib/claims.mjs";
 import { maybeJson, readJson } from "../lib/json.mjs";
-import { soundKit } from "../lib/kit.mjs";
-import { narrator as findNarrator } from "../lib/narrators.mjs";
+import { soundKit, voicedCast } from "../lib/kit.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
@@ -443,22 +442,11 @@ gates.critic = criticGate({
 const failing = Object.values(gates).filter((g) => g.status === "fail").length;
 const pending = gates.critic.status === "pending";
 
-// The voices voice.json voiced, not cast.json's, which can be edited since.
-// Only a role some sentence speaks can sound alike: `voices` keeps the
-// narrator role even when every sentence is another's.
-const spoken = new Set(voiced.scenes.flatMap((s) => s.roles));
 const warned = warnings({
   plan,
   events,
   script,
-  castVoices: Object.fromEntries(
-    Object.entries(voiced.voices)
-      .filter(([role]) => spoken.has(role))
-      .map(([role, v]) => [
-        role,
-        { ...findNarrator(v.narrator, voiced.language), style: v.style },
-      ]),
-  ),
+  castVoices: voicedCast(voiced),
   sound: kit,
   total: timeline.total,
   proj,

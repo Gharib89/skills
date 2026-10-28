@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { SCENES, fixture, here, write, writeCast } from "./voice-lib.mjs";
+import { SCENES, fixture, here, run, write, writeCast } from "./voice-lib.mjs";
 import { exec, project, read } from "./timing-lib.mjs";
 
 const credits = path.join(
@@ -42,9 +42,15 @@ const KIT = {
   dropped: [{ event: "pop", query: "pop", why: "found nowhere" }],
 };
 const file = (fx) => path.join(fx.dir, "CREDITS.md");
+// Credits read the voices voice.json recorded, so each run is voiced first.
+const voice = (fx) => {
+  const r = run(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+};
 
 test("with no CREDITS.md, no cast and no kit, it writes the narrator's voice and no sound", () => {
   const fx = fixture();
+  voice(fx);
   const r = exec(credits, fx);
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(
@@ -60,6 +66,7 @@ test("each cast role's voice and each kit sound is credited, dropped sounds as d
     narrator: { voices: { en: "bf_emma" } },
     chef: { voices: { en: "am_fenrir" } },
   });
+  voice(fx);
   fs.writeFileSync(project(fx, "kit", "sound.json"), JSON.stringify(KIT));
   fs.writeFileSync(
     file(fx),
@@ -91,6 +98,7 @@ test("a narrator no sentence speaks is not credited", () => {
     SCENES.map((s) => ({ ...s, roles: s.narration.map(() => "chef") })),
   );
   writeCast(fx, { chef: { voices: { en: "am_fenrir" } } });
+  voice(fx);
   const r = exec(credits, fx);
   assert.equal(r.code, 0, r.out + r.err);
   assert.match(
@@ -99,10 +107,19 @@ test("a narrator no sentence speaks is not credited", () => {
   );
 });
 
-test("a run with no script.json is refused by name", () => {
+test("credits name the voices voice.json voiced, not a cast.json edited since", () => {
   const fx = fixture();
-  fs.rmSync(path.join(fx.dir, "script.json"));
+  write(fx, [...SCENES.slice(0, 2), { ...SCENES[2], roles: ["chef"] }]);
+  writeCast(fx, { chef: { voices: { en: "am_fenrir" } } });
+  voice(fx);
+  writeCast(fx, { chef: { voices: { en: "bf_emma" } } });
   const r = exec(credits, fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(read(file(fx)), /^- chef: am_fenrir \(kokoro, Apache-2\.0\)$/m);
+});
+
+test("a run with no voice.json is refused by name", () => {
+  const r = exec(credits, fixture());
   assert.equal(r.code, 1);
-  assert.match(r.err, /^credits: .*script\.json/);
+  assert.match(r.err, /^credits: .*voice\.json/);
 });
