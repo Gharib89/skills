@@ -8,7 +8,8 @@ import path from "node:path";
 import { sentences } from "../lib/length.mjs";
 import { sceneSeconds } from "./sounds.mjs";
 
-// The one place a gate reads scene code (ADR 0019): a clock or random read may
+// The one place a gate reads scene code (ADR 0019; the sounds gate reads only a
+// scene file's <audio> starts): a clock or random read may
 // break determinism, which the frames judge, so it is named, never refused.
 const CLOCK = [
   ["Math.random", /Math\.random\b/],
@@ -47,11 +48,11 @@ function effectRate(sounds) {
 // A sound more than 0.15 s from its scene's nearest tween start.
 function effectOnset({ sc }, { tweens, sounds }) {
   return sounds.flatMap((sound) => {
-    const s = sceneSeconds(sc, sound);
-    const gap = Math.min(...tweens.map(([from]) => Math.abs(s - from)));
+    const at = sceneSeconds(sc, sound);
+    const gap = Math.min(...tweens.map(([from]) => Math.abs(at - from)));
     return tweens.length && gap > 0.15 + 1e-6
       ? [
-          `effect onset: ${sc.id}: the sound at ${s.toFixed(2)} s is ${gap.toFixed(2)} s from the nearest tween start`,
+          `effect onset: ${sc.id}: the sound at ${at.toFixed(2)} s is ${gap.toFixed(2)} s from the nearest tween start`,
         ]
       : [];
   });

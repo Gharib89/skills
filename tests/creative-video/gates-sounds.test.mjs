@@ -30,15 +30,39 @@ function context(audio) {
 }
 
 test("a static <audio> whose start its script moves fails sounds, naming the scene, the id and both starts", () => {
-  const r = context(
-    () => '<audio id="ding" data-sound="0.5" data-moved="1.5"></audio>',
-  );
+  let at;
+  const r = context((start) => {
+    at = (start + 1.5).toFixed(3);
+    return '<audio id="ding" data-sound="0.5" data-moved="1.5"></audio>';
+  });
   assert.equal(r.code, 1, r.out + r.err);
   only(r, "sounds");
   assert.equal(
     gateLine(r, "sounds"),
-    'fail: 1 finding(s), first: context: <audio id="ding"> starts at 0.5 s in its scene file and 1.5 s after its script ran: the render plays 0.5 s, so create the sound in the script instead vs every sound plays where the gates judge it',
+    `fail: 1 finding(s), first: context: <audio id="ding"> starts at 0.5 s in its scene file and 1.5 s after its script ran: the render plays 0.5 s, so remove it from the scene file and create it in the script at data-start ${at} (the scene's start plus 1.5 s) vs every <audio> has an id and plays at its live data-start, in its scene`,
   );
+});
+
+test("a static <audio> moved by 1 ms fails sounds", () => {
+  const r = context(
+    () => '<audio id="ding" data-sound="0.5" data-moved="0.501"></audio>',
+  );
+  assert.equal(r.code, 1, r.out + r.err);
+  only(r, "sounds");
+});
+
+test("a created <audio> at a scene-local start fails sounds; one at its scene's start, read up to 1 ms early, passes", () => {
+  const local = context(() => '<audio id="ding" data-created="0.1"></audio>');
+  assert.equal(local.code, 1);
+  only(local, "sounds");
+  assert.match(
+    gateLine(local, "sounds"),
+    /first: context: <audio id="ding"> is created by its script at 0.1 s, outside its scene \(\d+\.\d{3} s to \d+\.\d{3} s\): a created <audio>'s data-start counts seconds of the whole video, so add TIMING.scenes\["context"\].start to it vs /,
+  );
+  const first = context(
+    (start) => `<audio id="ding" data-created="${start - 0.001}"></audio>`,
+  );
+  assert.equal(first.code, 0, first.out + first.err);
 });
 
 test("the same sound created by the script at the scene's start plus 1.5 s passes sounds, and effect onset judges it at 1.5 s", () => {
@@ -60,16 +84,19 @@ test("a static <audio> no script touches passes sounds", () => {
   assert.deepEqual(warns(r, "effect onset"), []);
 });
 
-test("a created <audio> with no id, or with an id another <audio> carries, fails sounds", () => {
-  const unnamed = context(
+test("an <audio> with no id, written or created, or a created one with an id another <audio> carries, fails sounds", () => {
+  for (const audio of [
+    () => '<audio data-sound="0.1"></audio>',
     (start) => `<audio data-created="${start + 0.1}"></audio>`,
-  );
-  assert.equal(unnamed.code, 1);
-  only(unnamed, "sounds");
-  assert.match(
-    gateLine(unnamed, "sounds"),
-    /first: context: an <audio> with no id: the render cannot place it, so give it an id vs /,
-  );
+  ]) {
+    const unnamed = context(audio);
+    assert.equal(unnamed.code, 1);
+    only(unnamed, "sounds");
+    assert.match(
+      gateLine(unnamed, "sounds"),
+      /first: context: an <audio> with no id: the render refuses one written in the scene file and never plays one a script created, so give it an id vs /,
+    );
+  }
   const fx = timed({
     hook: '<p>a line</p><audio id="ding" data-sound="0.1"></audio>',
   });

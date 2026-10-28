@@ -1,5 +1,6 @@
 // The gates stage: the authored project judged on what it renders, before the
-// full render (ADR 0019: output and narration, never scene code).
+// full render (ADR 0019: output and narration, never scene code, but for the
+// <audio> starts a scene file writes).
 //
 //   node gates.mjs <run-folder>
 //
@@ -351,7 +352,7 @@ const judged = {
   "script errors": [scriptErrors, "every scene's script runs"],
   sounds: [
     soundFindings(plan, events),
-    "every sound plays where the gates judge it",
+    "every <audio> has an id and plays at its live data-start, in its scene",
   ],
   "must and avoid": [
     coverage,

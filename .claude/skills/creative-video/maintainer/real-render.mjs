@@ -364,6 +364,8 @@ const created = sounded(
     document.querySelector('[data-composition-id="two"]').append(ding);`,
 );
 gatesPass(created);
+// Two high-passes bring the 220 Hz narration under -40 dB, one does not, so
+// the first sound left is the 2 kHz beep.
 const heard = spawnSync(
   "ffmpeg",
   [

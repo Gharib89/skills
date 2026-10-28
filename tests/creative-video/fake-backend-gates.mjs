@@ -21,7 +21,7 @@
 //   data-tween="<a>-<b>" the scene's tween windows, in scene seconds (no
 //                 tween: one across the scene)
 //   <audio data-sound="<t>">  a sound written in the scene file at scene
-//                 seconds <t> (its `id`, else one of its own); with
+//                 seconds <t>, its `id` if it has one; with
 //                 data-moved="<y>" its script moved its start to <y>
 //   <audio data-created="<t>">  a sound its script created at video seconds
 //                 <t>, its `id` if it has one
@@ -204,13 +204,13 @@ export async function probe(dir, times) {
     );
     events[m.id] = {
       tweens: tweens.length ? tweens : [[0, m.end - m.start]],
-      sounds: [...m.html.matchAll(/<audio\b([^>]*)>/g)].flatMap(([, a], i) => {
+      sounds: [...m.html.matchAll(/<audio\b([^>]*)>/g)].flatMap(([, a]) => {
         const attr = (name) => a.match(new RegExp(`${name}="([^"]*)"`))?.[1];
         const [authored, created] = [attr("data-sound"), attr("data-created")];
         if (authored)
           return [
             {
-              id: attr("id") ?? `${m.id}-sound-${i}`,
+              id: attr("id") ?? "",
               start: +(attr("data-moved") ?? authored),
               authored: +authored,
             },

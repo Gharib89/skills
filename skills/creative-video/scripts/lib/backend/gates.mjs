@@ -266,8 +266,12 @@ async function sceneEvents() {
     );
     const authored = new Map();
     if (host) {
+      // Unread, every static <audio> would pass as a created one.
+      const res = await fetch(host.dataset.compositionSrc);
+      if (!res.ok)
+        throw new Error(`${host.dataset.compositionSrc}: HTTP ${res.status}`);
       const file = new DOMParser().parseFromString(
-        await (await fetch(host.dataset.compositionSrc)).text(),
+        await res.text(),
         "text/html",
       );
       for (const a of (

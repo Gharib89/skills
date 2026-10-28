@@ -11,9 +11,10 @@ const warns = (r, name) =>
     (m) => m[1],
   );
 const sounds = (n, at = 1) =>
-  Array.from({ length: n }, () => `<audio data-sound="${at}"></audio>`).join(
-    "",
-  );
+  Array.from(
+    { length: n },
+    (_, i) => `<audio id="s${i}" data-sound="${at}"></audio>`,
+  ).join("");
 
 test("pacing is always printed: the change events a minute, and no dead stretch on a scene tweening throughout", () => {
   const fx = timed();
@@ -69,7 +70,7 @@ test("more than 24 sounds in a minute warns, 24 do not", () => {
 test("a sound more than 0.15 s from the nearest tween start warns by scene and gap", () => {
   const off = runGates(
     timed({
-      hook: '<p>a line</p><i data-tween="0.5-3"></i><audio data-sound="0.9"></audio>',
+      hook: '<p>a line</p><i data-tween="0.5-3"></i><audio id="ding" data-sound="0.9"></audio>',
     }),
   );
   assert.equal(off.code, 0, off.out);
@@ -78,7 +79,7 @@ test("a sound more than 0.15 s from the nearest tween start warns by scene and g
   ]);
   const on = runGates(
     timed({
-      hook: '<p>a line</p><i data-tween="0.5-3"></i><audio data-sound="0.6"></audio>',
+      hook: '<p>a line</p><i data-tween="0.5-3"></i><audio id="ding" data-sound="0.6"></audio>',
     }),
   );
   assert.deepEqual(warns(on, "effect onset"), []);
@@ -86,7 +87,7 @@ test("a sound more than 0.15 s from the nearest tween start warns by scene and g
     warns(
       runGates(
         timed({
-          hook: `<p>a line</p><i data-tween="0.5-3"></i><audio data-sound="${at}"></audio>`,
+          hook: `<p>a line</p><i data-tween="0.5-3"></i><audio id="ding" data-sound="${at}"></audio>`,
         }),
       ),
       "effect onset",
