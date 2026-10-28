@@ -238,9 +238,13 @@ for (const [role, n] of Object.entries(cast)) {
   }
 }
 // A repeat of a missing scene's narration takes its entry rather than a call
-// of its own, which on Gemini is a request off the quota.
+// of its own, which on Gemini is a request off the quota. A whole script one
+// voice speaks is one call; with more than one voice a scene takes a call per
+// run, so each scene is voiced and cached on its own, and a quota stop keeps
+// the scenes before it.
 const groups =
-  missing.length === scenes.length
+  missing.length === scenes.length &&
+  runsOf(missing.flatMap((s) => s.sentences)).length === 1
     ? [missing]
     : missing
         .filter((s, i) => missing.findIndex((m) => m.key === s.key) === i)
