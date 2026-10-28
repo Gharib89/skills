@@ -9,11 +9,12 @@
 // verdicts and <run>/project/. Samples each scene 0.3 s in, at its middle and
 // on its last frame (gates/samples.mjs), and measures the samples with
 // HyperFrames' check, a text probe (one launch, over the samples and a 0.25 s
-// grid) and two snapshot launches. Eleven gates judge the project, each a hard
+// grid) and two snapshot launches. Thirteen gates judge the project, each a hard
 // fail: determinism (the same pixels twice), layout, contrast, reading time,
 // the caption band, anchors (an at() naming a word the narration lacks),
 // script errors (a scene's script that throws), sounds (each <audio> renders
-// at the start the gates judge, gates/sounds.mjs), must and avoid, support (the
+// at the start the gates judge, gates/sounds.mjs), licence and bed level (the
+// sound kit, gates/sound-kit.mjs), must and avoid, support (the
 // claims check passed on the voiced narration) and the critic
 // (gates/critic.mjs), pending until each scene's verdict is written. Length,
 // loudness and voice QC are the voice and render stages' own. A video in
@@ -21,7 +22,7 @@
 // every word of its title) and sound only (over.html draws no element, since a
 // chapter renders without it). Advisory warnings
 // (gates/warnings.mjs) never change the exit: effect rate, effect onset, scene
-// length, sentences, alike voices, pacing and clock.
+// length, sentences, alike voices, dropped sound, pacing and clock.
 // stdout: `gate <name>: pass|fail|pending: <measured> vs <floor>` per gate (the
 //         rest of a failing gate's findings indented under it), `warn <name>:
 //         <detail>` per warning, then `gates: <n> pass, <m> fail[, 1 pending]`,
@@ -41,7 +42,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { claimsKey } from "../lib/claims.mjs";
 import { maybeJson, readJson } from "../lib/json.mjs";
-import { CAST } from "../lib/kit.mjs";
+import { CAST, soundKit } from "../lib/kit.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
@@ -51,6 +52,7 @@ import { inputsHash } from "./inputs.mjs";
 import { criticGate } from "./critic.mjs";
 import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
+import { BED_LU, bedLevel, licenceFindings } from "./sound-kit.mjs";
 import { soundFindings } from "./sounds.mjs";
 import { warnings } from "./warnings.mjs";
 
@@ -372,6 +374,10 @@ const support = !pack
 
 const summary = (ev) =>
   `${ev.length} finding(s)${ev.length ? `, first: ${ev[0]}` : ""}`;
+const kit = soundKit(run);
+const bed = await orFail(() => bedLevel({ proj, timeline, kit, backend }));
+// Each gate's findings and floor, and what a pass measured where it says more
+// than its count of findings.
 const judged = {
   determinism: [determinism, "the same pixels twice"],
   layout: [layout.lines(), `none, text >= ${TEXT_PX} px, margin 5%`],
@@ -387,6 +393,15 @@ const judged = {
     soundFindings(plan, events),
     "every <audio> has an id and plays at its live data-start, in its scene",
   ],
+  licence: [
+    licenceFindings(
+      events,
+      fs.readFileSync(path.join(proj, "index.html"), "utf8"),
+      kit,
+    ),
+    "every <audio> but the narration has a licence record in sound.json",
+  ],
+  "bed level": [bed.evidence, `${BED_LU} LU`, bed.measured],
   "must and avoid": [
     coverage,
     "every must said or shown, no avoid said or shown",
@@ -401,11 +416,11 @@ const judged = {
   support: [support, "the claims check passed on this script and source pack"],
 };
 const gates = Object.fromEntries(
-  Object.entries(judged).map(([name, [evidence, floor]]) => [
+  Object.entries(judged).map(([name, [evidence, floor, passed]]) => [
     name,
     {
       status: evidence.length ? "fail" : "pass",
-      measured: summary(evidence),
+      measured: (!evidence.length && passed) || summary(evidence),
       floor,
       evidence,
     },
@@ -432,6 +447,7 @@ const warned = warnings({
   events,
   script,
   cast: maybeJson(run, CAST),
+  sound: kit,
   total: timeline.total,
   proj,
 });

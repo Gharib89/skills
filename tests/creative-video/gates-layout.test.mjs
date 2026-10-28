@@ -14,6 +14,8 @@ const GATES = [
   "anchors",
   "script errors",
   "sounds",
+  "licence",
+  "bed level",
   "must and avoid",
   "support",
   "critic",
@@ -23,7 +25,7 @@ test("a project of readable lines in the clear passes every gate, captions in th
   const r = runGates(timed());
   assert.equal(r.code, 0, r.out + r.err);
   for (const g of GATES) assert.equal(gateLine(r, g)?.slice(0, 4), "pass", g);
-  assert.match(r.out, /^gates: 11 pass, 0 fail$/m);
+  assert.match(r.out, /^gates: 13 pass, 0 fail$/m);
 });
 
 test("a clipped line fails layout, naming its time and scene, and its fitting twin passes", () => {

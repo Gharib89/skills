@@ -1,8 +1,8 @@
 // The gates stage's advisory warnings: reported, never a refusal. Each is a
 // `<name>: <detail>` line, over the plan (each scene's window), the probe's
 // events (each scene's tween windows in its own seconds, and its sounds, judged
-// in its own seconds by gates/sounds.mjs), the script, the cast and, for the
-// clock scan, the project's scene and kit files.
+// in its own seconds by gates/sounds.mjs), the script, the cast, the sound kit
+// and, for the clock scan, the project's scene and kit files.
 import fs from "node:fs";
 import path from "node:path";
 import { sentences } from "../lib/length.mjs";
@@ -108,6 +108,11 @@ function alikeVoices(cast, language) {
   );
 }
 
+// Each sound sound/sounds.mjs found nowhere and dropped from `sound`
+// (sound.json, or null).
+const droppedSounds = (sound) =>
+  (sound?.dropped ?? []).map((d) => `dropped sound: ${d.event}: ${d.why}`);
+
 const clockReads = (proj) =>
   [...listed(proj, "compositions"), ...listed(proj, "kit")].flatMap((f) => {
     const code = fs.readFileSync(path.join(proj, f), "utf8");
@@ -116,9 +121,9 @@ const clockReads = (proj) =>
   });
 
 // The warnings in print order, as `<name>: <detail>` lines. `total` is the
-// video's length in seconds, `proj` the project folder, `cast` its
-// kit/cast.json or null.
-export function warnings({ plan, events, script, cast, total, proj }) {
+// video's length in seconds, `proj` the project folder, `cast` and `sound` its
+// kit/cast.json and kit/sound.json or null.
+export function warnings({ plan, events, script, cast, sound, total, proj }) {
   const eventsOf = (id) => events[id] ?? { tweens: [], sounds: [] };
   const sounds = plan.flatMap((p) =>
     eventsOf(p.sc.id).sounds.map((s) => p.sc.start + sceneSeconds(p.sc, s)),
@@ -139,6 +144,7 @@ export function warnings({ plan, events, script, cast, total, proj }) {
   out.push(
     ...longSentences(script),
     ...alikeVoices(cast, script.language),
+    ...droppedSounds(sound),
     `pacing: ${((starts + sounds.length) / (total / 60)).toFixed(1)} change events a minute; ${dead.join("; ") || "no dead stretch"}`,
     ...clockReads(proj),
   );

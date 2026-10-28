@@ -298,6 +298,22 @@ function sounded(name, body, js) {
     path.join(run, "project", "assets", "beep.wav"),
     tone(9, 2000),
   );
+  // The beep's licence record, which the licence gate asks of every sound.
+  fs.mkdirSync(path.join(run, "project", "kit"), { recursive: true });
+  fs.writeFileSync(
+    path.join(run, "project", "kit", "sound.json"),
+    JSON.stringify({
+      palette: [
+        {
+          event: "ding",
+          query: "beep",
+          source: "fixture",
+          file: "assets/beep.wav",
+          licence: "CC0-1.0",
+        },
+      ],
+    }),
+  );
   runStage("render/timing.mjs", run);
   return run;
 }

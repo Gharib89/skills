@@ -283,9 +283,10 @@ function overPaints() {
 }
 
 // Runs in the page: each scene's tween windows, in the scene's own seconds, and
-// its sounds as `{ id, start, authored }` (gates/sounds.mjs): the live
-// data-start, and the data-start its scene file gives the <audio> with that id
-// before any script runs, null where the file has none.
+// its sounds as `{ id, start, authored, src }` (gates/sounds.mjs): the live
+// data-start, the data-start its scene file gives the <audio> with that id
+// before any script runs, null where the file has none, and the file it plays,
+// which the licence gate looks up in the sound kit.
 async function sceneEvents() {
   const r3 = (n) => Math.round(n * 1000) / 1000;
   const out = {};
@@ -332,7 +333,12 @@ async function sceneEvents() {
       ].map((a) => {
         const written = authored.get(a.id) ?? null;
         authored.delete(a.id);
-        return { id: a.id, start: r3(+a.dataset.start), authored: written };
+        return {
+          id: a.id,
+          start: r3(+a.dataset.start),
+          authored: written,
+          src: a.getAttribute("src"),
+        };
       }),
     };
   }
