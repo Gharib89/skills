@@ -3,10 +3,10 @@
 //
 //   node credits.mjs <run-folder>
 //
-// Voices: each role voice.json voiced some sentence in (the narrator alone with
-// no cast.json), its voice id, backend and licence. Sound: the kit's bed and each palette
-// sound with its event, source, licence, creator, url and attribution, then
-// each sound sounds.mjs dropped. Every other section of CREDITS.md (the
+// Voices: each role voice.json voiced some sentence in (the narrator alone
+// with no cast.json), its voice id, backend and licence. Sound: the kit's bed
+// and each palette sound with its event, source, licence, creator, url and
+// attribution, then each sound sounds.mjs dropped. Every other section of CREDITS.md (the
 // sources, the faces) is kept as it stands; the file is created when absent.
 // writes: <run>/CREDITS.md
 // exit:   0 written · 1 refused, `credits: <why>` on stderr (no voice.json, a
@@ -23,10 +23,10 @@ if (!run || rest.length) {
   console.error("usage: node credits.mjs <run-folder>");
   process.exit(2);
 }
-const voiced = voicedCast(readJson(run, "voice.json"));
+const cast = voicedCast(readJson(run, "voice.json"));
 const kit = soundKit(run);
 const sections = {
-  Voices: Object.entries(voiced).map(
+  Voices: Object.entries(cast).map(
     ([role, n]) => `- ${role}: ${n.id} (${n.backend}, ${n.licence})`,
   ),
   Sound: [

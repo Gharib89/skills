@@ -68,7 +68,7 @@ if (voice.scenes.length !== script.scenes.length)
 // Each role's voice and style as script.json and the cast ask for them now; a
 // narrator speaks one language, so the voices hold the script's language too.
 const asked = voicesOf(voices(run, script));
-const held = voice.voices ?? {};
+const held = voice.voices;
 const said = (n) =>
   n ? `${n.narrator}${n.style ? ` ("${n.style}")` : ""}` : "no voice";
 for (const role of new Set([...Object.keys(asked), ...Object.keys(held)]))
