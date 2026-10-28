@@ -19,6 +19,7 @@ const matchWord = (v, at) =>
   text(v, at) ??
   (/[\p{L}\p{N}]/u.test(v) ? null : [at, "has no letter or digit"]);
 const opt = (shape) => (v, at) => (v === undefined ? null : shape(v, at));
+const orNull = (shape) => (v, at) => (v === null ? null : shape(v, at));
 const isObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 const list = (of) => (v, at) => {
   if (!Array.isArray(v)) return [at, "is not a list"];
@@ -79,12 +80,18 @@ export const SHAPES = {
       })(v, at),
   }),
   // The voice stage's input; the claims check reads each sentence's cites,
-  // excerpt ids, which a script voiced alone may leave out.
+  // excerpt ids, which a script voiced alone may leave out. `roles` names each
+  // sentence's speaker (lib/kit.mjs), null for the narrator.
   "script.json": obj({
     language: text,
     narrator: opt(text),
     scenes: list(
-      obj({ id: text, narration: list(text), cites: opt(list(list(text))) }),
+      obj({
+        id: text,
+        narration: list(text),
+        cites: opt(list(list(text))),
+        roles: opt(list(orNull(text))),
+      }),
     ),
     // The chapter plan of a video in chapters: each chapter's title, focus and
     // scene ids (render/timing.mjs holds them to the scenes).
@@ -92,6 +99,9 @@ export const SHAPES = {
       list(obj({ title: text, focus: opt(text), scenes: list(text) })),
     ),
   }),
+  // The cast (lib/kit.mjs): each role's narrators.json id per language and
+  // the style line it speaks in.
+  "project/kit/cast.json": map(obj({ voices: map(text), style: opt(text) })),
   // The source pack, read by the claims check and the gates.
   "excerpts.json": obj({ excerpts: list(obj({ id: text, text })) }),
   // The support checker's verdicts (agents/support-checker.md).

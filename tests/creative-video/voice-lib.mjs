@@ -60,6 +60,15 @@ export const write = (fx, scenes, language = "en", extra = {}) =>
     JSON.stringify({ language, ...extra, scenes }),
   );
 
+// The run's project/kit/cast.json (lib/kit.mjs).
+export function writeCast(fx, cast) {
+  fs.mkdirSync(path.join(fx.dir, "project", "kit"), { recursive: true });
+  fs.writeFileSync(
+    path.join(fx.dir, "project", "kit", "cast.json"),
+    JSON.stringify(cast),
+  );
+}
+
 export function run(fx, extra = {}) {
   const r = spawnSync(process.execPath, [voice, fx.dir], {
     env: {
