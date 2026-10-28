@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.4.0 (2026-10-28)
+
+### Features
+
+- **creative-video**: Cited facts, the support check and the critic gate
+  ([#1029](https://github.com/Gharib89/skills/pull/1029),
+  [`03c9ae9`](https://github.com/Gharib89/skills/commit/03c9ae9124da2256ae50d53238605ee3db9db716))
+
+
 ## v0.3.0 (2026-10-28)
 
 ### Features
