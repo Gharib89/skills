@@ -14,12 +14,14 @@ export const HEIGHT = 1080;
 export const esc = (s) =>
   s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
+// One composition's host in the root, `style` its extra attribute.
+export const host = (id, start, duration, track, kind, style = "") =>
+  `    <div id="${id}" data-composition-id="${id}" data-composition-src="compositions/${id}.html" data-start="${start}" data-duration="${duration}" data-track-index="${track}" data-track-kind="${kind}" data-width="${WIDTH}" data-height="${HEIGHT}"${style}></div>`;
+
 export function writeRoot(run) {
   const { total, scenes } = readJson(run, "timeline.json");
   const { language } = readJson(run, "script.json");
   const proj = path.join(run, "project");
-  const host = (id, start, duration, track, kind, style = "") =>
-    `    <div id="${id}" data-composition-id="${id}" data-composition-src="compositions/${id}.html" data-start="${start}" data-duration="${duration}" data-track-index="${track}" data-track-kind="${kind}" data-width="${WIDTH}" data-height="${HEIGHT}"${style}></div>`;
   const kit = fs.existsSync(path.join(proj, "kit"))
     ? fs.readdirSync(path.join(proj, "kit")).sort()
     : [];

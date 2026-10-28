@@ -134,6 +134,19 @@ export const SHAPES = {
     scenes: list(obj({ id: text, start: number, duration: number })),
     cues: list(obj({ start: number, end: number, text })),
   }),
+  // What the storyboard shows beyond the scenes (board/board.mjs): the video's
+  // title, the chapter's focus, the three directions and a title and notes per
+  // scene. Which ids it names, and how many, the stage checks.
+  "storyboard.json": obj({
+    title: text,
+    focus: text,
+    directions: obj({
+      recommended: text,
+      picked: text,
+      list: list(obj({ id: text, name: text, kind: text })),
+    }),
+    scenes: map(obj({ title: text, notes: text })),
+  }),
   // The source snapshot.
   "snapshots/sources.json": obj({
     minutes: number,
