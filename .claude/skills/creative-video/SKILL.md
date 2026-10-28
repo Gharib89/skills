@@ -220,9 +220,10 @@ render.
     `notes` into `storyboard.json` (storyboard.md step 1), then build and post
     the board again (storyboard.md steps 3 and 4) without waiting for an
     answer: a comment that comes back is acted on as step 11 says. A change one
-    asks for outside its files is yours to make: one to the kit or an asset
-    re-renders every chapter, so say the estimate first (step 13), and one to
-    `over.html` changes only the mix.
+    asks for outside its files is yours to make: nothing has rendered yet, so
+    one to the kit or an asset costs no extra render (step 13 estimates such a
+    change once chapters have rendered), and one to `over.html` changes only
+    the mix.
 12. **Gates.** `node <skill>/scripts/gates/gates.mjs <run>`
     ([the gates](reference/authoring.md#gates)); on exit 1 fix what each `gate
     <name>: fail` line and its indented findings name, then run it again. An
