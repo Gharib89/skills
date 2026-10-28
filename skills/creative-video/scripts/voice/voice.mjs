@@ -3,18 +3,17 @@
 //   node voice.mjs <run-folder>
 //
 // Reads <run>/script.json: { language, narrator?, scenes: [{ id, narration:
-// [sentence, ...], roles? }] }, and <run>/project/kit/cast.json when the
-// script names roles (lib/kit.mjs); the narrator defaults to the language's
-// first default one in narrators.json. Each scene's audio and timings are
-// cached in <run>/.cache/voice/ under the hash of its narration, each run's
-// voice and style, and language (ADR 0016). With no scene cached, the whole
+// [sentence, ...], roles? }] }, and <run>/project/kit/cast.json, each role's
+// voice, when there is one (lib/kit.mjs); the narrator defaults to the
+// language's first default one in narrators.json. Each scene's audio and
+// timings are cached in <run>/.cache/voice/ under the hash of its narration,
+// each run's voice and style, and language (ADR 0016). With no scene cached, the whole
 // narration is voiced at once, otherwise each uncached scene alone: one
 // synthesis call per run of consecutive sentences one role speaks, the calls
 // joined in order, aligned once and split per scene at the aligner's word
-// times. A scene failing
-// voice QC is not cached. Once every scene passes, with <run>/brief.json, the
-// voiced scenes and the render's closing hold must land within 10 percent of
-// the brief's `length`.
+// times. A scene failing voice QC is not cached. Once every scene passes,
+// with <run>/brief.json, the voiced scenes and the render's closing hold must
+// land within 10 percent of the brief's `length`.
 // stdout: one line per scene, `voice <id>: voiced|cached · recall · precision ·
 //         rate · pass` or `... · fail: <why>; heard: <file>`, that file
 //         (relative to the run folder) holding what the aligner heard; once
@@ -22,9 +21,9 @@
 //         `voice length: pass|fail: the scenes voice <s> s (<id> <s> s, ...)
 //         and the <hold> s hold vs the brief's <s> s ±10%`; then one summary
 //         line
-// writes: <run>/voice.json, the word timeline with each sentence's speaker,
-//         only when every scene and the
-//         length pass; <run>/.cache/voice/<key>.heard.txt per voiced scene
+// writes: <run>/voice.json, the word timeline with each sentence's speaker
+//         and each role's voice, only when every scene and the length pass;
+//         <run>/.cache/voice/<key>.heard.txt per voiced scene
 // stderr: a narrator with no calibrated rate, or a Gemini or ElevenLabs
 //         narrator with no key, is refused before any synthesis; a quota stop
 //         counts the scenes kept
