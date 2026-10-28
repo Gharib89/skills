@@ -1,0 +1,23 @@
+<title>{{TITLE}}</title>
+<!--
+  creative-video's fixed storyboard page. `board.mjs build` copies it to <run>/board/storyboard.html
+  with the title above filled (HTML-escaped) and the board embedded below; page.css and page.js sit
+  beside it. Published as the artifact page (db, user and comments capabilities, `files` from
+  files.json) or opened as a file: the page decides by whether its db capability resolves.
+  board-data.md is the contract.
+
+  Credits: the palette, type, cards and Submit bar follow grill-with-artifact's page, itself
+  derived from html-plan's htmlplan.css (claude-community marketplace, MIT, Thariq Shihipar).
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=JetBrains+Mono:wght@400..700&display=swap">
+<link rel="stylesheet" href="page.css">
+
+<main id="app"></main>
+
+<script type="application/json" id="board">null</script>
+
+<script src="page.js"></script>

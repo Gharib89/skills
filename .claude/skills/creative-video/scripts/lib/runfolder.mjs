@@ -13,6 +13,7 @@ const REBUILDABLE = [
   "snapshots/",
   ".cache/",
   "out/",
+  "board/",
   "timeline.json",
   "gates.json",
   "project/index.html",

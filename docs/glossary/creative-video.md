@@ -27,7 +27,7 @@ A subagent per scene that reads a creative video's sample stills with the narrat
 _Avoid_: judge, grader, stills review (the advisory read before the gates)
 
 **Direction**:
-One candidate format concept for a creative video, written before any scene with its arc, cast, audience device, sound and colour. A run writes three that differ in kind, not in palette, and marks one recommended; the person picks, or an unattended run takes the recommended one and writes why.
+One candidate format concept for a creative video, written before any scene with its arc, cast, audience device, sound and colour. A run writes three that differ in kind, not in palette, and marks one recommended, authored first; the person picks on the storyboard, or an unattended run takes the recommended one and writes why.
 _Avoid_: option, variant, pitch
 
 **Format concept**:
@@ -57,3 +57,7 @@ _Avoid_: decoration, decorative number, prop
 **Stills review**:
 A fresh subagent's read of a creative video's contact sheets before the full render, given the sheets and nothing of the plan: what a stranger sees in each frame, the defaults it spots, and notes ranked P0 and P1. It gives no score.
 _Avoid_: critic (the gate that blocks on hard failures), QA pass
+
+**Storyboard**:
+A creative video's page before the gates and the render: a tab per chapter with its status, every scene a card of its in, key and out stills, timecode, narration and notes, the chapter plan, and on chapter 1's board the three directions as one frame each. The person comments on a scene, which re-authors only that scene, or on the whole look, or picks another direction; one approval of the look covers the whole video. Each version is a board, numbered from 1. Unlike `explainer-video`'s storyboard it approves the look once, not scene by scene.
+_Avoid_: outline, shot list, contact sheet

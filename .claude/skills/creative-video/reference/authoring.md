@@ -20,7 +20,11 @@ What you write, all committed as the video's recipe:
   check, and optionally `"must"` and `"avoid"`, lists of words the gates'
   `must and avoid` check reads.
 - `DIRECTIONS.md`: the three directions, the recommended one and why, and the
-  pick (the person's, or yours and why on an unattended run).
+  pick (the person's on the storyboard, or yours and why on an unattended run).
+- `storyboard.json` and `directions/<id>.html` (attended runs): what the
+  storyboard shows beyond the scenes, and a frame of each direction not picked
+  ([storyboard.md](storyboard.md) step 1). The storyboard itself, `board/`, is
+  rebuilt by `board.mjs`.
 - `SPEC.md`: the stance's numbers, and one reason line per `hyperframes`
   banned default the concept uses.
 - `script.json`: the narration, scene by scene, each sentence's `cites`
@@ -201,7 +205,7 @@ verdict, its line reads `gate critic: pending: round <r> of 2, <k> of <n>
 scene(s) judged, stills in <dir>` and the exit is 1. Fix the failing gates
 first; once none fails, the last line ends `; next: run the critic, round <r>
 of 2`: dispatch the critics on `<dir>`, relative to the run folder (SKILL.md
-step 11), then run the
+step 12), then run the
 gates again. A scene whose stills, and the narration and
 excerpts every critic reads, are unchanged keeps its last verdict, so only a
 changed scene is judged again. The critic has two rounds per voice: a red

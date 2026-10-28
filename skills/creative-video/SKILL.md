@@ -111,7 +111,8 @@ looks techy" is not a reason.
 Where the `hyperframes` loop and [Make a video](#make-a-video) differ, these
 steps win: `DIRECTIONS.md` is its storylines, the stills review of step 10 is
 its review (no `REVIEW.md`, nothing but the sheets to the reviewer), the
-gates and the render follow that review with no stop at a Studio preview,
+storyboard of step 11 is its one stop, the gates and the render follow it with
+no stop at a Studio preview,
 every command but the gates and the render (`gates.mjs`, `render.mjs`) runs
 through `hf.mjs`, and a registry block is raw material you edit into the
 concept's look, never a look to pick.
@@ -149,9 +150,10 @@ render.
 4. **Directions.** Write `<run>/DIRECTIONS.md`: three directions that differ
    in kind, each a paragraph (the concept, its arc, its cast and audience
    device, its sound and colour), one bold, one the subject drawn directly
-   when that fits, and one marked recommended with why. Attended, show them
-   and ask the person once which to make; unattended, take the recommended one.
-   Write the pick and its reason into the file.
+   when that fits, and one marked recommended with why. Make the recommended
+   one without asking: attended, the person meets all three on the storyboard
+   (step 11) and picks there; unattended, it stands. Write the pick and its
+   reason into the file.
 5. **Spec and kit.** Read the `hyperframes` skill's `SKILL.md`, its
    `references/spec.md` and the references the concept needs, and this
    skill's [craft-teaching.md](reference/craft-teaching.md) and
@@ -194,7 +196,12 @@ render.
     `{notes}` `<run>/.cache/review/stills-notes.md`, and nothing else from the
     run. Fix every P0 and every default it or you named, fix each P1 or write
     in `DELIVERY.md` why it stays, then snapshot what changed.
-11. **Gates.** `node <skill>/scripts/gates/gates.mjs <run>`
+11. **Storyboard.** Attended only: read
+    [reference/storyboard.md](reference/storyboard.md) and run its steps until
+    `board apply` prints `board: approved`. That one look approval covers the
+    whole video: the gates and the render follow with no further stop.
+    Unattended, skip this step.
+12. **Gates.** `node <skill>/scripts/gates/gates.mjs <run>`
     ([the gates](reference/authoring.md#gates)); on exit 1 fix what each `gate
     <name>: fail` line and its indented findings name, then run it again. An
     `invented` finding is fixed in the visual: take the fact off screen, or
@@ -212,10 +219,10 @@ render.
     gates read them. A `gates: critic verdict <scene>.json: <why>` refusal
     goes, word for word, to that scene's critic by SendMessage to fix its
     verdict; once it replies, run the gates again.
-12. **Render.** `node <skill>/scripts/render/render.mjs <run>`; it refuses
+13. **Render.** `node <skill>/scripts/render/render.mjs <run>`; it refuses
     until the gates pass on the current project. On exit 1 fix what it names
     and render again.
-13. **Deliver.** Write `<run>/CREDITS.md` (each source cited with its
+14. **Deliver.** Write `<run>/CREDITS.md` (each source cited with its
     locators, each sound with its source, licence and attribution, the voice,
     the faces and their licences) and `<run>/DELIVERY.md` (the concept and why
     it was picked; what was measured, quoting the render's `delivery` and
