@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { here } from "./voice-lib.mjs";
-import { exec, project, readJson } from "./timing-lib.mjs";
+import { exec, readJson } from "./timing-lib.mjs";
 import { scene, timed } from "./gates-lib.mjs";
 
 export const board = path.join(
@@ -95,5 +95,3 @@ export const answersText = (n, ...lines) =>
   ].join("\n");
 
 export const ok = (r) => assert.equal(r.code, 0, r.out + r.err);
-
-export { project };

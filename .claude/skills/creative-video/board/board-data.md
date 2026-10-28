@@ -1,0 +1,123 @@
+# Board data
+
+The one contract between a run and [page.html](page.html), the storyboard
+page. `scripts/board/board.mjs build` writes one **board document** per board
+version; the page writes one **answers document** per Submit. `apply` reads
+the answers.
+
+## Contents
+
+- [Documents](#documents)
+- [Fields](#fields)
+- [Answers document](#answers-document)
+- [Answers text](#answers-text)
+- [Who reads what](#who-reads-what)
+
+## Documents
+
+| Document | Written by | When |
+|---|---|---|
+| `board/<n>.json` | `build` | once per board version, never rewritten |
+| `board/storyboard.html` | `build` | with each board: the page with that board embedded |
+| `board/answers-<n>.json` | `apply` | the normalized answers of board `<n>` |
+| database `answers/board-<n>` | the page, on Submit | once per Submit of version `<n>`, on the artifact page only |
+
+The page is never fed boards through a database: a new board is the same
+`storyboard.html` published again, which keeps the artifact's URL.
+
+## Fields
+
+`board.` is the board document; `[]` is an array element. The page reads
+nothing outside this table, and every field below is in every board.
+
+| Path | Type | Meaning |
+|---|---|---|
+| `board.version` | number | The board's number, the same as its file name. |
+| `board.title` | string | The video's title, from `storyboard.json`. |
+| `board.language` | string | The narration's language code, from `script.json`. |
+| `board.length` | string | The video's length, `m:ss`. |
+| `board.chapters` | array | One entry per chapter; this version has one. |
+| `board.chapters[].n` | number | The chapter's number, from 1. |
+| `board.chapters[].title` | string | The chapter's title. |
+| `board.chapters[].status` | string | `awaiting` until the look is approved. The page shows `approved` once the database holds an approving answers document of this version. |
+| `board.plan` | array | The chapter plan, one row per chapter. |
+| `board.plan[].chapter` | number | The row's chapter. |
+| `board.plan[].title` | string | The chapter's title. |
+| `board.plan[].length` | string | The chapter's length, `m:ss`. |
+| `board.plan[].focus` | string | What the chapter teaches, one line, from `storyboard.json`. |
+| `board.plan[].sources` | array | The titles of the sources the script cites, in the order first cited, as strings; empty without `excerpts.json`. |
+| `board.plan[].status` | string | As `board.chapters[].status`. |
+| `board.directions` | array | The three directions, in `storyboard.json`'s order. |
+| `board.directions[].id` | string | The direction's id, kebab-case. |
+| `board.directions[].name` | string | Its name. |
+| `board.directions[].kind` | string | What kind of concept it is (a world, a format, the subject itself). |
+| `board.directions[].recommended` | boolean | Whether it is the one recommended. |
+| `board.directions[].picked` | boolean | Whether it is the one the scenes are authored in. |
+| `board.directions[].frame` | string | Its frame, a still, a path relative to the page. The picked direction's is chapter 1's first scene at its key. |
+| `board.kit` | string | The hash of the project's kit files; `build` compares it with the last board's. |
+| `board.scenes` | array | Every scene, in timeline order. |
+| `board.scenes[].id` | string | The scene's id. |
+| `board.scenes[].chapter` | number | The chapter it belongs to. |
+| `board.scenes[].title` | string | Its title, from `storyboard.json`. |
+| `board.scenes[].start` | number | Its start in the video, seconds. |
+| `board.scenes[].end` | number | Its end in the video, seconds. |
+| `board.scenes[].timecode` | string | `m:ss to m:ss`. |
+| `board.scenes[].narration` | string | Its sentences from `script.json`, joined by spaces. |
+| `board.scenes[].notes` | string | Short staging notes, from `storyboard.json`. |
+| `board.scenes[].stills` | object | Its three stills. |
+| `board.scenes[].stills.in` | string | The still 0.3 s in, a path relative to the page. |
+| `board.scenes[].stills.key` | string | The still at its middle. |
+| `board.scenes[].stills.out` | string | The still on its last frame. |
+| `board.scenes[].hash` | string | The hash of the scene's composition file; the guard compares it with the last board's. |
+| `board.scenes[].changed` | boolean | Whether the hash differs from the last board's; false on board 1. |
+
+A still is `stills/<first 16 hex of the sha-256 of its bytes>.png`: an
+unchanged still keeps its name from one board to the next.
+
+## Answers document
+
+Written by the page to `answers/board-<n>` in the artifact's database, and
+accepted by `apply` as JSON in a file:
+
+```json
+{ "version": 1, "submittedAt": "2026-10-28T10:00:00.000Z", "approve": false,
+  "direction": "kitchen", "look": "warmer", "scenes": [{ "id": "hook", "note": "slower" }] }
+```
+
+`version` is the board answered. `approve` is true only for the approval, and
+the page offers it only while `direction` is null, `look` is empty and `scenes`
+is empty: a comment wins over an approval. `direction` is the id of a direction
+other than the one in use, or null. `scenes` holds one entry per scene with a
+note, in timeline order.
+
+## Answers text
+
+What the page's copy button and its Submit comment carry, and what `apply`
+reads when the answers did not come from the database:
+
+```
+creative-video: board <n> answers (database document answers/board-<n>)
+Approved: the look
+Direction: <id>
+Look: <text>
+<scene id>: <note>
+```
+
+Only the lines that apply. A look or a note of several lines continues on
+lines indented two spaces. The comment holds 4096 bytes: a longer text ends
+`[cut to fit: read answers/board-<n>]`, which `apply` refuses, and the
+document is read from the database instead.
+
+## Who reads what
+
+- The agent writes `storyboard.json` and `directions/<id>.html`; `build` writes
+  the board and the page, and `files.json`, the `files` map of the Artifact
+  publish: the page's style and script and every still, by the path the page
+  names them.
+- The page reads the board it embeds. On the artifact page (its db capability
+  resolves) it writes the answers document, wakes the session with a comment
+  that carries the answers text, and reads the `answers` collection to show a
+  chapter approved. Opened as a file, it shows the answers text for the person
+  to paste into the terminal.
+- `apply` reads the answers document or text and writes `answers-<n>.json`; the
+  next `build` reads it to guard the scenes.

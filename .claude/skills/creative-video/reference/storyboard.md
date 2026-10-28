@@ -1,0 +1,70 @@
+# The storyboard
+
+The **storyboard** is where the person meets the video before the expensive
+render, and approves its look once. It is a page with one tab per chapter
+(this version: one) showing the chapter's status; every scene a card of three
+stills (in, key, out) rendered from the authored scene, its timecode, its
+narration and short notes, with a comment box; one comment for the whole look;
+the chapter plan as a table, with no stop of its own; and on chapter 1's board
+the three directions as one frame each. The page is a claude.ai artifact, or a
+local file when the session has no artifact tools.
+[board/board-data.md](../board/board-data.md) holds the board and answers
+documents. `<skill>` and `<run>` are as in [SKILL.md](../SKILL.md), and
+`board` below is `node <skill>/scripts/board/board.mjs <run>`.
+
+Only an attended run shows the board. Unattended, the recommended direction
+stands and the run goes on to the gates.
+
+1. **Inputs.** Write `<run>/storyboard.json`: the video's `title`, the
+   chapter's `focus` in one line, `directions` (`list` of the three from
+   `DIRECTIONS.md`, each `id`, `name` and `kind`; the `recommended` id; the
+   `picked` id, the one the scenes are authored in), and per scene its `title`
+   and `notes` (what the card's stills cannot say: what moves on which word,
+   the sound, the metaphor's limit). For each direction other than the picked
+   one, author `<run>/directions/<id>.html`: chapter 1's first scene at its key
+   moment in that direction's look, one composition written as a scene file is,
+   `data-composition-id` its direction id, its own styles (the kit is not
+   loaded), settled by 1 s.
+2. **Surface.** The page needs the `Artifact`, `ArtifactData` and
+   `ArtifactComments` tools. With any of them missing, or when the person says
+   the page cannot reach its database, the board is **local** for the rest of
+   the run.
+3. **Build.** `board build`. It renders the stills and the direction frames,
+   then prints `board: <n> -> board/storyboard.html (...)` and `board: files
+   board/files.json`. Exit 1 names what to fix first. `board: <ids> changed,
+   but board <n>'s comments named only <ids>` means you re-authored a scene
+   nobody commented on: put it back as it was, and build again.
+4. **Show it.** Published: `Artifact` publish with `file_path`
+   `<run>/board/storyboard.html` and `files` the map `board/files.json` holds;
+   on the first board add `capabilities` `{"db": {}, "user": {}, "comments":
+   {}}`, `icon` `video` and a one-sentence `description`, and on later boards
+   publish the same `file_path` again, which keeps the URL. A Submit wakes this
+   session only while the artifact's watch shows auto-replies armed; when the
+   publish result's subscription line leaves that in doubt, check with
+   `ArtifactComments` `watch` and no `url`, and unarmed, tell the person to type
+   `submitted` here after each Submit. A refused publish makes the board local.
+   Local: say the board is `<run>/board/storyboard.html`, opened in a browser,
+   and that its Submit shows an answers text to paste back here. Then print the
+   link or the path and `Board <n> posted.`, and end the turn.
+5. **Read a Submit.** The Submit comment, a typed `submitted` or a pasted
+   answers text starts the next turn. Published: `ArtifactData` `get`,
+   collection `answers`, doc id `board-<n>`, `out_dir` `<run>/board/inbox`,
+   and `board apply` the file it saved. With no such document, or local, write
+   the comment's or the pasted text to `<run>/board/inbox/answers.txt` and
+   apply that. A comment carrying no answers is the person talking: answer it
+   here. Resolve the Submit thread once the next board is posted, or once the
+   gates begin.
+6. **Act on it.** `board apply` prints what the answers ask:
+   - `board: approved`: the look is approved, and that one approval covers the
+     whole video. Go on to the gates and the render with no further stop.
+   - `board: direction <id>`: set `picked` to it in `storyboard.json`, author
+     `directions/<old>.html` for the direction it replaces, write `SPEC.md`
+     and the kit again in the new look, and re-author every scene in it.
+   - `board: look: <text>`: change what the comment asks of the whole look
+     (`SPEC.md`, the kit, and each scene it reaches).
+   - `board: redo <id>: <note>`: re-author that scene, and only that scene,
+     from its note. The next build refuses a change to any other scene or the
+     kit.
+
+   Then snapshot what changed as the stills review does (SKILL.md step 10),
+   and build again from step 3: the board comes back.
