@@ -311,7 +311,7 @@ test("a board keeps its draft until it is sent or answered, then keeps none of i
     B.ACT.look(S, { value: "darker" });
     lock(S);
     store.set("board-draft-1", "{}");
-    store.delete("board-draft-2");
+    store.set("board-draft-2", "{}");
     assert.equal(
       B.storeDraft(() => local, S),
       true,

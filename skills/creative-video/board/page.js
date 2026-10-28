@@ -255,8 +255,9 @@ function storeDraft(getStore, S) {
   try {
     const store = getStore(),
       v = S.board.version;
-    if (!locked(S)) store.setItem(draftKey(v), JSON.stringify(S.draft));
-    else for (let k = v; k > 0; k--) store.removeItem(draftKey(k));
+    if (locked(S)) {
+      for (let k = v; k > 0; k--) store.removeItem(draftKey(k));
+    } else store.setItem(draftKey(v), JSON.stringify(S.draft));
     return true;
   } catch (e) {
     return false;
