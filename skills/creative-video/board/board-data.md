@@ -39,7 +39,7 @@ nothing outside this table, and every field below is in every board.
 | `board.chapters` | array | One entry per chapter; this version has one. |
 | `board.chapters[].n` | number | The chapter's number, from 1. |
 | `board.chapters[].title` | string | The chapter's title. |
-| `board.chapters[].status` | string | `awaiting` until the look is approved. The page shows `approved` once the database holds an approving answers document of this version. |
+| `board.chapters[].status` | string | `awaiting` until the look is approved. The page shows `approved` once the database holds an approving answers document of this version, or, on a local page, once the person asks for the approval. |
 | `board.plan` | array | The chapter plan, one row per chapter. |
 | `board.plan[].chapter` | number | The row's chapter. |
 | `board.plan[].title` | string | The chapter's title. |
@@ -59,8 +59,6 @@ nothing outside this table, and every field below is in every board.
 | `board.scenes[].id` | string | The scene's id. |
 | `board.scenes[].chapter` | number | The chapter it belongs to. |
 | `board.scenes[].title` | string | Its title, from `storyboard.json`. |
-| `board.scenes[].start` | number | Its start in the video, seconds. |
-| `board.scenes[].end` | number | Its end in the video, seconds. |
 | `board.scenes[].timecode` | string | `m:ss to m:ss`. |
 | `board.scenes[].narration` | string | Its sentences from `script.json`, joined by spaces. |
 | `board.scenes[].notes` | string | Short staging notes, from `storyboard.json`. |

@@ -14,12 +14,13 @@
 // change to any scene they did not name, or to the kit, so a comment on one
 // scene re-authors only that scene.
 // apply reads an answers file, the answers document as JSON or the answers
-// text, and says what it asks: it holds one answer of the latest board.
+// text, and says what it asks: it accepts only answers to the latest board.
 // stdout: build, `board: <n> -> board/storyboard.html (<k> scenes, <m> stills,
 //         <c> changed)` then `board: files board/files.json`; apply, the
 //         lines below, each starting `board: `:
 //           approved; next: run the gates      only an approval
-//           direction <id>; next: re-author chapter 1 in it, then build the board again
+//           these answers approve nothing and comment on nothing
+//           direction <id>
 //           look: <text>
 //           redo <scene>: <note>               one per noted scene
 //           next: re-author <the whole chapter | only <ids>>, then build the board again
@@ -29,9 +30,11 @@
 //         folder's .gitignore and the root again (render/root.mjs); apply,
 //         board/answers-<n>.json
 // exit:   0 ok · 1 refused, `board: <why>` on stderr (a missing timeline,
-//         scene file, storyboard.json or direction frame; a scene changed that
-//         the comments did not name; answers of an older board, naming an
-//         unknown scene or direction, cut to fit, or unreadable) · 2 usage
+//         scene file, storyboard.json, direction frame or gsap.min.js; an
+//         invalid storyboard.json; a script.json lacking a timed scene; a
+//         scene or the kit changed that the comments did not name; answers of
+//         an older board, naming an unknown scene or direction or the one in
+//         use, cut to fit, or unreadable) · 2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -73,7 +76,7 @@ const sha = (bytes) =>
 const mmss = (s) =>
   `${Math.floor(Math.round(s) / 60)}:${String(Math.round(s) % 60).padStart(2, "0")}`;
 
-// The kit as the root loads it: each file's name and bytes, sorted.
+// Every file under kit/, nested ones too: each one's name and bytes, sorted.
 function kitHash(proj) {
   const dir = path.join(proj, "kit");
   const h = crypto.createHash("sha256");
@@ -118,7 +121,7 @@ function guardScenes(n, hashes, kit) {
   const answered = path.join(out, `answers-${n - 1}.json`);
   if (!fs.existsSync(answered)) return;
   const a = JSON.parse(fs.readFileSync(answered, "utf8"));
-  if (!a.scenes.length || a.direction || a.look.trim() || a.approve) return;
+  if (!a.scenes.length || a.direction || a.look || a.approve) return;
   const prev = readBoard(n - 1);
   const was = new Map(prev.scenes.map((s) => [s.id, s.hash]));
   const named = a.scenes.map((s) => s.id);
@@ -181,6 +184,10 @@ ${host(id, 0, 2, 1, "graphics")}
 async function build() {
   const { timeline } = readTimeline(run, fail);
   const script = readJson(run, "script.json");
+  const narrationOf = new Map(script.scenes.map((s) => [s.id, s.narration]));
+  for (const { id } of timeline.scenes)
+    if (!narrationOf.has(id))
+      fail(`script.json has no scene ${id}: voice and time it again first`);
   const sb = readStoryboard(timeline);
   const n = Math.max(0, ...versions()) + 1;
   const proj = path.join(path.resolve(run), "project");
@@ -234,10 +241,8 @@ async function build() {
     id: s.id,
     chapter: 1,
     title: sb.scenes[s.id].title,
-    start: s.start,
-    end: s.start + s.duration,
     timecode: `${mmss(s.start)} to ${mmss(s.start + s.duration)}`,
-    narration: script.scenes.find((x) => x.id === s.id).narration.join(" "),
+    narration: narrationOf.get(s.id).join(" "),
     notes: sb.scenes[s.id].notes,
     stills: Object.fromEntries(
       ["in", "key", "out"].map((p) => [p, keep(frameAt.get(at[s.id][p]))]),
@@ -344,8 +349,11 @@ function apply() {
   for (const { id } of a.scenes)
     if (!board.scenes.some((s) => s.id === id))
       fail(`no scene ${id} in board ${latest}`);
-  if (a.direction && !board.directions.some((d) => d.id === a.direction))
+  const askedDirection = board.directions.find((d) => d.id === a.direction);
+  if (a.direction && !askedDirection)
     fail(`no direction ${a.direction} in board ${latest}`);
+  if (askedDirection?.picked)
+    fail(`direction ${a.direction} is the one in use: pick another, or none`);
   fs.writeFileSync(
     path.join(out, `answers-${latest}.json`),
     JSON.stringify(a, null, 2) + "\n",
@@ -353,9 +361,8 @@ function apply() {
 
   // A text continues on lines indented two spaces, as the answers text does.
   const lines = (t) => t.replaceAll("\n", "\n  ");
-  const notes = a.scenes.filter((s) => s.note.trim());
-  const look = a.look.trim();
-  if (!a.direction && !look && !notes.length) {
+  const { direction, look, scenes } = a;
+  if (!direction && !look && !scenes.length) {
     console.log(
       a.approve
         ? "board: approved; next: run the gates"
@@ -363,18 +370,14 @@ function apply() {
     );
     return;
   }
-  if (a.direction)
-    console.log(
-      `board: direction ${a.direction}; next: re-author chapter 1 in it, then build the board again`,
-    );
+  if (direction) console.log(`board: direction ${direction}`);
   if (look) console.log(`board: look: ${lines(look)}`);
-  for (const s of notes)
-    console.log(`board: redo ${s.id}: ${lines(s.note.trim())}`);
+  for (const s of scenes) console.log(`board: redo ${s.id}: ${lines(s.note)}`);
   console.log(
     `board: next: re-author ${
-      a.direction || look
+      direction || look
         ? "the whole chapter"
-        : `only ${notes.map((s) => s.id).join(", ")}`
+        : `only ${scenes.map((s) => s.id).join(", ")}`
     }, then build the board again`,
   );
 }

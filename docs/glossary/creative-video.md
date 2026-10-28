@@ -59,5 +59,5 @@ A fresh subagent's read of a creative video's contact sheets before the full ren
 _Avoid_: critic (the gate that blocks on hard failures), QA pass
 
 **Storyboard**:
-A creative video's page before the gates and the render: a tab per chapter with its status, every scene a card of its in, key and out stills, timecode, narration and notes, the chapter plan, and on chapter 1's board the three directions as one frame each. The person comments on a scene, which re-authors only that scene, or on the whole look, or picks another direction; one approval of the look covers the whole video. Unlike `explainer-video`'s storyboard it approves the look once, not scene by scene.
+A creative video's page before the gates and the render: a tab per chapter with its status, every scene a card of its in, key and out stills, timecode, narration and notes, the chapter plan, and on chapter 1's board the three directions as one frame each. The person comments on a scene, which re-authors only that scene, or on the whole look, or picks another direction; one approval of the look covers the whole video. Each version is a board, numbered from 1. Unlike `explainer-video`'s storyboard it approves the look once, not scene by scene.
 _Avoid_: outline, shot list, contact sheet

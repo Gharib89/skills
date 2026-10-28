@@ -4,10 +4,21 @@
 const HEAD = /^creative-video: board (\d+) answers/;
 const LINE = /^([a-z0-9-]+): (.*)$/;
 
-// `{ version, submittedAt, approve, direction, look, scenes: [{ id, note }] }`.
+// `{ version, submittedAt, approve, direction, look, scenes: [{ id, note }] }`,
+// the look and each note trimmed and a scene with an empty note dropped, so
+// every reader asks the same thing of it.
 export function readAnswers(text) {
-  return text.trimStart().startsWith("{") ? fromJson(text) : fromText(text);
+  const a = text.trimStart().startsWith("{") ? fromJson(text) : fromText(text);
+  return {
+    ...a,
+    look: a.look.trim(),
+    scenes: a.scenes
+      .map((s) => ({ id: s.id, note: s.note.trim() }))
+      .filter((s) => s.note),
+  };
 }
+
+const isText = (v) => v === undefined || v === null || typeof v === "string";
 
 function fromJson(text) {
   let v;
@@ -16,25 +27,30 @@ function fromJson(text) {
   } catch (e) {
     throw new Error(`the answers document is not valid JSON (${e.message})`);
   }
-  if (!Number.isInteger(v.version))
+  if (!Number.isInteger(v?.version))
     throw new Error("the answers document has no version");
   if (v.scenes !== undefined && !Array.isArray(v.scenes))
     throw new Error("the answers document's scenes is not a list");
+  for (const k of ["direction", "look"])
+    if (!isText(v[k]))
+      throw new Error(`the answers document's ${k} is not text`);
+  for (const s of v.scenes ?? [])
+    if (typeof s?.id !== "string" || !isText(s.note))
+      throw new Error(
+        "the answers document's scenes hold an entry that is not { id, note }",
+      );
   return {
     version: v.version,
     submittedAt: v.submittedAt ?? new Date().toISOString(),
     approve: v.approve === true,
     direction: v.direction || null,
-    look: String(v.look ?? ""),
-    scenes: (v.scenes ?? []).map((s) => ({
-      id: String(s.id),
-      note: String(s.note ?? ""),
-    })),
+    look: v.look ?? "",
+    scenes: (v.scenes ?? []).map((s) => ({ id: s.id, note: s.note ?? "" })),
   };
 }
 
 function fromText(text) {
-  const lines = text.split("\n");
+  const lines = text.trim().split(/\r?\n/);
   const head = lines[0].match(HEAD);
   if (!head)
     throw new Error("not an answers text: its first line is not the header");

@@ -148,9 +148,23 @@ test("a version answered in the database is approved only by an approving docume
   assert.doesNotMatch(v, /awaiting you/);
 });
 
+test("a local page reads approved once its approval is asked for, and not after a comment", () => {
+  const S = B.newState(clone(doc));
+  S.local = true;
+  B.ACT.approve(S);
+  assert.equal(B.statusOf(S, 1), "approved");
+  B.ACT.look(S, { value: "darker" });
+  assert.equal(B.statusOf(S, 1), "awaiting you");
+});
+
 test("the comment text is cut to 4096 bytes with a tail naming the answers document", () => {
   const short = "creative-video: board 1 answers\nLook: darker";
   assert.equal(B.capped(short, 1), short);
+  const at = "x".repeat(4096);
+  assert.equal(B.capped(at, 1), at);
+  const over = B.capped(`${at}y`, 1);
+  assert.notEqual(over, `${at}y`);
+  assert.ok(new TextEncoder().encode(over).length <= 4096);
   const long = `Look: ${"é".repeat(5000)}`;
   const cut = B.capped(long, 1);
   assert.ok(new TextEncoder().encode(cut).length <= 4096);

@@ -1,7 +1,7 @@
-// The storyboard stage, node board.mjs <run> build|apply: the board document
-// and its page from a timed run folder, the stills it takes in one snapshot
-// launch, the refusals, what an answers file asks the agent to do, and the
-// guard that lets a comment on one scene re-author only that scene.
+// The storyboard stage, node board.mjs <run> build: the board document and
+// its page from a timed run folder, the stills it takes in one snapshot
+// launch, the refusals, and the guard that lets a comment on one scene
+// re-author only that scene (apply is board-apply.test.mjs's).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
@@ -66,8 +66,6 @@ test("build writes board 1: one chapter, one plan row, every scene's three still
     assert.equal(s.chapter, 1);
     assert.equal(s.title, `The ${sc.id} scene`);
     assert.equal(s.notes, `${sc.id} notes`);
-    assert.equal(s.start, sc.start);
-    assert.equal(s.end, sc.start + sc.duration);
     assert.equal(
       s.timecode,
       `${mmss(sc.start)} to ${mmss(sc.start + sc.duration)}`,
@@ -313,156 +311,18 @@ test("build refuses without a timeline, as the gates do", () => {
   assert.match(r.err, /^board: timeline\.json is missing/m);
 });
 
-test("apply of an approval prints approved, and writes the normalized answers", () => {
+test("build refuses a script.json that lacks a timed scene", () => {
   const fx = ready();
-  ok(build(fx));
-  const r = apply(fx, answersText(1, "Approved: the look"));
-  ok(r);
-  assert.equal(r.out, "board: approved; next: run the gates\n");
-  const doc = readJson(path.join(fx.dir, "board", "answers-1.json"));
-  assert.equal(doc.version, 1);
-  assert.equal(doc.approve, true);
-  assert.equal(doc.direction, null);
-  assert.equal(doc.look, "");
-  assert.deepEqual(doc.scenes, []);
-  assert.ok(!Number.isNaN(Date.parse(doc.submittedAt)));
-  // The same answers as the document the database holds.
-  const j = apply(fx, {
-    version: 1,
-    submittedAt: "2026-10-28T10:00:00.000Z",
-    approve: true,
-    direction: null,
-    look: "",
-    scenes: [],
-  });
-  ok(j);
-  assert.equal(j.out, "board: approved; next: run the gates\n");
-});
-
-test("apply of scene notes prints a redo line for each noted scene and only those", () => {
-  const fx = ready();
-  ok(build(fx));
-  const r = apply(
-    fx,
-    answersText(
-      1,
-      "hook: make the first beat slower",
-      "context: drop the second metaphor",
-      "  and keep the question",
-    ),
-  );
-  ok(r);
-  assert.equal(
-    r.out,
-    [
-      "board: redo hook: make the first beat slower",
-      "board: redo context: drop the second metaphor",
-      "  and keep the question",
-      "board: next: re-author only hook, context, then build the board again",
-      "",
-    ].join("\n"),
-  );
-  assert.doesNotMatch(r.out, /approved|recap/);
-  const doc = readJson(path.join(fx.dir, "board", "answers-1.json"));
-  assert.deepEqual(doc.scenes, [
-    { id: "hook", note: "make the first beat slower" },
-    { id: "context", note: "drop the second metaphor\nand keep the question" },
-  ]);
-});
-
-test("apply of a direction pick and of a look comment each name the whole chapter", () => {
-  const fx = ready();
-  ok(build(fx));
-  let r = apply(fx, answersText(1, "Direction: kitchen"));
-  ok(r);
-  assert.equal(
-    r.out,
-    [
-      "board: direction kitchen; next: re-author chapter 1 in it, then build the board again",
-      "board: next: re-author the whole chapter, then build the board again",
-      "",
-    ].join("\n"),
-  );
-  r = apply(
-    fx,
-    answersText(1, "Look: warmer colours", "  and a lighter ground"),
-  );
-  ok(r);
-  assert.equal(
-    r.out,
-    [
-      "board: look: warmer colours",
-      "  and a lighter ground",
-      "board: next: re-author the whole chapter, then build the board again",
-      "",
-    ].join("\n"),
-  );
-});
-
-test("a comment wins over an approval: the board is not approved", () => {
-  const fx = ready();
-  ok(build(fx));
-  for (const lines of [
-    ["Approved: the look", "Look: darker"],
-    ["Approved: the look", "hook: slower"],
-    ["Approved: the look", "Direction: plain"],
-  ]) {
-    const r = apply(fx, answersText(1, ...lines));
-    ok(r);
-    assert.doesNotMatch(r.out, /approved/);
-    assert.match(r.out, /^board: next: re-author /m);
-  }
-});
-
-test("apply refuses a stale version, an unknown scene, an unknown direction, a cut text and a line it cannot read", () => {
-  const fx = ready();
-  ok(build(fx));
-  const refused = (answers, why) => {
-    const r = apply(fx, answers);
-    assert.equal(r.code, 1, r.out + r.err);
-    assert.match(r.err, why);
-    assert.equal(r.out, "");
-  };
-  refused(
-    answersText(2, "Approved: the look"),
-    /^board: these answers are of board 2, the latest is board 1$/m,
-  );
-  refused(answersText(1, "nope: slower"), /^board: no scene nope in board 1$/m);
-  refused(
-    answersText(1, "Direction: nope"),
-    /^board: no direction nope in board 1$/m,
-  );
-  refused(
-    {
-      version: 1,
-      approve: false,
-      direction: null,
-      look: "",
-      scenes: [{ id: "nope", note: "x" }],
-    },
-    /^board: no scene nope in board 1$/m,
-  );
-  refused(
-    answersText(1, "hook: slower", "[cut to fit: read answers/board-1]"),
-    /^board: the answers were cut to fit a comment: read answers\/board-1 from the database$/m,
-  );
-  refused(
-    answersText(1, "Approved: the look", "this is not a line"),
-    /^board: cannot read this answers line: this is not a line$/m,
-  );
-  refused(
-    "hello",
-    /^board: not an answers text: its first line is not the header$/m,
-  );
-  refused("{ not json", /^board: the answers document is not valid JSON/m);
-  assert.ok(!fs.existsSync(path.join(fx.dir, "board", "answers-1.json")));
-});
-
-test("apply refuses before any board is built", () => {
-  const fx = ready();
-  const r = apply(fx, answersText(1, "Approved: the look"));
+  const file = path.join(fx.dir, "script.json");
+  const script = readJson(file);
+  script.scenes = script.scenes.slice(1);
+  fs.writeFileSync(file, JSON.stringify(script));
+  const r = build(fx);
   assert.equal(r.code, 1);
-  assert.match(r.err, /^board: no board built yet: run build first$/m);
+  assert.match(
+    r.err,
+    /^board: script\.json has no scene \S+: voice and time it again first$/m,
+  );
 });
 
 test("a comment on one scene lets only that scene be re-authored: another scene's change refuses the next build", () => {

@@ -28,6 +28,8 @@ const hasComments = (S) =>
   S.board.scenes.some((c) => noteOf(S, c.id));
 const canApprove = (S) => !!S.board && !hasComments(S);
 const canSend = (S) => !!S.board && hasComments(S);
+// An approval holds only while asked for and nothing is commented.
+const approving = (S) => S.intent === "approve" && canApprove(S);
 // A database page takes one answer per board version; a local page copies as often as it likes.
 const answered = (S) => S.answers.some((a) => a.version === S.board.version);
 const locked = (S) =>
@@ -35,10 +37,14 @@ const locked = (S) =>
 function setAnswers(S, docs) {
   S.answers = docs;
 }
-// A chapter is approved once an approving answers document of the latest version is in the database.
+// A chapter is approved once an approving answers document of the latest version is in the database,
+// or, on a local page, which has no database, once its approval is asked for.
 function statusOf(S, n) {
   if (
-    S.answers.some((a) => a.version === S.board.version && a.approve === true)
+    S.answers.some(
+      (a) => a.version === S.board.version && a.approve === true,
+    ) ||
+    (S.local && approving(S))
   )
     return "approved";
   const c = S.board.chapters.find((x) => x.n === n);
@@ -73,7 +79,7 @@ function answersDoc(S, at = new Date().toISOString()) {
   return {
     version: S.board.version,
     submittedAt: at,
-    approve: S.intent === "approve" && canApprove(S),
+    approve: approving(S),
     direction: S.draft.direction,
     look: S.draft.look.trim(),
     scenes: S.board.scenes
