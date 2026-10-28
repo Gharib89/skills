@@ -107,6 +107,50 @@ test("a token spanning several words takes its first word's start and its last w
   assert.equal(cue.end, 3.8);
 });
 
+test("with two speakers, a cue whose speaker is not the last cue's opens with the role's name", () => {
+  const a = scene([["One."], ["Two."], ["Three."]], 0, 1.5);
+  const b = scene([["Four."]], 1.5, 0.5);
+  a.script.speakers = ["narrator", "learner", "learner"];
+  b.script.speakers = ["narrator"];
+  const cues = captionCues([a.script, b.script], [a.timeline, b.timeline]);
+  assert.deepEqual(
+    cues.map((c) => [c.who, c.text]),
+    [
+      ["Narrator", "Narrator: One."],
+      ["Learner", "Learner: Two."],
+      [undefined, "Three."],
+      ["Narrator", "Narrator: Four."],
+    ],
+  );
+  assert.deepEqual(
+    cues[1].tokens.map((t) => t.text),
+    ["Two."],
+  );
+});
+
+test("one speaker names no one, and a name counts toward CUE_CHARS", () => {
+  const one = scene([["One."], ["Two."]]);
+  one.script.speakers = ["learner", "learner"];
+  assert.deepEqual(
+    captionCues([one.script], [one.timeline]).map((c) => [c.who, c.text]),
+    [
+      [undefined, "One."],
+      [undefined, "Two."],
+    ],
+  );
+  // "Learner: " is 9 characters: 75 of words fit beside it, 76 do not
+  const words = (last) => ["a".repeat(20), "b".repeat(20), "c".repeat(last)];
+  const two = (last) => {
+    const s = scene([["Hi."], words(last)]);
+    s.script.speakers = ["narrator", "learner"];
+    return captionCues([s.script], [s.timeline]);
+  };
+  assert.equal(two(33).length, 2);
+  assert.equal(two(33)[1].text.length, CUE_CHARS);
+  assert.equal(two(34).length, 3);
+  assert.equal(two(34)[2].who, undefined);
+});
+
 test("each scene's cues end within that scene", () => {
   const a = scene([["One."]], 0, 0.6);
   const b = scene([["Two."]], 0.6, 0.6);

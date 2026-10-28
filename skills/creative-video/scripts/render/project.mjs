@@ -49,12 +49,13 @@ window.at = (scene, word, nth = 1) => {
 };
 `;
 
-// compositions/captions.html: `cues` as HyperFrames cue clips.
+// compositions/captions.html: `cues` as HyperFrames cue clips, a cue's
+// speaker name in its own span before its words.
 export function captionsHtml(cues) {
   const cueDivs = cues
     .map(
       (c, i) =>
-        `    <div class="cue clip" data-start="${c.start}" data-duration="${(c.end - c.start).toFixed(3)}" id="cue-${i + 1}">${c.tokens
+        `    <div class="cue clip" data-start="${c.start}" data-duration="${(c.end - c.start).toFixed(3)}" id="cue-${i + 1}">${c.who ? `<span class="who">${esc(c.who)}:</span> ` : ""}${c.tokens
           .map((t) => `<span class="w">${esc(t.text)}</span>`)
           .join(" ")}</div>`,
     )
