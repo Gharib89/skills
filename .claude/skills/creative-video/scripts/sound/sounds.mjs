@@ -3,14 +3,17 @@
 //
 //   node sounds.mjs <run-folder>
 //
-// For each sound by its `query`: one whose `source` file is in the store and
-// in the project is kept, with no network. Else the store's query record (the
+// For each sound by its `query`: one whose query's record names its `source`,
+// that file in the store and in the project, is kept, with no network, so an
+// edited query searches again. Else the store's query record (the
 // result a query of that kind chose before, on any run) is copied again. Else
 // Openverse is searched for CC0 audio (the bed for medium-length clips), a
 // search failing after 30 s tried once more, and the first result in a format
-// the render plays is downloaded into the store. Else the Kenney packs setup
+// the render plays is downloaded into the store (a failed download counts as
+// no result). Else the Kenney packs setup
 // installed are searched by their file names' words. Else the sound is dropped
-// from the kit into its `dropped` list. The store is
+// from the kit into its `dropped` list, where it replaces an earlier drop of
+// its event, as a sound found does. The store is
 // <data>/creative-video/sounds/: openverse/<id>.<ext>, kenney/<pack>/<file> and
 // queries.json.
 // stdout: `sound <event>: openverse <id> | kenney <pack>/<file> | cached |
@@ -20,11 +23,12 @@
 //         (assets/sounds/<name>), licence, creator, url and attribution, the
 //         store, and <run>/project/assets/sounds/
 // exit:   0 every sound found or dropped · 1 refused, `sounds: <why>` on
-//         stderr (no sound.json, or a malformed one) · 2 usage
+//         stderr (no sound.json, a malformed one, or a malformed queries.json:
+//         `sounds: <path> is malformed: <why>`) · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { readJson } from "../lib/json.mjs";
-import { SOUND } from "../lib/kit.mjs";
+import { SOUND, kitSounds } from "../lib/kit.mjs";
 import { stage } from "../lib/stage.mjs";
 import { dest, loadBackend } from "../lib/tools.mjs";
 
@@ -35,15 +39,34 @@ if (!run || rest.length) {
   process.exit(2);
 }
 const kit = readJson(run, SOUND);
+// The events this run looks for, the bed's as `bed`.
+const asked = new Set(kitSounds(kit).map((s) => s.event));
 const backend = await loadBackend();
 // Setup's sounds:kenney row lands in the store.
 const KENNEY = dest({ kind: "sounds" });
 const store = path.dirname(KENNEY);
 const assets = path.join(run, "project", "assets", "sounds");
 const recordFile = path.join(store, "queries.json");
-const records = fs.existsSync(recordFile)
-  ? JSON.parse(fs.readFileSync(recordFile, "utf8"))
-  : {};
+const records = fs.existsSync(recordFile) ? readRecords() : {};
+// The store's query records, each a found sound's fields by `<kind>:<query>`,
+// held to the `source` and `file` every reader of a record takes.
+function readRecords() {
+  const refuse = (why) => {
+    throw new Error(`${recordFile} is malformed: ${why}`);
+  };
+  let v;
+  try {
+    v = JSON.parse(fs.readFileSync(recordFile, "utf8"));
+  } catch (e) {
+    refuse(e.message);
+  }
+  if (!v || typeof v !== "object" || Array.isArray(v))
+    refuse("it is not an object");
+  for (const [key, r] of Object.entries(v))
+    for (const f of ["source", "file"])
+      if (typeof r?.[f] !== "string") refuse(`${key}.${f} is not text`);
+  return v;
+}
 // Formats the render plays.
 const PLAYS = ["mp3", "ogg", "wav", "flac"];
 
@@ -72,7 +95,11 @@ async function fromOpenverse(query, medium) {
   if (!r) return "openverse found no usable CC0 result";
   const name = `${r.id}.${ext(r)}`;
   fs.mkdirSync(path.join(store, "openverse"), { recursive: true });
-  await backend.download(r.url, path.join(store, "openverse", name));
+  try {
+    await backend.download(r.url, path.join(store, "openverse", name));
+  } catch (e) {
+    return `openverse download failed (${e.message})`;
+  }
   return {
     source: `openverse:${r.id}`,
     file: `assets/sounds/${name}`,
@@ -121,13 +148,15 @@ function fromKenney(query) {
 
 // The sound filled, its line's verdict, or `{ why }` to drop it.
 async function find(kind, sound) {
-  const inProject = (s) =>
-    s.source &&
-    fs.existsSync(stored(s)) &&
-    fs.existsSync(path.join(run, "project", s.file));
-  if (inProject(sound)) return { filled: sound, said: "cached" };
   const key = `${kind}:${sound.query}`;
   let found = records[key];
+  if (
+    found &&
+    found.source === sound.source &&
+    fs.existsSync(stored(found)) &&
+    fs.existsSync(path.join(run, "project", sound.file))
+  )
+    return { filled: sound, said: "cached" };
   let said = "cached";
   if (!found || !fs.existsSync(stored(found))) {
     const ov = await fromOpenverse(sound.query, kind === "bed");
@@ -144,12 +173,12 @@ async function find(kind, sound) {
 
 const dropped = [];
 async function each(kind, sound) {
+  const event = sound.event ?? "bed";
   const { filled, said, why } = await find(kind, sound);
   if (filled) {
-    console.log(`sound ${sound.event ?? "bed"}: ${said}`);
+    console.log(`sound ${event}: ${said}`);
     return filled;
   }
-  const event = sound.event ?? "bed";
   console.log(`sound ${event}: dropped: ${why}`);
   dropped.push({ event, query: sound.query, why });
   return null;
@@ -167,7 +196,10 @@ if (kit.palette) {
   }
   kit.palette = out;
 }
-if (dropped.length) kit.dropped = [...(kit.dropped ?? []), ...dropped];
+// This run's outcome for an event replaces its earlier drop.
+const kept = (kit.dropped ?? []).filter((d) => !asked.has(d.event));
+if (kept.length || dropped.length) kit.dropped = [...kept, ...dropped];
+else delete kit.dropped;
 for (const d of dropped)
   console.log(`warn dropped sound: ${d.event}: ${d.why}`);
 fs.mkdirSync(store, { recursive: true });

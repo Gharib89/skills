@@ -33,31 +33,32 @@ request`); QC spells them in Arabic letters as a speaker says them. An acronym
 of more than four capitals QC reads as a word: write it as its letters' names
 in Arabic.
 
-`roles` is optional: one role per sentence, like `cites`, `null` or none for
-`narrator`. Any other role needs `project/kit/cast.json`: per role a
-`narrators.json` id per language and the style line it speaks in:
+`roles` is optional: one role per sentence, like `cites`. `null`, or no `roles`
+at all, means `narrator`. Any other role needs `project/kit/cast.json`: per
+role a `narrators.json` id per language and the style line it speaks in:
 
 ```json
 { "narrator": { "voices": { "en": "af_heart" } },
   "learner": { "voices": { "en": "am_fenrir" }, "style": "a curious student" } }
 ```
 
-Without the file the video has one voice, `narrator` above, which a cast
-leaving `narrator` out keeps. A role speaks its voice in the script's
-language, `style` replacing that narrator's own (Gemini acts it; Kokoro
-ignores it). Each run of consecutive sentences of one role is voiced in its
-voice, the runs one after another, never overlapping; `voice.json` records
-each sentence's speaker, and captions name a new one. Two roles with the same
-voice and style line warn `alike voices` at the gates.
+Without `cast.json`, `script.json`'s `narrator` voices every sentence; a
+`cast.json` with no `narrator` role keeps that voice for it. Cast only
+narrators whose `narrators.json` `rate` is a number; voice refuses a null one.
+A role speaks its voice in the script's language, `style` replacing that
+narrator's own (Gemini acts it; Kokoro and ElevenLabs ignore it). Each run of
+consecutive sentences of one role is voiced in its voice, the runs one after
+another, never overlapping; `voice.json` records each sentence's role
+(`roles`), and captions name a new one.
 
 1. **Tools.** Voice needs the npm packages and its narrator's rows: English
    `model:kokoro-82m` and `model:wav2vec2-base-960h`, plus `onnx-cuda` where
    setup lists it; Egyptian Arabic
    `model:egyptian-arabic-wav2vec2` and `key:gemini`; an ElevenLabs narrator
-   `key:elevenlabs` and `model:wav2vec2-base-960h`. Run the setup
+   `key:elevenlabs` and `model:wav2vec2-base-960h`. First run the setup
    check with `--voice` set to the narrator this stage uses (`narrator`, else
-   the language's default above), and again per other voice the cast names,
-   first; any row missing, run SKILL.md's Setup steps before voicing.
+   the language's default above), then once per other voice `cast.json`
+   names; any row missing, run SKILL.md's Setup steps before voicing.
 2. **Voice.** `node <skill>/scripts/voice/voice.mjs creative-videos/<slug>`.
    It prints one line per scene, `voice <id>: voiced|cached · recall ·
    precision · rate · pass|fail: <why>`, a failing one ending in `heard:

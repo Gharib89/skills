@@ -81,7 +81,7 @@ export const SHAPES = {
   }),
   // The voice stage's input; the claims check reads each sentence's cites,
   // excerpt ids, which a script voiced alone may leave out. `roles` names each
-  // sentence's speaker (lib/kit.mjs), null for the narrator.
+  // sentence's role (lib/kit.mjs), null for the narrator.
   "script.json": obj({
     language: text,
     narrator: opt(text),

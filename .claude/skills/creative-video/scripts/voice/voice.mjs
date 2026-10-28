@@ -21,7 +21,7 @@
 //         `voice length: pass|fail: the scenes voice <s> s (<id> <s> s, ...)
 //         and the <hold> s hold vs the brief's <s> s ±10%`; then one summary
 //         line
-// writes: <run>/voice.json, the word timeline with each sentence's speaker
+// writes: <run>/voice.json, the word timeline with each sentence's role
 //         and each role's voice, only when every scene and the length pass;
 //         <run>/.cache/voice/<key>.heard.txt per voiced scene
 // stderr: a narrator with no calibrated rate, or a Gemini or ElevenLabs
@@ -34,7 +34,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { maybeJson, readJson } from "../lib/json.mjs";
-import { speakers, voices, voicesOf } from "../lib/kit.mjs";
+import { CAST, rolesOf, voices, voicesOf } from "../lib/kit.mjs";
 import { HOLD, fitsLength } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
@@ -99,7 +99,7 @@ const runsOf = (sentences) =>
   }, []);
 const scenes = script.scenes.map((s) => {
   const text = s.narration.join(" ");
-  const roles = speakers(s);
+  const roles = rolesOf(s);
   const sentences = s.narration.map((t, i) => ({ role: roles[i], text: t }));
   const runs = runsOf(sentences).map((r) => ({ ...r, n: cast[r.role] }));
   // A scene one voice speaks in its narrators.json style keys as it did before
@@ -224,14 +224,15 @@ function wav(file, samples, rate) {
 const missing = scenes.filter((s) => !s.cached);
 // A Gemini or ElevenLabs narrator speaks only on the user's own key, its
 // backend's key row in setup/rows.json: no other narrator stands in, since
-// script.json or the cast names this narrator.
-for (const n of Object.values(cast)) {
+// script.json or the cast names this narrator, and the refusal names which.
+const castFile = maybeJson(run, CAST);
+for (const [role, n] of Object.entries(cast)) {
   const keyRow = catalogue().find(
     (r) => r.kind === "key" && r.backend === n.backend,
   );
   if (missing.length && keyRow && !process.env[keyRow.env]) {
     console.error(
-      `voice: narrator ${n.id} needs ${keyRow.env}: get a free key at ${keyRow.get}, or choose another narrator in script.json`,
+      `voice: narrator ${n.id} needs ${keyRow.env}: get a free key at ${keyRow.get}, or choose another narrator in ${castFile?.[role] ? CAST : "script.json"}`,
     );
     process.exit(1);
   }
@@ -329,7 +330,7 @@ fs.writeFileSync(
       scenes: scenes.map((s) => ({
         id: s.id,
         ...(s.cached ?? s.voiced),
-        speakers: s.roles,
+        roles: s.roles,
       })),
     },
     null,

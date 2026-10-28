@@ -28,7 +28,10 @@ export function licenceFindings(events, root, kit) {
     .map((s) => s.replace(/^\.\//, "").split(/[?#]/)[0]);
   return [...new Set(played)]
     .filter((s) => !licensed.has(s))
-    .map((s) => `${s}: no licence record in the kit`);
+    .map(
+      (s) =>
+        `${s}: no licence record in sound.json; play a sound.json file, or add it there and run sound/sounds.mjs`,
+    );
 }
 
 // The bed against the voice, `{ evidence, measured }`. In each 3 s window of
@@ -47,7 +50,7 @@ export async function bedLevel({ proj, timeline, kit, backend }) {
   const { total, scenes } = timeline;
   const lane = bedLane(timeline, bed.out);
   const words = scenes.flatMap((s) => s.words);
-  const [voice, music] = await Promise.all(
+  const [voice, bedLoudness] = await Promise.all(
     [path.join(proj, "assets", "narration.wav"), path.join(proj, bed.file)].map(
       (f) => backend.shortTerm(f, total),
     ),
@@ -68,7 +71,7 @@ export async function bedLevel({ proj, timeline, kit, backend }) {
     for (let i = 0; i < steps; i++)
       power += laneAt(lane, a + ((i + 0.5) * (e - a)) / steps) ** 2;
     const gain = bed.level + 10 * Math.log10(power / steps);
-    const margin = at(voice, e) - at(music, e) - gain;
+    const margin = at(voice, e) - at(bedLoudness, e) - gain;
     if (!closest || margin < closest.margin) closest = { a, margin };
     if (margin < BED_LU)
       evidence.push(

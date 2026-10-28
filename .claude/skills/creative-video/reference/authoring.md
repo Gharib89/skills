@@ -81,12 +81,12 @@ node <skill>/scripts/render/timing.mjs <run>
 It lays the scenes back to back on the 30 fps frame grid from their voiced
 lengths, the last one held 1 s, and writes the root `index.html` (each scene's
 host at its start and length, the narration, the captions on top),
-`timing.js` and the caption track. In a video of two or more speakers, a cue
-whose speaker is not the last cue's opens with the role's name (`Learner: `),
-in the video and the SRT alike. It prints `timing: <n> scene(s), <total> s`
-and one `timing: compositions/<id>.html to author` line per scene file not yet
-written. On exit 1, `timing: <why>` names what to fix: a `voice.json` that no
-longer matches `script.json` means voice again first.
+`timing.js` and the caption track. In a video of two or more roles, a cue
+whose role differs from the last cue's opens with the role's name
+(`Learner: `), in the video and the SRT alike. It prints `timing: <n>
+scene(s), <total> s` and one `timing: compositions/<id>.html to author` line
+per scene file not yet written. On exit 1, `timing: <why>` names what to fix:
+a `voice.json` that no longer matches `script.json` means voice again first.
 
 ## Chapters
 
@@ -182,15 +182,19 @@ node <skill>/scripts/sound/sounds.mjs <run>
 ```
 
 For each sound it searches Openverse for CC0 audio (a search that fails after
-30 s is tried once more), then the Kenney packs setup installs
-(`sounds:kenney`) by their file names' words, copies what it finds into
-`project/assets/sounds/` and writes the sound's `file`, `source`, `licence`,
-`creator`, `url` and `attribution` into `sound.json`. A sound found before, on
-any run, is copied again with no search. It prints `sound <event>: openverse
-<id> | kenney <pack>/<file> | cached | dropped: <why>` per sound. A sound found
-nowhere moves to `sound.json`'s `dropped` list with its reason, and prints
-`warn dropped sound: <event>: <why>`: change its query and run again, or stage
-the moment without it. Never edit the fields it writes.
+30 s is tried once more, a failed download counts as no result), then the
+Kenney packs setup installs (`sounds:kenney`) by their file names' words,
+copies what it finds into `project/assets/sounds/` and writes the sound's
+`file`, `source`, `licence`, `creator`, `url` and `attribution` into
+`sound.json`. A sound its query found before, on any run, is copied again with
+no search. It prints `sound <event>:
+openverse <id> | kenney <pack>/<file> | cached | dropped: <why>` per sound. A
+sound found nowhere moves to `sound.json`'s `dropped` list with its reason, and
+prints `warn dropped sound: <event>: <why>`. To swap a found sound, change its
+`query` and run again. To retry a dropped one, put it back under `bed` or
+`palette` with a new `query` and run again: this run's outcome replaces its
+`dropped` entry. Or stage the moment without it. Never edit the fields it
+writes.
 
 The root plays the bed: every stage that writes `index.html` adds it after the
 narration as `<audio id="bed">`, looped over the whole video at its `level`,
@@ -280,11 +284,12 @@ failing one indented under it. Each is a hard fail:
 Warnings print as `warn <name>: <detail>`, are recorded in `gates.json` and
 never change the exit: `effect rate` (over 24 sounds in a minute), `effect
 onset` (a sound over 0.15 s from the nearest tween start), `scene length`
-(over 30 s), `sentences` (over 25 words), `alike voices` (two roles of
-`cast.json` with the same voice and the same style line in the script's
-language), `dropped sound` (a sound `sounds.mjs` found nowhere), `pacing`
-(always printed: the change
-events a minute, and each dead stretch of 2 s or more with no tween running)
+(over 30 s), `sentences` (over 25 words), `alike voices` (two roles with the
+same voice in the script's language, the narrator role counted whether
+`cast.json` casts it or not, and on Gemini, which acts the style line, the
+same style line too), `dropped sound` (a sound `sounds.mjs` found nowhere),
+`pacing` (always printed: the change events a minute, and each dead stretch of
+2 s or more with no tween running)
 and `clock` (a scene or kit file naming `Math.random`, `Date.now`, `new Date`,
 `performance.now`, `setTimeout`, `setInterval` or `requestAnimationFrame`).
 

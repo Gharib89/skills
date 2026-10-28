@@ -19,7 +19,7 @@ export async function openverse(query, { medium }) {
     );
   }
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return (await r.json()).results;
+  return (await r.json()).results ?? [];
 }
 
 // A Kenney pack's zip unpacked flat into `dir`: its audio files and its
