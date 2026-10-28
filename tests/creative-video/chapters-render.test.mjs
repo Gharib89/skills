@@ -200,6 +200,26 @@ test("a chapter's folder holds only its scene hosts and cues, every time counted
   );
 });
 
+test("a chapter starting between milliseconds keeps its opening cue, which the timeline rounds to the millisecond", () => {
+  const fx = chaptered([{ ...SCENES[0], frames: 1801 }, ...SCENES.slice(1)], {
+    chapters: PLAN,
+  });
+  supported(fx);
+  assert.equal(exec(timing, fx).code, 0);
+  assert.equal(runGates(fx).code, 0);
+  assert.equal(exec(render, fx).code, 0);
+  const tl = timeline(fx);
+  const opening = tl.scenes[2].words.map((w) => w.text).join(" ");
+  const cue = tl.cues.find((c) => c.text === opening);
+  assert.ok(cue.start < tl.chapters[1].start);
+  const text = (n) =>
+    cues(read(rel(fx, `chapter-${n}`, "compositions", "captions.html"))).map(
+      (c) => c.text,
+    );
+  assert.ok(text(2).includes(opening));
+  assert.ok(!text(1).includes(opening));
+});
+
 test("the estimate is printed before any render, from the chapters not cached and the rates table", () => {
   const fx = ready();
   const rates = loadRates().rates;

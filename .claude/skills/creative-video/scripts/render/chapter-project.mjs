@@ -36,8 +36,10 @@ export function writeChapter(run, { timeline, voice }, n) {
   const by = frame(ch.start);
   const seconds = written(frame(ch.end) - by);
   const scenes = timeline.scenes.filter((s) => ch.scenes.includes(s.id));
+  // A cue joins the chapter by its frame: its start is rounded to the
+  // millisecond, a chapter's start is not.
   const cues = timeline.cues
-    .filter((c) => c.start >= ch.start - 1e-6 && c.start < ch.end - 1e-6)
+    .filter((c) => frame(c.start) >= by && frame(c.start) < frame(ch.end))
     .map((c) => ({
       ...c,
       start: r3(c.start - ch.start),
