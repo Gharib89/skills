@@ -90,11 +90,11 @@ another, never overlapping; `voice.json` records each sentence's role
    is an input or tool error (an unknown narrator, a scene with no narration,
    a Gemini narrator with no `GEMINI_API_KEY`, an ElevenLabs narrator with no
    `ELEVENLABS_API_KEY`, a failed synthesis): relay the stderr message as
-   printed. Keep `script.json`'s `narrator`: only the user changes it.
+   printed. Only the user changes a narrator (`script.json`, `cast.json`).
 5. **On `voice: Gemini quota reached`** (or `ElevenLabs`), the key has hit
    that vendor's limit: a rate or daily limit, or spent credits. The line
    quotes the vendor's own message, and the scenes it counts as kept are
    cached. Relay the line and ask the user to pick one: voice again once the
    quota resets (tomorrow, for a daily quota) or the credits are topped up,
    which voices only the missing scenes; set another key (a paid one, for a
-   free-tier limit); or change `script.json`'s `narrator`.
+   free-tier limit); or change the narrator (`script.json`, `cast.json`).

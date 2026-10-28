@@ -150,3 +150,17 @@ test("a cast narrator with no key is refused naming cast.json as where to choose
   );
   assert.equal(synths(fx).length, 0);
 });
+
+test("a quota stop with a cast names cast.json beside script.json as where to choose another narrator", () => {
+  const fx = fixture(SCENES);
+  cast(fx, { learner: { voices: { en: "elevenlabs-george" } } });
+  const r = run(fx, {
+    ELEVENLABS_API_KEY: "fake",
+    CREATIVE_VIDEO_FAKE_QUOTA: "0",
+  });
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^voice: ElevenLabs quota reached .*; or choose another narrator in script\.json or project\/kit\/cast\.json$/m,
+  );
+});
