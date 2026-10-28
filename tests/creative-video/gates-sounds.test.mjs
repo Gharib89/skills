@@ -124,3 +124,36 @@ test("an <audio> with no id, written or created, or a created one with an id ano
     /first: context: <audio id="ding"> is created by its script with an id another <audio> carries: the render never plays it, so give it an id no other <audio> has vs /,
   );
 });
+
+test("over.html's sounds are judged too, across the whole video: a moved written start fails, a created one passes", () => {
+  const moved = timed();
+  compose(
+    moved,
+    "over",
+    '<audio id="bed" data-sound="0" data-moved="2"></audio>',
+  );
+  const r = runGates(moved);
+  assert.equal(r.code, 1, r.out + r.err);
+  only(r, "sounds");
+  assert.match(
+    gateLine(r, "sounds"),
+    /first: over: <audio id="bed"> starts at 0 s in its scene file and 2 s after its script ran: /,
+  );
+  const created = timed();
+  compose(created, "over", '<audio id="bed" data-created="2"></audio>');
+  const ok = runGates(created);
+  assert.equal(ok.code, 0, ok.out + ok.err);
+});
+
+test("a created <audio> reusing a written one's id in the same scene fails sounds", () => {
+  const r = context(
+    (start) =>
+      `<audio id="ding" data-sound="0.1"></audio><audio id="ding" data-created="${start + 0.1}"></audio>`,
+  );
+  assert.equal(r.code, 1, r.out + r.err);
+  only(r, "sounds");
+  assert.match(
+    gateLine(r, "sounds"),
+    /first: context: <audio id="ding"> is created by its script with an id another <audio> carries: /,
+  );
+});

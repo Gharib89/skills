@@ -12,12 +12,15 @@
 export const sceneSeconds = (sc, s) =>
   s.authored === null ? s.start - sc.start : s.start;
 
-// One finding per sound the render plays elsewhere than the gates judge it.
+// One finding per sound the render plays elsewhere than the gates judge it,
+// over.html's judged as a scene across the whole video.
 export function soundFindings(plan, events) {
   const carried = new Map();
   for (const { sounds } of Object.values(events))
     for (const { id } of sounds) carried.set(id, (carried.get(id) ?? 0) + 1);
-  return plan.flatMap(({ sc }) =>
+  const last = plan.at(-1).sc;
+  const over = { id: "over", start: 0, duration: last.start + last.duration };
+  return [...plan, ...(events.over ? [{ sc: over }] : [])].flatMap(({ sc }) =>
     (events[sc.id]?.sounds ?? []).flatMap(({ id, start, authored }) => {
       const audio = `${sc.id}: <audio id="${id}">`;
       const end = sc.start + sc.duration;

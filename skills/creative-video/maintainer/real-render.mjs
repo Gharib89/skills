@@ -353,6 +353,20 @@ const moved = judged(
     'document.querySelector("#ding").dataset.start = 1;',
   ),
 );
+// A created beep reusing the written one's id, at the same 1 s, is the
+// created one the render never plays.
+const reused = judged(
+  "sounds",
+  sounded(
+    "sounds-reused",
+    '<audio id="ding" src="assets/beep.wav" data-start="1" data-duration="0.3"></audio>',
+    `const ding = document.createElement("audio");
+    ding.id = "ding";
+    ding.src = "assets/beep.wav";
+    ding.dataset.start = 1;
+    document.querySelector('[data-composition-id="two"]').append(ding);`,
+  ),
+);
 const created = sounded(
   "sounds-created",
   "",
@@ -382,6 +396,11 @@ check(
   "gate sounds",
   moved.status === "fail",
   `failing twin: ${moved.measured}; passing twin: every gate passes`,
+);
+check(
+  "gate sounds on a reused id",
+  reused.status === "fail" && /is created by its script/.test(reused.measured),
+  reused.measured,
 );
 check(
   "sound onset",

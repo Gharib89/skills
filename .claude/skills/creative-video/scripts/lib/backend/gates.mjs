@@ -286,15 +286,17 @@ async function sceneEvents() {
         .filter((c) => !c.getChildren)
         .map((c) => [lift(c, c.startTime()), lift(c, c.endTime())]),
       // A timeline a script registers beyond its scene's has no element.
+      // Each written start is claimed once, in document order, so a created
+      // <audio> reusing a written one's id reads as created.
       sounds: [
         ...(document
           .querySelector(`[data-composition-id="${id}"]`)
           ?.querySelectorAll("audio[data-start]") ?? []),
-      ].map((a) => ({
-        id: a.id,
-        start: r3(+a.dataset.start),
-        authored: a.id && authored.has(a.id) ? authored.get(a.id) : null,
-      })),
+      ].map((a) => {
+        const written = authored.get(a.id) ?? null;
+        authored.delete(a.id);
+        return { id: a.id, start: r3(+a.dataset.start), authored: written };
+      }),
     };
   }
   return out;
