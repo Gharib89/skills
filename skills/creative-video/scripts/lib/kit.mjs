@@ -1,9 +1,20 @@
 // The parts of a run's format kit (<run>/project/kit/) the stages read as data:
-// cast.json, each role's voice per language and the style it speaks in.
+// cast.json, each role's voice per language and the style it speaks in, and
+// sound.json, the bed and the sound palette.
 import { maybeJson } from "./json.mjs";
 import { narrator as findNarrator } from "./narrators.mjs";
 
 export const CAST = "project/kit/cast.json";
+export const SOUND = "project/kit/sound.json";
+
+// sound.json, or null when the run has none.
+export const soundKit = (run) => maybeJson(run, SOUND);
+
+// The kit's sounds, the bed first as the event `bed`.
+export const kitSounds = (kit) => [
+  ...(kit?.bed ? [{ event: "bed", ...kit.bed }] : []),
+  ...(kit?.palette ?? []),
+];
 
 // A scene's speaker per sentence: its `roles` entry, `narrator` where the list
 // or the entry is missing.

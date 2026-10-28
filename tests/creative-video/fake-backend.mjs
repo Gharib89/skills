@@ -29,6 +29,7 @@ export * from "./fake-backend-voice.mjs";
 export * from "./fake-backend-media.mjs";
 export * from "./fake-backend-sources.mjs";
 export * from "./fake-backend-gates.mjs";
+export * from "./fake-backend-sound.mjs";
 
 export async function npmCi(dir, env) {
   log({
