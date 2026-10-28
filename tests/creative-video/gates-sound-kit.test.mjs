@@ -8,6 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { bedLevel } from "../../skills/creative-video/scripts/gates/sound-kit.mjs";
+import { DUCK } from "../../skills/creative-video/scripts/render/bed.mjs";
 import { gateLine, only, runGates, timed } from "./gates-lib.mjs";
 import { exec, project, timing } from "./timing-lib.mjs";
 
@@ -102,6 +103,53 @@ test("the bed's margin is the voice's loudness less the bed file's moved by its 
   assert.deepEqual((await level(-28)).evidence, [
     `${BED.file} is missing: run sound/sounds.mjs`,
   ]);
+});
+
+test("a short last window is judged over its own length, and a margin of exactly 15 LU passes", async () => {
+  const proj = fs.mkdtempSync(path.join(os.tmpdir(), "creative-bed-"));
+  fs.mkdirSync(path.join(proj, "assets", "sounds"), { recursive: true });
+  fs.writeFileSync(path.join(proj, BED.file), "bed");
+  // 10 s of words every 0.5 s: three 3 s windows and a last one of 1 s.
+  const words = [...Array(20)].map((_, i) => ({
+    text: "w",
+    start: i / 2,
+    end: i / 2 + 0.45,
+  }));
+  const timeline = {
+    total: 10,
+    scenes: [{ id: "one", start: 0, duration: 10, words }],
+  };
+  const backend = (bed) => ({
+    shortTerm: async (f, seconds) =>
+      [...Array(seconds * 10)].map((_, i) => [
+        (i + 1) / 10,
+        f.endsWith("narration.wav") ? -16 : bed,
+      ]),
+  });
+  const judge = (level, bed) =>
+    bedLevel({
+      proj,
+      timeline,
+      kit: { bed: { ...BED, level } },
+      backend: backend(bed),
+    });
+  assert.deepEqual((await judge(0, -20)).evidence, [
+    "window 0 s: the bed is 13.1 LU under the voice, under 15 LU",
+    "window 3 s: the bed is 13.1 LU under the voice, under 15 LU",
+    "window 6 s: the bed is 13.1 LU under the voice, under 15 LU",
+    "window 9 s: the bed is 13.1 LU under the voice, under 15 LU",
+  ]);
+  // A level that cancels the ducked lane's power mean, summed as the gate
+  // sums it, leaves the margin the voice less the bed: -16 - -31 = 15.
+  let power = 0;
+  for (let i = 0; i < 30; i++) power += DUCK ** 2;
+  const unity = -10 * Math.log10(power / 30);
+  assert.deepEqual(await judge(unity, -31), {
+    evidence: [],
+    measured: "15.0 LU under the voice at its closest (window 0 s)",
+  });
+  assert.equal((await judge(unity, -30.9)).evidence.length, 4);
+  fs.rmSync(proj, { recursive: true });
 });
 
 test("a sound with no licence record fails licence, by file", () => {
