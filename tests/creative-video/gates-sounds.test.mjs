@@ -145,15 +145,22 @@ test("over.html's sounds are judged too, across the whole video: a moved written
   assert.equal(ok.code, 0, ok.out + ok.err);
 });
 
-test("a created <audio> reusing a written one's id in the same scene fails sounds", () => {
-  const r = context(
-    (start) =>
-      `<audio id="ding" data-sound="0.1"></audio><audio id="ding" data-created="${start + 0.1}"></audio>`,
-  );
-  assert.equal(r.code, 1, r.out + r.err);
-  only(r, "sounds");
-  assert.match(
-    gateLine(r, "sounds"),
-    /first: context: <audio id="ding"> is created by its script with an id another <audio> carries: /,
-  );
+test("a created <audio> reusing a written one's id in the same scene, or the root narration's, fails sounds", () => {
+  for (const [id, written] of [
+    ["ding", '<audio id="ding" data-sound="0.1"></audio>'],
+    ["narration", ""],
+  ]) {
+    const r = context(
+      (start) =>
+        `${written}<audio id="${id}" data-created="${start + 0.1}"></audio>`,
+    );
+    assert.equal(r.code, 1, r.out + r.err);
+    only(r, "sounds");
+    assert.match(
+      gateLine(r, "sounds"),
+      new RegExp(
+        `first: context: <audio id="${id}"> is created by its script with an id another <audio> carries: `,
+      ),
+    );
+  }
 });

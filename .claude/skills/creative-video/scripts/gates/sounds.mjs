@@ -15,7 +15,8 @@ export const sceneSeconds = (sc, s) =>
 // One finding per sound the render plays elsewhere than the gates judge it,
 // over.html's judged as a scene across the whole video.
 export function soundFindings(plan, events) {
-  const carried = new Map();
+  // The root's own <audio> (render/root.mjs), which no scene's events hold.
+  const carried = new Map([["narration", 1]]);
   for (const { sounds } of Object.values(events))
     for (const { id } of sounds) carried.set(id, (carried.get(id) ?? 0) + 1);
   const last = plan.at(-1).sc;
