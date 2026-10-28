@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { calls, readJson } from "./timing-lib.mjs";
+import { calls, exec, readJson, timing } from "./timing-lib.mjs";
 import { compose, timeline } from "./gates-lib.mjs";
 import { cited } from "./support-lib.mjs";
 import { sampleTimes } from "../../skills/creative-video/scripts/gates/samples.mjs";
@@ -355,6 +355,19 @@ test("a comment on one scene lets only that scene be re-authored: another scene'
   );
   assert.match(build(fx).err, /^board: context changed, but board 1's/);
   fs.writeFileSync(file, JSON.stringify(kept));
+  // So is another scene's narration, voiced and timed again.
+  const files = ["script.json", "voice.json", "timeline.json"];
+  const before = files.map((f) => fs.readFileSync(path.join(fx.dir, f)));
+  for (const f of files.slice(0, 2)) {
+    const doc = readJson(path.join(fx.dir, f));
+    const s = doc.scenes.find((x) => x.id === "context");
+    if (s.narration) s.narration = s.narration.map((t) => t.toUpperCase());
+    else s.words.forEach((w) => (w.text = w.text.toUpperCase()));
+    fs.writeFileSync(path.join(fx.dir, f), JSON.stringify(doc));
+  }
+  ok(exec(timing, fx));
+  assert.match(build(fx).err, /^board: context changed, but board 1's/);
+  files.forEach((f, i) => fs.writeFileSync(path.join(fx.dir, f), before[i]));
   // The scene the note named is the one to change: board 2 flags it alone.
   compose(fx, "context", "<p>context line</p>");
   compose(fx, "hook", "<p>hook, slower</p>");

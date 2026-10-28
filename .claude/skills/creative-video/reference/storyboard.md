@@ -78,8 +78,8 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
    - `board: look: <text>`: change what the comment asks of the whole look
      (`SPEC.md`, the kit, and each scene it reaches).
    - `board: redo <id>: <note>`: re-author that scene, and only that scene,
-     from its note. The next build refuses a change to any other scene or the
-     kit.
+     from its note. The next build refuses a change to any other scene (its
+     file or its narration), the kit, `over.html` or an asset it may use.
 
    Then snapshot what changed as the stills review does (SKILL.md step 10),
    and build again from step 3: the board comes back.

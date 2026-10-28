@@ -10,7 +10,7 @@
 // and <run>/project/, takes every scene's in, key and out stills
 // (gates/samples.mjs) in one snapshot launch and one frame of each direction not
 // picked, and writes the board and its page. A scene is judged by the hash of
-// its file; after answers that commented on scenes alone, a build refuses a
+// its file and by its narration; after answers that commented on scenes alone, a build refuses a
 // change to any scene they did not name, to the kit, to over.html or to an
 // asset the last board had, so a comment on one scene re-authors only that
 // scene.
@@ -138,17 +138,20 @@ function readStoryboard(timeline) {
 
 // After answers that commented on scenes, with no look or direction, only those
 // scenes may change: notes beside an approval win over it, as apply prints.
-function guardScenes(n, hashes, kit, over, assets) {
+// `scenes` maps each id to its file's hash and its narration.
+function guardScenes(n, scenes, kit, over, assets) {
   const answered = path.join(out, `answers-${n - 1}.json`);
   if (!fs.existsSync(answered)) return;
   const a = JSON.parse(fs.readFileSync(answered, "utf8"));
   if (!a.scenes.length || a.direction || a.look) return;
   const prev = readBoard(n - 1);
-  const was = new Map(prev.scenes.map((s) => [s.id, s.hash]));
+  const was = new Map(
+    prev.scenes.map((s) => [s.id, `${s.hash} ${s.narration}`]),
+  );
   const named = a.scenes.map((s) => s.id);
   // A scene added or gone counts as changed.
-  const changed = [...new Set([...was.keys(), ...Object.keys(hashes)])].filter(
-    (id) => !named.includes(id) && was.get(id) !== hashes[id],
+  const changed = [...new Set([...was.keys(), ...Object.keys(scenes)])].filter(
+    (id) => !named.includes(id) && was.get(id) !== scenes[id],
   );
   if (kit !== prev.kit) changed.push("the kit");
   if (over !== prev.over) changed.push("over.html");
@@ -232,7 +235,10 @@ async function build() {
   const overFile = path.join(proj, "compositions", "over.html");
   const over = fs.existsSync(overFile) ? sha(fs.readFileSync(overFile)) : null;
   const assets = assetHashes(proj);
-  if (n > 1) guardScenes(n, hashes, kit, over, assets);
+  const seen = Object.fromEntries(
+    timeline.scenes.map((s) => [s.id, `${hashes[s.id]} ${voiced.get(s.id)}`]),
+  );
+  if (n > 1) guardScenes(n, seen, kit, over, assets);
   writeIgnore(run);
   writeRoot(run);
 
