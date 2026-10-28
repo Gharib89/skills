@@ -229,6 +229,21 @@ function status(S, b) {
   return "";
 }
 
+// The draft to restore on board `version`, read through `get` (localStorage's
+// getItem): its own, else the newest earlier board's, so a later chapter's
+// board posted while a comment was being written keeps that comment. A Submit
+// that saved removes its draft, so only an unsent one carries over.
+function savedDraft(get, version) {
+  for (let v = version; v > 0; v--) {
+    let d = null;
+    try {
+      d = JSON.parse(get("board-draft-" + v) || "null");
+    } catch (e) {}
+    if (d && typeof d === "object") return d;
+  }
+  return null;
+}
+
 globalThis.Board = {
   newState,
   ACT,
@@ -241,6 +256,7 @@ globalThis.Board = {
   statusOf,
   setAnswers,
   view,
+  savedDraft,
 };
 
 /* ---- boot: the browser only. Wires the capability, the draft, Submit and the copy button. ---- */
@@ -267,15 +283,19 @@ async function boot() {
   function restoreDraft() {
     let saved = null;
     try {
-      saved = JSON.parse(localStorage.getItem(key()) || "null");
+      saved = savedDraft((k) => localStorage.getItem(k), S.board.version);
+      // An earlier board's draft now lives under this board's key alone.
+      for (let v = 1; v < S.board.version; v++)
+        localStorage.removeItem("board-draft-" + v);
     } catch (e) {}
-    if (!saved || typeof saved !== "object") return;
+    if (!saved) return;
     const picks = S.board.directions.filter((d) => !d.picked).map((d) => d.id);
     if (picks.includes(saved.direction)) S.draft.direction = saved.direction;
     if (typeof saved.look === "string") S.draft.look = saved.look;
     for (const [id, v] of Object.entries(saved.notes || {}))
       if (S.board.scenes.some((c) => c.id === id) && typeof v === "string")
         S.draft.notes[id] = v;
+    saveDraft();
   }
   function render() {
     const f = document.activeElement,
@@ -401,6 +421,10 @@ async function boot() {
         () => true,
         () => false,
       );
+    if (saved)
+      try {
+        localStorage.removeItem(key());
+      } catch (e) {}
     const woke = await wake(anchor),
       text = answersText(doc);
     S.status = outcome(saved, woke, capped(text, doc.version) === text);

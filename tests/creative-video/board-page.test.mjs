@@ -278,6 +278,21 @@ test("a video in chapters has a tab per chapter with its status, cards under the
   );
 });
 
+test("a board posted while a comment was being written restores that unsent draft; its own draft, even empty, comes first", () => {
+  const draft = (look) => JSON.stringify({ direction: null, look, notes: {} });
+  const store = { "board-draft-2": draft("darker") };
+  const get = (k) => store[k] ?? null;
+  assert.equal(B.savedDraft(get, 3).look, "darker");
+  store["board-draft-3"] = draft("");
+  assert.equal(B.savedDraft(get, 3).look, "");
+  store["board-draft-3"] = "{not json";
+  assert.equal(B.savedDraft(get, 3).look, "darker");
+  assert.equal(
+    B.savedDraft(() => null, 3),
+    null,
+  );
+});
+
 test("the view escapes what the board holds", () => {
   const edited = clone(doc);
   edited.scenes[0].notes = '<img src=x onerror="boom()">';
