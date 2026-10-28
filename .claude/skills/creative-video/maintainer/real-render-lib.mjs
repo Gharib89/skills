@@ -61,10 +61,31 @@ const composition = (id, hue) => `<template>
 </template>
 `;
 
+// A scene file the way the agent writes one: `body` its markup on a dark
+// ground, `js` the script that adds to its timeline `tl`.
+export const authored = (id, body, js = "") => `<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      background: #20242c;
+    }
+  </style>
+  <div id="root" data-composition-id="${id}" data-width="${WIDTH}" data-height="${HEIGHT}">
+    ${body}
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    ${js}
+    window.__timelines["${id}"] = tl;
+  </script>
+</template>
+`;
+
 // The run folder `<dir>/<name>` as the voice stage and the agent leave it: one
-// scene per `{ id, frames }`, voiced by a tone exactly `frames` long with its
-// two words spread over it, and its composition authored. The timing stage
-// times it, the render stage renders it.
+// scene per `{ id, frames, html }`, voiced by a tone exactly `frames` long with
+// its two words spread over it, and its composition authored (the sliding box,
+// or `html`). The timing stage times it, the render stage renders it.
 export function runFolder(dir, name, scenes) {
   const run = path.join(dir, name);
   const comps = path.join(run, "project", "compositions");
@@ -78,12 +99,12 @@ export function runFolder(dir, name, scenes) {
       scenes: scenes.map(({ id }) => ({ id, narration: [narration(id)] })),
     }),
   );
-  const voiced = scenes.map(({ id, frames }, i) => {
+  const voiced = scenes.map(({ id, frames, html }, i) => {
     const audio = `voice/${id}.wav`;
     fs.writeFileSync(path.join(run, audio), tone(frames));
     fs.writeFileSync(
       path.join(comps, `${id}.html`),
-      composition(id, (i * 137) % 360),
+      html ?? composition(id, (i * 137) % 360),
     );
     const half = frames / FPS / 2;
     const [first, second] = narration(id).split(" ");

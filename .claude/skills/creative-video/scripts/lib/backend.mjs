@@ -3,6 +3,7 @@
 // Hugging Face, PATH, the models, and the source readers. Callers load it
 // through tools.mjs's loadBackend.
 export * from "./backend/browser.mjs";
+export * from "./backend/gates.mjs";
 export * from "./backend/media.mjs";
 export * from "./backend/voice.mjs";
 export * from "./backend/source.mjs";

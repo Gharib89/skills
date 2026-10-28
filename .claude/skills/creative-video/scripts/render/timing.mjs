@@ -28,6 +28,7 @@ import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { voiceHash, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { catalogue, dest } from "../lib/tools.mjs";
+import { NO_WORD } from "./anchors.mjs";
 import { captionCues } from "./cues.mjs";
 import { gridScenes, written } from "./grid.mjs";
 import { joinNarration, wavSeconds } from "./narration.mjs";
@@ -146,7 +147,7 @@ window.at = (scene, word, nth = 1) => {
     (w) => norm(w.text) === norm(word),
   );
   if (!hits[nth - 1])
-    throw new Error(\`at: no word "\${word}" (\${nth}) in scene \${scene}\`);
+    throw new Error(\`${NO_WORD} "\${word}" (\${nth}) in scene \${scene}\`);
   return hits[nth - 1].start;
 };
 `,

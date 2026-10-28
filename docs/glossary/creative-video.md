@@ -38,6 +38,10 @@ _Avoid_: style profile (that is an explainer video's), brand (a look the kit may
 One speaking part of a cast: the narrator, a host, an announcer, a learner. Each narration line names its role, and a line that names none is the narrator's.
 _Avoid_: speaker, persona, narrator (that is one role)
 
+**Sample frames**:
+A scene's three stills the gates judge before the full render: in (0.3 s after its start), key (its middle) and out (its last frame). Each is rendered twice in separate launches for the determinism gate.
+_Avoid_: thumbnails, review frames
+
 **Sound palette**:
 The effects a creative video uses, one per kind of story event it marks (a wrong answer, a door opening), fixed in the format kit with each sound's source and licence, so the same event sounds the same in every chapter.
 _Avoid_: SFX library, sound cues (the kit's whole sound, bed included)

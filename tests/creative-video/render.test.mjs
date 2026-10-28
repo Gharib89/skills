@@ -18,6 +18,7 @@ import {
   timing,
   voiced,
 } from "./timing-lib.mjs";
+import { runGates } from "./gates-lib.mjs";
 
 const ids = SCENES.map((s) => s.id);
 const CHECKS = [
@@ -26,16 +27,18 @@ const CHECKS = [
   "aspect",
   "duration",
   "audio",
-  "srt",
+  "captions",
   "loudness",
   "true peak",
 ];
 
-// A run folder timed and with every scene file authored.
+// A run folder timed, every scene file authored and the gates passed.
 function ready() {
   const fx = voiced();
   assert.equal(exec(timing, fx).code, 0);
   author(fx, ids);
+  const g = runGates(fx);
+  assert.equal(g.code, 0, g.out + g.err);
   return fx;
 }
 
@@ -143,6 +146,7 @@ test("an over.html and kit files authored after the timing stage reach the root 
   assert.ok(html.includes('href="kit/look.css"'));
   fs.writeFileSync(project(fx, "kit", "devices.js"), "");
   fs.rmSync(project(fx, "index.html"));
+  assert.equal(runGates(fx).code, 0);
   assert.equal(exec(render, fx).code, 0);
   assert.ok(read(project(fx, "index.html")).includes('src="kit/devices.js"'));
 });
