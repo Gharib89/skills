@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.6.0 (2026-10-28)
+
+### Features
+
+- **creative-video**: The storyboard, one look approval before the render
+  ([#1032](https://github.com/Gharib89/skills/pull/1032),
+  [`fc1c92a`](https://github.com/Gharib89/skills/commit/fc1c92aafe4b53c56d09eb552e1c876c4d058ff0))
+
+
 ## v0.5.0 (2026-10-28)
 
 ### Features
