@@ -14,7 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { readJson } from "../lib/json.mjs";
-import { kitSounds, soundKit, voices } from "../lib/kit.mjs";
+import { kitSounds, rolesOf, soundKit, voices } from "../lib/kit.mjs";
 import { stage } from "../lib/stage.mjs";
 
 stage("credits");
@@ -23,12 +23,14 @@ if (!run || rest.length) {
   console.error("usage: node credits.mjs <run-folder>");
   process.exit(2);
 }
-const cast = voices(run, readJson(run, "script.json"));
+const script = readJson(run, "script.json");
+// `voices` keeps the narrator role even when every sentence is another's.
+const spoken = new Set(script.scenes.flatMap(rolesOf));
 const kit = soundKit(run);
 const sections = {
-  Voices: Object.entries(cast).map(
-    ([role, n]) => `- ${role}: ${n.id} (${n.backend}, ${n.licence})`,
-  ),
+  Voices: Object.entries(voices(run, script))
+    .filter(([role]) => spoken.has(role))
+    .map(([role, n]) => `- ${role}: ${n.id} (${n.backend}, ${n.licence})`),
   Sound: [
     ...kitSounds(kit).map(
       (s) =>

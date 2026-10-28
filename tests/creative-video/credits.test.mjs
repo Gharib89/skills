@@ -84,6 +84,21 @@ test("each cast role's voice and each kit sound is credited, dropped sounds as d
   assert.equal(read(file(fx)), before);
 });
 
+test("a narrator no sentence speaks is not credited", () => {
+  const fx = fixture();
+  write(
+    fx,
+    SCENES.map((s) => ({ ...s, roles: s.narration.map(() => "chef") })),
+  );
+  writeCast(fx, { chef: { voices: { en: "am_fenrir" } } });
+  const r = exec(credits, fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(
+    read(file(fx)),
+    /^## Voices\n\n- chef: am_fenrir \(kokoro, Apache-2\.0\)\n\n/m,
+  );
+});
+
 test("a run with no script.json is refused by name", () => {
   const fx = fixture();
   fs.rmSync(path.join(fx.dir, "script.json"));
