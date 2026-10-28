@@ -34,7 +34,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { maybeJson, readJson } from "../lib/json.mjs";
-import { speakers, voices, voicesOf } from "../lib/kit.mjs";
+import { CAST, speakers, voices, voicesOf } from "../lib/kit.mjs";
 import { HOLD, fitsLength } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
@@ -224,14 +224,15 @@ function wav(file, samples, rate) {
 const missing = scenes.filter((s) => !s.cached);
 // A Gemini or ElevenLabs narrator speaks only on the user's own key, its
 // backend's key row in setup/rows.json: no other narrator stands in, since
-// script.json or the cast names this narrator.
-for (const n of Object.values(cast)) {
+// script.json or the cast names this narrator, and the refusal names which.
+const castFile = maybeJson(run, CAST);
+for (const [role, n] of Object.entries(cast)) {
   const keyRow = catalogue().find(
     (r) => r.kind === "key" && r.backend === n.backend,
   );
   if (missing.length && keyRow && !process.env[keyRow.env]) {
     console.error(
-      `voice: narrator ${n.id} needs ${keyRow.env}: get a free key at ${keyRow.get}, or choose another narrator in script.json`,
+      `voice: narrator ${n.id} needs ${keyRow.env}: get a free key at ${keyRow.get}, or choose another narrator in ${castFile?.[role] ? CAST : "script.json"}`,
     );
     process.exit(1);
   }

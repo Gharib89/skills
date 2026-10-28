@@ -138,3 +138,15 @@ test("a script with no roles and no cast voices as one narrator, every sentence 
   );
   assert.deepEqual(voiceJson(fx).scenes[0].speakers, ["narrator"]);
 });
+
+test("a cast narrator with no key is refused naming cast.json as where to choose another", () => {
+  const fx = fixture(SCENES);
+  cast(fx, { learner: { voices: { en: "elevenlabs-george" } } });
+  const r = run(fx);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(
+    r.err,
+    /^voice: narrator elevenlabs-george needs ELEVENLABS_API_KEY: get a free key at \S+, or choose another narrator in project\/kit\/cast\.json$/m,
+  );
+  assert.equal(synths(fx).length, 0);
+});
