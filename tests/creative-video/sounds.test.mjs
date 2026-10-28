@@ -175,3 +175,59 @@ test("a sound found nowhere is dropped from the kit with why, and warned", () =>
   assert.deepEqual(k.palette, []);
   assert.deepEqual(k.dropped, [{ event: "ticket", query: "paper tear", why }]);
 });
+
+test("a sound whose query was edited is searched again, not kept on its old file", () => {
+  const fx = fixture();
+  kit(fx);
+  assert.equal(fetch(fx).code, 0);
+  const k = kitOf(fx);
+  k.palette[0].query = "glass break";
+  kit(fx, k);
+  const r = fetch(fx, { ...OPENVERSE, "glass break": [[hit("glass-1")]] });
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(r.out.trim().split("\n"), [
+    "sound bed: cached",
+    "sound ticket: openverse glass-1",
+  ]);
+  const [entry] = kitOf(fx).palette;
+  assert.equal(entry.query, "glass break");
+  assert.equal(entry.source, "openverse:glass-1");
+  assert.equal(entry.file, "assets/sounds/glass-1.mp3");
+});
+
+test("a dropped sound put back with its query replaces its earlier drop, and leaves the list once found", () => {
+  const fx = fixture();
+  const door = { event: "door", query: "door creak", why: "found nowhere" };
+  const events = () => kitOf(fx).dropped?.map((d) => [d.event, d.query]);
+  kit(fx, { palette: KIT.palette, dropped: [door] });
+  assert.equal(fetch(fx, {}).code, 0);
+  assert.deepEqual(events(), [
+    ["door", "door creak"],
+    ["ticket", "paper tear"],
+  ]);
+  // Found nowhere again: this run's drop replaces the earlier one.
+  const retry = () =>
+    kit(fx, {
+      palette: [{ event: "ticket", query: "paper rip" }],
+      dropped: kitOf(fx).dropped,
+    });
+  retry();
+  assert.equal(fetch(fx, {}).code, 0);
+  assert.deepEqual(events(), [
+    ["door", "door creak"],
+    ["ticket", "paper rip"],
+  ]);
+  // Found: it leaves the list and no longer warns.
+  retry();
+  const r = fetch(fx, { "paper rip": [[hit("rip-1")]] });
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(r.out.trim(), "sound ticket: openverse rip-1");
+  assert.deepEqual(kitOf(fx).dropped, [door]);
+  // The last drop found, the list goes too.
+  kit(fx, {
+    palette: [{ event: "door", query: "paper rip" }],
+    dropped: [door],
+  });
+  assert.equal(fetch(fx, {}).code, 0);
+  assert.equal(events(), undefined);
+});
