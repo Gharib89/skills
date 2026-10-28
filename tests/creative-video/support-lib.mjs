@@ -1,6 +1,6 @@
 // Shared fixtures of the support tests: a run folder's source pack and the
 // support checker's verdicts, written the way pack.mjs and
-// agents/support-checker.md write them, and the runner of the script check.
+// agents/support-checker.md write them, and the runner of the claims check.
 import fs from "node:fs";
 import path from "node:path";
 import { here } from "./voice-lib.mjs";
@@ -13,8 +13,8 @@ export const check = path.join(
   "skills",
   "creative-video",
   "scripts",
-  "script",
-  "check.mjs",
+  "source",
+  "claims.mjs",
 );
 
 export const EXCERPTS = [
@@ -37,7 +37,7 @@ export const EXCERPTS = [
 export const cited = (scenes, cites = {}) =>
   scenes.map((s) => ({
     ...s,
-    cites: cites[s.id] ?? s.narration.map(() => []),
+    cites: cites[s.id] ?? s.cites ?? s.narration.map(() => []),
   }));
 
 export function pack(fx, excerpts = EXCERPTS) {

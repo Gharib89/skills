@@ -18,7 +18,8 @@ import {
   timing,
   voiced,
 } from "./timing-lib.mjs";
-import { runGates } from "./gates-lib.mjs";
+import { runGates, supported } from "./gates-lib.mjs";
+import { cited } from "./support-lib.mjs";
 
 const ids = SCENES.map((s) => s.id);
 const CHECKS = [
@@ -34,7 +35,8 @@ const CHECKS = [
 
 // A run folder timed, every scene file authored and the gates passed.
 function ready() {
-  const fx = voiced();
+  const fx = voiced(cited(SCENES));
+  supported(fx);
   assert.equal(exec(timing, fx).code, 0);
   author(fx, ids);
   const g = runGates(fx);

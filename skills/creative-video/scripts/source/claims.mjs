@@ -1,8 +1,8 @@
-// The script check: the narration checked against the source pack and the
+// The claims check: the narration checked against the source pack and the
 // support checker's verdicts before anything is voiced, carried from
 // explainer-video's script gates (cites and support only).
 //
-//   node check.mjs <run-folder>
+//   node claims.mjs <run-folder>
 //
 // Reads <run>/script.json (each scene's `cites`, one list of excerpt ids per
 // narration sentence, [] for a sentence stating no fact), excerpts.json and
@@ -11,15 +11,15 @@
 // A verdict on another wording or other cites, or one older than
 // excerpts.json, judges nothing; `verdict` is supported or connective (a
 // pass), unsupported or unmarked (an uncited sentence that states a fact).
-// stdout: `script <check>: pass|fail: <findings>|warn: <findings>` for cites
-//         and support, then `script: <p> pass, <f> fail, <w> warn`, ending on
+// stdout: `claims <check>: pass|fail: <findings>|warn: <findings>` for cites
+//         and support, then `claims: <p> pass, <f> fail, <w> warn`, ending on
 //         a red support verdict in `; next: fix attempt <a> of 2` or `; stop:
 //         unsupported claims after two fix attempts`
-// writes: <run>/check.json: each check, the support attempts, each sentence's
+// writes: <run>/claims.json: each check, the support attempts, each sentence's
 //         kept verdict, and `passed`, the claims key (lib/claims.mjs) of a
 //         script that passed, which the gates' support gate reads
-// exit:   0 no check failed · 1 a check failed, or `script: no <file>: <why>`
-//         or `script: <file>: <field> <problem>` on stderr · 2 usage
+// exit:   0 no check failed · 1 a check failed, or `claims: no <file>: <why>`
+//         or `claims: <file>: <field> <problem>` on stderr · 2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -27,10 +27,10 @@ import { claimsKey } from "../lib/claims.mjs";
 import { maybeJson, readJson } from "../lib/json.mjs";
 import { stage } from "../lib/stage.mjs";
 
-stage("script");
+stage("claims");
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
-  console.error("usage: node check.mjs <run-folder>");
+  console.error("usage: node claims.mjs <run-folder>");
   process.exit(2);
 }
 const file = (f) => path.join(run, f);
@@ -39,7 +39,7 @@ for (const [f, why] of [
   ["excerpts.json", "run the source stage first"],
 ])
   if (!fs.existsSync(file(f))) {
-    console.error(`script: no ${f}: ${why}`);
+    console.error(`claims: no ${f}: ${why}`);
     process.exit(1);
   }
 const script = readJson(run, "script.json");
@@ -76,7 +76,7 @@ const checks = {};
 // words, cites and cited excerpts' words are unchanged keeps the first verdict
 // it got, and a different one is drift: a warn, never a new failure or fix
 // attempt.
-const record = maybeJson(run, "check.json");
+const record = maybeJson(run, "claims.json");
 let support = record?.support ?? { attempts: 0, judged: null };
 let red = false;
 const drift = [];
@@ -164,14 +164,14 @@ for (const [name, f] of Object.entries(checks)) {
   const status = f.length ? "fail" : findings.length ? "warn" : "pass";
   out[name] = { status, findings };
   console.log(
-    `script ${name}: ${status}${findings.length ? `: ${findings.join("; ")}` : ""}`,
+    `claims ${name}: ${status}${findings.length ? `: ${findings.join("; ")}` : ""}`,
   );
 }
 const count = (status) =>
   Object.values(out).filter((c) => c.status === status).length;
 const failed = count("fail");
 fs.writeFileSync(
-  file("check.json"),
+  file("claims.json"),
   JSON.stringify(
     {
       checks: out,
@@ -183,7 +183,7 @@ fs.writeFileSync(
   ) + "\n",
 );
 console.log(
-  `script: ${count("pass")} pass, ${failed} fail, ${count("warn")} warn${
+  `claims: ${count("pass")} pass, ${failed} fail, ${count("warn")} warn${
     !red
       ? ""
       : support.attempts > 2

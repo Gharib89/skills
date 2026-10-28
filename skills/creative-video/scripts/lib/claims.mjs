@@ -1,4 +1,4 @@
-// What the narration claims, defined once so the script check that judges it
+// What the narration claims, defined once so the claims check that judges it
 // and the gates that refuse an unjudged one cannot drift apart.
 import crypto from "node:crypto";
 

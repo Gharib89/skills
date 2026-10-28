@@ -1,4 +1,4 @@
-// The script check: every narration sentence carries its cites, every cite is
+// The claims check: every narration sentence carries its cites, every cite is
 // an excerpt of the pack, and the support checker judged every sentence
 // supported or connective, before anything is voiced. A red support verdict
 // is one fix attempt, two at most.
@@ -19,16 +19,16 @@ function run(scenes = cited(SCENES, CITES), verdicts) {
   return fx;
 }
 const gate = (r, name) =>
-  r.out.match(new RegExp(`^script ${name}: (.*)$`, "m"))?.[1];
-const record = (fx) => readJson(path.join(fx.dir, "check.json"));
+  r.out.match(new RegExp(`^claims ${name}: (.*)$`, "m"))?.[1];
+const record = (fx) => readJson(path.join(fx.dir, "claims.json"));
 
-test("a script whose every sentence is supported or connective passes, and check.json records the narration it passed", () => {
+test("a script whose every sentence is supported or connective passes, and claims.json records the narration it passed", () => {
   const fx = run();
   const r = runCheck(fx);
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(gate(r, "cites"), "pass");
   assert.equal(gate(r, "support"), "pass");
-  assert.match(r.out, /^script: 2 pass, 0 fail, 0 warn$/m);
+  assert.match(r.out, /^claims: 2 pass, 0 fail, 0 warn$/m);
   assert.match(record(fx).passed, /^[0-9a-f]{16}$/);
 });
 
@@ -58,7 +58,7 @@ test("a cited sentence its excerpts do not support, or an uncited one stating a 
   );
   assert.match(
     r.out,
-    /^script: 1 pass, 1 fail, 0 warn; next: fix attempt 1 of 2$/m,
+    /^claims: 1 pass, 1 fail, 0 warn; next: fix attempt 1 of 2$/m,
   );
   assert.match(runCheck(fx).out, /; next: fix attempt 1 of 2$/m);
   // the narration rewritten: a new verdict set is the next attempt
@@ -121,13 +121,13 @@ test("an unchanged sentence judged again keeps its first verdict, and a differen
     gate(r, "support"),
     "warn: hook 1 drift: judged unsupported on unchanged words, kept supported",
   );
-  assert.match(r.out, /^script: 1 pass, 0 fail, 1 warn$/m);
+  assert.match(r.out, /^claims: 1 pass, 0 fail, 1 warn$/m);
 });
 
 test("a run folder with no excerpts.json is refused by name", () => {
   const fx = fixture(cited(SCENES, CITES));
   const r = runCheck(fx);
   assert.equal(r.code, 1);
-  assert.match(r.err, /^script: no excerpts\.json: run the source stage first/);
+  assert.match(r.err, /^claims: no excerpts\.json: run the source stage first/);
   assert.equal(r.out, "");
 });

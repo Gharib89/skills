@@ -7,7 +7,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { calls, exec, project, timing } from "./timing-lib.mjs";
 import { SCENES, run as voice, write } from "./voice-lib.mjs";
-import { compose, gates, record, runGates, timed } from "./gates-lib.mjs";
+import {
+  compose,
+  gates,
+  record,
+  runGates,
+  supported,
+  timed,
+} from "./gates-lib.mjs";
+import { cited } from "./support-lib.mjs";
 
 const RED = "<p>a clipped line</p>";
 const GREEN = "<p>a fitting line</p>";
@@ -16,7 +24,7 @@ test("a red run is attempt 1 of 2, the same inputs judged again add none, and ch
   const fx = timed({ context: RED });
   let r = runGates(fx);
   assert.equal(r.code, 1);
-  assert.match(r.out, /^gates: 7 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.match(r.out, /^gates: 9 pass, 1 fail; next: fix attempt 1 of 2$/m);
   assert.equal(record(fx).attempts, 1);
   r = runGates(fx);
   assert.match(r.out, /; next: fix attempt 1 of 2$/m);
@@ -29,7 +37,7 @@ test("a red run is attempt 1 of 2, the same inputs judged again add none, and ch
   assert.equal(r.code, 1);
   assert.match(
     r.out,
-    /^gates: 7 pass, 1 fail; stop: red after two fix attempts, no video$/m,
+    /^gates: 9 pass, 1 fail; stop: red after two fix attempts, no video$/m,
   );
   assert.equal(record(fx).attempts, 3);
 });
@@ -42,13 +50,14 @@ test("a pass resets the count, and so does a new voice, but not a script.json ed
   assert.equal(record(fx).attempts, 2);
   // the narration changes in script.json only: the gates judge the voice, so
   // the count goes on
-  const edited = SCENES.map((s) =>
+  const edited = cited(SCENES).map((s) =>
     s.id === "recap" ? { ...s, narration: ["A different closing line."] } : s,
   );
   write(fx, edited);
   compose(fx, "context", "<p>a third clipped line</p>");
   assert.match(runGates(fx).out, /; stop: red after two fix attempts/m);
-  // voiced and timed again: a new voice starts at attempt 1
+  // checked, voiced and timed again: a new voice starts at attempt 1
+  supported(fx);
   assert.equal(voice(fx).code, 0);
   assert.equal(exec(timing, fx).code, 0);
   compose(fx, "context", "<p>a fourth clipped line</p>");
@@ -57,7 +66,7 @@ test("a pass resets the count, and so does a new voice, but not a script.json ed
   compose(fx, "context", GREEN);
   const ok = runGates(fx);
   assert.equal(ok.code, 0, ok.out);
-  assert.match(ok.out, /^gates: 8 pass, 0 fail$/m);
+  assert.match(ok.out, /^gates: 10 pass, 0 fail$/m);
   assert.equal(record(fx).attempts, 0);
 });
 
@@ -76,6 +85,8 @@ test("gates.json records the inputs, the voice, each gate's verdict with its evi
     "anchors",
     "script errors",
     "must and avoid",
+    "support",
+    "critic",
   ]);
   assert.equal(rec.gates.layout.status, "fail");
   assert.equal(rec.gates.layout.floor, "none, text >= 18 px, margin 5%");
