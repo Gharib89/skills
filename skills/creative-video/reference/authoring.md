@@ -23,8 +23,9 @@ What you write, all committed as the video's recipe:
   pick (the person's, or yours and why on an unattended run).
 - `SPEC.md`: the stance's numbers, and one reason line per `hyperframes`
   banned default the concept uses.
-- `script.json`: the narration, scene by scene ([voice.md](voice.md) holds its
-  shape and the spoken-form rules). A scene is a stretch of narration that one
+- `script.json`: the narration, scene by scene, each sentence's `cites`
+  beside it ([voice.md](voice.md) holds its shape and the spoken-form rules).
+  A scene is a stretch of narration that one
   composition stages; the picture changes inside it on words, so a scene runs
   as long as its idea, not a fixed length. Its `id` is a file name, an element
   id and a timeline key: lower-case letters, digits and hyphens, and none of
@@ -40,6 +41,10 @@ What you write, all committed as the video's recipe:
   stays on screen, a host who never leaves.
 - `project/assets/`: your media (recorded sounds, images, fonts).
 - `CREDITS.md` and `DELIVERY.md`, after the render.
+
+`support.json` is the support checker's own to write and fix.
+`claims.json` (the claims check) keeps the fix attempts and each sentence's
+first verdict across runs: never delete it, or the fix count starts again.
 
 What the stages write, rebuilt on every run: `voice.json` and `.cache/` (voice),
 `timeline.json`, `project/index.html`, `project/timing.js`,
@@ -138,6 +143,19 @@ failing one indented under it. Each is a hard fail:
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no
   `avoid` word is: said in the voiced narration (not `script.json`, which can
   change after the voice), shown fully drawn in a sample frame.
+- `support`: the claims check (`source/claims.mjs`) passed on `script.json`'s
+  sentences and cites and the excerpts they cite as they stand. Edit a
+  sentence or a cite, or pack the sources again, and it fails until the
+  support checker and the claims check run again. A sentence edited after
+  voicing fails it too (`scene <id>'s narration is not what voice.json voiced`)
+  until the voice stage runs again, since the render speaks the voiced words.
+- `critic`: no hard failure in any scene's sample stills, judged by one
+  subagent per scene (`agents/critic.md`) that describes each still as a
+  stranger would, then names what blocks: `unreadable` text, an `invented`
+  fact on screen (one no narration sentence or cited excerpt states, or one
+  they contradict; staging such as props, signs, scores and round numbers
+  never is) and `rtl` (Arabic laid out the wrong way round). It gives no
+  scores.
 
 Warnings print as `warn <name>: <detail>`, are recorded in `gates.json` and
 never change the exit: `effect rate` (over 24 sounds in a minute), `effect
@@ -147,7 +165,21 @@ events a minute, and each dead stretch of 2 s or more with no tween running)
 and `clock` (a scene or kit file naming `Math.random`, `Date.now`, `new Date`,
 `performance.now`, `setTimeout`, `setInterval` or `requestAnimationFrame`).
 
-The last line is `gates: <p> pass, <f> fail`. Each red run after a change to
+The critic runs on the stills of the gates' own render. While a scene has no
+verdict, its line reads `gate critic: pending: round <r> of 2, <k> of <n>
+scene(s) judged, stills in <dir>` and the exit is 1. Fix the failing gates
+first; once none fails, the last line ends `; next: run the critic, round <r>
+of 2`: dispatch the critics on `<dir>`, relative to the run folder (SKILL.md
+step 11), then run the
+gates again. A scene whose stills, and the narration and
+excerpts every critic reads, are unchanged keeps its last verdict, so only a
+changed scene is judged again. The critic has two rounds per voice: a red
+second round is final, `; stop: the critic's second round is red, no video`,
+and a later gates run past two rounds carries the second round's verdict
+(`carried: no third round`).
+
+The last line is `gates: <p> pass, <f> fail`, with `, 1 pending` while the
+critic is. Each red run after a change to
 the project is one fix attempt; a re-run with nothing changed counts none. The
 first two red runs end `; next: fix attempt <n> of 2`, the third `; stop: red
 after two fix attempts, no video`. Stop there and report the findings. A pass,

@@ -37,7 +37,8 @@ work. A concept with no source is a topic.
    reader to fix, then pack again.
 5. **Outline.** Read `outline.md`: each source's summary, each excerpt's id,
    locator and note. Every factual sentence of the script comes from an
-   excerpt you can name.
+   excerpt you can name, and cites its id in the scene's `cites`
+   ([voice.md](voice.md)).
 6. **Still standing.** For each source a factual sentence leans on (a study, a
    benchmark, a release note), search for a later update, erratum,
    retraction or newer version by its authors. A source that was updated or

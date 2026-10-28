@@ -14,13 +14,15 @@ const GATES = [
   "anchors",
   "script errors",
   "must and avoid",
+  "support",
+  "critic",
 ];
 
 test("a project of readable lines in the clear passes every gate, captions in the band included", () => {
   const r = runGates(timed());
   assert.equal(r.code, 0, r.out + r.err);
   for (const g of GATES) assert.equal(gateLine(r, g)?.slice(0, 4), "pass", g);
-  assert.match(r.out, /^gates: 8 pass, 0 fail$/m);
+  assert.match(r.out, /^gates: 10 pass, 0 fail$/m);
 });
 
 test("a clipped line fails layout, naming its time and scene, and its fitting twin passes", () => {

@@ -219,7 +219,12 @@ export async function snapshot(dir, times, outDir) {
     const draw = /\btl\.[^;]*\b(Date|performance)\.now\(\)/.test(m?.html ?? "")
       ? Math.random()
       : "";
-    fs.writeFileSync(file, `pixels ${m?.id} ${time} ${draw}`);
+    // The scene's markup is drawn too, so an edited scene shows new pixels.
+    const html = crypto
+      .createHash("sha256")
+      .update(m?.html ?? "")
+      .digest("hex");
+    fs.writeFileSync(file, `pixels ${m?.id} ${time} ${html} ${draw}`);
     return { path: file, time };
   });
 }

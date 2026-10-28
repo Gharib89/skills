@@ -21,12 +21,19 @@ function walk(dir, seen = new Set()) {
   });
 }
 
-// Everything a video is rendered from: the timeline, the script, the brief and
-// every file of the project but the CLI's own state. A render of other inputs
-// than the gates passed is refused.
+// Everything a video is rendered from: the timeline, the script, the brief, the
+// source pack and claims record the support gate judged, and every file of the
+// project but the CLI's own state. A render of other inputs than the gates
+// passed is refused.
 export function inputsHash(run) {
   const h = crypto.createHash("sha256");
-  const files = ["timeline.json", "script.json", "brief.json"]
+  const files = [
+    "timeline.json",
+    "script.json",
+    "brief.json",
+    "excerpts.json",
+    "claims.json",
+  ]
     .filter((f) => fs.existsSync(path.join(run, f)))
     .map((f) => path.join(run, f));
   const proj = path.join(run, "project");

@@ -66,18 +66,52 @@ export const SHAPES = {
     avoid: opt(list(matchWord)),
   }),
   // The gates stage's record: what it is of and each gate's verdict, which the
-  // render reads to refuse a project the gates have not passed.
+  // render reads to refuse a project the gates have not passed, and the
+  // critic's rounds, which the next gates run carries on.
   "gates.json": obj({
     inputs: text,
     voice: text,
     attempts: opt(number),
-    gates: map(obj({ status: text })),
+    gates: (v, at) =>
+      map(obj({ status: text }))(v, at) ??
+      obj({
+        critic: opt(obj({ format: number, rounds: list(text), stills: text })),
+      })(v, at),
   }),
-  // The voice stage's input.
+  // The voice stage's input; the claims check reads each sentence's cites,
+  // excerpt ids, which a script voiced alone may leave out.
   "script.json": obj({
     language: text,
     narrator: opt(text),
-    scenes: list(obj({ id: text, narration: list(text) })),
+    scenes: list(
+      obj({ id: text, narration: list(text), cites: opt(list(list(text))) }),
+    ),
+  }),
+  // The source pack, read by the claims check and the gates.
+  "excerpts.json": obj({ excerpts: list(obj({ id: text, text })) }),
+  // The support checker's verdicts (agents/support-checker.md).
+  "support.json": obj({
+    sentences: list(
+      obj({
+        scene: text,
+        n: number,
+        text,
+        cites: list(text),
+        verdict: text,
+        why: text,
+      }),
+    ),
+  }),
+  // The claims check's record (source/claims.mjs), read by the support gate,
+  // and its fix attempts and kept verdicts, read by the next claims check.
+  "claims.json": obj({
+    passed: opt(text),
+    support: opt(
+      obj({
+        attempts: number,
+        verdicts: opt(map(obj({ verdict: text, why: text }))),
+      }),
+    ),
   }),
   // The voice stage.
   "voice.json": obj({
