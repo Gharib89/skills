@@ -33,8 +33,9 @@
 // exit:   0 ok · 1 refused, `board: <why>` on stderr (a missing timeline,
 //         scene file, storyboard.json, direction frame or gsap.min.js; an
 //         invalid storyboard.json; a script.json whose narration of a timed
-//         scene is not the one voiced; a scene, the kit, over.html or an
-//         asset changed, added or gone that the comments did not name;
+//         scene is not the one voiced; a scene changed, added or gone, or
+//         the kit, over.html or an asset changed or gone, that the comments
+//         did not name;
 //         answers of an older board, naming an unknown scene or direction or
 //         the one in use, cut to fit, or unreadable) · 2 usage
 import crypto from "node:crypto";
@@ -70,6 +71,14 @@ const versions = () =>
         .readdirSync(out)
         .flatMap((f) => (/^\d+\.json$/.test(f) ? [parseInt(f, 10)] : []))
     : [];
+// The latest board answered, however many boards were built since it; 0 for none.
+const latestAnswered = () =>
+  Math.max(
+    0,
+    ...fs
+      .readdirSync(out)
+      .map((f) => Number(/^answers-(\d+)\.json$/.exec(f)?.[1] ?? 0)),
+  );
 const readBoard = (n) =>
   JSON.parse(fs.readFileSync(path.join(out, `${n}.json`), "utf8"));
 
@@ -140,13 +149,7 @@ function readStoryboard(timeline) {
 // scenes may change: notes beside an approval win over it, as apply prints.
 // `scenes` maps each id to its file's hash and its narration.
 function guardScenes(scenes, kit, over, assets) {
-  // The latest board answered, however many boards were built since it.
-  const k = Math.max(
-    0,
-    ...fs
-      .readdirSync(out)
-      .map((f) => Number(/^answers-(\d+)\.json$/.exec(f)?.[1] ?? 0)),
-  );
+  const k = latestAnswered();
   if (!k) return;
   const a = JSON.parse(
     fs.readFileSync(path.join(out, `answers-${k}.json`), "utf8"),
@@ -283,7 +286,9 @@ async function build() {
     return name;
   };
 
-  const prev = n > 1 ? readBoard(n - 1) : null;
+  // `changed` is against the board the person last answered: a board built
+  // again with no Submit still shows what their comments changed.
+  const prev = n > 1 ? readBoard(latestAnswered() || n - 1) : null;
   const was = new Map(prev?.scenes.map((s) => [s.id, s.hash]));
   const scenes = timeline.scenes.map((s) => ({
     id: s.id,

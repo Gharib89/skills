@@ -69,7 +69,7 @@ nothing outside this table, and every field below is in every board.
 | `board.scenes[].stills.key` | string | The still at its middle. |
 | `board.scenes[].stills.out` | string | The still on its last frame. |
 | `board.scenes[].hash` | string | The hash of the scene's composition file; the guard compares it with the latest answered board's. |
-| `board.scenes[].changed` | boolean | Whether the hash differs from the last board's; false on board 1. |
+| `board.scenes[].changed` | boolean | Whether the hash differs from the latest answered board's, or the last board's before any answers; false on board 1. |
 
 A still is `stills/<first 16 hex of the sha-256 of its bytes>.png`: an
 unchanged still keeps its name from one board to the next.
@@ -120,4 +120,5 @@ document is read from the database instead.
   chapter approved. Opened as a file, it shows the answers text for the person
   to paste into the terminal.
 - `apply` reads the answers document or text and writes `answers-<n>.json`; the
-  next `build` reads it to guard the scenes.
+  builds until the next answers read it to guard the scenes and mark what
+  changed.

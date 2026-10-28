@@ -386,10 +386,13 @@ test("a comment on one scene lets only that scene be re-authored: another scene'
   // An unchanged scene keeps its stills' names across versions.
   assert.deepEqual(two.scenes[1].stills, one.scenes[1].stills);
   assert.notDeepEqual(two.scenes[0].stills, one.scenes[0].stills);
+  // A board built again with no Submit still flags what changed since the one
+  // the person answered.
   assert.match(
     build(fx).out,
-    /^board: 3 -> board\/storyboard\.html \(3 scenes, \d+ stills, 0 changed\)$/m,
+    /^board: 3 -> board\/storyboard\.html \(3 scenes, \d+ stills, 1 changed\)$/m,
   );
+  assert.equal(built(fx, 3).scenes[0].changed, true);
   // Boards built with no Submit between are still held to board 1's notes.
   compose(fx, "context", "<p>context, later</p>");
   assert.match(build(fx).err, /^board: context changed, but board 1's/);
