@@ -8,8 +8,8 @@ import path from "node:path";
 import { sentences } from "../lib/length.mjs";
 import { sceneSeconds } from "./sounds.mjs";
 
-// The one place a gate reads scene code (ADR 0019; the sounds gate reads only a
-// scene file's <audio> starts): a clock or random read may
+// One of two places a gate reads scene code (ADR 0019), the other the sounds
+// gate's read of each <audio> start: a clock or random read may
 // break determinism, which the frames judge, so it is named, never refused.
 const CLOCK = [
   ["Math.random", /Math\.random\b/],

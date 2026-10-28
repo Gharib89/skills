@@ -17,14 +17,15 @@ const warns = (r, name) =>
   [...r.out.matchAll(new RegExp(`^warn ${name}: (.*)$`, "gm"))].map(
     (m) => m[1],
   );
-// The context scene, which starts after the hook, with one tween at 0 to 0.3 s.
+// The context scene, which starts after the hook, with one tween at 0 to 0.3 s;
+// `audio` gets its start and end in video seconds.
 function context(audio) {
   const fx = timed();
-  const { start } = timeline(fx).scenes[1];
+  const { start, duration } = timeline(fx).scenes[1];
   compose(
     fx,
     "context",
-    `<p>a line</p><i data-tween="0-0.3"></i>${audio(start)}`,
+    `<p>a line</p><i data-tween="0-0.3"></i>${audio(start, start + duration)}`,
   );
   return runGates(fx);
 }
@@ -51,7 +52,7 @@ test("a static <audio> moved by 1 ms fails sounds", () => {
   only(r, "sounds");
 });
 
-test("a created <audio> at a scene-local start fails sounds; one at its scene's start, read up to 1 ms early, passes", () => {
+test("a created <audio> at a scene-local start fails sounds; inside its scene, from 0.5 ms before its start to before its end, it passes", () => {
   const local = context(() => '<audio id="ding" data-created="0.1"></audio>');
   assert.equal(local.code, 1);
   only(local, "sounds");
@@ -59,10 +60,18 @@ test("a created <audio> at a scene-local start fails sounds; one at its scene's 
     gateLine(local, "sounds"),
     /first: context: <audio id="ding"> is created by its script at 0.1 s, outside its scene \(\d+\.\d{3} s to \d+\.\d{3} s\): a created <audio>'s data-start counts seconds of the whole video, so add TIMING.scenes\["context"\].start to it vs /,
   );
-  const first = context(
-    (start) => `<audio id="ding" data-created="${start - 0.001}"></audio>`,
-  );
-  assert.equal(first.code, 0, first.out + first.err);
+  for (const [at, code] of [
+    [(start) => start - 0.0005, 0],
+    [(start) => start - 0.001, 1],
+    [(start, end) => end - 0.001, 0],
+    [(start, end) => end, 1],
+  ]) {
+    const r = context(
+      (start, end) =>
+        `<audio id="ding" data-created="${at(start, end)}"></audio>`,
+    );
+    assert.equal(r.code, code, `${at}: ${r.out}${r.err}`);
+  }
 });
 
 test("the same sound created by the script at the scene's start plus 1.5 s passes sounds, and effect onset judges it at 1.5 s", () => {
@@ -111,6 +120,6 @@ test("an <audio> with no id, written or created, or a created one with an id ano
   only(shared, "sounds");
   assert.match(
     gateLine(shared, "sounds"),
-    /first: context: <audio id="ding"> is created by its script with an id another <audio> carries: the render drops it, so give it an id no other <audio> has vs /,
+    /first: context: <audio id="ding"> is created by its script with an id another <audio> carries: the render never plays it, so give it an id no other <audio> has vs /,
   );
 });

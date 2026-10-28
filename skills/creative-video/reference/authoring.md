@@ -166,10 +166,10 @@ failing one indented under it. Each is a hard fail:
 - `sounds`: every `<audio>` has an id and plays at its live `data-start`, in
   its scene: one written in the HTML keeps the `data-start` written there (a
   script that moves it is refused, since the render reads the HTML's), a
-  created one starts inside its scene in seconds of the whole video, and every
-  one has an id (the render refuses a written one without, never plays a
-  created one without), a created one an id no other `<audio>` has (the
-  render drops it).
+  created one starts inside its scene in seconds of the whole video, and an
+  id is required (the render refuses a written one without, never plays a
+  created one without), a created one's an id no other `<audio>` has (the
+  render never plays it otherwise).
   See [Scenes on word times](#scenes-on-word-times).
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no
   `avoid` word is: said in the voiced narration (not `script.json`, which can

@@ -28,12 +28,12 @@ export function soundFindings(plan, events) {
       if (authored === null) {
         if (carried.get(id) > 1)
           return [
-            `${audio} is created by its script with an id another <audio> carries: the render drops it, so give it an id no other <audio> has`,
+            `${audio} is created by its script with an id another <audio> carries: the render never plays it, so give it an id no other <audio> has`,
           ];
         // The scene start is on the frame grid, the probe's start rounded to
-        // the millisecond, so one placed on the scene's first word may read
-        // up to 0.5 ms early.
-        return start < sc.start - 1e-3 || start > end
+        // the millisecond, so one placed at the scene's start may read up to
+        // 0.5 ms early. The end is the next scene's, as in the other gates.
+        return start < sc.start - 5e-4 || start >= end
           ? [
               `${audio} is created by its script at ${start} s, outside its scene (${sc.start.toFixed(3)} s to ${end.toFixed(3)} s): a created <audio>'s data-start counts seconds of the whole video, so add TIMING.scenes["${sc.id}"].start to it`,
             ]
