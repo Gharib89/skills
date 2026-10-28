@@ -193,10 +193,14 @@ function planPanel(S, b) {
       )
       .join("")}</tbody></table></div></section>`;
 }
+const countLine = (S) =>
+  hasComments(S)
+    ? "You have comments: send them."
+    : "Nothing commented: the look can be approved.";
 function bar(S, b) {
   const dis = (ok) => (ok && !locked(S) ? "" : "disabled");
   return `<div class="bar panel"><div class="bar-in">
-    <span class="count">${hasComments(S) ? "You have comments: send them." : "Nothing commented: the look can be approved."}</span>
+    <span class="count" id="count">${countLine(S)}</span>
     <div><button class="btn accent" id="approve" data-act="approve" ${dis(canApprove(S))}>Approve the look</button> <button class="btn" id="send" data-act="send" ${dis(canSend(S))}>Send comments</button></div>
     ${S.local ? localNote(S) : status(S, b)}</div></div>`;
 }
@@ -292,6 +296,8 @@ async function boot() {
       const b = document.getElementById(id);
       if (b) b.disabled = !ok || locked(S);
     }
+    const c = document.getElementById("count");
+    if (c) c.textContent = countLine(S);
     const ft = document.getElementById("fallback-text");
     if (ft) ft.textContent = answersText(answersDoc(S));
   }
