@@ -18,8 +18,13 @@
 //   no-timeline   the scene registers no timeline and no error is reported,
 //                 as HyperFrames 0.8.206 does for a throwing script that also
 //                 names a second timeline
-//   data-tween="<a>-<b>" and data-sound="<t>" the scene's tween windows and
-//                 sounds, in scene seconds (no tween: one across the scene)
+//   data-tween="<a>-<b>" the scene's tween windows, in scene seconds (no
+//                 tween: one across the scene)
+//   <audio data-sound="<t>">  a sound written in the scene file at scene
+//                 seconds <t>, its `id` if it has one; with
+//                 data-moved="<y>" its script moved its start to <y>
+//   <audio data-created="<t>">  a sound its script created at video seconds
+//                 <t>, its `id` if it has one
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -199,7 +204,21 @@ export async function probe(dir, times) {
     );
     events[m.id] = {
       tweens: tweens.length ? tweens : [[0, m.end - m.start]],
-      sounds: [...m.html.matchAll(/data-sound="([\d.]+)"/g)].map((s) => +s[1]),
+      sounds: [...m.html.matchAll(/<audio\b([^>]*)>/g)].flatMap(([, a]) => {
+        const attr = (name) => a.match(new RegExp(`${name}="([^"]*)"`))?.[1];
+        const [authored, created] = [attr("data-sound"), attr("data-created")];
+        if (authored)
+          return [
+            {
+              id: attr("id") ?? "",
+              start: +(attr("data-moved") ?? authored),
+              authored: +authored,
+            },
+          ];
+        return created
+          ? [{ id: attr("id") ?? "", start: +created, authored: null }]
+          : [];
+      }),
     };
   }
   return { frames, events };

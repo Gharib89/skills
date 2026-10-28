@@ -245,9 +245,11 @@ function measureFrame() {
   return out;
 }
 
-// Runs in the page: each scene's tween windows and sound starts, in the scene's
-// own seconds.
-function sceneEvents() {
+// Runs in the page: each scene's tween windows, in the scene's own seconds, and
+// its sounds as `{ id, start, authored }` (gates/sounds.mjs): the live
+// data-start, and the data-start its scene file gives the <audio> with that id
+// before any script runs, null where the file has none.
+async function sceneEvents() {
   const r3 = (n) => Math.round(n * 1000) / 1000;
   const out = {};
   for (const [id, tl] of Object.entries(window.__timelines ?? {})) {
@@ -259,6 +261,24 @@ function sceneEvents() {
         t = p.startTime() + t / p.timeScale();
       return r3(t);
     };
+    const host = document.querySelector(
+      `[data-composition-id="${id}"][data-composition-src]`,
+    );
+    const authored = new Map();
+    if (host) {
+      // Unread, every static <audio> would pass as a created one.
+      const res = await fetch(host.dataset.compositionSrc);
+      if (!res.ok)
+        throw new Error(`${host.dataset.compositionSrc}: HTTP ${res.status}`);
+      const file = new DOMParser().parseFromString(
+        await res.text(),
+        "text/html",
+      );
+      for (const a of (
+        file.querySelector("template")?.content ?? file
+      ).querySelectorAll("audio[id]"))
+        authored.set(a.id, r3(+(a.getAttribute("data-start") ?? 0)));
+    }
     out[id] = {
       // A nested timeline spans its tweens, so only a tween is a window.
       tweens: tl
@@ -266,11 +286,17 @@ function sceneEvents() {
         .filter((c) => !c.getChildren)
         .map((c) => [lift(c, c.startTime()), lift(c, c.endTime())]),
       // A timeline a script registers beyond its scene's has no element.
+      // Each written start is claimed once, in document order, so a created
+      // <audio> reusing a written one's id reads as created.
       sounds: [
         ...(document
           .querySelector(`[data-composition-id="${id}"]`)
           ?.querySelectorAll("audio[data-start]") ?? []),
-      ].map((a) => r3(+a.dataset.start)),
+      ].map((a) => {
+        const written = authored.get(a.id) ?? null;
+        authored.delete(a.id);
+        return { id: a.id, start: r3(+a.dataset.start), authored: written };
+      }),
     };
   }
   return out;

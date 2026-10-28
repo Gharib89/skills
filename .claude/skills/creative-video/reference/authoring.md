@@ -94,6 +94,28 @@ gives; offsets from an anchor (`- 0.1`, an event 0.5 s after a word) are
 yours. `window.TIMING.scenes[<id>].duration` is the scene's length, for an
 event that lands on its end.
 
+A sound that answers a word is an `<audio>` the scene script creates, since a
+`data-start` written in the HTML is a typed time, and only `at()` in the script
+gives a word's time:
+
+```js
+const ding = document.createElement("audio");
+ding.id = "kitchen-ding";
+ding.src = "assets/ding.wav";
+ding.dataset.start = window.TIMING.scenes["kitchen"].start + at("kitchen", "ticket");
+ding.dataset.duration = 0.4;
+document.querySelector('[data-composition-id="kitchen"]').append(ding);
+```
+
+The render plays a created `<audio>` at its `data-start` in seconds of the
+whole video, so add the scene's start (`TIMING.scenes[<id>].start`) to the
+word's time; one outside its scene is refused. Give each sound an id no other
+`<audio>` in the project has: the render never plays a created one with no id
+or a taken id, and refuses a written one with no id. An `<audio>`
+written in the HTML keeps the `data-start` written there, in scene seconds,
+whatever the script sets later, so the `sounds` gate refuses a script that
+moves one.
+
 Readable text stays out of the caption band, the bottom 220 px: paint behind
 it, never write in it.
 
@@ -122,7 +144,8 @@ node <skill>/scripts/gates/gates.mjs <run>
 ```
 
 After the stills review. It judges what the project renders and what the
-narration says, never the scene code, and writes `gates.json`. It samples each
+narration says, never the scene code (but for the `<audio>` starts a scene
+file writes, which `sounds` reads), and writes `gates.json`. It samples each
 scene 0.3 s in, at its middle and on its last frame, and prints one `gate
 <name>: pass|fail: <measured> vs <floor>` line per gate, the findings of a
 failing one indented under it. Each is a hard fail:
@@ -140,6 +163,14 @@ failing one indented under it. Each is a hard fail:
 - `script errors`: no scene's script throws (an error HyperFrames reports from
   running it, other than an anchor), each named `<scene>: <message>`, and
   every scene registers its timeline (one missing means its script stopped).
+- `sounds`: every `<audio>` plays at its live `data-start`, in its scene: one
+  written in the HTML keeps the `data-start` written there (a script that
+  moves it is refused, since the render reads the HTML's), and a created one
+  starts inside its scene in seconds of the whole video. Every one needs an id
+  (the render refuses a written one without, never plays a created one
+  without), and a created one an id no other `<audio>` has (the render never
+  plays it otherwise).
+  See [Scenes on word times](#scenes-on-word-times).
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no
   `avoid` word is: said in the voiced narration (not `script.json`, which can
   change after the voice), shown fully drawn in a sample frame.

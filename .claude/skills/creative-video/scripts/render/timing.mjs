@@ -12,8 +12,9 @@
 // touches (the agent's scene files and kit/ live there):
 //   assets/narration.wav   the scenes' WAVs joined on the grid
 //   assets/gsap.min.js     copied from the tool cache's npm install
-//   timing.js              window.TIMING (scene durations and word times local
-//                          to each scene) and window.at(scene, word, nth), the
+//   timing.js              window.TIMING (scene starts in the video, durations
+//                          and word times local to each scene) and
+//                          window.at(scene, word, nth), the
 //                          start of the nth matching word, for scene scripts
 //   compositions/captions.html   the cues as HyperFrames cue clips
 //   index.html             the root (render/root.mjs)
@@ -130,11 +131,16 @@ fs.copyFileSync(
   path.join(proj, "assets", "gsap.min.js"),
 );
 
-// Word times local to their scene, for scene scripts to cue to.
+// Word times local to their scene, for scene scripts to cue to, and the scene's
+// start in the video, which a sound a script creates is placed by.
 const local = Object.fromEntries(
   scenes.map((s, i) => [
     s.id,
-    { duration: s.duration, words: shift(voice.scenes[i].words, 0) },
+    {
+      start: s.start,
+      duration: s.duration,
+      words: shift(voice.scenes[i].words, 0),
+    },
   ]),
 );
 fs.writeFileSync(
