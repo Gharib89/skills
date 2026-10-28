@@ -7,9 +7,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { warnings } from "../../skills/creative-video/scripts/gates/warnings.mjs";
 import { narrator } from "../../skills/creative-video/scripts/lib/narrators.mjs";
-import { project, readJson } from "./timing-lib.mjs";
+import { exec, project, readJson, timing } from "./timing-lib.mjs";
 import { compose, record, runGates, timed, timeline } from "./gates-lib.mjs";
-import { writeCast } from "./voice-lib.mjs";
+import { run as voice, writeCast } from "./voice-lib.mjs";
 
 const warns = (r, name) =>
   [...r.out.matchAll(new RegExp(`^warn ${name}: (.*)$`, "gm"))].map(
@@ -144,8 +144,9 @@ test("a scene over 30 s warns, and so does a sentence over 25 words", () => {
   assert.match(warns(over, "scene length")[0], /^hook: 30\.1 s, over 30 s$/);
 });
 
-// Writes `cast` as `fx`'s cast.json and gives its script.json the top-level
-// `extra` fields and each scene the `roles` its id maps to.
+// Writes `cast` as `fx`'s cast.json, gives its script.json the top-level
+// `extra` fields and each scene the `roles` its id maps to, then voices and
+// times the run again, so voice.json records that cast.
 function recast(fx, cast, roles, extra = {}) {
   const file = path.join(fx.dir, "script.json");
   const script = readJson(file);
@@ -158,6 +159,10 @@ function recast(fx, cast, roles, extra = {}) {
     }),
   );
   writeCast(fx, cast);
+  const v = voice(fx);
+  assert.equal(v.code, 0, v.out + v.err);
+  const t = exec(timing, fx);
+  assert.equal(t.code, 0, t.out + t.err);
 }
 
 test("two roles on one Kokoro voice in the script's language warn whatever their style lines", () => {
@@ -214,14 +219,14 @@ test("two roles on one Kokoro voice in the script's language warn whatever their
   );
 });
 
-// The alike voices warnings for `voiced`, each speaking role's narrators.json
-// entry.
-const alike = (voiced) =>
+// The alike voices warnings for `castVoices`, each speaking role's
+// narrators.json entry.
+const alike = (castVoices) =>
   warnings({
     plan: [],
     events: {},
     script: { scenes: [] },
-    voiced,
+    castVoices,
     sound: null,
     total: 60,
     proj: fileURLToPath(new URL("./no-project/", import.meta.url)),
@@ -271,6 +276,19 @@ test("a role no sentence speaks never warns: a cast role, or the narrator role a
     },
     { hook: ["host"], context: ["learner", "host"], recap: ["learner"] },
   );
+  assert.deepEqual(alikeWarns(fx), []);
+});
+
+test("alike voices judges the voices voice.json voiced, not a cast.json edited since", () => {
+  const fx = timed();
+  const roles = { context: [null, "learner"] };
+  recast(fx, { learner: { voices: { en: "af_heart" } } }, roles);
+  writeCast(fx, { learner: { voices: { en: "am_fenrir" } } });
+  assert.deepEqual(alikeWarns(fx), [
+    "narrator and learner both speak af_heart",
+  ]);
+  recast(fx, { learner: { voices: { en: "am_fenrir" } } }, roles);
+  writeCast(fx, { learner: { voices: { en: "af_heart" } } });
   assert.deepEqual(alikeWarns(fx), []);
 });
 

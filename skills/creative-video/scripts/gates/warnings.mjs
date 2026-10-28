@@ -88,11 +88,11 @@ const longSentences = (script) =>
     ),
   );
 
-// Two roles of `voiced` a viewer cannot tell apart: each pair speaks one
+// Two roles of `castVoices` a viewer cannot tell apart: each pair speaks one
 // narrator, and on Gemini, the one backend that acts the style line, one style
 // line too.
-function alikeVoices(voiced) {
-  const roles = Object.entries(voiced);
+function alikeVoices(castVoices) {
+  const roles = Object.entries(castVoices);
   return roles.flatMap(([a, n], i) => {
     const acts = n.backend === "gemini";
     return roles
@@ -118,10 +118,18 @@ const clockReads = (proj) =>
   });
 
 // The warnings in print order, as `<name>: <detail>` lines. `total` is the
-// video's length in seconds, `proj` the project folder, `voiced` maps each role
-// some sentence speaks to its narrators.json entry, cast.json's style applied
-// (lib/kit.mjs `voices`), and `sound` is kit/sound.json or null.
-export function warnings({ plan, events, script, voiced, sound, total, proj }) {
+// video's length in seconds, `proj` the project folder, `castVoices` maps each
+// role some sentence speaks to its narrators.json entry, the style voice.json
+// voiced it in applied, and `sound` is kit/sound.json or null.
+export function warnings({
+  plan,
+  events,
+  script,
+  castVoices,
+  sound,
+  total,
+  proj,
+}) {
   const eventsOf = (id) => events[id] ?? { tweens: [], sounds: [] };
   const sounds = plan.flatMap((p) =>
     eventsOf(p.sc.id).sounds.map((s) => p.sc.start + sceneSeconds(p.sc, s)),
@@ -141,7 +149,7 @@ export function warnings({ plan, events, script, voiced, sound, total, proj }) {
   }
   out.push(
     ...longSentences(script),
-    ...alikeVoices(voiced),
+    ...alikeVoices(castVoices),
     ...droppedSounds(sound),
     `pacing: ${((starts + sounds.length) / (total / 60)).toFixed(1)} change events a minute; ${dead.join("; ") || "no dead stretch"}`,
     ...clockReads(proj),
