@@ -139,12 +139,20 @@ function readStoryboard(timeline) {
 // After answers that commented on scenes, with no look or direction, only those
 // scenes may change: notes beside an approval win over it, as apply prints.
 // `scenes` maps each id to its file's hash and its narration.
-function guardScenes(n, scenes, kit, over, assets) {
-  const answered = path.join(out, `answers-${n - 1}.json`);
-  if (!fs.existsSync(answered)) return;
-  const a = JSON.parse(fs.readFileSync(answered, "utf8"));
+function guardScenes(scenes, kit, over, assets) {
+  // The latest board answered, however many boards were built since it.
+  const k = Math.max(
+    0,
+    ...fs
+      .readdirSync(out)
+      .map((f) => Number(/^answers-(\d+)\.json$/.exec(f)?.[1] ?? 0)),
+  );
+  if (!k) return;
+  const a = JSON.parse(
+    fs.readFileSync(path.join(out, `answers-${k}.json`), "utf8"),
+  );
   if (!a.scenes.length || a.direction || a.look) return;
-  const prev = readBoard(n - 1);
+  const prev = readBoard(k);
   const was = new Map(
     prev.scenes.map((s) => [s.id, `${s.hash} ${s.narration}`]),
   );
@@ -159,7 +167,7 @@ function guardScenes(n, scenes, kit, over, assets) {
     if (assets[f] !== h) changed.push(`assets/${f}`);
   if (changed.length)
     fail(
-      `${changed.join(", ")} changed, but board ${n - 1}'s comments named only ${named.join(", ")}: re-author only those scenes`,
+      `${changed.join(", ")} changed, but board ${k}'s comments named only ${named.join(", ")}: re-author only those scenes`,
     );
 }
 
@@ -238,7 +246,7 @@ async function build() {
   const seen = Object.fromEntries(
     timeline.scenes.map((s) => [s.id, `${hashes[s.id]} ${voiced.get(s.id)}`]),
   );
-  if (n > 1) guardScenes(n, seen, kit, over, assets);
+  if (n > 1) guardScenes(seen, kit, over, assets);
   writeIgnore(run);
   writeRoot(run);
 

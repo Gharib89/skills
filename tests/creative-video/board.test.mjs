@@ -390,6 +390,9 @@ test("a comment on one scene lets only that scene be re-authored: another scene'
     build(fx).out,
     /^board: 3 -> board\/storyboard\.html \(3 scenes, \d+ stills, 0 changed\)$/m,
   );
+  // Boards built with no Submit between are still held to board 1's notes.
+  compose(fx, "context", "<p>context, later</p>");
+  assert.match(build(fx).err, /^board: context changed, but board 1's/);
 });
 
 test("a change to the kit refuses the next build after notes on a scene", () => {

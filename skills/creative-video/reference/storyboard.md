@@ -39,8 +39,9 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
 3. **Build.** `board build`. It renders the stills and the direction frames,
    then prints `board: <n> -> board/storyboard.html (...)` and `board: files
    board/files.json`. Exit 1 names what to fix first. `board: <ids> changed,
-   but board <n-1>'s comments named only <ids>: re-author only those scenes`
-   means you changed a scene nobody commented on, the kit, `over.html` or an
+   but board <k>'s comments named only <ids>: re-author only those scenes`
+   (board `<k>` the latest board answered) means you changed a scene nobody
+   commented on, the kit, `over.html` or an
    asset another scene may use (`<ids>` then holds `the kit`, `over.html` or
    `assets/<file>`): put back each one it names as it was, and build again. A
    new asset is fine.
