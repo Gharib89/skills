@@ -70,22 +70,30 @@
     {
       "id": "ar-eg-advisor-11",
       "gender": "female",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 11.19,
+      "pause": 0.66
     },
     {
       "id": "ar-eg-advisor-12",
       "gender": "female",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 11.51,
+      "pause": 0.63
     },
     {
       "id": "ar-eg-advisor-4",
       "gender": "female",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 11.9,
+      "pause": 0.62
     },
     {
       "id": "ar-eg-advisor-5",
       "gender": "female",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 12.13,
+      "pause": 0.67
     },
     {
       "id": "ar-eg-advisor-6",
