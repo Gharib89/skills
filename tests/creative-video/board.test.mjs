@@ -311,18 +311,23 @@ test("build refuses without a timeline, as the gates do", () => {
   assert.match(r.err, /^board: timeline\.json is missing/m);
 });
 
-test("build refuses a script.json that lacks a timed scene", () => {
-  const fx = ready();
-  const file = path.join(fx.dir, "script.json");
-  const script = readJson(file);
-  script.scenes = script.scenes.slice(1);
-  fs.writeFileSync(file, JSON.stringify(script));
-  const r = build(fx);
-  assert.equal(r.code, 1);
-  assert.match(
-    r.err,
-    /^board: script\.json has no scene \S+: voice and time it again first$/m,
-  );
+test("build refuses a script.json that lacks a timed scene or whose narration is not the one voiced", () => {
+  for (const edit of [
+    (script) => (script.scenes = script.scenes.slice(1)),
+    (script) => (script.scenes[0].narration = ["Words never voiced."]),
+  ]) {
+    const fx = ready();
+    const file = path.join(fx.dir, "script.json");
+    const script = readJson(file);
+    edit(script);
+    fs.writeFileSync(file, JSON.stringify(script));
+    const r = build(fx);
+    assert.equal(r.code, 1);
+    assert.match(
+      r.err,
+      /^board: script\.json's scene hook is not the narration voiced: voice and time it again first$/m,
+    );
+  }
 });
 
 test("a comment on one scene lets only that scene be re-authored: another scene's change refuses the next build", () => {
@@ -337,6 +342,19 @@ test("a comment on one scene lets only that scene be re-authored: another scene'
     "board: context changed, but board 1's comments named only hook: re-author only those scenes\n",
   );
   assert.ok(!fs.existsSync(path.join(fx.dir, "board", "2.json")));
+  // A scene gone from the timeline is a change too.
+  compose(fx, "context", "<p>context line</p>");
+  const file = path.join(fx.dir, "timeline.json");
+  const kept = readJson(file);
+  fs.writeFileSync(
+    file,
+    JSON.stringify({
+      ...kept,
+      scenes: kept.scenes.filter((s) => s.id !== "context"),
+    }),
+  );
+  assert.match(build(fx).err, /^board: context changed, but board 1's/);
+  fs.writeFileSync(file, JSON.stringify(kept));
   // The scene the note named is the one to change: board 2 flags it alone.
   compose(fx, "context", "<p>context line</p>");
   compose(fx, "hook", "<p>hook, slower</p>");

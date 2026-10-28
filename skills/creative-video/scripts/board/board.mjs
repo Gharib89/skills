@@ -32,11 +32,11 @@
 //         board/answers-<n>.json
 // exit:   0 ok · 1 refused, `board: <why>` on stderr (a missing timeline,
 //         scene file, storyboard.json, direction frame or gsap.min.js; an
-//         invalid storyboard.json; a script.json lacking a timed scene; a
-//         scene, the kit, over.html or an asset changed that the comments did
-//         not name; answers of
-//         an older board, naming an unknown scene or direction or the one in
-//         use, cut to fit, or unreadable) · 2 usage
+//         invalid storyboard.json; a script.json whose narration of a timed
+//         scene is not the one voiced; a scene, the kit, over.html or an
+//         asset changed, added or gone that the comments did not name;
+//         answers of an older board, naming an unknown scene or direction or
+//         the one in use, cut to fit, or unreadable) · 2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -146,9 +146,10 @@ function guardScenes(n, hashes, kit, over, assets) {
   const prev = readBoard(n - 1);
   const was = new Map(prev.scenes.map((s) => [s.id, s.hash]));
   const named = a.scenes.map((s) => s.id);
-  const changed = Object.entries(hashes)
-    .filter(([id, h]) => !named.includes(id) && was.get(id) !== h)
-    .map(([id]) => id);
+  // A scene added or gone counts as changed.
+  const changed = [...new Set([...was.keys(), ...Object.keys(hashes)])].filter(
+    (id) => !named.includes(id) && was.get(id) !== hashes[id],
+  );
   if (kit !== prev.kit) changed.push("the kit");
   if (over !== prev.over) changed.push("over.html");
   for (const [f, h] of Object.entries(prev.assets))
@@ -206,12 +207,18 @@ ${host(id, 0, 2, 1, "graphics")}
 }
 
 async function build() {
-  const { timeline } = readTimeline(run, fail);
+  const { timeline, voice } = readTimeline(run, fail);
   const script = readJson(run, "script.json");
   const narrationOf = new Map(script.scenes.map((s) => [s.id, s.narration]));
+  // The board shows script.json's narration beside stills timed to voice.json.
+  const voiced = new Map(
+    voice.scenes.map((v) => [v.id, v.words.map((w) => w.text).join(" ")]),
+  );
   for (const { id } of timeline.scenes)
-    if (!narrationOf.has(id))
-      fail(`script.json has no scene ${id}: voice and time it again first`);
+    if (narrationOf.get(id)?.join(" ") !== voiced.get(id))
+      fail(
+        `script.json's scene ${id} is not the narration voiced: voice and time it again first`,
+      );
   const sb = readStoryboard(timeline);
   const n = Math.max(0, ...versions()) + 1;
   const proj = path.join(path.resolve(run), "project");
