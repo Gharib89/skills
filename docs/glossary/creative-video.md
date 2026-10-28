@@ -19,7 +19,7 @@ A marked run of scenes inside one creative video, two to six minutes long, requi
 _Avoid_: section (that is an explainer video's), part (that is a separate video), episode, segment
 
 **Chapter plan**:
-How a creative video is divided into chapters: each chapter's title, focus, length and the sources it draws on. The agent writes it before the script, and the owner meets it on the storyboard rather than at a stop of its own.
+How a creative video is divided into chapters: each chapter's title, focus, length and the sources it draws on. The agent writes it with the whole script, before any scene, and the owner meets it on the storyboard rather than at a stop of its own.
 _Avoid_: part plan (that is an explainer video's), outline, table of contents
 
 **Critic**:
