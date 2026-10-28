@@ -32,7 +32,7 @@ const cast = (fx, value = CAST) => writeCast(fx, value);
 const voiceJson = (fx) =>
   JSON.parse(fs.readFileSync(path.join(fx.dir, "voice.json"), "utf8"));
 
-test("each run of sentences is voiced by its role's narrator in order, and voice.json names each sentence's role", () => {
+test("each scene's runs of sentences are voiced by their role's narrator in order, and voice.json names each sentence's role", () => {
   const fx = fixture(SCENES);
   cast(fx);
   const r = run(fx);
@@ -42,10 +42,8 @@ test("each run of sentences is voiced by its role's narrator in order, and voice
     [
       ["af_heart", "Ship drives one issue to a merged pull request."],
       ["am_fenrir", "Why not merge it by hand?"],
-      [
-        "af_heart",
-        "Because the review comes first. Every change lands through a reviewed pull request.",
-      ],
+      ["af_heart", "Because the review comes first."],
+      ["af_heart", "Every change lands through a reviewed pull request."],
     ],
   );
   const v = voiceJson(fx);
@@ -149,6 +147,28 @@ test("a cast narrator with no key is refused naming cast.json as where to choose
     /^voice: narrator elevenlabs-george needs ELEVENLABS_API_KEY: get a free key at \S+, or choose another narrator in project\/kit\/cast\.json$/m,
   );
   assert.equal(synths(fx).length, 0);
+});
+
+test("a cast's fresh run keeps each scene voiced before a quota stop, so the next run voices only the rest", () => {
+  const fx = fixture([
+    {
+      id: "hook",
+      narration: ["Ship drives one issue to a merged pull request."],
+    },
+    { id: "ask", narration: ["Why not merge it by hand?"], roles: ["learner"] },
+  ]);
+  cast(fx, {
+    narrator: { voices: { en: "af_heart" } },
+    learner: { voices: { en: "elevenlabs-george" } },
+  });
+  const key = { ELEVENLABS_API_KEY: "fake" };
+  const stopped = run(fx, { ...key, CREATIVE_VIDEO_FAKE_QUOTA: "1" });
+  assert.equal(stopped.code, 1, stopped.out + stopped.err);
+  assert.match(stopped.err, /; 1 scene\(s\) voiced before it are kept\./);
+  const resumed = run(fx, key);
+  assert.equal(resumed.code, 0, resumed.out + resumed.err);
+  assert.match(line(resumed.out, "hook"), /: cached ·/);
+  assert.match(line(resumed.out, "ask"), /: voiced ·/);
 });
 
 test("a quota stop with a cast names cast.json beside script.json as where to choose another narrator", () => {
