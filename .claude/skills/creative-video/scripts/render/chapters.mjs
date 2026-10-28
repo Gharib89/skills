@@ -1,6 +1,6 @@
 // A video in chapters, for the render stage. Each chapter renders video only,
-// so an edit to one scene changes only its chapter's part. The parts join at
-// the hard cuts by stream copy, and the narration is encoded once on the
+// so an edit to one scene changes only its chapter's render. The chapter
+// renders join at the hard cuts by stream copy, and the narration is encoded once on the
 // joined file, which takes a chapter mark per chapter at its first frame. The
 // plan (script.json's `chapters`) is held to the scenes and the grid here.
 import fs from "node:fs";

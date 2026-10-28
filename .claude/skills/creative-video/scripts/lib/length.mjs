@@ -1,5 +1,5 @@
-// The video's lengths, shared by the voice stage, the timing, the board and the
-// render: the render holds the last scene's frame HOLD seconds after its
+// The video's lengths, shared by the stages that time, judge, show or render
+// it: the render holds the last scene's frame HOLD seconds after its
 // narration, and the scenes with that hold land within 10 percent of the
 // brief's `length`.
 export const HOLD = 1;

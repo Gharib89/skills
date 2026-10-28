@@ -20,10 +20,9 @@
 // chapter unchanged since it was rendered is not rendered again and a changed
 // one's stale render is removed. The whole project is rendered once more at
 // 1 fps, draft quality (its audio is the 30 fps render's, bit for bit, measured
-// on HyperFrames
-// 0.8.206) to audio.mp4, its audio mastered to the targets above into audio.wav
-// the length of the timeline, and the chapter renders and that mix join into
-// out/<slug>.mp4 with a chapter mark each (render/chapters.mjs). The checks add
+// on HyperFrames 0.8.206) to audio.mp4, its audio mastered to the targets above
+// into audio.wav the length of the timeline, and the chapter renders and that
+// mix join into out/<slug>.mp4 with a chapter mark each (render/chapters.mjs). The checks add
 // `chapters`. Before any chapter renders it prints its estimate from
 // render-rates.json; `--estimate` prints that line and exits 0, rendering
 // nothing, touching nothing in out/ and not asking for passed gates.
