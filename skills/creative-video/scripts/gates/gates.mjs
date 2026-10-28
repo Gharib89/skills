@@ -21,7 +21,7 @@
 // every word of its title) and sound only (over.html draws no element, since a
 // chapter renders without it). Advisory warnings
 // (gates/warnings.mjs) never change the exit: effect rate, effect onset, scene
-// length, sentences, pacing and clock.
+// length, sentences, alike voices, pacing and clock.
 // stdout: `gate <name>: pass|fail|pending: <measured> vs <floor>` per gate (the
 //         rest of a failing gate's findings indented under it), `warn <name>:
 //         <detail>` per warning, then `gates: <n> pass, <m> fail[, 1 pending]`,
@@ -41,6 +41,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { claimsKey } from "../lib/claims.mjs";
 import { maybeJson, readJson } from "../lib/json.mjs";
+import { CAST } from "../lib/kit.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
@@ -430,6 +431,7 @@ const warned = warnings({
   plan,
   events,
   script,
+  cast: maybeJson(run, CAST),
   total: timeline.total,
   proj,
 });

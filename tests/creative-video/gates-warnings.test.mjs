@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { project } from "./timing-lib.mjs";
 import { compose, record, runGates, timed, timeline } from "./gates-lib.mjs";
+import { writeCast } from "./voice-lib.mjs";
 
 const warns = (r, name) =>
   [...r.out.matchAll(new RegExp(`^warn ${name}: (.*)$`, "gm"))].map(
@@ -137,6 +138,29 @@ test("a scene over 30 s warns, and so does a sentence over 25 words", () => {
   assert.deepEqual(warns(exact, "scene length"), []);
   const over = runGates(timed({}, { scenes: [nearly("Fox.")] }));
   assert.match(warns(over, "scene length")[0], /^hook: 30\.1 s, over 30 s$/);
+});
+
+test("two roles cast in one voice and one style line in the script's language warn", () => {
+  const fx = timed();
+  writeCast(fx, {
+    narrator: { voices: { en: "af_heart" } },
+    learner: { voices: { en: "af_heart", ar: "ar-eg-csagent-2" } },
+    rival: { voices: { en: "am_fenrir" }, style: "a smug rival" },
+    critic: { voices: { en: "am_fenrir" }, style: "a smug rival" },
+    host: { voices: { en: "am_fenrir" }, style: "a calm host" },
+    guide: { voices: { ar: "ar-eg-csagent-2" } },
+  });
+  const r = runGates(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const alike = [
+    "narrator and learner both speak af_heart in the same style",
+    "rival and critic both speak am_fenrir in the same style",
+  ];
+  assert.deepEqual(warns(r, "alike voices"), alike);
+  assert.deepEqual(
+    record(fx).warnings.filter((w) => w.startsWith("alike voices")),
+    alike.map((a) => `alike voices: ${a}`),
+  );
 });
 
 test("a scene or kit file reading the clock or a random draw is named, and captions.html is left alone", () => {

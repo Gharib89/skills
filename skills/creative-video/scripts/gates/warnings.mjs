@@ -1,11 +1,12 @@
 // The gates stage's advisory warnings: reported, never a refusal. Each is a
 // `<name>: <detail>` line, over the plan (each scene's window), the probe's
 // events (each scene's tween windows in its own seconds, and its sounds, judged
-// in its own seconds by gates/sounds.mjs), the script and, for the clock scan,
-// the project's scene and kit files.
+// in its own seconds by gates/sounds.mjs), the script, the cast and, for the
+// clock scan, the project's scene and kit files.
 import fs from "node:fs";
 import path from "node:path";
 import { sentences } from "../lib/length.mjs";
+import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { sceneSeconds } from "./sounds.mjs";
 
 // One of two places a gate reads scene code (ADR 0019), the other the sounds
@@ -88,6 +89,25 @@ const longSentences = (script) =>
     ),
   );
 
+// Two roles of `cast` (cast.json, or null) a viewer cannot tell apart: the
+// same narrator in `language`, speaking the same style line.
+function alikeVoices(cast, language) {
+  const roles = Object.entries(cast ?? {}).flatMap(([role, c]) => {
+    // A missing id would find the language's default.
+    const n = c.voices[language] && findNarrator(c.voices[language], language);
+    return n ? [{ role, id: n.id, style: c.style ?? n.style }] : [];
+  });
+  return roles.flatMap((a, i) =>
+    roles
+      .slice(i + 1)
+      .filter((b) => b.id === a.id && b.style === a.style)
+      .map(
+        (b) =>
+          `alike voices: ${a.role} and ${b.role} both speak ${a.id} in the same style`,
+      ),
+  );
+}
+
 const clockReads = (proj) =>
   [...listed(proj, "compositions"), ...listed(proj, "kit")].flatMap((f) => {
     const code = fs.readFileSync(path.join(proj, f), "utf8");
@@ -96,8 +116,9 @@ const clockReads = (proj) =>
   });
 
 // The warnings in print order, as `<name>: <detail>` lines. `total` is the
-// video's length in seconds, `proj` the project folder.
-export function warnings({ plan, events, script, total, proj }) {
+// video's length in seconds, `proj` the project folder, `cast` its
+// kit/cast.json or null.
+export function warnings({ plan, events, script, cast, total, proj }) {
   const eventsOf = (id) => events[id] ?? { tweens: [], sounds: [] };
   const sounds = plan.flatMap((p) =>
     eventsOf(p.sc.id).sounds.map((s) => p.sc.start + sceneSeconds(p.sc, s)),
@@ -117,6 +138,7 @@ export function warnings({ plan, events, script, total, proj }) {
   }
   out.push(
     ...longSentences(script),
+    ...alikeVoices(cast, script.language),
     `pacing: ${((starts + sounds.length) / (total / 60)).toFixed(1)} change events a minute; ${dead.join("; ") || "no dead stretch"}`,
     ...clockReads(proj),
   );
