@@ -28,7 +28,10 @@ export function licenceFindings(events, root, kit) {
     .map((s) => s.replace(/^\.\//, "").split(/[?#]/)[0]);
   return [...new Set(played)]
     .filter((s) => !licensed.has(s))
-    .map((s) => `${s}: no licence record in the kit`);
+    .map(
+      (s) =>
+        `${s}: no licence record in sound.json; play a sound.json file, or add it there and run sound/sounds.mjs`,
+    );
 }
 
 // The bed against the voice, `{ evidence, measured }`. In each 3 s window of

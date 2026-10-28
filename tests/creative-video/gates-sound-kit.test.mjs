@@ -152,7 +152,7 @@ test("a short last window is judged over its own length, and a margin of exactly
   fs.rmSync(proj, { recursive: true });
 });
 
-test("a sound with no licence record fails licence, by file", () => {
+test("a sound with no licence record fails licence, by file, naming how to give it one", () => {
   const fx = withKit(
     { bed: { ...BED, licence: "" }, palette: [DING] },
     {
@@ -165,11 +165,11 @@ test("a sound with no licence record fails licence, by file", () => {
   only(r, "licence");
   assert.match(
     gateLine(r, "licence"),
-    /^fail: 2 finding\(s\), first: assets\/pop\.wav: no licence record in the kit vs /,
+    /^fail: 2 finding\(s\), first: assets\/pop\.wav: no licence record in sound\.json; play a sound\.json file, or add it there and run sound\/sounds\.mjs vs /,
   );
   assert.match(
     r.out,
-    /^ {2}assets\/sounds\/bed-1\.mp3: no licence record in the kit$/m,
+    /^ {2}assets\/sounds\/bed-1\.mp3: no licence record in sound\.json; play a sound\.json file, or add it there and run sound\/sounds\.mjs$/m,
   );
 });
 
