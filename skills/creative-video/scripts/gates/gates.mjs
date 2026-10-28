@@ -8,10 +8,11 @@
 // verdicts and <run>/project/. Samples each scene 0.3 s in, at its middle and
 // on its last frame (gates/samples.mjs), and measures the samples with
 // HyperFrames' check, a text probe (one launch, over the samples and a 0.25 s
-// grid) and two snapshot launches. Ten gates judge the project, each a hard
+// grid) and two snapshot launches. Eleven gates judge the project, each a hard
 // fail: determinism (the same pixels twice), layout, contrast, reading time,
 // the caption band, anchors (an at() naming a word the narration lacks),
-// script errors (a scene's script that throws), must and avoid, support (the
+// script errors (a scene's script that throws), sounds (each <audio> renders
+// at the start the gates judge, gates/sounds.mjs), must and avoid, support (the
 // claims check passed on the voiced narration) and the critic
 // (gates/critic.mjs), pending until each scene's verdict is written. Length,
 // loudness and voice QC are the voice and render stages' own. Advisory warnings
@@ -45,6 +46,7 @@ import { inputsHash } from "./inputs.mjs";
 import { criticGate } from "./critic.mjs";
 import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
+import { soundFindings } from "./sounds.mjs";
 import { warnings } from "./warnings.mjs";
 
 stage("gates");
@@ -347,6 +349,10 @@ const judged = {
   "caption band": [band.lines(), "no readable text in the bottom 220 px"],
   anchors: [anchors, "every anchor names an aligned word"],
   "script errors": [scriptErrors, "every scene's script runs"],
+  sounds: [
+    soundFindings(plan, events),
+    "every sound plays where the gates judge it",
+  ],
   "must and avoid": [
     coverage,
     "every must said or shown, no avoid said or shown",

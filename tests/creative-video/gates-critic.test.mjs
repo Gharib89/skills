@@ -34,7 +34,7 @@ test("a green project's critic is pending, each scene's sample stills set out, u
   );
   assert.match(
     r.out,
-    /^gates: 9 pass, 0 fail, 1 pending; next: run the critic, round 1 of 2$/m,
+    /^gates: 10 pass, 0 fail, 1 pending; next: run the critic, round 1 of 2$/m,
   );
   const stills = JSON.parse(
     fs.readFileSync(path.join(dir(fx), "stills.json"), "utf8"),
@@ -58,7 +58,7 @@ test("verdicts with no failure pass, and gates.json keeps each still's descripti
     gateLine(r, "critic"),
     /^pass: 0 finding\(s\), round 1 of 2 vs /,
   );
-  assert.match(r.out, /^gates: 10 pass, 0 fail$/m);
+  assert.match(r.out, /^gates: 11 pass, 0 fail$/m);
   const { described } = record(fx).gates.critic;
   assert.deepEqual(
     described.map((d) => d.scene),
@@ -80,7 +80,7 @@ test("an invented or unreadable failure fails the critic as one fix attempt, led
     gateLine(r, "critic"),
     `fail: 2 finding(s), first: ${start} s context: invented: The card "ten times faster" is in no sentence., round 1 of 2 vs no unreadable, invented or rtl content`,
   );
-  assert.match(r.out, /^gates: 9 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.match(r.out, /^gates: 10 pass, 1 fail; next: fix attempt 1 of 2$/m);
 });
 
 test("a gates.json whose critic has no rounds is refused by name", () => {
@@ -138,7 +138,7 @@ test("a fix re-judges only the changed scene in round 2, and a red second round 
   assert.equal(r.code, 1);
   assert.match(
     r.out,
-    /^gates: 9 pass, 1 fail; stop: the critic's second round is red, no video$/m,
+    /^gates: 10 pass, 1 fail; stop: the critic's second round is red, no video$/m,
   );
   assert.equal(record(fx).attempts, 3);
 });

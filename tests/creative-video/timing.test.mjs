@@ -150,6 +150,7 @@ test("timing.js answers at() with the local start of the nth matching word and t
   const tl = readJson(path.join(fx.dir, "timeline.json"));
   assert.equal(window.TIMING.total, tl.total);
   assert.equal(window.TIMING.scenes.context.duration, tl.scenes[1].duration);
+  assert.equal(window.TIMING.scenes.context.start, tl.scenes[1].start);
   const words = voice.scenes[1].words; // It reads the profile first. Then it claims ...
   // The context is another realm's: its objects compare by JSON.
   assert.deepEqual(
