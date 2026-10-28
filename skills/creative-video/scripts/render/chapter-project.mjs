@@ -21,8 +21,9 @@ export const chapterDir = (run, n) =>
 // Writes chapter `n`'s folder afresh from the run's `timeline` and `voice` and
 // returns `{ dir, seconds, key }`: `seconds` is the chapter's length on the
 // grid, `key` the 16 hex digits of a hash over every file the folder loads (its
-// index.html, timing.js, captions.html, its scene files, kit/ and assets/), so
-// a chapter render from it is reusable exactly while nothing it loads changed.
+// index.html, timing.js, captions.html, its scene files, kit/ and the assets it
+// uses, chapterKey), so a chapter render from it is reusable exactly while
+// nothing it loads changed.
 // The narration WAV and the HyperFrames CLI's own state are no input of a
 // video-only render, and the lockfile hash stands for the HyperFrames engine.
 export function writeChapter(run, { timeline, voice }, n) {
@@ -81,19 +82,33 @@ export function writeChapter(run, { timeline, voice }, n) {
       narration: false,
     }),
   );
-  return { dir, seconds, key: chapterKey(dir) };
+  return { dir, seconds, key: chapterKey(dir, proj) };
 }
 
-// The 16 hex digits of the hash over the files a chapter folder loads.
-function chapterKey(dir) {
-  const files = walk(dir)
-    .filter((f) => {
-      const rel = path.relative(dir, f);
-      return (
-        rel.split(path.sep)[0] !== ".hyperframes" &&
-        rel !== path.join("assets", "narration.wav")
-      );
-    })
-    .sort();
-  return hashFiles(dir, files, lockHash);
+// The 16 hex digits of the hash over the files a chapter folder loads. An asset
+// counts for the chapters whose files name its path (`assets/<file>`), so a new
+// one costs only the chapters that use it; one no file of the project names (a
+// name a script builds at run time) counts for every chapter, since which
+// chapter loads it cannot be read.
+function chapterKey(dir, proj) {
+  const outside = (root) => (f) =>
+    !["assets", ".hyperframes"].includes(
+      path.relative(root, f).split(path.sep)[0],
+    );
+  const names = (files) => {
+    const text = files.map((f) => fs.readFileSync(f, "utf8")).join("\n");
+    return (a) =>
+      text.includes(path.posix.join("assets", ...a.split(path.sep)));
+  };
+  const own = walk(dir).filter(outside(dir));
+  const inChapter = names(own);
+  const inProject = names(walk(proj).filter(outside(proj)));
+  const assets = path.join(dir, "assets");
+  const used = fs.existsSync(assets)
+    ? walk(assets).filter((f) => {
+        const a = path.relative(assets, f);
+        return a !== "narration.wav" && (inChapter(a) || !inProject(a));
+      })
+    : [];
+  return hashFiles(dir, [...own, ...used].sort(), lockHash);
 }

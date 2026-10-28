@@ -280,9 +280,12 @@ loudness:` line with both values, `delivered: <path of out/<slug>.mp4>`, then
 
 A video in chapters renders each chapter on its own, one at a time, video
 only, and keeps each chapter video under `.cache/render/` by everything that
-chapter loads: its scenes, captions, the kit and the assets. A later render
-renders only the chapters whose video changed, so a fix to one scene costs one
-chapter, and a change to the kit or an asset costs them all. `over.html` is no
+chapter loads: its scenes, captions, the kit and the assets its files name by
+path (`assets/<file>`). A later render renders only the chapters whose video
+changed, so a fix to one scene costs one chapter, a new or changed asset the
+chapters that name it, and a change to the kit costs them all. Name an asset by
+its path in the file that uses it: one no file names (a name a script builds
+at run time) counts for every chapter. `over.html` is no
 chapter's input: a change to it changes only the mix. The narration and every
 sound are mixed once over the whole video, the chapter videos joined by stream
 copy at the hard cuts, and the audio encoded once with a chapter mark at each

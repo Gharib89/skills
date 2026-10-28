@@ -246,9 +246,11 @@ render.
     until the gates pass on the current project. On exit 1 fix what it names
     and render again. In chapters it renders each chapter one at a time,
     keeping each chapter's render, so a later render re-renders only the
-    chapters that changed; a change to the kit or an asset changes every
-    chapter. Before a render that follows a change to the kit or an asset, run
-    it with `--estimate` first and tell the person the line it prints, in full:
+    chapters that changed; a change to the kit changes every chapter, one to
+    an asset only the chapters whose files name its path (every chapter when
+    no file names it, as a name a script builds). Before a render that
+    follows a change to the kit or an asset, run it with `--estimate` first
+    and tell the person the line it prints, in full:
     `render: <k> of <n> chapter(s) to render, estimate <m:ss>, budget <m:ss>`.
 14. **Deliver.** Write `<run>/CREDITS.md` (each source cited with its
     locators, each sound with its source, licence and attribution, the voice,

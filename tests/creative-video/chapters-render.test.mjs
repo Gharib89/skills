@@ -287,6 +287,36 @@ test("a kit file changes every chapter's key, so every chapter renders again", (
   assert.match(r.out, /^render: 2 of 2 chapter\(s\) to render/);
 });
 
+test("a new asset changes the key of only the chapters whose files name it; one no file names, as a name built at run time, changes every chapter's", () => {
+  const fx = ready();
+  assert.equal(exec(render, fx).code, 0);
+  const again = () => {
+    assert.equal(runGates(fx).code, 0);
+    fs.rmSync(fx.log, { force: true });
+    const r = exec(render, fx);
+    assert.equal(r.code, 0, r.out + r.err);
+    return r;
+  };
+  fs.writeFileSync(project(fx, "assets", "photo.png"), "one");
+  fs.appendFileSync(
+    project(fx, "compositions", "d.html"),
+    '<img src="assets/photo.png">',
+  );
+  assert.match(again().out, /^render: 1 of 2 chapter\(s\) to render/);
+  assert.deepEqual(
+    renders(fx).map((c) => c.cwd),
+    [rel(fx, "chapter-2"), project(fx)],
+  );
+  fs.writeFileSync(project(fx, "assets", "photo.png"), "two");
+  assert.match(again().out, /^render: 1 of 2 chapter\(s\) to render/);
+  assert.deepEqual(
+    renders(fx).map((c) => c.cwd),
+    [rel(fx, "chapter-2"), project(fx)],
+  );
+  fs.writeFileSync(project(fx, "assets", "ding.wav"), "built");
+  assert.match(again().out, /^render: 2 of 2 chapter\(s\) to render/);
+});
+
 test("--estimate prints the estimate line alone, renders nothing, leaves out/ as it was and needs no passed gates", () => {
   const fx = chaptered(SCENES, { chapters: PLAN });
   supported(fx);
