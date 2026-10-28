@@ -287,6 +287,32 @@ test("a kit file changes every chapter's key, so every chapter renders again", (
   assert.match(r.out, /^render: 2 of 2 chapter\(s\) to render/);
 });
 
+test("a bed in the sound kit renders no chapter again: it plays in the whole project's mix alone", () => {
+  const fx = ready();
+  assert.equal(exec(render, fx).code, 0);
+  fs.mkdirSync(project(fx, "assets", "sounds"), { recursive: true });
+  fs.writeFileSync(project(fx, "assets", "sounds", "bed-1.mp3"), "bed");
+  fs.mkdirSync(project(fx, "kit"), { recursive: true });
+  fs.writeFileSync(
+    project(fx, "kit", "sound.json"),
+    JSON.stringify({
+      bed: {
+        query: "room tone",
+        level: -28,
+        source: "openverse:bed-1",
+        file: "assets/sounds/bed-1.mp3",
+        licence: "CC0-1.0",
+      },
+    }),
+  );
+  const g = runGates(fx);
+  assert.equal(g.code, 0, g.out + g.err);
+  const r = exec(render, fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(r.out, /^render: 0 of 2 chapter\(s\) to render/);
+  assert.match(read(project(fx, "index.html")), /<audio id="bed"/);
+});
+
 test("a new asset changes the key of only the chapters whose files name it; one no file names, as a name built at run time, changes every chapter's", () => {
   const fx = ready();
   assert.equal(exec(render, fx).code, 0);
