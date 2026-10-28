@@ -71,6 +71,7 @@ test("a created <audio> at a scene-local start fails sounds; inside its scene, f
         `<audio id="ding" data-created="${at(start, end)}"></audio>`,
     );
     assert.equal(r.code, code, `${at}: ${r.out}${r.err}`);
+    if (code) only(r, "sounds");
   }
 });
 

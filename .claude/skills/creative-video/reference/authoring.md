@@ -163,13 +163,13 @@ failing one indented under it. Each is a hard fail:
 - `script errors`: no scene's script throws (an error HyperFrames reports from
   running it, other than an anchor), each named `<scene>: <message>`, and
   every scene registers its timeline (one missing means its script stopped).
-- `sounds`: every `<audio>` has an id and plays at its live `data-start`, in
-  its scene: one written in the HTML keeps the `data-start` written there (a
-  script that moves it is refused, since the render reads the HTML's), a
-  created one starts inside its scene in seconds of the whole video, and an
-  id is required (the render refuses a written one without, never plays a
-  created one without), a created one's an id no other `<audio>` has (the
-  render never plays it otherwise).
+- `sounds`: every `<audio>` plays at its live `data-start`, in its scene: one
+  written in the HTML keeps the `data-start` written there (a script that
+  moves it is refused, since the render reads the HTML's), and a created one
+  starts inside its scene in seconds of the whole video. Every one needs an id
+  (the render refuses a written one without, never plays a created one
+  without), and a created one an id no other `<audio>` has (the render never
+  plays it otherwise).
   See [Scenes on word times](#scenes-on-word-times).
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no
   `avoid` word is: said in the voiced narration (not `script.json`, which can
