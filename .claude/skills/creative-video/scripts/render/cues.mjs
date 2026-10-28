@@ -8,14 +8,26 @@ export const CUE_CHARS = 84;
 
 const r3 = (n) => +n.toFixed(3);
 
-// `script` is script.json's scenes, `scenes` the timeline's by the same index.
+// `script` is each scene's `captions`, a token list per sentence, and
+// `speakers`, a role per sentence; `scenes` the timeline's by the same index.
+// In a video of two or more speakers, a cue whose speaker is not the last
+// cue's opens with `<Role>: `, its `who`, which counts toward CUE_CHARS; a cue
+// never spans two sentences, so never two speakers.
 export function captionCues(script, scenes) {
   const cues = [];
+  const many = new Set(script.flatMap((s) => s.speakers ?? [])).size > 1;
+  let last = null;
   script.forEach((s, i) => {
     const sc = scenes[i];
     const own = [];
     let w = 0;
-    for (const tokens of s.captions) {
+    for (const [k, tokens] of s.captions.entries()) {
+      const speaker = s.speakers?.[k];
+      let who =
+        many && speaker !== last
+          ? speaker[0].toUpperCase() + speaker.slice(1)
+          : undefined;
+      last = speaker;
       let cue = null;
       for (const t of tokens) {
         const token = {
@@ -29,7 +41,10 @@ export function captionCues(script, scenes) {
           cue.text += ` ${t.text}`;
           cue.tokens.push(token);
         } else {
-          cue = { text: t.text, tokens: [token] };
+          cue = who
+            ? { who, text: `${who}: ${t.text}`, tokens: [token] }
+            : { text: t.text, tokens: [token] };
+          who = undefined;
           own.push(cue);
         }
       }

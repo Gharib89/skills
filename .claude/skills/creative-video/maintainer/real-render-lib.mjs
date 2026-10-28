@@ -4,6 +4,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { voicesOf } from "../scripts/lib/kit.mjs";
 import { narrator } from "../scripts/lib/narrators.mjs";
 import { catalogue, dest, skill } from "../scripts/lib/tools.mjs";
 import { FPS } from "../scripts/render/grid.mjs";
@@ -144,13 +145,16 @@ export function runFolder(dir, name, scenes) {
         { text: second, start: half, end: 2 * half },
       ],
       qc: { failures: [] },
+      speakers: ["narrator"],
     };
   });
+  const n = narrator(undefined, "en");
   fs.writeFileSync(
     path.join(run, "voice.json"),
     JSON.stringify({
-      narrator: narrator(undefined, "en").id,
+      narrator: n.id,
       language: "en",
+      voices: voicesOf({ narrator: n }),
       scenes: voiced,
     }),
   );

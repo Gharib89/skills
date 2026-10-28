@@ -10,18 +10,23 @@ const unescape = (s) =>
     .replaceAll("&gt;", ">")
     .replaceAll("&quot;", '"')
     .replaceAll("&amp;", "&");
+// Each cue's start, end and text as drawn: a speaker's name (render/cues.mjs)
+// is its `who` and its text's `<Role>: ` prefix, never one of its words.
 export const cuesOf = (html) =>
   [
     ...html.matchAll(
       /<div class="cue clip" data-start="([\d.]+)" data-duration="([\d.]+)"[^>]*>(.*?)<\/div>/g,
     ),
-  ].map((m) => ({
-    start: +m[1],
-    end: +m[1] + +m[2],
-    text: [...m[3].matchAll(/<span class="w"[^>]*>(.*?)<\/span>/g)]
+  ].map((m) => {
+    const words = [...m[3].matchAll(/<span class="w"[^>]*>(.*?)<\/span>/g)]
       .map((w) => unescape(w[1].replace(/<[^>]+>/g, "")))
-      .join(" "),
-  }));
+      .join(" ");
+    const who = m[3].match(/<span class="who">(.*?):<\/span>/)?.[1];
+    const cue = { start: +m[1], end: +m[1] + +m[2] };
+    return who
+      ? { ...cue, who: unescape(who), text: `${unescape(who)}: ${words}` }
+      : { ...cue, text: words };
+  });
 
 // The timeline's words, the composition's cues, and the SRT as the cues' copy.
 export function captionFindings({ timeline, cues, srtText }) {
