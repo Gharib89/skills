@@ -3,9 +3,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { warnings } from "../../skills/creative-video/scripts/gates/warnings.mjs";
-import { project } from "./timing-lib.mjs";
+import { narrator } from "../../skills/creative-video/scripts/lib/narrators.mjs";
+import { project, readJson } from "./timing-lib.mjs";
 import { compose, record, runGates, timed, timeline } from "./gates-lib.mjs";
 import { writeCast } from "./voice-lib.mjs";
 
@@ -142,16 +144,61 @@ test("a scene over 30 s warns, and so does a sentence over 25 words", () => {
   assert.match(warns(over, "scene length")[0], /^hook: 30\.1 s, over 30 s$/);
 });
 
+// Writes `cast` as `fx`'s cast.json and gives its script.json the top-level
+// `extra` fields and each scene the `roles` its id maps to.
+function recast(fx, cast, roles, extra = {}) {
+  const file = path.join(fx.dir, "script.json");
+  const script = readJson(file);
+  fs.writeFileSync(
+    file,
+    JSON.stringify({
+      ...script,
+      ...extra,
+      scenes: script.scenes.map((s) => ({ ...s, roles: roles[s.id] })),
+    }),
+  );
+  writeCast(fx, cast);
+}
+
 test("two roles on one Kokoro voice in the script's language warn whatever their style lines", () => {
-  const fx = timed();
-  writeCast(fx, {
-    narrator: { voices: { en: "af_heart" } },
-    learner: { voices: { en: "af_heart", ar: "ar-eg-csagent-2" } },
-    rival: { voices: { en: "am_fenrir" }, style: "a smug rival" },
-    critic: { voices: { en: "am_fenrir" }, style: "a smug rival" },
-    host: { voices: { en: "am_fenrir" }, style: "a calm host" },
-    guide: { voices: { ar: "ar-eg-csagent-2" } },
-  });
+  const fx = timed(
+    {},
+    {
+      scenes: [
+        {
+          id: "hook",
+          narration: [
+            "Ship drives one issue to a merged pull request.",
+            "Why not merge it by hand?",
+            "Because the review comes first.",
+          ],
+        },
+        {
+          id: "context",
+          narration: [
+            "It reads the profile first.",
+            "Then it claims the issue.",
+            "So no other run takes it.",
+          ],
+        },
+      ],
+    },
+  );
+  recast(
+    fx,
+    {
+      narrator: { voices: { en: "af_heart" } },
+      learner: { voices: { en: "af_heart", ar: "ar-eg-csagent-2" } },
+      rival: { voices: { en: "am_fenrir" }, style: "a smug rival" },
+      critic: { voices: { en: "am_fenrir" }, style: "a smug rival" },
+      host: { voices: { en: "am_fenrir" }, style: "a calm host" },
+      guide: { voices: { ar: "ar-eg-csagent-2" } },
+    },
+    {
+      hook: [null, "learner", "rival"],
+      context: ["critic", "host", "rival"],
+    },
+  );
   const r = runGates(fx);
   assert.equal(r.code, 0, r.out + r.err);
   const alike = [
@@ -167,27 +214,27 @@ test("two roles on one Kokoro voice in the script's language warn whatever their
   );
 });
 
-// The alike voices warnings for `cast` over a script in `language` that names
-// `narrator`, if any.
-const alike = (language, cast, narrator) =>
+// The alike voices warnings for `voiced`, each speaking role's narrators.json
+// entry.
+const alike = (voiced) =>
   warnings({
     plan: [],
     events: {},
-    script: { language, narrator, scenes: [] },
-    cast,
+    script: { scenes: [] },
+    voiced,
     sound: null,
     total: 60,
     proj: fileURLToPath(new URL("./no-project/", import.meta.url)),
   }).filter((w) => w.startsWith("alike voices"));
 
 test("on Gemini, which acts the style line, two roles on one voice warn only when their style lines match", () => {
-  const voice = { ar: "ar-eg-csagent-2" };
+  const gemini = (style) => ({ ...narrator("ar-eg-csagent-2", "ar"), style });
   assert.deepEqual(
-    alike("ar", {
-      narrator: { voices: voice },
-      host: { voices: voice, style: "a calm host" },
-      rival: { voices: voice, style: "a calm host" },
-      critic: { voices: voice, style: "a sharp critic" },
+    alike({
+      narrator: narrator("ar-eg-csagent-2", "ar"),
+      host: gemini("a calm host"),
+      rival: gemini("a calm host"),
+      critic: gemini("a sharp critic"),
     }),
     [
       "alike voices: host and rival both speak ar-eg-csagent-2 in the same style",
@@ -195,15 +242,36 @@ test("on Gemini, which acts the style line, two roles on one voice warn only whe
   );
 });
 
-test("the narrator role a cast leaves out counts: script.json's narrator, else the language's default", () => {
+const alikeWarns = (fx) => warns(runGates(fx), "alike voices");
+
+test("the narrator role a cast leaves out counts when it speaks: script.json's narrator, else the language's default", () => {
+  const fx = timed();
   const learner = (id) => ({ learner: { voices: { en: id } } });
-  assert.deepEqual(alike("en", learner("af_heart")), [
-    "alike voices: narrator and learner both speak af_heart",
+  const roles = { context: [null, "learner"] };
+  recast(fx, learner("af_heart"), roles);
+  assert.deepEqual(alikeWarns(fx), [
+    "narrator and learner both speak af_heart",
   ]);
-  assert.deepEqual(alike("en", learner("am_fenrir"), "am_fenrir"), [
-    "alike voices: narrator and learner both speak am_fenrir",
+  recast(fx, learner("am_fenrir"), roles, { narrator: "am_fenrir" });
+  assert.deepEqual(alikeWarns(fx), [
+    "narrator and learner both speak am_fenrir",
   ]);
-  assert.deepEqual(alike("en", learner("am_fenrir")), []);
+  recast(fx, learner("am_fenrir"), roles, { narrator: undefined });
+  assert.deepEqual(alikeWarns(fx), []);
+});
+
+test("a role no sentence speaks never warns: a cast role, or the narrator role a cast leaves out", () => {
+  const fx = timed();
+  recast(
+    fx,
+    {
+      host: { voices: { en: "af_heart" } },
+      learner: { voices: { en: "am_fenrir" } },
+      extra: { voices: { en: "am_fenrir" } },
+    },
+    { hook: ["host"], context: ["learner", "host"], recap: ["learner"] },
+  );
+  assert.deepEqual(alikeWarns(fx), []);
 });
 
 test("a scene or kit file reading the clock or a random draw is named, and captions.html is left alone", () => {

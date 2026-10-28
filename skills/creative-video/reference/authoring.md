@@ -285,12 +285,12 @@ Warnings print as `warn <name>: <detail>`, are recorded in `gates.json` and
 never change the exit: `effect rate` (over 24 sounds in a minute), `effect
 onset` (a sound over 0.15 s from the nearest tween start), `scene length`
 (over 30 s), `sentences` (over 25 words), `alike voices` (two roles with the
-same voice in the script's language, the narrator role counted whether
-`cast.json` casts it or not, and on Gemini, which acts the style line, the
-same style line too), `dropped sound` (a sound `sounds.mjs` found nowhere),
-`pacing` (always printed: the change events a minute, and each dead stretch of
-2 s or more with no tween running)
-and `clock` (a scene or kit file naming `Math.random`, `Date.now`, `new Date`,
+same voice in the script's language, counting only roles some sentence
+speaks, the narrator role whether `cast.json` casts it or not, and on Gemini,
+which acts the style line, the same style line too), `dropped sound` (a sound
+`sounds.mjs` found nowhere), `pacing` (always printed: the change events a
+minute, and each dead stretch of 2 s or more with no tween running) and
+`clock` (a scene or kit file naming `Math.random`, `Date.now`, `new Date`,
 `performance.now`, `setTimeout`, `setInterval` or `requestAnimationFrame`).
 
 The critic runs on the stills of the gates' own render. While a scene has no

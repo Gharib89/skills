@@ -42,7 +42,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { claimsKey } from "../lib/claims.mjs";
 import { maybeJson, readJson } from "../lib/json.mjs";
-import { CAST, soundKit } from "../lib/kit.mjs";
+import { rolesOf, soundKit, voices } from "../lib/kit.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
@@ -442,11 +442,16 @@ gates.critic = criticGate({
 const failing = Object.values(gates).filter((g) => g.status === "fail").length;
 const pending = gates.critic.status === "pending";
 
+// Only a role some sentence speaks can sound alike: `voices` keeps the
+// narrator role even when every sentence is another's.
+const spoken = new Set(script.scenes.flatMap(rolesOf));
 const warned = warnings({
   plan,
   events,
   script,
-  cast: maybeJson(run, CAST),
+  voiced: Object.fromEntries(
+    Object.entries(voices(run, script)).filter(([role]) => spoken.has(role)),
+  ),
   sound: kit,
   total: timeline.total,
   proj,
