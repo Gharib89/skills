@@ -1,6 +1,7 @@
 // creative-video's setup: check the tool rows a run needs, and install the
 // missing ones after the human's one yes. Tools go to the per-user tool cache,
-// keyed by the lockfile's hash, fonts to the font store (ADR 0017).
+// keyed by the lockfile's hash, fonts to the font store (ADR 0017), Kenney's
+// sound packs to the sound store beside it.
 //
 //   node setup.mjs check [--voice <id>]    print the table; installs nothing
 //   node setup.mjs install [--voice <id>]  the yes: install every missing row,
@@ -195,6 +196,19 @@ async function fetchFiles(r, dir) {
   }
 }
 
+// Each Kenney pack's zip, checked by sha256, unpacked into `dir/<pack>`.
+async function fetchPacks(r, dir) {
+  for (const p of r.packs) {
+    const zip = path.join(dir, `${p.name}.zip`);
+    await backend.download(p.url, zip);
+    const sum = await sha256(zip);
+    if (sum !== p.sha256)
+      throw new Error(`${p.name}.zip has sha256 ${sum}, pinned ${p.sha256}`);
+    await backend.unzipSounds(zip, path.join(dir, p.name));
+    fs.rmSync(zip);
+  }
+}
+
 async function install(r) {
   if (r.kind === "font") return installFont(r, backend);
   const dir = dest(r);
@@ -234,6 +248,11 @@ async function install(r) {
     fs.rmSync(nupkg);
   } else if (r.kind === "model") {
     await staged(dir, (part) => fetchFiles(r, part));
+  } else if (r.kind === "sounds") {
+    // The zips unpack with the npm install's JSZip.
+    if (!fs.existsSync(stamp(dest({ kind: "npm" }))))
+      throw new Error("needs npm-packages first");
+    await staged(dir, (part) => fetchPacks(r, part));
   }
   fs.writeFileSync(stamp(dir), "");
   return "present";

@@ -25,9 +25,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { readJson } from "../lib/json.mjs";
 import { SOUND } from "../lib/kit.mjs";
-import { userDirs } from "../lib/paths.mjs";
 import { stage } from "../lib/stage.mjs";
-import { loadBackend } from "../lib/tools.mjs";
+import { dest, loadBackend } from "../lib/tools.mjs";
 
 stage("sounds");
 const [run, ...rest] = process.argv.slice(2);
@@ -37,7 +36,9 @@ if (!run || rest.length) {
 }
 const kit = readJson(run, SOUND);
 const backend = await loadBackend();
-const store = path.join(userDirs().data, "sounds");
+// Setup's sounds:kenney row lands in the store.
+const KENNEY = dest({ kind: "sounds" });
+const store = path.dirname(KENNEY);
 const assets = path.join(run, "project", "assets", "sounds");
 const recordFile = path.join(store, "queries.json");
 const records = fs.existsSync(recordFile)
@@ -45,7 +46,6 @@ const records = fs.existsSync(recordFile)
   : {};
 // Formats the render plays.
 const PLAYS = ["mp3", "ogg", "wav", "flac"];
-const KENNEY = path.join(store, "kenney");
 
 // A sound's file in the store, from its source and its project file's name.
 const stored = ({ source, file }) =>
