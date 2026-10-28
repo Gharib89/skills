@@ -10,10 +10,10 @@
 // and <run>/project/, takes every scene's in, key and out stills
 // (gates/samples.mjs) in one snapshot launch and one frame of each direction not
 // picked, and writes the board and its page. A scene is judged by the hash of
-// its file and by its narration; after answers that commented on scenes alone, a build refuses a
-// change to any scene they did not name, to the kit, to over.html or to an
-// asset the last board had, so a comment on one scene re-authors only that
-// scene.
+// its file and by its narration. After answers that commented on scenes alone,
+// every build until the next answers refuses a change to any scene they did not
+// name, to the kit, to over.html or to an asset that board had, so a comment on
+// one scene re-authors only that scene.
 // apply reads an answers file, the answers document as JSON or the answers
 // text, and says what it asks: it accepts only answers to the latest board.
 // stdout: build, `board: <n> -> board/storyboard.html (<k> scenes, <m> stills,

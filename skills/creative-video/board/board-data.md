@@ -54,9 +54,9 @@ nothing outside this table, and every field below is in every board.
 | `board.directions[].recommended` | boolean | Whether it is the one recommended. |
 | `board.directions[].picked` | boolean | Whether it is the one the scenes are authored in. |
 | `board.directions[].frame` | string | Its frame, a still, a path relative to the page. The picked direction's is chapter 1's first scene at its key. |
-| `board.kit` | string | The hash of the project's kit files; `build` compares it with the last board's. |
-| `board.over` | string or null | The hash of `compositions/over.html`, null without one; `build` compares it with the last board's. |
-| `board.assets` | object | Each file under `assets/` but `narration.wav` and `gsap.min.js`, by its path there, to its hash; `build` refuses one of the last board's that changed or went. |
+| `board.kit` | string | The hash of the project's kit files; the guard compares it with the latest answered board's. |
+| `board.over` | string or null | The hash of `compositions/over.html`, null without one; the guard compares it with the latest answered board's. |
+| `board.assets` | object | Each file under `assets/` but `narration.wav` and `gsap.min.js`, by its path there, to its hash; the guard refuses one of the latest answered board's that changed or went. |
 | `board.scenes` | array | Every scene, in timeline order. |
 | `board.scenes[].id` | string | The scene's id. |
 | `board.scenes[].chapter` | number | The chapter it belongs to. |
@@ -68,7 +68,7 @@ nothing outside this table, and every field below is in every board.
 | `board.scenes[].stills.in` | string | The still 0.3 s in, a path relative to the page. |
 | `board.scenes[].stills.key` | string | The still at its middle. |
 | `board.scenes[].stills.out` | string | The still on its last frame. |
-| `board.scenes[].hash` | string | The hash of the scene's composition file; the guard compares it with the last board's. |
+| `board.scenes[].hash` | string | The hash of the scene's composition file; the guard compares it with the latest answered board's. |
 | `board.scenes[].changed` | boolean | Whether the hash differs from the last board's; false on board 1. |
 
 A still is `stills/<first 16 hex of the sha-256 of its bytes>.png`: an
