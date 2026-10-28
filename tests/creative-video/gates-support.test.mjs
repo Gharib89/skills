@@ -68,3 +68,15 @@ test("a narration edited after voicing fails support though the claims check pas
     `fail: 1 finding(s), first: scene hook's narration is not what voice.json voiced: run the voice stage again vs ${FLOOR}`,
   );
 });
+
+test("a scene dropped from the script after voicing fails support though the claims check passed on the rest", () => {
+  const fx = timed();
+  write(fx, cited(SCENES).slice(0, -1));
+  supported(fx);
+  const r = runGates(fx);
+  only(r, "support");
+  assert.equal(
+    gateLine(r, "support"),
+    `fail: 1 finding(s), first: voice.json voiced ${SCENES.length} scene(s), the script holds ${SCENES.length - 1}: run the voice stage again vs ${FLOOR}`,
+  );
+});

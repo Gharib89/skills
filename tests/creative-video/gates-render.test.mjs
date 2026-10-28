@@ -55,6 +55,16 @@ test("a kit file added after the gates passed also makes them stale", () => {
   assert.match(exec(render, fx).err, REFUSED);
 });
 
+test("an excerpt or the claims record changed after the gates passed makes them stale", () => {
+  for (const file of ["excerpts.json", "claims.json"]) {
+    const fx = timed();
+    assert.equal(runGates(fx).code, 0);
+    fs.appendFileSync(path.join(fx.dir, file), "\n");
+    assert.match(exec(render, fx).err, REFUSED, file);
+    assert.ok(!rendered(fx), file);
+  }
+});
+
 test("a file reached through a symlink, to a file, a folder or a folder that links back to itself, changed after the gates passed makes them stale", () => {
   for (const link of ["file", "dir", "loop"]) {
     const fx = timed();

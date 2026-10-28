@@ -320,6 +320,10 @@ const unvoiced = script.scenes
     (s) =>
       `scene ${s.id}'s narration is not what voice.json voiced: run the voice stage again`,
   );
+if (voiced.scenes.length !== script.scenes.length)
+  unvoiced.push(
+    `voice.json voiced ${voiced.scenes.length} scene(s), the script holds ${script.scenes.length}: run the voice stage again`,
+  );
 const support = !pack
   ? ["no excerpts.json: run the source stage"]
   : !claims
