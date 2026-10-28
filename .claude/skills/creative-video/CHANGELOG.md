@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.3.0 (2026-10-28)
+
+### Features
+
+- **creative-video**: Output gates on rendered frames
+  ([#1025](https://github.com/Gharib89/skills/pull/1025),
+  [`14569df`](https://github.com/Gharib89/skills/commit/14569dffd766f66432abaebc3860aff6940f93b8))
+
+
 ## v0.2.1 (2026-10-27)
 
 ### Chores
