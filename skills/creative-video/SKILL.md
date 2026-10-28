@@ -94,10 +94,9 @@ you would have written an adjective. At least:
   it marks and nothing else; where the bed plays, where it drops out, and the
   one moment it changes. A low bed plays by default, well under the voice and
   drawn from the concept's world (room tone, a track), and drops out for the
-  hardest step of the explanation. Effects are recorded sounds from a licensed
-  source (CC0 packs, a library with a licence you write down), never tones or
-  beeps generated in code: nobody can hear whether they are good, and they
-  sound like it.
+  hardest step of the explanation. Effects are recorded CC0 sounds that
+  `sounds.mjs` finds, never tones or beeps generated in code: nobody can hear
+  whether they are good, and they sound like it.
 - **Motion**: the event rate, the easing family, what moves on which word.
 - **Type**: faces and sizes.
 
@@ -160,8 +159,8 @@ render.
    skill's [craft-teaching.md](reference/craft-teaching.md) and
    [craft-motion.md](reference/craft-motion.md). Write `<run>/SPEC.md` by the
    stance, then the format kit in `<run>/project/kit/`, both before any scene.
-   Write the bed and the palette into `<run>/project/kit/sound.json` and run
-   `node <skill>/scripts/sound/sounds.mjs <run>`
+   Write the bed and the sound palette into `<run>/project/kit/sound.json` and
+   run `node <skill>/scripts/sound/sounds.mjs <run>`
    ([Sound](reference/authoring.md#sound)); the root places the bed. A bed
    that is music carries one reason line on `SPEC.md`'s Sound line, as a
    banned default does.
