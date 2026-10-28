@@ -298,36 +298,43 @@ test("a board with no draft of its own restores the newest earlier board's draft
   );
 });
 
-test("a board keeps its draft until it is sent or answered, then keeps none, and a store that refuses reads false", () => {
+test("a board keeps its draft until it is sent or answered, then keeps none of its own or an earlier board's; a local page keeps it; a store that refuses reads false", () => {
   const store = new Map();
   const local = {
     setItem: (k, v) => store.set(k, v),
     removeItem: (k) => store.delete(k),
   };
-  const S = B.newState(clone(doc));
-  B.ACT.look(S, { value: "darker" });
-  assert.equal(
-    B.storeDraft(() => local, S),
-    true,
-  );
-  assert.equal(JSON.parse(store.get("board-draft-1")).look, "darker");
-  for (const status of ["sending", "sent", "saved"]) {
+  const board2 = (lock) => {
+    const b = clone(doc);
+    b.version = 2;
+    const S = B.newState(b);
+    B.ACT.look(S, { value: "darker" });
+    lock(S);
     store.set("board-draft-1", "{}");
-    S.status = status;
+    store.delete("board-draft-2");
     assert.equal(
       B.storeDraft(() => local, S),
       true,
     );
-    assert.equal(store.has("board-draft-1"), false, status);
+    return S;
+  };
+  board2(() => {});
+  assert.equal(JSON.parse(store.get("board-draft-2")).look, "darker");
+  const locks = {
+    sending: (S) => (S.status = "sending"),
+    sent: (S) => (S.status = "sent"),
+    saved: (S) => (S.status = "saved"),
+    answered: (S) => B.setAnswers(S, [{ version: 2, approve: false }]),
+  };
+  for (const [name, lock] of Object.entries(locks)) {
+    board2(lock);
+    assert.deepEqual([...store.keys()], [], name);
   }
-  S.status = "";
-  B.setAnswers(S, [{ version: 1, approve: false }]);
-  store.set("board-draft-1", "{}");
-  assert.equal(
-    B.storeDraft(() => local, S),
-    true,
-  );
-  assert.equal(store.has("board-draft-1"), false);
+  const S = board2((S) => {
+    S.local = true;
+    S.status = "sent";
+  });
+  assert.equal(JSON.parse(store.get("board-draft-2")).look, "darker");
   const refuses = () => {
     throw new Error("SecurityError");
   };

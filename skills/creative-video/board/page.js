@@ -235,7 +235,7 @@ const draftKey = (version) => "board-draft-" + version;
 // getItem): its own, else the newest earlier board's, so a later chapter's
 // board posted while a comment was being written keeps that comment. A sent
 // or answered board keeps no draft (storeDraft), so only an unsent one carries
-// over; a local page's copy is never known to have landed, so it keeps its own.
+// over.
 function savedDraft(get, version) {
   for (let v = version; v > 0; v--) {
     let d = null;
@@ -247,14 +247,16 @@ function savedDraft(get, version) {
   return null;
 }
 
-// Saves the draft to the store `getStore` returns (localStorage), or removes it
-// once the board is sent or answered, so a later board never restores a sent
-// comment. False when the store refuses.
+// Saves the draft to the store `getStore` returns (localStorage), or, once the
+// board is sent or answered, removes it and every earlier board's, so a later
+// board never restores a sent comment. A local page never locks: its copy is
+// never known to have landed, so it keeps its draft. False when the store refuses.
 function storeDraft(getStore, S) {
   try {
-    const store = getStore();
-    if (locked(S)) store.removeItem(draftKey(S.board.version));
-    else store.setItem(draftKey(S.board.version), JSON.stringify(S.draft));
+    const store = getStore(),
+      v = S.board.version;
+    if (!locked(S)) store.setItem(draftKey(v), JSON.stringify(S.draft));
+    else for (let k = v; k > 0; k--) store.removeItem(draftKey(k));
     return true;
   } catch (e) {
     return false;
@@ -305,12 +307,7 @@ async function boot() {
     for (const [id, v] of Object.entries(saved.notes || {}))
       if (S.board.scenes.some((c) => c.id === id) && typeof v === "string")
         S.draft.notes[id] = v;
-    // An earlier board's draft moves under this board's key, once it is there.
-    if (saveDraft())
-      try {
-        for (let v = 1; v < S.board.version; v++)
-          localStorage.removeItem(draftKey(v));
-      } catch (e) {} // a key left behind is only shadowed by this board's own
+    saveDraft();
   }
   function render() {
     const f = document.activeElement,
