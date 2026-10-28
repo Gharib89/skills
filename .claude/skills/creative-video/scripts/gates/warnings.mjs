@@ -6,7 +6,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import { sentences } from "../lib/length.mjs";
-import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { sceneSeconds } from "./sounds.mjs";
 
 // One of two places a gate reads scene code (ADR 0019), the other the sounds
@@ -89,37 +88,21 @@ const longSentences = (script) =>
     ),
   );
 
-// Two roles a viewer cannot tell apart in the script's language: those of
-// `cast` (cast.json, or null) and the narrator role it leaves out, which speaks
-// script.json's `narrator`, else the language's default. Each pair speaks one
+// Two roles of `voiced` a viewer cannot tell apart: each pair speaks one
 // narrator, and on Gemini, the one backend that acts the style line, one style
 // line too.
-function alikeVoices(cast, { language, narrator }) {
-  const voiced = Object.entries(cast ?? {}).map(([role, c]) => ({
-    role,
-    // A missing id would find the language's default.
-    n: c.voices[language] && findNarrator(c.voices[language], language),
-    style: c.style,
-  }));
-  if (!cast?.narrator)
-    voiced.unshift({ role: "narrator", n: findNarrator(narrator, language) });
-  const roles = voiced
-    .filter((r) => r.n)
-    .map(({ role, n, style }) => ({
-      role,
-      id: n.id,
-      acts: n.backend === "gemini",
-      style: style ?? n.style,
-    }));
-  return roles.flatMap((a, i) =>
-    roles
+function alikeVoices(voiced) {
+  const roles = Object.entries(voiced);
+  return roles.flatMap(([a, n], i) => {
+    const acts = n.backend === "gemini";
+    return roles
       .slice(i + 1)
-      .filter((b) => b.id === a.id && (!a.acts || b.style === a.style))
+      .filter(([, m]) => m.id === n.id && (!acts || m.style === n.style))
       .map(
-        (b) =>
-          `alike voices: ${a.role} and ${b.role} both speak ${a.id}${a.acts ? " in the same style" : ""}`,
-      ),
-  );
+        ([b]) =>
+          `alike voices: ${a} and ${b} both speak ${n.id}${acts ? " in the same style" : ""}`,
+      );
+  });
 }
 
 // Each sound sound/sounds.mjs found nowhere and dropped from `sound`
@@ -135,9 +118,10 @@ const clockReads = (proj) =>
   });
 
 // The warnings in print order, as `<name>: <detail>` lines. `total` is the
-// video's length in seconds, `proj` the project folder, `cast` and `sound` its
-// kit/cast.json and kit/sound.json or null.
-export function warnings({ plan, events, script, cast, sound, total, proj }) {
+// video's length in seconds, `proj` the project folder, `voiced` maps each role
+// some sentence speaks to its narrators.json entry, cast.json's style applied
+// (lib/kit.mjs `voices`), and `sound` is kit/sound.json or null.
+export function warnings({ plan, events, script, voiced, sound, total, proj }) {
   const eventsOf = (id) => events[id] ?? { tweens: [], sounds: [] };
   const sounds = plan.flatMap((p) =>
     eventsOf(p.sc.id).sounds.map((s) => p.sc.start + sceneSeconds(p.sc, s)),
@@ -157,7 +141,7 @@ export function warnings({ plan, events, script, cast, sound, total, proj }) {
   }
   out.push(
     ...longSentences(script),
-    ...alikeVoices(cast, script),
+    ...alikeVoices(voiced),
     ...droppedSounds(sound),
     `pacing: ${((starts + sounds.length) / (total / 60)).toFixed(1)} change events a minute; ${dead.join("; ") || "no dead stretch"}`,
     ...clockReads(proj),
