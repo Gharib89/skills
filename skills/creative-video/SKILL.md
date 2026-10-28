@@ -160,10 +160,11 @@ render.
    skill's [craft-teaching.md](reference/craft-teaching.md) and
    [craft-motion.md](reference/craft-motion.md). Write `<run>/SPEC.md` by the
    stance, then the format kit in `<run>/project/kit/`, both before any scene.
-   Fetch each sound of the palette and the bed with `media-use` into
-   `<run>/project/assets/`, its source and licence on `SPEC.md`'s Sound line.
-   A bed that is music carries one reason line there, as a banned default
-   does.
+   Write the bed and the palette into `<run>/project/kit/sound.json` and run
+   `node <skill>/scripts/sound/sounds.mjs <run>`
+   ([Sound](reference/authoring.md#sound)); the root places the bed. A bed
+   that is music carries one reason line on `SPEC.md`'s Sound line, as a
+   banned default does.
 6. **Script.** Write `<run>/script.json`
    ([reference/voice.md](reference/voice.md) holds its shape), one scene per
    idea of the arc: the misconception given a voice and broken, the question
@@ -253,9 +254,10 @@ render.
     follows a change to the kit or an asset, run it with `--estimate` first
     and tell the person the line it prints, in full:
     `render: <k> of <n> chapter(s) to render, estimate <m:ss>, budget <m:ss>`.
-14. **Deliver.** Write `<run>/CREDITS.md` (each source cited with its
-    locators, each sound with its source, licence and attribution, the voice,
-    the faces and their licences) and `<run>/DELIVERY.md` (the concept and why
+14. **Deliver.** Run `node <skill>/scripts/render/credits.mjs <run>` first:
+    it writes `<run>/CREDITS.md`'s voices and sound. Then add to it each
+    source cited with its locators, and the faces and their licences. Write
+    `<run>/DELIVERY.md` (the concept and why
     it was picked; what was measured, quoting the render's `delivery` and
     `measured loudness` lines and the gates' `warn` lines, and what was only
     looked at; that the sound was measured, not heard, and each effect placed
@@ -300,6 +302,9 @@ skill's own path, `<skill>` below being the folder this file is in:
 compute capability 7.5 or higher, beside an English Kokoro narrator. CUDA 13
 and cuDNN 9 are host prerequisites: the line under the table says whether
 Kokoro runs on the GPU here or names the missing library.
+
+`sounds:kenney`, Kenney's CC0 sound packs (12 MB), is what `sounds.mjs`
+searches when Openverse finds nothing.
 
 Whenever the **Gemini data notice** prints under a table, relay it word for
 word: setup prints it once per key, the first time Google accepts that key.

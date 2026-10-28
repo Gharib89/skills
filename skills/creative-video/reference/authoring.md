@@ -6,6 +6,7 @@
 - [Timing](#timing)
 - [Chapters](#chapters)
 - [Scenes on word times](#scenes-on-word-times)
+- [Sound](#sound)
 - [The pinned CLI](#the-pinned-cli)
 - [Gates](#gates)
 - [Render](#render)
@@ -42,15 +43,18 @@ What you write, all committed as the video's recipe:
 - `project/kit/cast.json` (optional): the voice of each role the script
   names in `roles` ([voice.md](voice.md) holds its shape). Without it the
   video has one voice.
+- `project/kit/sound.json`: the bed and the sound palette, each sound's
+  licence filled in by the sound stage ([Sound](#sound)).
 - `project/compositions/<id>.html`: one scene file per `script.json` scene,
   by its `id`.
 - `project/compositions/over.html` (optional): one composition across the
-  whole video, over the scenes, for what crosses a cut: the bed, a score that
-  stays on screen, a host who never leaves. In a video in chapters it holds
-  sound only: a chapter renders without it, and its sound plays in the one
-  mix of the whole video.
+  whole video, over the scenes, for what crosses a cut: a score that stays on
+  screen, a host who never leaves, a sound that runs on. In a video in
+  chapters it holds sound only: a chapter renders without it, and its sound
+  plays in the one mix of the whole video.
 - `project/assets/`: your media (recorded sounds, images, fonts).
-- `CREDITS.md` and `DELIVERY.md`, after the render.
+- `CREDITS.md` and `DELIVERY.md`, after the render (`render/credits.mjs`
+  writes `CREDITS.md`'s `## Voices` and `## Sound`).
 
 `support.json` is the support checker's own to write and fix.
 `claims.json` (the claims check) keeps the fix attempts and each sentence's
@@ -59,7 +63,8 @@ first verdict across runs: never delete it, or the fix count starts again.
 What the stages write, rebuilt on every run: `voice.json` and `.cache/` (voice),
 `timeline.json`, `project/index.html`, `project/timing.js`,
 `project/compositions/captions.html`, `project/assets/narration.wav` and
-`project/assets/gsap.min.js` (timing), `project/.hyperframes/` (the CLI's
+`project/assets/gsap.min.js` (timing), `project/assets/sounds/` (sounds),
+`project/.hyperframes/` (the CLI's
 snapshots), `gates.json` (gates), and `out/` (render). Never edit these by
 hand: the next run of their stage overwrites them. `hf.mjs` and the render
 write `index.html` again before they run, so an `over.html` or a kit file added
@@ -105,7 +110,7 @@ chapter's start and end into `timeline.json`.
 A chapter opens on a hard cut into a scene you author freely, whose very first
 frame draws the chapter's title in full: the delivered video's chapter mark
 lands on that frame, and the `chapter titles` gate fails a title not drawn
-there. Sound may cross a cut (`over.html`'s bed, a sound running on); no visual
+there. Sound may cross a cut (the bed, a sound in `over.html`); no visual
 transition does. The kit is loaded by every chapter, so a device that recurs
 lives there, never copied into a scene.
 
@@ -139,7 +144,7 @@ gives a word's time:
 ```js
 const ding = document.createElement("audio");
 ding.id = "kitchen-ding";
-ding.src = "assets/ding.wav";
+ding.src = "assets/sounds/bell-1.mp3"; // its sound.json `file`
 ding.dataset.start = window.TIMING.scenes["kitchen"].start + at("kitchen", "ticket");
 ding.dataset.duration = 0.4;
 document.querySelector('[data-composition-id="kitchen"]').append(ding);
@@ -156,6 +161,43 @@ moves one.
 
 Readable text stays out of the caption band, the bottom 220 px: paint behind
 it, never write in it.
+
+## Sound
+
+Write `project/kit/sound.json` with the kit, before any scene:
+
+```json
+{
+  "bed": {"query": "kitchen ambience", "level": -28, "out": ["hardest-step"]},
+  "palette": [{"event": "ticket", "query": "bell ding"}]
+}
+```
+
+`bed` is the low sound under the whole video: `query` the words to search
+for, `level` its gain in dB, `out` the ids of the scenes it drops out for. Each
+`palette` entry is one sound and the story event it marks. Then:
+
+```
+node <skill>/scripts/sound/sounds.mjs <run>
+```
+
+For each sound it searches Openverse for CC0 audio (a search that fails after
+30 s is tried once more), then the Kenney packs setup installs
+(`sounds:kenney`) by their file names' words, copies what it finds into
+`project/assets/sounds/` and writes the sound's `file`, `source`, `licence`,
+`creator`, `url` and `attribution` into `sound.json`. A sound found before, on
+any run, is copied again with no search. It prints `sound <event>: openverse
+<id> | kenney <pack>/<file> | cached | dropped: <why>` per sound. A sound found
+nowhere moves to `sound.json`'s `dropped` list with its reason, and prints
+`warn dropped sound: <event>: <why>`: change its query and run again, or stage
+the moment without it. Never edit the fields it writes.
+
+The root plays the bed: every stage that writes `index.html` adds it after the
+narration as `<audio id="bed">`, looped over the whole video at its `level`,
+with a volume lane (`data-automation`) that ducks it to 0.35 while words play
+and silences it across each `out` scene, each change a 0.2 s ramp. A palette
+sound plays where a scene places it, by its `file`
+([Scenes on word times](#scenes-on-word-times)).
 
 ## The pinned CLI
 
@@ -209,6 +251,11 @@ failing one indented under it. Each is a hard fail:
   without), and a created one an id no other `<audio>` has (the render never
   plays it otherwise).
   See [Scenes on word times](#scenes-on-word-times).
+- `licence`: every `<audio>` but the narration, in a scene, `over.html` or the
+  root, plays a `file` that `sound.json` gives a licence ([Sound](#sound)).
+- `bed level`: the bed at least 15 LU under the voice in each 3 s window that
+  holds a word, by short-term loudness, its level and lane applied. It names
+  each window under 15 LU, and passes as `no bed` without one.
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no
   `avoid` word is: said in the voiced narration (not `script.json`, which can
   change after the voice), shown fully drawn in a sample frame.
@@ -235,7 +282,8 @@ never change the exit: `effect rate` (over 24 sounds in a minute), `effect
 onset` (a sound over 0.15 s from the nearest tween start), `scene length`
 (over 30 s), `sentences` (over 25 words), `alike voices` (two roles of
 `cast.json` with the same voice and the same style line in the script's
-language), `pacing` (always printed: the change
+language), `dropped sound` (a sound `sounds.mjs` found nowhere), `pacing`
+(always printed: the change
 events a minute, and each dead stretch of 2 s or more with no tween running)
 and `clock` (a scene or kit file naming `Math.random`, `Date.now`, `new Date`,
 `performance.now`, `setTimeout`, `setInterval` or `requestAnimationFrame`).
