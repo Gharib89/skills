@@ -174,10 +174,11 @@ render.
    six minutes, and the script carries the **chapter plan**, `chapters`
    ([authoring.md](reference/authoring.md#chapters)): write the plan and the
    whole script, every chapter's, before any scene, so the video keeps one
-   arc. This version voices one narrator: anyone else in the cast
-   is drawn, or speaks in on-screen text. Run the claims check,
-   `node <skill>/scripts/source/claims.mjs <run>`, and fix the cites until
-   its `claims cites:` line passes. Then dispatch one subagent with
+   arc. A cast speaks: each scene's `roles` names who says each sentence, and
+   `<run>/project/kit/cast.json` gives each role its own voice and style
+   line, so a learner, a rival or a guest sounds like no one else. Run the
+   claims check, `node <skill>/scripts/source/claims.mjs <run>`, and fix the
+   cites until its `claims cites:` line passes. Then dispatch one subagent with
    `<skill>/agents/support-checker.md` as its prompt, `{run}` the run folder
    and `{skill}` this skill's folder; it judges each sentence against its
    excerpts and replies with the claims check's `claims support:` line. Run

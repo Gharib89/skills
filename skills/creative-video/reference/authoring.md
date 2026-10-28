@@ -39,6 +39,9 @@ What you write, all committed as the video's recipe:
   as custom properties, the faces with their `@font-face` rules, sizes) and
   `*.js` (the recurring devices every scene shares). The root loads every file
   there, sorted by name, so a scene uses the kit without importing it.
+- `project/kit/cast.json` (optional): the voice of each role the script
+  names in `roles` ([voice.md](voice.md) holds its shape). Without it the
+  video has one voice.
 - `project/compositions/<id>.html`: one scene file per `script.json` scene,
   by its `id`.
 - `project/compositions/over.html` (optional): one composition across the
@@ -73,7 +76,9 @@ node <skill>/scripts/render/timing.mjs <run>
 It lays the scenes back to back on the 30 fps frame grid from their voiced
 lengths, the last one held 1 s, and writes the root `index.html` (each scene's
 host at its start and length, the narration, the captions on top),
-`timing.js` and the caption track. It prints `timing: <n> scene(s), <total> s`
+`timing.js` and the caption track. In a video of two or more speakers, a cue
+whose speaker is not the last cue's opens with the role's name (`Learner: `),
+in the video and the SRT alike. It prints `timing: <n> scene(s), <total> s`
 and one `timing: compositions/<id>.html to author` line per scene file not yet
 written. On exit 1, `timing: <why>` names what to fix: a `voice.json` that no
 longer matches `script.json` means voice again first.
@@ -228,7 +233,9 @@ failing one indented under it. Each is a hard fail:
 Warnings print as `warn <name>: <detail>`, are recorded in `gates.json` and
 never change the exit: `effect rate` (over 24 sounds in a minute), `effect
 onset` (a sound over 0.15 s from the nearest tween start), `scene length`
-(over 30 s), `sentences` (over 25 words), `pacing` (always printed: the change
+(over 30 s), `sentences` (over 25 words), `alike voices` (two roles of
+`cast.json` with the same voice and the same style line in the script's
+language), `pacing` (always printed: the change
 events a minute, and each dead stretch of 2 s or more with no tween running)
 and `clock` (a scene or kit file naming `Math.random`, `Date.now`, `new Date`,
 `performance.now`, `setTimeout`, `setInterval` or `requestAnimationFrame`).
