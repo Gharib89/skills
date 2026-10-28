@@ -107,11 +107,11 @@ test("a token spanning several words takes its first word's start and its last w
   assert.equal(cue.end, 3.8);
 });
 
-test("with two speakers, a cue whose speaker is not the last cue's opens with the role's name", () => {
+test("with two roles, a cue whose role is not the last cue's opens with the role's name", () => {
   const a = scene([["One."], ["Two."], ["Three."]], 0, 1.5);
   const b = scene([["Four."]], 1.5, 0.5);
-  a.script.speakers = ["narrator", "learner", "learner"];
-  b.script.speakers = ["narrator"];
+  a.script.roles = ["narrator", "learner", "learner"];
+  b.script.roles = ["narrator"];
   const cues = captionCues([a.script, b.script], [a.timeline, b.timeline]);
   assert.deepEqual(
     cues.map((c) => [c.who, c.text]),
@@ -128,9 +128,9 @@ test("with two speakers, a cue whose speaker is not the last cue's opens with th
   );
 });
 
-test("one speaker names no one, and a name counts toward CUE_CHARS", () => {
+test("one role names no one, and a name counts toward CUE_CHARS", () => {
   const one = scene([["One."], ["Two."]]);
-  one.script.speakers = ["learner", "learner"];
+  one.script.roles = ["learner", "learner"];
   assert.deepEqual(
     captionCues([one.script], [one.timeline]).map((c) => [c.who, c.text]),
     [
@@ -142,7 +142,7 @@ test("one speaker names no one, and a name counts toward CUE_CHARS", () => {
   const words = (last) => ["a".repeat(20), "b".repeat(20), "c".repeat(last)];
   const two = (last) => {
     const s = scene([["Hi."], words(last)]);
-    s.script.speakers = ["narrator", "learner"];
+    s.script.roles = ["narrator", "learner"];
     return captionCues([s.script], [s.timeline]);
   };
   assert.equal(two(33).length, 2);

@@ -81,12 +81,12 @@ node <skill>/scripts/render/timing.mjs <run>
 It lays the scenes back to back on the 30 fps frame grid from their voiced
 lengths, the last one held 1 s, and writes the root `index.html` (each scene's
 host at its start and length, the narration, the captions on top),
-`timing.js` and the caption track. In a video of two or more speakers, a cue
-whose speaker is not the last cue's opens with the role's name (`Learner: `),
-in the video and the SRT alike. It prints `timing: <n> scene(s), <total> s`
-and one `timing: compositions/<id>.html to author` line per scene file not yet
-written. On exit 1, `timing: <why>` names what to fix: a `voice.json` that no
-longer matches `script.json` means voice again first.
+`timing.js` and the caption track. In a video of two or more roles, a cue
+whose role differs from the last cue's opens with the role's name
+(`Learner: `), in the video and the SRT alike. It prints `timing: <n>
+scene(s), <total> s` and one `timing: compositions/<id>.html to author` line
+per scene file not yet written. On exit 1, `timing: <why>` names what to fix:
+a `voice.json` that no longer matches `script.json` means voice again first.
 
 ## Chapters
 

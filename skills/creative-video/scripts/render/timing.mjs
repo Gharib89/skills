@@ -8,7 +8,7 @@
 // duration, the last held 1 s. Writes <run>/timeline.json (the voice.json's
 // hash, the total, each scene's start, duration and absolute word times, the
 // caption cues: one per sentence, broken early at a long one, a cue naming
-// its speaker when the video has two or more and the last cue's differs, and, when
+// its role when the video has two or more and the last cue's differs, and, when
 // script.json carries `chapters`, each chapter's number, title, window and scenes
 // on the grid) and, in <run>/project/, which it creates but otherwise never deletes from or
 // touches (the agent's scene files and kit/ live there):
@@ -28,7 +28,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { maybeJson, readJson } from "../lib/json.mjs";
-import { speakers, voices, voicesOf } from "../lib/kit.mjs";
+import { rolesOf, voices, voicesOf } from "../lib/kit.mjs";
 import { HOLD } from "../lib/length.mjs";
 import { voiceHash, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
@@ -59,7 +59,7 @@ script.scenes.forEach((s, i) => {
   if (
     v?.id !== s.id ||
     v.words.map((w) => w.text).join(" ") !== s.narration.join(" ") ||
-    JSON.stringify(v.speakers) !== JSON.stringify(speakers(s))
+    JSON.stringify(v.roles) !== JSON.stringify(rolesOf(s))
   )
     fail(`voice.json does not match scene ${s.id}: run the voice stage again`);
 });
@@ -109,7 +109,7 @@ const cues = captionCues(
     captions: s.narration.map((n) =>
       n.split(/\s+/).map((text) => ({ text, words: 1 })),
     ),
-    speakers: voice.scenes[i].speakers,
+    roles: voice.scenes[i].roles,
   })),
   scenes,
 );

@@ -16,9 +16,9 @@ export const kitSounds = (kit) => [
   ...(kit?.palette ?? []),
 ];
 
-// A scene's speaker per sentence: its `roles` entry, `narrator` where the list
+// A scene's role per sentence: its `roles` entry, `narrator` where the list
 // or the entry is missing.
-export const speakers = (scene) =>
+export const rolesOf = (scene) =>
   scene.narration.map((_, i) => scene.roles?.[i] ?? "narrator");
 
 // The narrators.json entry `role` speaks in `language`, cast.json's `style`
@@ -57,7 +57,7 @@ export function voices(run, script) {
       throw new Error(
         `script.json: scene ${s.id} has ${s.narration.length} sentence(s), ${s.roles.length} role(s)`,
       );
-    for (const role of speakers(s)) {
+    for (const role of rolesOf(s)) {
       if (out[role]) continue;
       if (!cast?.[role])
         throw new Error(

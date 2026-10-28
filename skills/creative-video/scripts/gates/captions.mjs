@@ -10,7 +10,7 @@ const unescape = (s) =>
     .replaceAll("&gt;", ">")
     .replaceAll("&quot;", '"')
     .replaceAll("&amp;", "&");
-// Each cue's start, end and text as drawn: a speaker's name (render/cues.mjs)
+// Each cue's start, end and text as drawn: a role's name (render/cues.mjs)
 // is its `who` and its text's `<Role>: ` prefix, never one of its words.
 export const cuesOf = (html) =>
   [

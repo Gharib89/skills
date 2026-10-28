@@ -50,7 +50,7 @@ window.at = (scene, word, nth = 1) => {
 `;
 
 // compositions/captions.html: `cues` as HyperFrames cue clips, a cue's
-// speaker name in its own span before its words.
+// role's name in its own span before its words.
 export function captionsHtml(cues) {
   const cueDivs = cues
     .map(

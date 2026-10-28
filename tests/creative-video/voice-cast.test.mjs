@@ -32,7 +32,7 @@ const cast = (fx, value = CAST) => writeCast(fx, value);
 const voiceJson = (fx) =>
   JSON.parse(fs.readFileSync(path.join(fx.dir, "voice.json"), "utf8"));
 
-test("each run of sentences is voiced by its role's narrator in order, and voice.json names each sentence's speaker", () => {
+test("each run of sentences is voiced by its role's narrator in order, and voice.json names each sentence's role", () => {
   const fx = fixture(SCENES);
   cast(fx);
   const r = run(fx);
@@ -50,7 +50,7 @@ test("each run of sentences is voiced by its role's narrator in order, and voice
   );
   const v = voiceJson(fx);
   assert.deepEqual(
-    v.scenes.map((s) => s.speakers),
+    v.scenes.map((s) => s.roles),
     [["narrator", "learner", "narrator"], ["narrator"]],
   );
   assert.deepEqual(
@@ -85,7 +85,7 @@ test("a one-voice scene keys its cache as before the cast, so a cast naming the 
   cast(fx, { narrator: { voices: { en: "af_heart" } } });
   const r = run(fx);
   assert.match(line(r.out, "recap"), /: cached ·/);
-  assert.deepEqual(voiceJson(fx).scenes[0].speakers, ["narrator"]);
+  assert.deepEqual(voiceJson(fx).scenes[0].roles, ["narrator"]);
 });
 
 test("roles that do not fit the narration or the cast are refused before anything is voiced", () => {
@@ -128,7 +128,7 @@ test("roles that do not fit the narration or the cast are refused before anythin
   );
 });
 
-test("a script with no roles and no cast voices as one narrator, every sentence its speaker", () => {
+test("a script with no roles and no cast voices as one narrator, every sentence its role", () => {
   const fx = fixture([SCENES[1]]);
   write(fx, [SCENES[1]], "en", { narrator: "am_fenrir" });
   assert.equal(run(fx).code, 0);
@@ -136,7 +136,7 @@ test("a script with no roles and no cast voices as one narrator, every sentence 
     synths(fx).map((c) => c.voice),
     ["am_fenrir"],
   );
-  assert.deepEqual(voiceJson(fx).scenes[0].speakers, ["narrator"]);
+  assert.deepEqual(voiceJson(fx).scenes[0].roles, ["narrator"]);
 });
 
 test("a cast narrator with no key is refused naming cast.json as where to choose another", () => {

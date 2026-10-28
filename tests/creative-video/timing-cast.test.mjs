@@ -1,4 +1,4 @@
-// The timing stage with a cast: captions name a new speaker, and a voice.json
+// The timing stage with a cast: captions name a new role, and a voice.json
 // voiced for other roles or another cast is refused.
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -50,7 +50,7 @@ function castVoiced(scenes = SCENES) {
   return fx;
 }
 
-test("a cue whose speaker changes opens with the role's name, in the composition and the SRT alike", () => {
+test("a cue whose role changes opens with the role's name, in the composition and the SRT alike", () => {
   const fx = castVoiced();
   const t = exec(timing, fx);
   assert.equal(t.code, 0, t.out + t.err);

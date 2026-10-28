@@ -47,7 +47,7 @@ leaving `narrator` out keeps. A role speaks its voice in the script's
 language, `style` replacing that narrator's own (Gemini acts it; Kokoro
 ignores it). Each run of consecutive sentences of one role is voiced in its
 voice, the runs one after another, never overlapping; `voice.json` records
-each sentence's speaker, and captions name a new one.
+each sentence's role (`roles`), and captions name a new one.
 
 1. **Tools.** Voice needs the npm packages and its narrator's rows: English
    `model:kokoro-82m` and `model:wav2vec2-base-960h`, plus `onnx-cuda` where

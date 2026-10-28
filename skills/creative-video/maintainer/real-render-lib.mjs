@@ -145,7 +145,7 @@ export function runFolder(dir, name, scenes) {
         { text: second, start: half, end: 2 * half },
       ],
       qc: { failures: [] },
-      speakers: ["narrator"],
+      roles: ["narrator"],
     };
   });
   const n = narrator(undefined, "en");
