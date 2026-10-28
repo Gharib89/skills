@@ -32,8 +32,8 @@
 //         board/answers-<n>.json
 // exit:   0 ok · 1 refused, `board: <why>` on stderr (a missing timeline,
 //         scene file, storyboard.json, direction frame or gsap.min.js; an
-//         invalid storyboard.json; a script.json whose narration of a timed
-//         scene is not the one voiced; a scene changed, added or gone, or
+//         invalid storyboard.json; a script.json whose scenes are not the
+//         ones timed, in order, or whose narration is not the one voiced; a scene changed, added or gone, or
 //         the kit, over.html or an asset changed or gone, that the comments
 //         did not name;
 //         answers of an older board, naming an unknown scene or direction or
@@ -223,13 +223,20 @@ ${host(id, 0, 2, 1, "graphics")}
 async function build() {
   const { timeline, voice } = readTimeline(run, fail);
   const script = readJson(run, "script.json");
+  // The board shows script.json's narration beside stills timed to voice.json:
+  // a script edited after timing (a scene added, gone or moved, or its words
+  // changed) is not what the board would show.
+  const timed = timeline.scenes.map((s) => s.id).join(", ");
+  if (script.scenes.map((s) => s.id).join(", ") !== timed)
+    fail(
+      `script.json's scenes are not the scenes timed (${timed}): voice and time it again first`,
+    );
   const narrationOf = new Map(script.scenes.map((s) => [s.id, s.narration]));
-  // The board shows script.json's narration beside stills timed to voice.json.
   const voiced = new Map(
     voice.scenes.map((v) => [v.id, v.words.map((w) => w.text).join(" ")]),
   );
   for (const { id } of timeline.scenes)
-    if (narrationOf.get(id)?.join(" ") !== voiced.get(id))
+    if (narrationOf.get(id).join(" ") !== voiced.get(id))
       fail(
         `script.json's scene ${id} is not the narration voiced: voice and time it again first`,
       );
