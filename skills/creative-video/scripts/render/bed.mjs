@@ -16,7 +16,7 @@ export const bedVolume = (level) => +(10 ** (level / 20)).toFixed(4);
 
 // The lane's points `{ t, v }` for `timeline` (each scene's absolute word
 // times) with the scenes `out` silenced; past MAX_POINTS the word runs merge
-// over wider gaps.
+// over wider gaps, and out scenes that alone pass it are refused.
 export function bedLane(timeline, out = [], gap = GAP) {
   const { total, scenes } = timeline;
   for (const id of out)
@@ -70,7 +70,14 @@ export function bedLane(timeline, out = [], gap = GAP) {
   const lane = points.filter(
     (p, i) => !i || p.t !== points[i - 1].t || p.v !== points[i - 1].v,
   );
-  return lane.length > MAX_POINTS ? bedLane(timeline, out, gap * 1.5) : lane;
+  if (lane.length <= MAX_POINTS) return lane;
+  // A gap past the video already merges every word into one run: what is left
+  // is the out scenes' own edges, which no gap moves.
+  if (gap > total)
+    throw new Error(
+      `project/kit/sound.json: bed.out's ${out.length} scene(s) take the bed's volume lane past ${MAX_POINTS} points: silence fewer scenes, or neighbouring ones`,
+    );
+  return bedLane(timeline, out, gap * 1.5);
 }
 
 // The lane's value at `t`.

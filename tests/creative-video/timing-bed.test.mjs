@@ -111,3 +111,17 @@ test("a lane past 512 points merges the word runs over wider gaps", () => {
   assert.ok(lane.length <= 512, `${lane.length} points`);
   assert.equal(laneAt(lane, 500.15), DUCK);
 });
+
+test("out scenes whose silences alone take the lane past 512 points are refused, not merged forever", () => {
+  const scenes = Array.from({ length: 260 }, (_, i) => ({
+    id: `s${i}`,
+    start: i * 10,
+    duration: 10,
+    words: [{ text: "word", start: i * 10, end: i * 10 + 10 }],
+  }));
+  const out = scenes.filter((_, i) => i % 2).map((s) => s.id);
+  assert.throws(
+    () => bedLane({ total: 2600, scenes }, out),
+    /^Error: project\/kit\/sound\.json: bed\.out's 130 scene\(s\) take the bed's volume lane past 512 points: silence fewer scenes, or neighbouring ones$/,
+  );
+});
