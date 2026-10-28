@@ -179,6 +179,19 @@ export async function check(dir, times) {
   };
 }
 
+// The tags over.html paints at `t`: an element with text of its own, or an
+// image, SVG or canvas. A wrapper of <audio> alone paints nothing.
+function overPaints(dir, t) {
+  const over = mounted(dir).find((m) => m.id === "over");
+  if (!over || t < over.start || t >= over.end) return [];
+  const html = over.html.replace(/<(script|style)\b[\s\S]*?<\/\1>/g, "");
+  return [...html.matchAll(/<([a-z][\w-]*)\b[^>]*>([^<]*)/g)]
+    .filter(
+      ([, tag, text]) => text.trim() || ["img", "svg", "canvas"].includes(tag),
+    )
+    .map(([, tag]) => `<${tag}>`);
+}
+
 export async function probe(dir, times) {
   log({ call: "probe", times });
   const frames = times.map((t) => {
@@ -194,7 +207,7 @@ export async function probe(dir, times) {
             fontPx: e.fontPx,
             opacity: e.opacity,
           });
-    return { t, texts: out };
+    return { t, texts: out, over: overPaints(dir, t) };
   });
   const events = {};
   for (const m of mounted(dir).filter((m) => m.id !== "captions")) {

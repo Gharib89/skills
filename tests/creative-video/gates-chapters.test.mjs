@@ -79,6 +79,16 @@ test("an over.html that draws an element fails the sound only gate in a video in
   );
 });
 
+test("an over.html image with no text of its own fails the sound only gate, and a wrapper that paints nothing passes it", () => {
+  const img = run(["Why", "How"], OPENERS, `<img src="bed.png">${BED}`);
+  assert.equal(img.code, 1, img.out + img.err);
+  assert.match(gateLine(img, "sound only"), /over\.html draws <img>/);
+  const wrapped = `<div style="display:contents">${BED}</div>`;
+  const r = run(["Why", "How"], OPENERS, wrapped);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(gateLine(r, "sound only"), /^pass: 0 finding\(s\)/);
+});
+
 test("an over.html of only <audio> passes the sound only gate, and a video without chapters has no such gate", () => {
   const r = run(["Why", "How"], OPENERS, BED);
   assert.equal(r.code, 0, r.out + r.err);

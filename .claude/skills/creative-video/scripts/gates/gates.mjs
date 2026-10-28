@@ -330,23 +330,9 @@ const titles = (timeline.chapters ?? []).flatMap((ch) => {
 });
 
 // Sound only, in a video in chapters: a chapter renders without over.html (its
-// sound plays in the one mix), so a drawn element in it never reaches the video.
-// Scripts, styles and <audio> are no drawing; the file's own root host is none.
-const overFile = path.join(proj, "compositions", "over.html");
-const drawnByOver =
-  timeline.chapters && fs.existsSync(overFile)
-    ? [
-        ...fs
-          .readFileSync(overFile, "utf8")
-          .replace(
-            /<!--[\s\S]*?-->|<(script|style|audio)\b[\s\S]*?<\/\1>/gi,
-            "",
-          )
-          .matchAll(/<(?!template\b)([a-z][\w-]*)\b([^>]*)>/gi),
-      ]
-        .filter((m) => !m[2].includes("data-composition-id"))
-        .map((m) => `<${m[1]}>`)
-    : [];
+// sound plays in the one mix), so what it paints never reaches the video. The
+// probe measures what paints at each frame; a wrapper that draws nothing passes.
+const drawnByOver = timeline.chapters ? frames.flatMap((f) => f.over) : [];
 const overDrawing = drawnByOver.length
   ? [
       `over.html draws ${[...new Set(drawnByOver)].join(", ")}: a chapter renders without it, so move the drawing into a scene file`,
