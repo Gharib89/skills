@@ -25,8 +25,9 @@ Open each of the scene's stills with Read. In `script.json`, read the
 `language`, then every scene's `narration` sentences and each sentence's
 `cites`, the excerpt ids it stands on; read each cited excerpt's `text` in
 `excerpts.json`. A hook or a closing card may name what another scene says, so
-read them all. Judge against these words alone: not the scene files, not
-`SPEC.md`, not the source, not what you know about the subject.
+read them all. The captions along the bottom are the narration, so they are
+never `invented`. Judge the rest against these words alone: not the scene
+files, not `SPEC.md`, not the source, not what you know about the subject.
 
 ## Describe each still
 
