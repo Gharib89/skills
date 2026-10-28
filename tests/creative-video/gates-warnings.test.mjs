@@ -3,6 +3,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import { warnings } from "../../skills/creative-video/scripts/gates/warnings.mjs";
 import { project } from "./timing-lib.mjs";
 import { compose, record, runGates, timed, timeline } from "./gates-lib.mjs";
 import { writeCast } from "./voice-lib.mjs";
@@ -140,7 +142,7 @@ test("a scene over 30 s warns, and so does a sentence over 25 words", () => {
   assert.match(warns(over, "scene length")[0], /^hook: 30\.1 s, over 30 s$/);
 });
 
-test("two roles cast in one voice and one style line in the script's language warn", () => {
+test("two roles on one Kokoro voice in the script's language warn whatever their style lines", () => {
   const fx = timed();
   writeCast(fx, {
     narrator: { voices: { en: "af_heart" } },
@@ -153,14 +155,55 @@ test("two roles cast in one voice and one style line in the script's language wa
   const r = runGates(fx);
   assert.equal(r.code, 0, r.out + r.err);
   const alike = [
-    "narrator and learner both speak af_heart in the same style",
-    "rival and critic both speak am_fenrir in the same style",
+    "narrator and learner both speak af_heart",
+    "rival and critic both speak am_fenrir",
+    "rival and host both speak am_fenrir",
+    "critic and host both speak am_fenrir",
   ];
   assert.deepEqual(warns(r, "alike voices"), alike);
   assert.deepEqual(
     record(fx).warnings.filter((w) => w.startsWith("alike voices")),
     alike.map((a) => `alike voices: ${a}`),
   );
+});
+
+// The alike voices warnings for `cast` over a script in `language` that names
+// `narrator`, if any.
+const alike = (language, cast, narrator) =>
+  warnings({
+    plan: [],
+    events: {},
+    script: { language, narrator, scenes: [] },
+    cast,
+    sound: null,
+    total: 60,
+    proj: fileURLToPath(new URL("./no-project/", import.meta.url)),
+  }).filter((w) => w.startsWith("alike voices"));
+
+test("on Gemini, which acts the style line, two roles on one voice warn only when their style lines match", () => {
+  const voice = { ar: "ar-eg-csagent-2" };
+  assert.deepEqual(
+    alike("ar", {
+      narrator: { voices: voice },
+      host: { voices: voice, style: "a calm host" },
+      rival: { voices: voice, style: "a calm host" },
+      critic: { voices: voice, style: "a sharp critic" },
+    }),
+    [
+      "alike voices: host and rival both speak ar-eg-csagent-2 in the same style",
+    ],
+  );
+});
+
+test("the narrator role a cast leaves out counts: script.json's narrator, else the language's default", () => {
+  const learner = (id) => ({ learner: { voices: { en: id } } });
+  assert.deepEqual(alike("en", learner("af_heart")), [
+    "alike voices: narrator and learner both speak af_heart",
+  ]);
+  assert.deepEqual(alike("en", learner("am_fenrir"), "am_fenrir"), [
+    "alike voices: narrator and learner both speak am_fenrir",
+  ]);
+  assert.deepEqual(alike("en", learner("am_fenrir")), []);
 });
 
 test("a scene or kit file reading the clock or a random draw is named, and captions.html is left alone", () => {

@@ -89,21 +89,35 @@ const longSentences = (script) =>
     ),
   );
 
-// Two roles of `cast` (cast.json, or null) a viewer cannot tell apart: the
-// same narrator in `language`, speaking the same style line.
-function alikeVoices(cast, language) {
-  const roles = Object.entries(cast ?? {}).flatMap(([role, c]) => {
+// Two roles a viewer cannot tell apart in the script's language: those of
+// `cast` (cast.json, or null) and the narrator role it leaves out, which speaks
+// script.json's `narrator`, else the language's default. Each pair speaks one
+// narrator, and on Gemini, the one backend that acts the style line, one style
+// line too.
+function alikeVoices(cast, { language, narrator }) {
+  const voiced = Object.entries(cast ?? {}).map(([role, c]) => ({
+    role,
     // A missing id would find the language's default.
-    const n = c.voices[language] && findNarrator(c.voices[language], language);
-    return n ? [{ role, id: n.id, style: c.style ?? n.style }] : [];
-  });
+    n: c.voices[language] && findNarrator(c.voices[language], language),
+    style: c.style,
+  }));
+  if (!cast?.narrator)
+    voiced.unshift({ role: "narrator", n: findNarrator(narrator, language) });
+  const roles = voiced
+    .filter((r) => r.n)
+    .map(({ role, n, style }) => ({
+      role,
+      id: n.id,
+      acts: n.backend === "gemini",
+      style: style ?? n.style,
+    }));
   return roles.flatMap((a, i) =>
     roles
       .slice(i + 1)
-      .filter((b) => b.id === a.id && b.style === a.style)
+      .filter((b) => b.id === a.id && (!a.acts || b.style === a.style))
       .map(
         (b) =>
-          `alike voices: ${a.role} and ${b.role} both speak ${a.id} in the same style`,
+          `alike voices: ${a.role} and ${b.role} both speak ${a.id}${a.acts ? " in the same style" : ""}`,
       ),
   );
 }
@@ -143,7 +157,7 @@ export function warnings({ plan, events, script, cast, sound, total, proj }) {
   }
   out.push(
     ...longSentences(script),
-    ...alikeVoices(cast, script.language),
+    ...alikeVoices(cast, script),
     ...droppedSounds(sound),
     `pacing: ${((starts + sounds.length) / (total / 60)).toFixed(1)} change events a minute; ${dead.join("; ") || "no dead stretch"}`,
     ...clockReads(proj),
