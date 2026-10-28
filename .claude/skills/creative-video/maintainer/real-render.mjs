@@ -394,12 +394,18 @@ const placed =
     .start + 1;
 check(
   "gate sounds",
-  moved.status === "fail",
+  moved.status === "fail" &&
+    /starts at 0.3 s in its scene file and 1 s after its script ran/.test(
+      moved.measured,
+    ),
   `failing twin: ${moved.measured}; passing twin: every gate passes`,
 );
 check(
   "gate sounds on a reused id",
-  reused.status === "fail" && /is created by its script/.test(reused.measured),
+  reused.status === "fail" &&
+    /is created by its script with an id another <audio> carries/.test(
+      reused.measured,
+    ),
   reused.measured,
 );
 check(
