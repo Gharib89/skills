@@ -311,16 +311,22 @@ test("a board keeps its draft until it is sent or answered, then keeps none, and
     true,
   );
   assert.equal(JSON.parse(store.get("board-draft-1")).look, "darker");
-  S.status = "saved";
+  for (const status of ["sending", "sent", "saved"]) {
+    store.set("board-draft-1", "{}");
+    S.status = status;
+    assert.equal(
+      B.storeDraft(() => local, S),
+      true,
+    );
+    assert.equal(store.has("board-draft-1"), false, status);
+  }
+  S.status = "";
+  B.setAnswers(S, [{ version: 1, approve: false }]);
+  store.set("board-draft-1", "{}");
   assert.equal(
     B.storeDraft(() => local, S),
     true,
   );
-  assert.equal(store.has("board-draft-1"), false);
-  S.status = "";
-  B.setAnswers(S, [{ version: 1, approve: false }]);
-  store.set("board-draft-1", "{}");
-  B.storeDraft(() => local, S);
   assert.equal(store.has("board-draft-1"), false);
   const refuses = () => {
     throw new Error("SecurityError");

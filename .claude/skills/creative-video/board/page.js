@@ -234,8 +234,8 @@ const draftKey = (version) => "board-draft-" + version;
 // The draft to restore on board `version`, read through `get` (localStorage's
 // getItem): its own, else the newest earlier board's, so a later chapter's
 // board posted while a comment was being written keeps that comment. A sent
-// or answered board keeps no draft (boot's saveDraft), so only an unsent one
-// carries over.
+// or answered board keeps no draft (storeDraft), so only an unsent one carries
+// over; a local page's copy is never known to have landed, so it keeps its own.
 function savedDraft(get, version) {
   for (let v = version; v > 0; v--) {
     let d = null;
@@ -310,7 +310,7 @@ async function boot() {
       try {
         for (let v = 1; v < S.board.version; v++)
           localStorage.removeItem(draftKey(v));
-      } catch (e) {}
+      } catch (e) {} // a key left behind is only shadowed by this board's own
   }
   function render() {
     const f = document.activeElement,
