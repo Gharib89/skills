@@ -18,8 +18,9 @@ The shape of `script.json` in the run folder:
 
 `cites` holds one list of excerpt ids per sentence, from `excerpts.json`: the
 excerpts a sentence stating a fact stands on, `[]` for a sentence stating none.
-The claims check and the gates read it; the voice stage does not, and a
-narration you wrote yourself, with no source pack, carries none.
+The claims check and the gates read it; the voice stage does not, so a
+`script.json` the user wrote, voiced alone (SKILL.md's Voice), may carry none.
+A video's gates need them.
 
 `narrator` is optional: without it the stage takes the language's first default
 in `<skill>/narrators.json` (`af_heart` for `en`, `ar-eg-csagent-2` for `ar`).

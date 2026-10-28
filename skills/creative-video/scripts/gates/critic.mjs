@@ -73,8 +73,8 @@ export function criticGate({ run, plan, stills, script, pack, prev, fail }) {
   );
   const key = hash(keys);
   const dirOf = (k) => path.posix.join(".cache", "critic", k);
-  const kept = prev?.format === FORMAT;
-  const rounds = kept ? [...prev.rounds] : [];
+  const sameFormat = prev?.format === FORMAT;
+  const rounds = sameFormat ? [...prev.rounds] : [];
   const dir = dirOf(key);
   // Past two rounds a render carries the second round's verdict: no stills.
   if (rounds.includes(key) || rounds.length < ROUNDS) {
@@ -91,7 +91,7 @@ export function criticGate({ run, plan, stills, script, pack, prev, fail }) {
     fs.writeFileSync(path.join(abs, "keys.json"), JSON.stringify(keys));
     // The last round's verdict on a scene whose key is unchanged is carried,
     // so only changed scenes are pending.
-    const before = kept && prev.stills !== dir ? prev.stills : null;
+    const before = sameFormat && prev.stills !== dir ? prev.stills : null;
     const beforeKeys = before && path.join(run, before, "keys.json");
     if (beforeKeys && fs.existsSync(beforeKeys)) {
       const old = JSON.parse(fs.readFileSync(beforeKeys, "utf8"));

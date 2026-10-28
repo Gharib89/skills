@@ -42,8 +42,11 @@ What you write, all committed as the video's recipe:
 - `project/assets/`: your media (recorded sounds, images, fonts).
 - `CREDITS.md` and `DELIVERY.md`, after the render.
 
-What the stages write, rebuilt on every run: `support.json` (the support
-checker), `claims.json` (the claims check), `voice.json` and `.cache/` (voice),
+`support.json` is the support checker's own to write and fix.
+`claims.json` (the claims check) keeps the fix attempts and each sentence's
+first verdict across runs: never delete it, or the fix count starts again.
+
+What the stages write, rebuilt on every run: `voice.json` and `.cache/` (voice),
 `timeline.json`, `project/index.html`, `project/timing.js`,
 `project/compositions/captions.html`, `project/assets/narration.wav` and
 `project/assets/gsap.min.js` (timing), `project/.hyperframes/` (the CLI's
@@ -143,7 +146,9 @@ failing one indented under it. Each is a hard fail:
 - `support`: the claims check (`source/claims.mjs`) passed on `script.json`'s
   sentences and cites and the excerpts they cite as they stand. Edit a
   sentence or a cite, or pack the sources again, and it fails until the
-  support checker and the claims check run again.
+  support checker and the claims check run again. A sentence edited after
+  voicing fails it too (`scene <id>'s narration is not what voice.json voiced`)
+  until the voice stage runs again, since the render speaks the voiced words.
 - `critic`: no hard failure in any scene's sample stills, judged by one
   subagent per scene (`agents/critic.md`) that describes each still as a
   stranger would, then names what blocks: `unreadable` text, an `invented`
@@ -164,15 +169,17 @@ The critic runs on the stills of the gates' own render. While a scene has no
 verdict, its line reads `gate critic: pending: round <r> of 2, <k> of <n>
 scene(s) judged, stills in <dir>` and the exit is 1. Fix the failing gates
 first; once none fails, the last line ends `; next: run the critic, round <r>
-of 2`: dispatch the critics on `<run>/<dir>` (SKILL.md step 11), then run the
+of 2`: dispatch the critics on `<dir>`, relative to the run folder (SKILL.md
+step 11), then run the
 gates again. A scene whose stills, and the narration and
 excerpts every critic reads, are unchanged keeps its last verdict, so only a
 changed scene is judged again. The critic has two rounds per voice: a red
 second round is final, `; stop: the critic's second round is red, no video`,
-and a later render past two rounds carries the second round's verdict
+and a later gates run past two rounds carries the second round's verdict
 (`carried: no third round`).
 
-The last line is `gates: <p> pass, <f> fail`. Each red run after a change to
+The last line is `gates: <p> pass, <f> fail`, with `, 1 pending` while the
+critic is. Each red run after a change to
 the project is one fix attempt; a re-run with nothing changed counts none. The
 first two red runs end `; next: fix attempt <n> of 2`, the third `; stop: red
 after two fix attempts, no video`. Stop there and report the findings. A pass,

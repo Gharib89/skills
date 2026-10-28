@@ -23,7 +23,7 @@ How a creative video is divided into chapters: each chapter's title, focus, leng
 _Avoid_: part plan (that is an explainer video's), outline, table of contents
 
 **Critic**:
-A subagent per scene that reads a creative video's sample frames with the narration and the excerpts it cites, describes each still as a stranger would, and names its hard failures: unreadable text, an invented fact on screen (never staging) and a broken right-to-left layout. Its hard failures block like a gate; it gives no scores.
+A subagent per scene that reads a creative video's sample stills with the narration and the excerpts it cites, describes each still as a stranger would, and names its hard failures: unreadable text, an invented fact on screen (never staging) and a broken right-to-left layout. Its hard failures block like a gate; it gives no scores.
 _Avoid_: judge, grader, stills review (the advisory read before the gates)
 
 **Direction**:

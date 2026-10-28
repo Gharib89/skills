@@ -67,7 +67,7 @@ test("verdicts with no failure pass, and gates.json keeps each still's descripti
   assert.equal(described[0].stills[0].sees, "a frame of hook");
 });
 
-test("an invented, unreadable or rtl failure fails the critic as one fix attempt, led by the scene's start", () => {
+test("an invented or unreadable failure fails the critic as one fix attempt, led by the scene's start", () => {
   const fx = timed();
   raw(fx);
   critics(fx, {
@@ -81,6 +81,21 @@ test("an invented, unreadable or rtl failure fails the critic as one fix attempt
     `fail: 2 finding(s), first: ${start} s context: invented: The card "ten times faster" is in no sentence., round 1 of 2 vs no unreadable, invented or rtl content`,
   );
   assert.match(r.out, /^gates: 9 pass, 1 fail; next: fix attempt 1 of 2$/m);
+});
+
+test("a gates.json whose critic has no rounds is refused by name", () => {
+  const fx = timed();
+  raw(fx);
+  const f = path.join(fx.dir, "gates.json");
+  const g = record(fx);
+  delete g.gates.critic.rounds;
+  fs.writeFileSync(f, JSON.stringify(g));
+  const r = raw(fx);
+  assert.equal(r.code, 1);
+  assert.match(
+    r.err,
+    /^gates: gates\.json: gates\.critic\.rounds is not a list/,
+  );
 });
 
 test("a verdict with scores, a kind outside the three, or a still left undescribed is refused by name", () => {

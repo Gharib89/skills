@@ -3,28 +3,35 @@
 //
 //   node gates.mjs <run-folder>
 //
-// Reads <run>/timeline.json, script.json, brief.json (optional: `must` and
-// `avoid` word lists) and <run>/project/. Samples each scene 0.3 s in, at its
-// middle and on its last frame (gates/samples.mjs), and measures the samples
-// with HyperFrames' check, a text probe (one launch, over the samples and a
-// 0.25 s grid) and two snapshot launches. Eight gates judge the project, each a
-// hard fail: determinism (the same pixels twice), layout, contrast, reading
-// time, the caption band, anchors (an at() naming a word the narration lacks),
-// script errors (a scene's script that throws) and must and avoid. Length,
+// Reads <run>/timeline.json, voice.json, script.json, brief.json (optional:
+// `must` and `avoid` word lists), excerpts.json, claims.json, the critic's
+// verdicts and <run>/project/. Samples each scene 0.3 s in, at its middle and
+// on its last frame (gates/samples.mjs), and measures the samples with
+// HyperFrames' check, a text probe (one launch, over the samples and a 0.25 s
+// grid) and two snapshot launches. Ten gates judge the project, each a hard
+// fail: determinism (the same pixels twice), layout, contrast, reading time,
+// the caption band, anchors (an at() naming a word the narration lacks),
+// script errors (a scene's script that throws), must and avoid, support (the
+// claims check passed on the voiced narration) and the critic
+// (gates/critic.mjs), pending until each scene's verdict is written. Length,
 // loudness and voice QC are the voice and render stages' own. Advisory warnings
 // (gates/warnings.mjs) never change the exit: effect rate, effect onset, scene
 // length, sentences, pacing and clock.
-// stdout: `gate <name>: pass|fail: <measured> vs <floor>` per gate (the rest of
-//         a failing gate's findings indented under it), `warn <name>: <detail>`
-//         per warning, then `gates: <n> pass, <m> fail`, when red ending `; next:
-//         fix attempt <a> of 2` or, past two, `; stop: red after two fix
-//         attempts, no video`
+// stdout: `gate <name>: pass|fail|pending: <measured> vs <floor>` per gate (the
+//         rest of a failing gate's findings indented under it), `warn <name>:
+//         <detail>` per warning, then `gates: <n> pass, <m> fail[, 1 pending]`,
+//         when red ending `; next: fix attempt <a> of 2` or, past two, `; stop:
+//         red after two fix attempts, no video`, on a red second critic round
+//         `; stop: the critic's second round is red, no video`, and with only
+//         the critic left `; next: run the critic, round <r> of 2`
 // writes: <run>/gates.json (the inputs and voice it is of, the attempts, each
 //         gate's status, measured, floor and evidence, the warnings),
-//         .cache/gates/frames/a and b, and the root again (render/root.mjs)
-// exit:   0 every gate passes · 1 a gate fails, or `gates: <why>` on stderr
-//         (the render's own refusals: no timeline, an older voice, a missing
-//         scene file) · 2 usage
+//         .cache/gates/frames/a and b, the critic's stills under
+//         .cache/critic/<key>, and the root again (render/root.mjs)
+// exit:   0 every gate passes · 1 a gate fails or the critic is pending, or
+//         `gates: <why>` on stderr (the render's own refusals: no timeline, an
+//         older voice, a missing scene file; a malformed critic verdict) ·
+//         2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { claimsKey } from "../lib/claims.mjs";
@@ -66,7 +73,7 @@ const MARGIN_Y = Math.round(HEIGHT * 0.05);
 const BAND = HEIGHT - 220;
 const MAX_ATTEMPTS = 2;
 
-const { timeline } = readTimeline(run, fail);
+const { timeline, voice: voiced } = readTimeline(run, fail);
 const script = readJson(run, "script.json");
 const brief = maybeJson(run, "brief.json");
 const prev = maybeJson(run, "gates.json");
@@ -299,18 +306,29 @@ for (const x of brief?.avoid ?? []) {
 
 // Support: the claims check (source/claims.mjs) passed on the narration and the
 // source pack as they stand, so every sentence stating a fact cites excerpts
-// that support it.
+// that support it, and that narration is the one voiced, so the render speaks
+// only judged words.
 const pack = maybeJson(run, "excerpts.json");
-const scriptCheck = maybeJson(run, "claims.json");
+const claims = maybeJson(run, "claims.json");
+const unvoiced = script.scenes
+  .filter(
+    (s, i) =>
+      voiced.scenes[i]?.words.map((w) => w.text).join(" ") !==
+      s.narration.join(" "),
+  )
+  .map(
+    (s) =>
+      `scene ${s.id}'s narration is not what voice.json voiced: run the voice stage again`,
+  );
 const support = !pack
   ? ["no excerpts.json: run the source stage"]
-  : !scriptCheck
+  : !claims
     ? ["no claims.json: run source/claims.mjs"]
-    : scriptCheck.passed !== claimsKey(script, pack)
+    : claims.passed !== claimsKey(script, pack)
       ? [
           "the claims check has not passed on this script and source pack: run source/claims.mjs",
         ]
-      : [];
+      : unvoiced;
 
 const summary = (ev) =>
   `${ev.length} finding(s)${ev.length ? `, first: ${ev[0]}` : ""}`;

@@ -46,3 +46,25 @@ test("no claims.json, or one passed on other claims or another pack, fails suppo
   fs.writeFileSync(pack, JSON.stringify(p));
   only(runGates(fx), "support");
 });
+
+test("a narration edited after voicing fails support though the claims check passed on it", () => {
+  const fx = timed();
+  write(
+    fx,
+    cited(SCENES).map((s) =>
+      s.id === "hook"
+        ? {
+            ...s,
+            narration: ["Ship drives two issues to a merged pull request."],
+          }
+        : s,
+    ),
+  );
+  supported(fx);
+  const r = runGates(fx);
+  only(r, "support");
+  assert.equal(
+    gateLine(r, "support"),
+    `fail: 1 finding(s), first: scene hook's narration is not what voice.json voiced: run the voice stage again vs ${FLOOR}`,
+  );
+});

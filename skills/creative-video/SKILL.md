@@ -168,13 +168,15 @@ render.
    sentence comes from an excerpt in the outline and cites it: each scene's
    `cites` holds one list of excerpt ids per sentence, `[]` for a sentence
    stating no fact. This version voices one narrator: anyone else in the cast
-   is drawn, or speaks in on-screen text. Then dispatch one subagent with
+   is drawn, or speaks in on-screen text. Run the claims check,
+   `node <skill>/scripts/source/claims.mjs <run>`, and fix the cites until
+   its `claims cites:` line passes. Then dispatch one subagent with
    `<skill>/agents/support-checker.md` as its prompt, `{run}` the run folder
    and `{skill}` this skill's folder; it judges each sentence against its
    excerpts and replies with the claims check's `claims support:` line. Run
-   `node <skill>/scripts/source/claims.mjs <run>` yourself before voicing:
-   on exit 1 fix what its `claims <check>: fail` lines name (a cite, or a
-   sentence's words or cites) and dispatch the checker again. On `; stop:
+   the claims check yourself before voicing: on exit 1 fix what its
+   `claims <check>: fail` lines name (a cite, or a sentence's words or
+   cites) and dispatch the checker again. On `; stop:
    unsupported claims after two fix attempts`, stop: report each failing
    sentence and ask what the video may say.
 7. **Voice.** Run [reference/voice.md](reference/voice.md)'s steps until the
@@ -202,11 +204,14 @@ render.
     On `; next: run the critic`, the `gate critic: pending` line names the
     stills folder: dispatch one subagent per scene that has no verdict there,
     with `<skill>/agents/critic.md` as its prompt, `{run}` the run folder,
-    `{scene}` the scene's id and `{stills}` that folder, at most 20 at once,
-    the next batch once all have replied; then run the gates again. Never read
-    the stills or the verdicts in this thread: the gates read them. A `gates:
-    critic verdict <scene>.json: <why>` refusal goes, word for word, to that
-    scene's critic to fix its verdict.
+    `{scene}` the scene's id and `{stills}` that folder as the line prints it,
+    relative to the run folder (`.cache/critic/<key>`), at most 20 at once,
+    the next batch once all have replied; then run the gates again. A scene
+    has no verdict when `stills.json` there names it and no `<scene>.json`
+    sits beside it. Never read the stills or the verdicts in this thread: the
+    gates read them. A `gates: critic verdict <scene>.json: <why>` refusal
+    goes, word for word, to that scene's critic by SendMessage to fix its
+    verdict; once it replies, run the gates again.
 12. **Render.** `node <skill>/scripts/render/render.mjs <run>`; it refuses
     until the gates pass on the current project. On exit 1 fix what it names
     and render again.

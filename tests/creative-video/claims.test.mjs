@@ -33,51 +33,63 @@ test("a script whose every sentence is supported or connective passes, and claim
 });
 
 test("a scene without cites, a cites list of another length, or a cite outside the pack fails cites", () => {
-  const scenes = cited(SCENES, CITES);
-  delete scenes[2].cites;
-  scenes[1].cites = [["ex-2"]];
-  scenes[0].cites = [["ex-9"]];
-  const fx = run(scenes, null);
-  const r = runCheck(fx);
-  assert.equal(r.code, 1);
-  assert.equal(
-    gate(r, "cites"),
-    "fail: hook 1: ex-9 is not in excerpts.json; context: 2 sentence(s), 1 cites list(s); recap: no cites, one list of excerpt ids per sentence, [] for a sentence stating no fact",
-  );
-  assert.equal(record(fx).passed, undefined);
+  for (const [scene, cites, why] of [
+    [
+      2,
+      undefined,
+      "recap: no cites, one list of excerpt ids per sentence, [] for a sentence stating no fact",
+    ],
+    [1, [["ex-2"]], "context: 2 sentence(s), 1 cites list(s)"],
+    [0, [["ex-9"]], "hook 1: ex-9 is not in excerpts.json"],
+  ]) {
+    const scenes = cited(SCENES, CITES);
+    scenes[scene].cites = cites;
+    const fx = run(scenes, null);
+    const r = runCheck(fx);
+    assert.equal(r.code, 1);
+    assert.equal(gate(r, "cites"), `fail: ${why}`);
+    assert.equal(record(fx).passed, undefined);
+  }
 });
 
-test("a cited sentence its excerpts do not support, or an uncited one stating a fact, fails support: attempt 1, again 1, a new set 2, then stop", () => {
+test("a cited sentence its excerpts do not support, or an uncited one stating a fact, fails support", () => {
+  for (const [at, verdict] of [
+    ["hook 1", "unsupported"],
+    ["recap 1", "unmarked"],
+  ]) {
+    const r = runCheck(run(cited(SCENES, CITES), { [at]: verdict }));
+    assert.equal(r.code, 1);
+    assert.equal(gate(r, "support"), `fail: ${at} ${verdict}: fixture`);
+    assert.match(
+      r.out,
+      /^claims: 1 pass, 1 fail, 0 warn; next: fix attempt 1 of 2$/m,
+    );
+  }
+});
+
+test("a red support verdict is fix attempt 1, again 1, a new failing set 2, then stop", () => {
   const scenes = cited(SCENES, CITES);
-  const fx = run(scenes, { "hook 1": "unsupported", "recap 1": "unmarked" });
-  let r = runCheck(fx);
-  assert.equal(r.code, 1);
-  assert.equal(
-    gate(r, "support"),
-    "fail: hook 1 unsupported: fixture; recap 1 unmarked: fixture",
-  );
-  assert.match(
-    r.out,
-    /^claims: 1 pass, 1 fail, 0 warn; next: fix attempt 1 of 2$/m,
-  );
+  const fx = run(scenes, { "hook 1": "unsupported" });
   assert.match(runCheck(fx).out, /; next: fix attempt 1 of 2$/m);
-  // the narration rewritten: a new verdict set is the next attempt
-  const fixed = scenes.map((s) =>
-    s.id === "recap" ? { ...s, narration: ["It ends where it began."] } : s,
-  );
-  write(fx, fixed);
-  judge(fx, fixed, { "hook 1": "unsupported" });
-  assert.match(runCheck(fx).out, /; next: fix attempt 2 of 2$/m);
-  const again = fixed.map((s) =>
-    s.id === "hook"
-      ? { ...s, narration: ["Ship drives an issue to a merge."] }
-      : s,
-  );
-  write(fx, again);
-  judge(fx, again, { "hook 1": "unsupported" });
-  r = runCheck(fx);
-  assert.equal(r.code, 1);
-  assert.match(r.out, /; stop: unsupported claims after two fix attempts$/m);
+  assert.match(runCheck(fx).out, /; next: fix attempt 1 of 2$/m);
+  // the failing sentence rewritten: a new verdict set is the next attempt
+  let r;
+  for (const [words, line] of [
+    ["Ship drives an issue to a merge.", /; next: fix attempt 2 of 2$/m],
+    [
+      "Ship drives one issue to a merge.",
+      /; stop: unsupported claims after two fix attempts$/m,
+    ],
+  ]) {
+    const next = scenes.map((s) =>
+      s.id === "hook" ? { ...s, narration: [words] } : s,
+    );
+    write(fx, next);
+    judge(fx, next, { "hook 1": "unsupported" });
+    r = runCheck(fx);
+    assert.equal(r.code, 1);
+    assert.match(r.out, line);
+  }
 });
 
 test("no support.json, one older than excerpts.json, or one judging other words fails support with what to run", () => {
@@ -122,6 +134,20 @@ test("an unchanged sentence judged again keeps its first verdict, and a differen
     "warn: hook 1 drift: judged unsupported on unchanged words, kept supported",
   );
   assert.match(r.out, /^claims: 1 pass, 0 fail, 1 warn$/m);
+});
+
+test("a claims.json whose fix attempts are not a number is refused by name", () => {
+  const fx = run(cited(SCENES, CITES), { "hook 1": "unsupported" });
+  runCheck(fx);
+  const c = record(fx);
+  c.support.attempts = "one";
+  fs.writeFileSync(path.join(fx.dir, "claims.json"), JSON.stringify(c));
+  const r = runCheck(fx);
+  assert.equal(r.code, 1);
+  assert.match(
+    r.err,
+    /^claims: claims\.json: support\.attempts is not a number/,
+  );
 });
 
 test("a run folder with no excerpts.json is refused by name", () => {

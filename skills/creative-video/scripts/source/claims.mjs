@@ -28,6 +28,7 @@ import { maybeJson, readJson } from "../lib/json.mjs";
 import { stage } from "../lib/stage.mjs";
 
 stage("claims");
+const MAX_ATTEMPTS = 2;
 const [run, ...rest] = process.argv.slice(2);
 if (!run || rest.length) {
   console.error("usage: node claims.mjs <run-folder>");
@@ -186,9 +187,9 @@ console.log(
   `claims: ${count("pass")} pass, ${failed} fail, ${count("warn")} warn${
     !red
       ? ""
-      : support.attempts > 2
+      : support.attempts > MAX_ATTEMPTS
         ? "; stop: unsupported claims after two fix attempts"
-        : `; next: fix attempt ${support.attempts} of 2`
+        : `; next: fix attempt ${support.attempts} of ${MAX_ATTEMPTS}`
   }`,
 );
 process.exit(failed ? 1 : 0);

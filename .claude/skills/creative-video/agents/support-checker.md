@@ -74,9 +74,11 @@ failing sentence with its verdict and reason. A sentence whose place, words,
 cites and cited excerpts an earlier check already judged keeps that first
 verdict and its reason, which may not be yours; a `drift` finding says you
 judged it differently this time, and needs no action. A sentence it calls `not
-judged` has no entry matching it: fix the entry's `scene`, `n` or `text` and
-run the claims check again, at most twice. Keep each verdict as you judged it,
-drift or not: fix only `scene`, `n`, `text` and `cites`.
+judged` has no entry matching it: fix the entry's `scene`, `n`, `text` or
+`cites` and run the claims check again, at most twice. A `the cites fail`
+finding is the run's to fix, not yours: reply with the line as it reads.
+Keep each verdict as you judged it, drift or not: fix only `scene`, `n`,
+`text` and `cites`.
 
 ## Report
 
