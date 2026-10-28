@@ -118,16 +118,28 @@ test("credits name the voices voice.json voiced, not a cast.json edited since", 
   assert.match(read(file(fx)), /^- chef: am_fenrir \(kokoro, Apache-2\.0\)$/m);
 });
 
-test("a run with no voice.json, or one with no voices, is refused by name", () => {
+test("a run with no voice.json, or one with no voices or no roles, is refused by name", () => {
   const fx = fixture();
   const r = exec(credits, fx);
   assert.equal(r.code, 1);
   assert.match(r.err, /^credits: .*voice\.json/);
   voice(fx);
   const json = path.join(fx.dir, "voice.json");
-  const { voices: _, ...rest } = JSON.parse(read(json));
-  fs.writeFileSync(json, JSON.stringify(rest));
-  const old = exec(credits, fx);
-  assert.equal(old.code, 1);
-  assert.equal(old.err.trim(), "credits: voice.json: voices is not an object");
+  const voiced = JSON.parse(read(json));
+  const refused = (doc) => {
+    fs.writeFileSync(json, JSON.stringify(doc));
+    const bad = exec(credits, fx);
+    assert.equal(bad.code, 1);
+    return bad.err.trim();
+  };
+  const { voices: _, ...noVoices } = voiced;
+  assert.equal(
+    refused(noVoices),
+    "credits: voice.json: voices is not an object",
+  );
+  const [{ roles: __, ...noRoles }, ...rest] = voiced.scenes;
+  assert.equal(
+    refused({ ...voiced, scenes: [noRoles, ...rest] }),
+    "credits: voice.json: scenes[0].roles is not a list",
+  );
 });
