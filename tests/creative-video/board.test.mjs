@@ -385,6 +385,37 @@ test("a change to the kit refuses the next build after notes on a scene", () => 
   );
 });
 
+test("after notes on a scene, a change to over.html or an asset refuses the next build, a new asset does not", () => {
+  const fx = ready();
+  const asset = (f, bytes) =>
+    fs.writeFileSync(path.join(fx.dir, "project", "assets", f), bytes);
+  compose(fx, "over", "<p>bed</p>");
+  asset("tick.wav", "a");
+  ok(build(fx));
+  ok(apply(fx, answersText(1, "hook: slower")));
+  asset("whoosh.wav", "b");
+  ok(build(fx));
+  ok(apply(fx, answersText(2, "hook: slower")));
+  compose(fx, "over", "<p>bed, louder</p>");
+  asset("tick.wav", "c");
+  const r = build(fx);
+  assert.equal(r.code, 1);
+  assert.equal(
+    r.err,
+    "board: over.html, assets/tick.wav changed, but board 2's comments named only hook: re-author only those scenes\n",
+  );
+});
+
+test("notes on a scene beside an approval still hold the guard", () => {
+  const fx = ready();
+  ok(build(fx));
+  ok(apply(fx, answersText(1, "Approved: the look", "hook: slower")));
+  compose(fx, "context", "<p>another</p>");
+  const r = build(fx);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^board: context changed, but board 1's comments/);
+});
+
 test("after a look comment, a direction pick or no answers, any change builds", () => {
   for (const answers of [
     answersText(1, "Look: warmer", "hook: slower"),

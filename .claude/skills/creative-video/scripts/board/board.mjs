@@ -11,8 +11,9 @@
 // (gates/samples.mjs) in one snapshot launch and one frame of each direction not
 // picked, and writes the board and its page. A scene is judged by the hash of
 // its file; after answers that commented on scenes alone, a build refuses a
-// change to any scene they did not name, or to the kit, so a comment on one
-// scene re-authors only that scene.
+// change to any scene they did not name, to the kit, to over.html or to an
+// asset the last board had, so a comment on one scene re-authors only that
+// scene.
 // apply reads an answers file, the answers document as JSON or the answers
 // text, and says what it asks: it accepts only answers to the latest board.
 // stdout: build, `board: <n> -> board/storyboard.html (<k> scenes, <m> stills,
@@ -32,7 +33,8 @@
 // exit:   0 ok · 1 refused, `board: <why>` on stderr (a missing timeline,
 //         scene file, storyboard.json, direction frame or gsap.min.js; an
 //         invalid storyboard.json; a script.json lacking a timed scene; a
-//         scene or the kit changed that the comments did not name; answers of
+//         scene, the kit, over.html or an asset changed that the comments did
+//         not name; answers of
 //         an older board, naming an unknown scene or direction or the one in
 //         use, cut to fit, or unreadable) · 2 usage
 import crypto from "node:crypto";
@@ -87,6 +89,24 @@ function kitHash(proj) {
   return h.digest("hex").slice(0, 16);
 }
 
+// Each file under assets/ but the two timing writes, by name: a scene may add
+// one, but one that changes or goes changes every scene that uses it.
+function assetHashes(proj) {
+  const dir = path.join(proj, "assets");
+  if (!fs.existsSync(dir)) return {};
+  return Object.fromEntries(
+    fs
+      .readdirSync(dir, { recursive: true })
+      .sort()
+      .filter(
+        (f) =>
+          !["narration.wav", "gsap.min.js"].includes(f) &&
+          fs.statSync(path.join(dir, f)).isFile(),
+      )
+      .map((f) => [f, sha(fs.readFileSync(path.join(dir, f)))]),
+  );
+}
+
 // storyboard.json held to what the stage relies on beyond its shape.
 function readStoryboard(timeline) {
   const sb = readJson(run, "storyboard.json");
@@ -116,12 +136,13 @@ function readStoryboard(timeline) {
   return sb;
 }
 
-// After answers that commented on scenes alone, only those scenes may change.
-function guardScenes(n, hashes, kit) {
+// After answers that commented on scenes, with no look or direction, only those
+// scenes may change: notes beside an approval win over it, as apply prints.
+function guardScenes(n, hashes, kit, over, assets) {
   const answered = path.join(out, `answers-${n - 1}.json`);
   if (!fs.existsSync(answered)) return;
   const a = JSON.parse(fs.readFileSync(answered, "utf8"));
-  if (!a.scenes.length || a.direction || a.look || a.approve) return;
+  if (!a.scenes.length || a.direction || a.look) return;
   const prev = readBoard(n - 1);
   const was = new Map(prev.scenes.map((s) => [s.id, s.hash]));
   const named = a.scenes.map((s) => s.id);
@@ -129,6 +150,9 @@ function guardScenes(n, hashes, kit) {
     .filter(([id, h]) => !named.includes(id) && was.get(id) !== h)
     .map(([id]) => id);
   if (kit !== prev.kit) changed.push("the kit");
+  if (over !== prev.over) changed.push("over.html");
+  for (const [f, h] of Object.entries(prev.assets))
+    if (assets[f] !== h) changed.push(`assets/${f}`);
   if (changed.length)
     fail(
       `${changed.join(", ")} changed, but board ${n - 1}'s comments named only ${named.join(", ")}: re-author only those scenes`,
@@ -198,7 +222,10 @@ async function build() {
     ]),
   );
   const kit = kitHash(proj);
-  if (n > 1) guardScenes(n, hashes, kit);
+  const overFile = path.join(proj, "compositions", "over.html");
+  const over = fs.existsSync(overFile) ? sha(fs.readFileSync(overFile)) : null;
+  const assets = assetHashes(proj);
+  if (n > 1) guardScenes(n, hashes, kit, over, assets);
   writeIgnore(run);
   writeRoot(run);
 
@@ -285,6 +312,8 @@ async function build() {
     ],
     directions,
     kit,
+    over,
+    assets,
     scenes,
   };
   fs.writeFileSync(

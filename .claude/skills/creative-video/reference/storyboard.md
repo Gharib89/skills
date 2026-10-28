@@ -40,8 +40,10 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
    then prints `board: <n> -> board/storyboard.html (...)` and `board: files
    board/files.json`. Exit 1 names what to fix first. `board: <ids> changed,
    but board <n-1>'s comments named only <ids>: re-author only those scenes`
-   means you changed a scene nobody commented on, or the kit (`<ids>` then
-   holds `the kit`): put back each one it names as it was, and build again.
+   means you changed a scene nobody commented on, the kit, `over.html` or an
+   asset another scene may use (`<ids>` then holds `the kit`, `over.html` or
+   `assets/<file>`): put back each one it names as it was, and build again. A
+   new asset is fine.
 4. **Show it.** Published: `Artifact` publish with `file_path`
    `<run>/board/storyboard.html` and `files` the map `board/files.json` holds;
    on the first board add `capabilities` `{"db": {}, "user": {}, "comments":

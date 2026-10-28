@@ -55,6 +55,8 @@ nothing outside this table, and every field below is in every board.
 | `board.directions[].picked` | boolean | Whether it is the one the scenes are authored in. |
 | `board.directions[].frame` | string | Its frame, a still, a path relative to the page. The picked direction's is chapter 1's first scene at its key. |
 | `board.kit` | string | The hash of the project's kit files; `build` compares it with the last board's. |
+| `board.over` | string or null | The hash of `compositions/over.html`, null without one; `build` compares it with the last board's. |
+| `board.assets` | object | Each file under `assets/` but `narration.wav` and `gsap.min.js`, by its path there, to its hash; `build` refuses one of the last board's that changed or went. |
 | `board.scenes` | array | Every scene, in timeline order. |
 | `board.scenes[].id` | string | The scene's id. |
 | `board.scenes[].chapter` | number | The chapter it belongs to. |
