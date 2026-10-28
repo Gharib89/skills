@@ -23,7 +23,8 @@
 //         (assets/sounds/<name>), licence, creator, url and attribution, the
 //         store, and <run>/project/assets/sounds/
 // exit:   0 every sound found or dropped · 1 refused, `sounds: <why>` on
-//         stderr (no sound.json, or a malformed one) · 2 usage
+//         stderr (no sound.json, a malformed one, or a malformed queries.json:
+//         `sounds: <path> is malformed: <why>`) · 2 usage
 import fs from "node:fs";
 import path from "node:path";
 import { readJson } from "../lib/json.mjs";
@@ -46,9 +47,26 @@ const KENNEY = dest({ kind: "sounds" });
 const store = path.dirname(KENNEY);
 const assets = path.join(run, "project", "assets", "sounds");
 const recordFile = path.join(store, "queries.json");
-const records = fs.existsSync(recordFile)
-  ? JSON.parse(fs.readFileSync(recordFile, "utf8"))
-  : {};
+const records = fs.existsSync(recordFile) ? readRecords() : {};
+// The store's query records, each a found sound's fields by `<kind>:<query>`,
+// held to the `source` and `file` every reader of a record takes.
+function readRecords() {
+  const refuse = (why) => {
+    throw new Error(`${recordFile} is malformed: ${why}`);
+  };
+  let v;
+  try {
+    v = JSON.parse(fs.readFileSync(recordFile, "utf8"));
+  } catch (e) {
+    refuse(e.message);
+  }
+  if (!v || typeof v !== "object" || Array.isArray(v))
+    refuse("it is not an object");
+  for (const [key, r] of Object.entries(v))
+    for (const f of ["source", "file"])
+      if (typeof r?.[f] !== "string") refuse(`${key}.${f} is not text`);
+  return v;
+}
 // Formats the render plays.
 const PLAYS = ["mp3", "ogg", "wav", "flac"];
 

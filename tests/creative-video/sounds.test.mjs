@@ -254,3 +254,37 @@ test("a dropped sound put back with its query replaces its earlier drop, and lea
   assert.equal(fetch(fx, {}).code, 0);
   assert.equal(events(), undefined);
 });
+
+test("a malformed sound.json is refused by its field before any search", () => {
+  const fx = fixture();
+  kit(fx, { palette: [{ event: "ticket" }] });
+  const r = fetch(fx);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.equal(
+    r.err.trim(),
+    "sounds: project/kit/sound.json: palette[0].query is not text",
+  );
+  assert.deepEqual(calls(fx), []);
+});
+
+test("a malformed queries.json in the store is refused by its path and field", () => {
+  const fx = fixture();
+  kit(fx);
+  const file = store(fx, "queries.json");
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const refused = (body, why) => {
+    fs.writeFileSync(file, body);
+    const r = fetch(fx);
+    assert.equal(r.code, 1, r.out + r.err);
+    assert.equal(r.err.trim(), `sounds: ${file} is malformed: ${why}`);
+  };
+  refused(
+    JSON.stringify({ "palette:paper tear": { file: "assets/sounds/x.ogg" } }),
+    "palette:paper tear.source is not text",
+  );
+  refused(
+    JSON.stringify({ "bed:kitchen ambience": { source: "openverse:bed-1" } }),
+    "bed:kitchen ambience.file is not text",
+  );
+  refused("[]", "it is not an object");
+});
