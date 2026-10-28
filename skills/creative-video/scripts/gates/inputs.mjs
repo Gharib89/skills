@@ -9,7 +9,7 @@ const hex = (h) => h.digest("hex").slice(0, 16);
 // The files under `dir`, through symlinks to files and folders, since the
 // project loads what a link points at; a folder seen before is walked once, so
 // a link loop ends.
-function walk(dir, seen = new Set()) {
+export function walk(dir, seen = new Set()) {
   const real = fs.realpathSync(dir);
   if (seen.has(real)) return [];
   seen.add(real);

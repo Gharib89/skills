@@ -69,6 +69,7 @@ test("scenes grid back to back from the voice durations, and the timeline carrie
 
 test("the root lists the scene hosts in order on the grid, then the captions host and the narration", () => {
   const fx = voiced();
+  author(fx, ids);
   assert.equal(exec(timing, fx).code, 0);
   const tl = readJson(path.join(fx.dir, "timeline.json"));
   const html = read(project(fx, "index.html"));
@@ -115,6 +116,7 @@ test("the root lists the scene hosts in order on the grid, then the captions hos
 
 test("an over.html adds the over host on track 2, and the kit's files load sorted", () => {
   const fx = voiced();
+  author(fx, ids);
   assert.equal(exec(timing, fx).code, 0);
   const bare = read(project(fx, "index.html"));
   assert.ok(!bare.includes('id="over"'));

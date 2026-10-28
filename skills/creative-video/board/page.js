@@ -37,9 +37,14 @@ const locked = (S) =>
 function setAnswers(S, docs) {
   S.answers = docs;
 }
-// A chapter is approved once an approving answers document of the latest version is in the database,
+const cardsOf = (S, n) => S.board.scenes.filter((c) => c.chapter === n);
+// A chapter with no card yet, or only some, is still being authored: there is nothing in it to approve.
+// Otherwise it is approved once an approving answers document of the latest version is in the database,
 // or, on a local page, which has no database, once its approval is asked for.
 function statusOf(S, n) {
+  const c = S.board.chapters.find((x) => x.n === n);
+  if (c.status === "authoring" || !cardsOf(S, n).length)
+    return "being authored";
   if (
     S.answers.some(
       (a) => a.version === S.board.version && a.approve === true,
@@ -47,7 +52,6 @@ function statusOf(S, n) {
     (S.local && approving(S))
   )
     return "approved";
-  const c = S.board.chapters.find((x) => x.n === n);
   return c.status === "awaiting" ? "awaiting you" : c.status;
 }
 
@@ -137,8 +141,8 @@ function view(S) {
     <nav class="tabs" role="tablist">${b.chapters.map((c) => tab(S, c)).join("")}</nav>
     <section class="chapter" role="tabpanel" aria-labelledby="tab-${esc(chapter.n)}">
       ${chapter.n === 1 ? directionsPanel(S, b) : ""}
-      <div class="cards">${b.scenes
-        .filter((c) => c.chapter === chapter.n)
+      ${statusOf(S, chapter.n) === "being authored" ? '<p class="lede">This chapter is being authored: its scenes join the board as they are made.</p>' : ""}
+      <div class="cards">${cardsOf(S, chapter.n)
         .map((c) => card(S, c))
         .join("")}</div>
     </section>

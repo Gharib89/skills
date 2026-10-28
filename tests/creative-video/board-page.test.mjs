@@ -226,6 +226,50 @@ test("the view shows the tab and plan, the directions, the scene cards and the s
   );
 });
 
+test("a video in chapters has a tab per chapter with its status, cards under their own chapter's tab, and every chapter in the plan", () => {
+  const chaptered = clone(doc);
+  const [first, ...more] = chaptered.scenes;
+  first.chapter = 1;
+  more.forEach((s) => (s.chapter = 2));
+  chaptered.chapters = [
+    { n: 1, title: "The loop", status: "awaiting" },
+    { n: 2, title: "The wrap", status: "authoring" },
+    { n: 3, title: "The last", status: "awaiting" },
+  ];
+  chaptered.plan = chaptered.chapters.map((c) => ({
+    chapter: c.n,
+    title: c.title,
+    length: "1:00",
+    focus: `focus ${c.n}`,
+    sources: [],
+    status: c.status,
+  }));
+  const S = B.newState(chaptered);
+  let v = B.view(S);
+  assert.equal((v.match(/role="tab"/g) ?? []).length, 3);
+  assert.equal((v.match(/data-card=/g) ?? []).length, 1);
+  assert.ok(v.includes(`data-card="${first.id}"`));
+  assert.equal((v.match(/<tr><td>/g) ?? []).length, 3);
+  assert.deepEqual(
+    [1, 2, 3].map((n) => B.statusOf(S, n)),
+    ["awaiting you", "being authored", "being authored"],
+  );
+  B.ACT.tab(S, { n: 2 });
+  v = B.view(S);
+  assert.equal((v.match(/data-card=/g) ?? []).length, more.length);
+  assert.ok(!v.includes(`data-card="${first.id}"`));
+  assert.doesNotMatch(v, /data-act="direction"/);
+  assert.match(v, /being authored: its scenes join the board/);
+  B.ACT.tab(S, { n: 3 });
+  assert.equal((B.view(S).match(/data-card=/g) ?? []).length, 0);
+  // The look's approval covers the video, but not a chapter with nothing to approve yet.
+  B.setAnswers(S, [{ version: 1, approve: true }]);
+  assert.deepEqual(
+    [1, 2, 3].map((n) => B.statusOf(S, n)),
+    ["approved", "being authored", "being authored"],
+  );
+});
+
 test("the view escapes what the board holds", () => {
   const edited = clone(doc);
   edited.scenes[0].notes = '<img src=x onerror="boom()">';

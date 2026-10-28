@@ -1,8 +1,11 @@
-// Maintainer only: the run folders real-render.mjs renders and the frame
-// comparison it reads the renders with.
+// Maintainer only: the run folders real-render.mjs and calibrate-render-rates.mjs
+// render, the stages they run, and the frame comparison real-render.mjs reads
+// the renders with.
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { narrator } from "../scripts/lib/narrators.mjs";
+import { catalogue, dest, skill } from "../scripts/lib/tools.mjs";
 import { FPS } from "../scripts/render/grid.mjs";
 import { HEIGHT, WIDTH } from "../scripts/render/root.mjs";
 
@@ -160,3 +163,70 @@ export const differing = (a, b) =>
   Array.from({ length: Math.max(a.length, b.length) }, (_, i) => i).filter(
     (i) => a[i] !== b[i],
   );
+
+// The rows a real render needs that are not installed: the npm-packages and
+// chrome rows, and ffmpeg and ffprobe on PATH.
+export function missingRows() {
+  const missing = catalogue()
+    .filter((r) => ["npm", "chrome"].includes(r.kind))
+    .filter((r) => !fs.existsSync(path.join(dest(r), ".stamp")))
+    .map((r) => r.id);
+  if (["ffmpeg", "ffprobe"].some((t) => spawnSync(t, ["-version"]).error))
+    missing.push("ffmpeg");
+  return missing;
+}
+
+// The stdout of `cmd`; a failure throws with both streams, since the render
+// stage prints its delivery failures on stdout and its renderer on stderr.
+export function capture(cmd, args) {
+  const r = spawnSync(cmd, args, { encoding: "utf8", maxBuffer: 1 << 26 });
+  if (r.status !== 0) {
+    const files = args.filter(path.isAbsolute).map((a) => path.basename(a));
+    const said = [r.stdout, r.stderr].map((s) => s?.trim()).filter(Boolean);
+    throw new Error(
+      `${path.basename(cmd)} ${files.join(" ")}: ${said.join("\n") || r.error?.message}`,
+    );
+  }
+  return r.stdout;
+}
+
+// Runs the skill's stage `script` (under scripts/) on `run` with `more`
+// arguments after it; the MP4 it would deliver.
+export function runStage(script, run, ...more) {
+  capture(process.execPath, [
+    path.join(skill, "scripts", script),
+    run,
+    ...more,
+  ]);
+  return path.join(run, "out", `${path.basename(run)}.mp4`);
+}
+
+// The claims check and the gates passed on `run`. The critic gate waits on a
+// verdict per scene: a clean one is written for each pending scene, as
+// agents/critic.md writes one, since the critic's judgement is a live probe's
+// to prove, not these scripts'.
+export function gatesPass(run) {
+  runStage("source/claims.mjs", run);
+  const gates = path.join(skill, "scripts", "gates", "gates.mjs");
+  spawnSync(process.execPath, [gates, run], { maxBuffer: 1 << 26 });
+  const record = path.join(run, "gates.json");
+  const critic =
+    fs.existsSync(record) &&
+    JSON.parse(fs.readFileSync(record, "utf8")).gates.critic;
+  if (critic?.status === "pending") {
+    const dir = path.join(run, critic.stills);
+    const set = JSON.parse(fs.readFileSync(path.join(dir, "stills.json")));
+    for (const [id, stills] of Object.entries(set))
+      fs.writeFileSync(
+        path.join(dir, `${id}.json`),
+        JSON.stringify({
+          stills: stills.map(({ t }) => ({
+            t,
+            sees: "a box on a dark ground",
+          })),
+          failures: [],
+        }),
+      );
+  }
+  runStage("gates/gates.mjs", run);
+}

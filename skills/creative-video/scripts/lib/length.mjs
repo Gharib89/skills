@@ -3,6 +3,10 @@
 // scenes with that hold land within 10 percent of the brief's `length`.
 export const HOLD = 1;
 
+// A chapter of a video in chapters runs 2 to 6 minutes within 10 percent: the
+// seconds it may take, the closing hold included on the last one.
+export const CHAPTER_SECONDS = [108, 396];
+
 // Whether `seconds` of scenes and the hold fit a brief `length` of `minutes`.
 export function fitsLength(seconds, minutes) {
   const want = minutes * 60;

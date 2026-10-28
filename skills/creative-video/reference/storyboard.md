@@ -2,11 +2,14 @@
 
 The **storyboard** is where the person meets the video before the expensive
 render, and approves its look once. It is a page with one tab per chapter
-(this version: one) showing the chapter's status; every scene a card of three
+showing the chapter's status; every scene a card of three
 stills (in, key, out) rendered from the authored scene, its timecode, its
 narration and short notes, with a comment box; one comment for the whole look;
 the chapter plan as a table, with no stop of its own; and on chapter 1's board
-the three directions as one frame each. The page is a claude.ai artifact, or a
+the three directions as one frame each. In a video in chapters the person
+approves on chapter 1's board alone; a later chapter shows in the plan and its
+tab while its author works, and its cards appear on the board built once it
+replies. The page is a claude.ai artifact, or a
 local file when the session has no artifact tools.
 [board/board-data.md](../board/board-data.md) holds the board and answers
 documents. Each version of the storyboard is a **board**, numbered from 1.
@@ -14,7 +17,8 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
 `node <skill>/scripts/board/board.mjs <run>`.
 
 1. **Inputs.** Write `<run>/storyboard.json`: the video's `title`, the
-   chapter's `focus` in one line, `directions` (`list` of the three from
+   chapter's `focus` in one line (in chapters, each chapter's comes from the
+   plan), `directions` (`list` of the three from
    `DIRECTIONS.md`, each `id`, `name` and `kind`; the `recommended` id; the
    `picked` id, the one the scenes are authored in), and `scenes`, keyed by
    scene id, each its `title` and `notes` (what the card's stills cannot say:
@@ -44,7 +48,7 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
    commented on, the kit, `over.html` or an
    asset another scene may use (`<ids>` then holds `the kit`, `over.html` or
    `assets/<file>`): put back each one it names as it was, and build again. A
-   new asset is fine.
+   new asset, or a later chapter's newly authored scene, is fine.
 4. **Show it.** Published: `Artifact` publish with `file_path`
    `<run>/board/storyboard.html` and `files` the map `board/files.json` holds;
    on the first board add `capabilities` `{"db": {}, "user": {}, "comments":

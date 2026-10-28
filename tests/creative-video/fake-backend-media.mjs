@@ -1,5 +1,5 @@
 // Canned media tools: the HyperFrames render, the join, the mux, ffprobe,
-// loudness, loudnorm and the poster frame.
+// loudness, loudnorm, the audio master and the poster frame.
 import fs from "node:fs";
 import path from "node:path";
 import { log } from "./fake-backend-log.mjs";
@@ -56,6 +56,13 @@ export async function loudness(file) {
 export async function loudnorm(input, output, { lufs, peak }) {
   log({ call: "loudnorm", input, output, lufs, peak });
   fs.copyFileSync(input, output);
+}
+
+// The mastered mix of a video in chapters: the stand-in of the audio pass,
+// written as a WAV's stand-in of `seconds`.
+export async function masterAudio(input, wav, { lufs, peak, seconds }) {
+  log({ call: "masterAudio", input, wav, lufs, peak, seconds });
+  fs.writeFileSync(wav, JSON.stringify({ ...stand(input), duration: seconds }));
 }
 
 export async function poster(video, seconds, png) {
