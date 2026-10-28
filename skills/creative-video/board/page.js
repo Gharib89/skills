@@ -229,19 +229,36 @@ function status(S, b) {
   return "";
 }
 
+const draftKey = (version) => "board-draft-" + version;
+
 // The draft to restore on board `version`, read through `get` (localStorage's
 // getItem): its own, else the newest earlier board's, so a later chapter's
-// board posted while a comment was being written keeps that comment. A Submit
-// that saved removes its draft, so only an unsent one carries over.
+// board posted while a comment was being written keeps that comment. A sent
+// or answered board keeps no draft (boot's saveDraft), so only an unsent one
+// carries over.
 function savedDraft(get, version) {
   for (let v = version; v > 0; v--) {
     let d = null;
     try {
-      d = JSON.parse(get("board-draft-" + v) || "null");
-    } catch (e) {}
+      d = JSON.parse(get(draftKey(v)) || "null");
+    } catch (e) {} // a draft that is not JSON is none
     if (d && typeof d === "object") return d;
   }
   return null;
+}
+
+// Saves the draft to the store `getStore` returns (localStorage), or removes it
+// once the board is sent or answered, so a later board never restores a sent
+// comment. False when the store refuses.
+function storeDraft(getStore, S) {
+  try {
+    const store = getStore();
+    if (locked(S)) store.removeItem(draftKey(S.board.version));
+    else store.setItem(draftKey(S.board.version), JSON.stringify(S.draft));
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 globalThis.Board = {
@@ -257,6 +274,7 @@ globalThis.Board = {
   setAnswers,
   view,
   savedDraft,
+  storeDraft,
 };
 
 /* ---- boot: the browser only. Wires the capability, the draft, Submit and the copy button. ---- */
@@ -273,20 +291,12 @@ async function boot() {
   const S = newState(embedded());
   S.mode = "loading";
   const app = document.getElementById("app");
-  const key = () => "board-draft-" + S.board.version;
-  const saveDraft = () => {
-    try {
-      localStorage.setItem(key(), JSON.stringify(S.draft));
-    } catch (e) {}
-  };
+  const saveDraft = () => storeDraft(() => localStorage, S);
   // Only what this board can take: a draft of another board's ids is dropped.
   function restoreDraft() {
     let saved = null;
     try {
       saved = savedDraft((k) => localStorage.getItem(k), S.board.version);
-      // An earlier board's draft now lives under this board's key alone.
-      for (let v = 1; v < S.board.version; v++)
-        localStorage.removeItem("board-draft-" + v);
     } catch (e) {}
     if (!saved) return;
     const picks = S.board.directions.filter((d) => !d.picked).map((d) => d.id);
@@ -295,7 +305,12 @@ async function boot() {
     for (const [id, v] of Object.entries(saved.notes || {}))
       if (S.board.scenes.some((c) => c.id === id) && typeof v === "string")
         S.draft.notes[id] = v;
-    saveDraft();
+    // An earlier board's draft moves under this board's key, once it is there.
+    if (saveDraft())
+      try {
+        for (let v = 1; v < S.board.version; v++)
+          localStorage.removeItem(draftKey(v));
+      } catch (e) {}
   }
   function render() {
     const f = document.activeElement,
@@ -382,6 +397,7 @@ async function boot() {
         S,
         snap.docs.map((d) => d.data()),
       );
+      saveDraft();
       render();
     },
     () => {},
@@ -421,13 +437,10 @@ async function boot() {
         () => true,
         () => false,
       );
-    if (saved)
-      try {
-        localStorage.removeItem(key());
-      } catch (e) {}
     const woke = await wake(anchor),
       text = answersText(doc);
     S.status = outcome(saved, woke, capped(text, doc.version) === text);
+    saveDraft();
     render();
   }
   async function rewake() {

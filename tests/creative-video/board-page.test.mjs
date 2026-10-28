@@ -278,19 +278,54 @@ test("a video in chapters has a tab per chapter with its status, cards under the
   );
 });
 
-test("a board posted while a comment was being written restores that unsent draft; its own draft, even empty, comes first", () => {
+test("a board with no draft of its own restores the newest earlier board's draft; its own, even empty, comes first, and one that is not JSON is none", () => {
   const draft = (look) => JSON.stringify({ direction: null, look, notes: {} });
-  const store = { "board-draft-2": draft("darker") };
+  const store = {
+    "board-draft-1": draft("older"),
+    "board-draft-2": draft("darker"),
+  };
   const get = (k) => store[k] ?? null;
   assert.equal(B.savedDraft(get, 3).look, "darker");
   store["board-draft-3"] = draft("");
   assert.equal(B.savedDraft(get, 3).look, "");
   store["board-draft-3"] = "{not json";
   assert.equal(B.savedDraft(get, 3).look, "darker");
+  delete store["board-draft-2"];
+  assert.equal(B.savedDraft(get, 3).look, "older");
   assert.equal(
     B.savedDraft(() => null, 3),
     null,
   );
+});
+
+test("a board keeps its draft until it is sent or answered, then keeps none, and a store that refuses reads false", () => {
+  const store = new Map();
+  const local = {
+    setItem: (k, v) => store.set(k, v),
+    removeItem: (k) => store.delete(k),
+  };
+  const S = B.newState(clone(doc));
+  B.ACT.look(S, { value: "darker" });
+  assert.equal(
+    B.storeDraft(() => local, S),
+    true,
+  );
+  assert.equal(JSON.parse(store.get("board-draft-1")).look, "darker");
+  S.status = "saved";
+  assert.equal(
+    B.storeDraft(() => local, S),
+    true,
+  );
+  assert.equal(store.has("board-draft-1"), false);
+  S.status = "";
+  B.setAnswers(S, [{ version: 1, approve: false }]);
+  store.set("board-draft-1", "{}");
+  B.storeDraft(() => local, S);
+  assert.equal(store.has("board-draft-1"), false);
+  const refuses = () => {
+    throw new Error("SecurityError");
+  };
+  assert.equal(B.storeDraft(refuses, S), false);
 });
 
 test("the view escapes what the board holds", () => {
