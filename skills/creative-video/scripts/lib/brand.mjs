@@ -12,32 +12,85 @@ export const storeDir = (name, dirs = userDirs()) =>
   path.join(dirs.data, "brands", name);
 export const seedFile = (name) => path.join(skill, "brands", `${name}.json`);
 
-// The run's brand.json parsed, or null when the run has none.
-export function readBrand(run) {
-  const file = path.join(run, "brand.json");
-  if (!fs.existsSync(file)) return null;
+const FROM = ["store", "seed", "fetched", "given"];
+const KEBAB = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const HEX = /^#[0-9a-f]{6}$/;
+const text = (v) => typeof v === "string" && v.trim() !== "";
+
+// A brand held to its shape: throws `<label>: <field> <problem>`.
+export function shape(b, label = "brand.json") {
+  const bad = (field, problem) => {
+    throw new Error(`${label}: ${field} ${problem}`);
+  };
+  if (!b || typeof b !== "object" || Array.isArray(b))
+    throw new Error(`${label}: is not an object`);
+  if (!text(b.name) || !KEBAB.test(b.name))
+    bad("name", `"${b.name}" is not kebab-case`);
+  if (!FROM.includes(b.from)) bad("from", `is not ${FROM.join(", ")}`);
+  if (typeof b.once !== "boolean") bad("once", "is not true or false");
+  for (const key of ["colours", "faces"])
+    if (!Array.isArray(b[key]) || !b[key].length)
+      bad(key, "is not a list with at least one entry");
+  for (const [i, c] of b.colours.entries()) {
+    const at = `colours[${i}]`;
+    if (!HEX.test(c?.hex)) bad(`${at}.hex`, "is not a lowercase #rrggbb");
+    if (!text(c.name)) bad(`${at}.name`, "is not text");
+    if (!["measured", "declared"].includes(c.basis))
+      bad(`${at}.basis`, "is not measured or declared");
+    if (!text(c.from)) bad(`${at}.from`, "is not text");
+  }
+  for (const [i, f] of b.faces.entries()) {
+    const at = `faces[${i}]`;
+    if (!text(f?.family) || !KEBAB.test(f.family))
+      bad(`${at}.family`, "is not a Fontsource id");
+    if (!text(f.role)) bad(`${at}.role`, "is not text");
+    if (!["measured", "declared", "replaced"].includes(f.basis))
+      bad(`${at}.basis`, "is not measured, declared or replaced");
+    if (f.basis === "replaced")
+      for (const key of ["was", "why"])
+        if (!text(f[key]))
+          bad(
+            `${at}.${key}`,
+            "is missing: a replaced face names what it replaces (was) and why",
+          );
+    if (
+      f.weights !== undefined &&
+      !(Array.isArray(f.weights) && f.weights.every(Number.isFinite))
+    )
+      bad(`${at}.weights`, "is not a list of numbers");
+  }
+  if (b.logo !== null && !(text(b.logo?.file) && text(b.logo.source)))
+    bad("logo", "is not null or { file, source }");
+  if (!Array.isArray(b.fetched)) bad("fetched", "is not a list");
+  for (const [i, f] of b.fetched.entries())
+    if (!text(f?.url) || !text(f.gave))
+      bad(`fetched[${i}]`, "is not { url, gave }");
+  if (b.from === "fetched" && !b.fetched.length)
+    bad("fetched", "is empty: a fetched brand lists what it fetched");
+}
+
+// A brand file parsed: throws `<label>: is not valid JSON (<why>)`.
+export function parseBrand(file, label = file) {
   try {
     return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (e) {
-    throw new Error(`brand.json: is not valid JSON (${e.message})`);
+    throw new Error(`${label}: is not valid JSON (${e.message})`);
   }
 }
 
-// The Arabic face that goes with a Latin family, by the family's Fontsource
-// category: a serif beside a naskh, a sans or a mono beside Plex, a display or
-// handwriting face beside a kufi.
-export const COMPANION = {
-  serif: "noto-naskh-arabic",
-  "sans-serif": "ibm-plex-sans-arabic",
-  monospace: "ibm-plex-sans-arabic",
-  display: "noto-kufi-arabic",
-  handwriting: "noto-kufi-arabic",
-};
+// The run's brand.json parsed and held to its shape, or null when the run has
+// none.
+export function readBrand(run) {
+  const file = path.join(run, "brand.json");
+  if (!fs.existsSync(file)) return null;
+  const brand = parseBrand(file, "brand.json");
+  shape(brand);
+  return brand;
+}
 
-// The run's brand into the store, whole, unless it was used once: brand.json
+// The run's `brand` into the store, whole, unless it was used once: brand.json
 // with its logo's name rewritten to the copy beside it, `logo.<ext>`.
-export async function saveBrand(run, dirs = userDirs()) {
-  const brand = readBrand(run);
+export async function saveBrand(run, brand, dirs = userDirs()) {
   if (brand.once) return { name: brand.name, saved: false };
   await staged(storeDir(brand.name, dirs), async (part) => {
     const doc = structuredClone(brand);
@@ -52,33 +105,4 @@ export async function saveBrand(run, dirs = userDirs()) {
     );
   });
   return { name: brand.name, saved: true };
-}
-
-// A binary PPM's size and its RGB bytes.
-export function decodePpm(buf) {
-  const m = buf
-    .subarray(0, 64)
-    .toString("latin1")
-    .match(/^P6\s+(\d+)\s+(\d+)\s+255\s/);
-  if (!m) throw new Error("not a binary PPM");
-  return { w: +m[1], h: +m[2], px: buf.subarray(m[0].length) };
-}
-
-// OKLab (Björn Ottosson's), where a declared colour is compared with a
-// measured one: `[L, a, b]` from a #rrggbb.
-export function oklab(hex) {
-  const [r, g, b] = [1, 3, 5].map((i) => {
-    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
-    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  });
-  const [l, m, s] = [
-    0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
-    0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
-    0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b,
-  ].map(Math.cbrt);
-  return [
-    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
-    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
-    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
-  ];
 }

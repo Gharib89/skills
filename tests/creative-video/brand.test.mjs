@@ -186,7 +186,7 @@ test("measure ranks colours by area across every page, each page weighing the sa
   const fx = machine();
   const site = {
     pages: [PAGE_A, PAGE_B],
-    colors: ["#161b8d", "#00ff00"],
+    colors: ["#161b8d", "#161b8e", "#00ff00"],
     fonts: [
       { role: "title", stack: "'Source Serif 4', serif" },
       { role: "text", stack: "Inter, sans-serif" },
@@ -233,6 +233,11 @@ test("measure ranks colours by area across every page, each page weighing the sa
   assert.match(
     r.out,
     /^brand declared #00ff00: not in the reference images, dropped$/m,
+  );
+  // A candidate is named once: a second declared colour near it is dropped.
+  assert.match(
+    r.out,
+    /^brand declared #161b8e: its candidate is #161b8d already, dropped$/m,
   );
   assert.match(r.out, /^brand font title: Source Serif 4$/m);
   assert.match(
@@ -515,6 +520,21 @@ test("a plain approval saves the brand to the store, and a later use reads it ba
     "board: brand itworx used once, not saved\nboard: approved; next: run the gates\n",
   );
   assert.ok(!fs.existsSync(store(once, "itworx")));
+});
+
+test("an approval refuses a brand.json changed since the board showed it, and saves nothing", () => {
+  const fx = ready({ brand: BRAND });
+  ok(build(fx));
+  const changed = brandJson(fx);
+  changed.colours[0].hex = "#000000";
+  fs.writeFileSync(path.join(fx.dir, "brand.json"), JSON.stringify(changed));
+  const r = apply(fx, answersText(1, "Approved: the look"));
+  assert.equal(r.code, 1);
+  assert.match(
+    r.err,
+    /brand\.json changed since board 1 showed it: build the board again/,
+  );
+  assert.ok(!fs.existsSync(store(fx, "itworx")));
 });
 
 test("a board with no brand.json approves with no brand line", () => {

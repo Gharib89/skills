@@ -15,8 +15,9 @@
 // stdout: `brand ref <image>: <kind> · <source>` per reference image, then
 //         `brand candidate <id>: <hex> · <share>% · <images>` per candidate,
 //         `brand declared <hex>: not in the reference images, dropped` per
-//         declared colour no candidate confirms, `brand font <role>: <family>`
-//         per declared family, then `brand: measured <n> reference image(s) ->
+//         declared colour no candidate confirms (`its candidate is <hex>
+//         already, dropped` when another named it first), `brand font <role>:
+//         <family>` per declared family, then `brand: measured <n> reference image(s) ->
 //         <candidates.json>`
 // writes: <run>/brand/refs/ and brand/candidates.json (both replaced whole),
 //         and the runs folder's .gitignore
@@ -25,7 +26,6 @@
 //         with no candidates.json
 import fs from "node:fs";
 import path from "node:path";
-import { decodePpm, oklab } from "../lib/brand.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { catalogue, dest, hyperframesEnv } from "../lib/tools.mjs";
 
@@ -170,12 +170,43 @@ function rank(all, min, top, prefix) {
     .map((c, n) => ({ id: `${prefix}${n + 1}`, ...c }));
 }
 
+// A binary PPM's size and its RGB bytes.
+function decodePpm(buf) {
+  const m = buf
+    .subarray(0, 64)
+    .toString("latin1")
+    .match(/^P6\s+(\d+)\s+(\d+)\s+255\s/);
+  if (!m) throw new Error("not a binary PPM");
+  return { w: +m[1], h: +m[2], px: buf.subarray(m[0].length) };
+}
+
+// OKLab (Björn Ottosson's), where a declared colour is compared with a
+// measured one: `[L, a, b]` from a #rrggbb.
+function oklab(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const v = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  const [l, m, s] = [
+    0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
+    0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
+    0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b,
+  ].map(Math.cbrt);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
 // How near a declared colour sits to a measured one, in OKLab.
 const near = (a, b) => Math.hypot(...oklab(a).map((v, i) => v - oklab(b)[i]));
 
 export async function measure(run, given, backend) {
   const errors = [];
-  const refuse = (source, why) => errors.push(`source ${source}: ${why}`);
+  const refuse = (source, why) => {
+    errors.push(`source ${source}: ${why}`);
+  };
   const draft = path.join(run, "brand");
   const refs = path.join(draft, "refs");
   const stop = () => {
@@ -289,7 +320,8 @@ export async function measure(run, given, backend) {
   if (errors.length) stop();
 
   const surfaces = rank(tally(images, null), 0.005, 10, "s");
-  // A monochrome brand: the floor drops once before there are no accents.
+  // A monochrome brand: the saturation floor drops once, and only then are
+  // there no accents.
   let accents = rank(tally(images, 0.4), 0.001, 8, "a");
   if (!accents.length) accents = rank(tally(images, 0.2), 0.001, 8, "a");
 
@@ -305,9 +337,10 @@ export async function measure(run, given, backend) {
     );
 
   // A declared colour within 0.04 in OKLab of a candidate those images show
-  // names it exactly; one no such candidate confirms is dropped.
+  // names it exactly; one no such candidate confirms is dropped, and so is one
+  // whose nearest candidate another declared colour named first.
   const confirmed = new Set();
-  const unconfirmed = new Set();
+  const dropped = new Map();
   for (const { hex, ...d } of declared) {
     const by = shownBy(d);
     const hit = [...surfaces, ...accents]
@@ -316,7 +349,11 @@ export async function measure(run, given, backend) {
       )
       .sort((x, y) => near(x.hex, hex) - near(y.hex, hex))[0];
     if (!hit) {
-      unconfirmed.add(hex);
+      dropped.set(hex, "not in the reference images");
+      continue;
+    }
+    if (hit.declared && hit.hex !== hex) {
+      dropped.set(hex, `its candidate is ${hit.hex} already`);
       continue;
     }
     confirmed.add(hex);
@@ -324,7 +361,7 @@ export async function measure(run, given, backend) {
     for (const c of [...surfaces, ...accents])
       if (c.hex === was) Object.assign(c, { hex, declared: true });
   }
-  const dropped = [...unconfirmed].filter((hex) => !confirmed.has(hex));
+  for (const hex of confirmed) dropped.delete(hex);
 
   const families = [
     ...new Map(
@@ -354,8 +391,8 @@ export async function measure(run, given, backend) {
     console.log(
       `brand candidate ${c.id}: ${c.hex} · ${Math.round(c.share * 1000) / 10}% · ${c.images.join(", ")}`,
     );
-  for (const hex of dropped)
-    console.log(`brand declared ${hex}: not in the reference images, dropped`);
+  for (const [hex, why] of dropped)
+    console.log(`brand declared ${hex}: ${why}, dropped`);
   for (const f of families) console.log(`brand font ${f.role}: ${f.family}`);
   console.log(`brand: measured ${images.length} reference image(s) -> ${out}`);
 }

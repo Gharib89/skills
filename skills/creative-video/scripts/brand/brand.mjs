@@ -16,10 +16,11 @@
 // writes: use, <run>/brand.json and brand/logo.<ext>; measure, brand/refs/ and
 //         brand/candidates.json; check, brand.json and project/assets/brand/
 // exit:   0 ok · 1 refused, `brand: <why>` on stderr (no such brand, a
-//         measure or check refusal) · 2 usage
+//         stored or seeded brand that is not JSON or is malformed, named by
+//         its file, a measure or check refusal) · 2 usage
 import fs from "node:fs";
 import path from "node:path";
-import { seedFile, storeDir } from "../lib/brand.mjs";
+import { parseBrand, seedFile, shape, storeDir } from "../lib/brand.mjs";
 import { stage } from "../lib/stage.mjs";
 import { loadBackend } from "../lib/tools.mjs";
 import { check } from "./check.mjs";
@@ -54,11 +55,12 @@ function use(name) {
     throw new Error(
       `no brand ${name} in the store or the seeds: measure its own pages (brand.mjs <run> measure <url>...) and write brand.json`,
     );
-  const {
-    from: _,
-    once: __,
-    ...doc
-  } = JSON.parse(fs.readFileSync(file, "utf8"));
+  // name, from and once lead; the file's own from and once give way.
+  const doc = Object.assign({ name: null, from, once }, parseBrand(file), {
+    from,
+    once,
+  });
+  shape(doc, file);
   if (doc.logo) {
     const logo = path.join(path.dirname(file), doc.logo.file);
     if (!fs.existsSync(logo)) throw new Error(`${logo}: is missing`);
@@ -67,11 +69,10 @@ function use(name) {
     fs.copyFileSync(logo, path.join(run, to));
     doc.logo = { ...doc.logo, file: to };
   }
-  const { name: n, ...tail } = doc;
   fs.mkdirSync(run, { recursive: true });
   fs.writeFileSync(
     path.join(run, "brand.json"),
-    JSON.stringify({ name: n, from, once, ...tail }, null, 2) + "\n",
+    JSON.stringify(doc, null, 2) + "\n",
   );
 }
 

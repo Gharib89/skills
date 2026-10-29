@@ -45,14 +45,16 @@
 // exit:   0 ok · 1 refused, `board: <why>` on stderr (a missing timeline,
 //         scene file, storyboard.json, direction frame or gsap.min.js; a
 //         direction frame or the kit's CSS that does not name every colour and
-//         face of the brand, or a brand logo that is missing; an
+//         face of the brand, a brand logo that is missing, or a malformed
+//         brand.json; an
 //         invalid storyboard.json; a script.json whose scenes are not the
 //         ones timed, in order, or whose narration is not the one voiced; a scene changed, added (but
 //         for a later chapter's) or gone, or
 //         the kit, over.html or an asset changed or gone, that the comments
 //         did not name;
 //         answers of an older board, naming an unknown scene or direction or
-//         the one in use, cut to fit, or unreadable) · 2 usage
+//         the one in use, cut to fit, or unreadable; an approval of a
+//         brand.json changed since the board showed it) · 2 usage
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -65,7 +67,7 @@ import { hyperframesEnv, loadBackend, skill } from "../lib/tools.mjs";
 import { sampleTimes } from "../gates/samples.mjs";
 import { esc, HEIGHT, host, WIDTH, writeRoot } from "../render/root.mjs";
 import { readAnswers } from "./answers.mjs";
-import { boardBrand, wearBrand } from "./brand.mjs";
+import { approvedBrand, brandStrip, copyLogo, wearBrand } from "./brand.mjs";
 
 stage("board");
 const [run, command, file, ...rest] = process.argv.slice(2);
@@ -286,6 +288,7 @@ async function build() {
   const sb = readStoryboard(shown);
   const brand = readBrand(run);
   if (brand) wearBrand(run, brand, sb.directions, fail);
+  const strip = brandStrip(run, brand, sha, fail);
   const n = Math.max(0, ...versions()) + 1;
   const hashes = Object.fromEntries(
     shown.map((s) => [
@@ -368,7 +371,7 @@ async function build() {
           : keep(await directionFrame(backend, env, d.id, script.language)),
     });
 
-  const withBrand = boardBrand(run, out, brand, sha, fail);
+  const logo = copyLogo(run, out, brand, strip);
   // A chapter some of whose scene files are missing is being authored.
   const status = (c) => (c.scenes.every(has) ? "awaiting" : "authoring");
   const doc = {
@@ -390,7 +393,7 @@ async function build() {
       status: status(c),
     })),
     directions,
-    brand: withBrand.doc,
+    brand: strip,
     kit,
     over,
     assets,
@@ -419,9 +422,10 @@ async function build() {
     path.join(out, "files.json"),
     JSON.stringify(
       Object.fromEntries(
-        ["page.css", "brand.js", "page.js", ...stills, ...withBrand.files].map(
-          (f) => [f, path.join(out, f)],
-        ),
+        ["page.css", "brand.js", "page.js", ...stills, ...logo].map((f) => [
+          f,
+          path.join(out, f),
+        ]),
       ),
       null,
       2,
@@ -475,11 +479,12 @@ async function apply() {
   const lines = (t) => t.replaceAll("\n", "\n  ");
   const { direction, look, scenes } = a;
   if (!direction && !look && !scenes.length) {
-    const brand = a.approve && readBrand(run);
+    const brand =
+      a.approve && approvedBrand(run, board.brand, latest, sha, fail);
     if (brand) {
-      const { saved } = await saveBrand(run);
+      const { name, saved } = await saveBrand(run, brand);
       console.log(
-        `board: brand ${brand.name} ${saved ? "saved to the store" : "used once, not saved"}`,
+        `board: brand ${name} ${saved ? "saved to the store" : "used once, not saved"}`,
       );
     }
     console.log(

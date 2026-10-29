@@ -8,6 +8,13 @@ import { toolPaths } from "../tools.mjs";
 import { ffmpeg } from "./common.mjs";
 import { sandboxed } from "./source.mjs";
 
+// A page's key in the crawl: its origin, path and query, so a bare origin and
+// its root, or a link with a fragment, are one page.
+export const pageKey = (u) => {
+  const l = new URL(u);
+  return l.origin + l.pathname + l.search;
+};
+
 // A page and the same-site pages its navigation links, `max` in all, each
 // captured 1440 wide in the site's default colour scheme with raster media
 // hidden (images, video, canvas, frames and every CSS background image), so
@@ -24,7 +31,8 @@ export async function capturePages(url, out, { env, max }) {
     const images = [];
     const colors = new Set();
     const fonts = [];
-    const queue = [url];
+    const start = pageKey(url);
+    const queue = [start];
     const seen = new Set();
     while (queue.length && images.length < max) {
       const u = queue.shift();
@@ -40,7 +48,7 @@ export async function capturePages(url, out, { env, max }) {
           if (e.name !== "TimeoutError") failed = e;
         });
       if (failed || (res && !res.ok())) {
-        if (u === url)
+        if (u === start)
           throw failed ?? new Error(`HTTP ${res.status()} at ${u}`);
         continue;
       }
@@ -81,7 +89,7 @@ export async function capturePages(url, out, { env, max }) {
         ]
           .map((a) => new URL(a.href, location.href))
           .filter((l) => l.origin === location.origin)
-          .map((l) => l.origin + l.pathname + l.search);
+          .map((l) => l.href);
         return {
           colors,
           height: document.documentElement.scrollHeight,
@@ -101,7 +109,7 @@ export async function capturePages(url, out, { env, max }) {
       images.push(f);
       found.colors.forEach((c) => colors.add(c));
       fonts.push(...found.fonts);
-      if (u === url) queue.push(...found.links);
+      if (u === start) queue.push(...found.links.map(pageKey));
     }
     return { images, colors: [...colors], fonts };
   } finally {

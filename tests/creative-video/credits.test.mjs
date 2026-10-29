@@ -187,11 +187,30 @@ test("a brand.json is credited as a Brand section: where it came from, each colo
   );
 });
 
-test("a run with no brand.json has no Brand section", () => {
+test("a run with no brand.json has no Brand section, an older one removed", () => {
   const fx = fixture();
   voice(fx);
   assert.equal(exec(credits, fx).code, 0);
   assert.doesNotMatch(read(file(fx)), /## Brand/);
+  fs.writeFileSync(
+    file(fx),
+    "# Credits\n\n## Brand\n\n- stale\n\n## Faces\n\n- a face\n",
+  );
+  assert.equal(exec(credits, fx).code, 0);
+  assert.doesNotMatch(read(file(fx)), /## Brand|stale/);
+  assert.match(read(file(fx)), /^## Faces\n\n- a face\n/m);
+});
+
+test("a malformed brand.json is refused by the field", () => {
+  const fx = fixture();
+  voice(fx);
+  fs.writeFileSync(
+    path.join(fx.dir, "brand.json"),
+    JSON.stringify({ name: "itworx", from: "web" }),
+  );
+  const r = exec(credits, fx);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /^credits: brand\.json: from is not store, seed/m);
 });
 
 test("a run with no voice.json, or one with no voices or no roles, is refused by name", () => {
