@@ -29,6 +29,7 @@ What you write, all committed as the video's recipe:
   rebuilt by `board.mjs`.
 - `SPEC.md`: the stance's numbers, and one reason line per `hyperframes`
   banned default the concept uses.
+- `brand.json` and `brand/` (with a brand): [brand.md](brand.md).
 - `script.json`: the narration, scene by scene, each sentence's `cites`
   beside it ([voice.md](voice.md) holds its shape and the spoken-form rules).
   A scene is a stretch of narration that one

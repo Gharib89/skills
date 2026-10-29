@@ -107,7 +107,8 @@ command line, run through this skill's pinned copy (`hf.mjs`,
 dark navy void with a glow, neon, floating particles, purple and blue
 gradients, everything centred and fading in) stays banned, with one more way
 out: the format concept needs it, and `SPEC.md` says why in one line. "It
-looks techy" is not a reason.
+looks techy" is not a reason. A brand's colours and faces pass the list; its
+banned treatments still hold.
 Where the `hyperframes` loop and [Make a video](#make-a-video) differ, these
 steps win: `DIRECTIONS.md` is its storylines, the stills review of step 10 is
 its review (no `REVIEW.md`, nothing but the sheets to the reviewer), the
@@ -141,7 +142,9 @@ render.
    not. The language is the one asked for, English when none is; the narrator
    the one asked for, else the language's default in `<skill>/narrators.json`.
    Name the audience (the one asked for, else a smart newcomer): it is the
-   researcher's `{audience}` and heads `DIRECTIONS.md`.
+   researcher's `{audience}` and heads `DIRECTIONS.md`. A brand named, or
+   material given (a logo, a site, a deck): after step 2, run
+   [reference/brand.md](reference/brand.md)'s steps.
 2. **Tools.** Run setup's check (below) with that narrator. A missing row:
    run setup's steps first. The `hyperframes` and `media-use`
    skills must be installed (Composed skills, below).
@@ -150,10 +153,11 @@ render.
 4. **Directions.** Write `<run>/DIRECTIONS.md`: three directions that differ
    in kind, each a paragraph (the concept, its arc, its cast and audience
    device, its sound and colour), one bold, one the subject drawn directly
-   when that fits, and one marked recommended with why. Make the recommended
-   one without asking: attended, the person meets all three on the storyboard
-   (step 11) and picks there; unattended, it stands. Write the pick and its
-   reason into the file.
+   when that fits, and one marked recommended with why; with a brand, all
+   three wear it ([brand.md](reference/brand.md#wear-the-brand)). Make the
+   recommended one without asking: attended, the person meets all three on the
+   storyboard (step 11) and picks there; unattended, it stands. Write the pick
+   and its reason into the file.
 5. **Spec and kit.** Read the `hyperframes` skill's `SKILL.md`, its
    `references/spec.md` and the references the concept needs, and this
    skill's [craft-teaching.md](reference/craft-teaching.md) and
@@ -257,7 +261,9 @@ render.
     it writes `<run>/CREDITS.md`'s voices and sound. Then add to it each
     source cited with its locators, and the faces and their licences. Write
     `<run>/DELIVERY.md` (the concept and why
-    it was picked; what was measured, quoting the render's `delivery` and
+    it was picked; any brand, with what was fetched and from where, as
+   `CREDITS.md`'s `## Brand` lists it; what
+   was measured, quoting the render's `delivery` and
     `measured loudness` lines and the gates' `warn` lines, and what was only
     looked at; that the sound was measured, not heard, and each effect placed
     on its event's word; any source updated or withdrawn; the weakest shot and

@@ -1,8 +1,8 @@
 <title>{{TITLE}}</title>
 <!--
   creative-video's fixed storyboard page. `board.mjs build` copies it to <run>/board/storyboard.html
-  with the title above filled (HTML-escaped) and the board embedded below; page.css and page.js sit
-  beside it. Published as the artifact page (db, user and comments capabilities, `files` from
+  with the title above filled (HTML-escaped) and the board embedded below; page.css, brand.js (the
+  brand strip, loaded before page.js) and page.js sit beside it. Published as the artifact page (db, user and comments capabilities, `files` from
   files.json) or opened as a file: the page decides by whether its db capability resolves.
   board-data.md is the contract.
 
@@ -20,4 +20,5 @@
 
 <script type="application/json" id="board">null</script>
 
+<script src="brand.js"></script>
 <script src="page.js"></script>

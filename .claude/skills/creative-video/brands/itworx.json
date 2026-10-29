@@ -1,0 +1,21 @@
+{
+  "name": "itworx",
+  "once": false,
+  "colours": [
+    { "hex": "#ffffff", "name": "ground", "basis": "declared", "from": "seed" },
+    { "hex": "#161b8c", "name": "ink", "basis": "declared", "from": "seed" },
+    { "hex": "#4850e0", "name": "indigo", "basis": "declared", "from": "seed" },
+    { "hex": "#c03020", "name": "red", "basis": "declared", "from": "seed" }
+  ],
+  "faces": [
+    {
+      "family": "source-serif-4",
+      "role": "title",
+      "basis": "declared",
+      "weights": [600]
+    },
+    { "family": "inter", "role": "text", "basis": "declared", "weights": [400] }
+  ],
+  "logo": null,
+  "fetched": []
+}
