@@ -2,6 +2,10 @@
 # Run-file mechanic: the checklist, the item and line helpers, and the recorded results. Sourced by ../run-file.sh, never run.
 # shellcheck disable=SC2154,SC2034 # shares the globals of run-file.sh (file, head, verb, usage)
 
+# The recovery both refusals of a missing record carry, rather than prose a
+# compacted run may no longer hold.
+rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers, --legs and --criteria the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
+
 # The ten items, in the fixed wording. Four carry a tail the ship profile
 # supplies; the rest are the same in every repo.
 checklist() { # checklist <tripwires> <verifications> <reviewers> <legs>
