@@ -12,11 +12,12 @@
 # under `.claude/skills/<rest>` is also mentioned when its source twin
 # `skills/<rest>` is changed and mentioned, since the copy mirrors the source.
 # A path under `.claude/skills/<name>/` of a vendored skill, one the repo root's
-# `skills-lock.json` lists with a `source` other than `.`, is also mentioned when
-# the section cites the folder `.claude/skills/<name>/`: it has no source twin.
-# A lock that cannot be read is no answer (exit 2). `skills-lock.json` and any
-# `CHANGELOG.md` are generated, never expected in an outline. The section is found by the same `ship_inert` rule as the headings, so
-# a `## Change outline` in a fence is not one; a body with no such heading
+# `skills-lock.json` lists with a `source` other than `.`, is also mentioned
+# when the section cites the folder `.claude/skills/<name>/`: it has no source
+# twin. A lock that cannot be read is no answer (exit 2). `skills-lock.json`
+# and any `CHANGELOG.md` are generated, never expected in an outline. The
+# section is found by the same `ship_inert` rule as the headings, so a
+# `## Change outline` in a fence is not one; a body with no such heading
 # mentions nothing, and every expected path is missing.
 ship_outline_missing() { # <body> <paths>
   local text p twin rc
