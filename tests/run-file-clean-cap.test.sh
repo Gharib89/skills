@@ -65,6 +65,10 @@ capped; printf 'Stop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; h
 capped; change_run 's/Round: primary 2:/Round: primary 3:/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held 'gapped round numbers do not spend the cap' 'reviewer primary: cap'
 capped; change_run 's/Round: primary 2: fixes pushed/Round: primary 2:   /'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a blank round does not spend the cap' 'reviewer primary: cap'
 capped; change_run 's/Stop: primary: cap/Stop: primary: tree unchanged at abcdef0123456789/'; clean 'primary at its cap with an unchanged tree owes no fallback'
+# A cap stamped with the head its last round read is still a cap (#1045).
+capped; change_run 's/Stop: primary: cap/& at abcdef0123456789/'; held 'a stamped capped primary owes its fallback' 'reviewer fallback: not reviewed'
+capped; change_run 's/Stop: primary: cap/& at abcdef0123456789/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a stamped capped primary covered by its fallback'
+capped; change_run 's/Stop: primary: cap/& at abcdef0123456789/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap at abcdef0123456789\n' >> "$f"; held 'a stamped capped fallback keeps the cap reason' 'reviewer fallback: cap'
 # A run past the cap records its local review as `Past-cap:`, never as a reviewer
 # `Round:`, so the capped reviewer's rounds still read 1..Cap (ship-849). The
 # gate stays held, naming the cap and the head the local review read (#880).

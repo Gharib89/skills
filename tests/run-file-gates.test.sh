@@ -218,7 +218,7 @@ reset
 
 run4bare; held=$(cat "$rf"); close 4
 refused "phase 4 with no self-review round and no stop" 'no Round line for self-review: add `Round: self-review <n>: <text>`, one per self-review round'
-check "the same refusal names the missing stop" yes "$(has 'no Stop line for self-review: add `Stop: self-review: <tree unchanged|cap>`' "$err")"
+check "the same refusal names the missing stop" yes "$(has 'no Stop line for self-review: add `Stop: self-review: <tree unchanged|cap at <sha>>`' "$err")"
 
 run4bare; add 'Round: self-review 1: 2 findings, both fixed'; held=$(cat "$rf"); close 4
 refused "a round with no stop" 'no Stop line for self-review'
@@ -234,7 +234,7 @@ run4bare; add 'Round: self-review 1:' 'Stop: self-review: tree unchanged'; held=
 refused "a round with no text" 'no Round line for self-review'
 
 run4bare; add 'Round: self-review 1: clean' 'Stop: self-review: small lane'; held=$(cat "$rf"); close 4
-refused "a host-loop stop reason" "Stop line for self-review has reason 'small lane', which is not one of tree unchanged, cap"
+refused "a host-loop stop reason" "Stop line for self-review has reason 'small lane', which is not one of tree unchanged, cap at <sha>, cap"
 
 run4bare; add 'Round: self-review 1: clean' 'Stop: self-review: cap' 'Stop: self-review: whenever'; held=$(cat "$rf"); close 4
 refused "the last Stop line decides" "Stop line for self-review has reason 'whenever'"
@@ -248,6 +248,12 @@ admitted "one clean round, stopped on an unchanged tree"
 
 run4bare; add '- Round: self-review 1: 1 finding, fixed' '- Round: self-review 2: 1 finding, fixed' '- Stop: self-review: cap'; close 4
 admitted "bulleted rounds stopped at the cap"
+
+run4bare; add 'Round: self-review 1: fixed' 'Stop: self-review: cap at abcdef0'; close 4
+admitted "a cap stamped with the head holding the last fix"
+
+run4bare; add 'Round: self-review 1: fixed' 'Stop: self-review: cap at HEAD'; held=$(cat "$rf"); close 4
+refused "a cap stamp that is no sha" "Stop line for self-review has reason 'cap at HEAD'"
 
 run4bare; add 'Round: copilot 1: clean' 'Stop: copilot: tree unchanged'; held=$(cat "$rf"); close 4
 refused "a host reviewer's lines are not the self-review's" 'no Round line for self-review'

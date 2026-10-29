@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.53.0 (2026-10-29)
+
+### Features
+
+- **ship**: A host stop stamped at the self-review's capped head lifts its hold
+  ([#1051](https://github.com/Gharib89/skills/pull/1051),
+  [`8e02b00`](https://github.com/Gharib89/skills/commit/8e02b006b25e9c51abffc8a2221d0adb7d287fa7))
+
+
 ## v0.52.0 (2026-10-29)
 
 ### Features

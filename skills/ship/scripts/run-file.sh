@@ -121,20 +121,20 @@
 #   the self-review loop in close 7's vocabulary: at least one
 #     `Round: self-review <n>: <text>`, <n> a positive integer, and
 #     `Stop: self-review: <reason>`, the last such line deciding, the reason
-#     tree unchanged or cap.
+#     tree unchanged, cap or `cap at <sha>`.
 # `close 7` reads the reviewers from the phase's checklist row (nothing is held
 # where the row names none, or names what is not a list of names) and needs a
 # `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
-# one of cap, `tree unchanged at <sha>` (<sha> the PR head the round read; a
-# bare `tree unchanged` is refused), small lane, inline lane, auto-once, not
-# landed, not reviewed (also spelled `not reviewed: <reason>`, read as the same
-# stop here and in `gate clean`) or `not invoked: <primary> reviewed` (a fallback
-# whose primary, a reviewer on the row, stopped on none of not reviewed, not
-# landed, inline lane or not invoked), and unless it is `not reviewed`, `not invoked: <primary>
-# reviewed` or `inline lane` at least one
-# `Round: <reviewer> <n>: <text>`, <n> a positive integer. `grade` writes
-# `Grade: <word>` under the `## Grade` section, replacing the line a call before
-# it wrote.
+# one of cap, `cap at <sha>` (read as cap), `tree unchanged at <sha>` (<sha>
+# the PR head the round read; a bare `tree unchanged` is refused), small lane,
+# inline lane, auto-once, not landed, not reviewed (also spelled `not reviewed:
+# <reason>`, read as the same stop here and in `gate clean`) or `not invoked:
+# <primary> reviewed` (a fallback whose primary, a reviewer on the row, stopped
+# on none of not reviewed, not landed, inline lane or not invoked), and unless
+# it is `not reviewed`, `not invoked: <primary> reviewed` or `inline lane` at
+# least one `Round: <reviewer> <n>: <text>`, <n> a positive integer. `grade`
+# writes `Grade: <word>` under the `## Grade` section, replacing the line a call
+# before it wrote.
 #
 # `ran <name>... <where>` marks, for each verification name the Run file's
 # results section knows, that its `Run:` line has just run: it appends
@@ -239,13 +239,14 @@
 #     outside Legs:, nonblank Override evidence, tracker drafts beside the
 #     Run file (excluding .base.md), and a last `Stop: self-review: cap`
 #     where no reviewer stopped on tree unchanged at a covered head with a
-#     dispositioned Round hold the gate. So does each `## Criteria` entry that
-#     is not met or has no `Criterion <n>:` line, and a reviewer with a Round
-#     whose text opens `re-raised declined: ` stopping on tree unchanged: it
-#     stops on cap, which that round also keeps from owing a fallback. An
-#     ordinary deviation, a Ship-defect line or a defect draft does not hold
-#     it: a defect that breaks a gating step fails that step's evidence. This
-#     read is independent of Merge.
+#     dispositioned Round hold the gate; a last `cap at <S>` is also lifted by
+#     a reviewer whose last stop is stamped at <S> or a descendant. So does
+#     each `## Criteria` entry that is not met or has no `Criterion <n>:`
+#     line, and a reviewer with a Round whose text opens `re-raised declined: `
+#     stopping on tree unchanged: it stops on cap, which that round also keeps
+#     from owing a fallback. An ordinary deviation, a Ship-defect line or a
+#     defect draft does not hold it: a defect that breaks a gating step fails
+#     that step's evidence. This read is independent of Merge.
 #     A stamp covers <sha> when it is <sha>, or when every later commit on
 #     <sha>'s first-parent line is a clean base merge: two parents, the second
 #     an ancestor of the local origin/HEAD (fetch first, or an unfetched base

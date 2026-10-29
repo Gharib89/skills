@@ -4,7 +4,7 @@
 
 gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   local ci first profile_path profile reviewers verifications lines record_dir rec rhead='' rverdict='' rgates=null drafts='[]' p answer
-  local stamps s cover='{}' scope='{}' vname vpaths
+  local stamps s cover='{}' scope='{}' vname vpaths sr_stamp sr c descends='{}'
   [ -r "$file" ] || ship_tooling "cannot read Run file at $file"
   # Fenced examples cannot authorize a merge.
   lines=$(awk "$SHIP_AWK_FENCE"'
@@ -61,6 +61,23 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       untouched "$s" "$head" "$vpaths" && scope=$(jq -c --arg v "$vname" --arg s "$s" '.[$v][$s] = true' <<<"$scope")
     done <<<"$(jq -r '.[] | select(.paths != null) | [.name, .paths] | @tsv' <<<"$verifications")"
   done <<<"$stamps"
+  # A self-review stopped `cap at <S>`: which stamps are <S> or descend from it,
+  # so a host stop stamped there read its last fixes. An unknown stamp descends
+  # from nothing; a failed ancestry read is no verdict.
+  sr_stamp=$(sed $'s/[ \t\r]*$//' <<<"$lines" | sed -n 's/^- //; s/^Stop: self-review: //p' | tail -n 1 \
+    | sed -nE 's/^cap at ([0-9a-f]{7,64})$/\1/p')
+  if [ -n "$sr_stamp" ] && sr=$(commit_of "$sr_stamp"); then
+    while IFS= read -r s; do
+      [ -n "$s" ] || continue
+      c=$(commit_of "$s") || continue
+      git merge-base --is-ancestor "$sr" "$c" 2>/dev/null
+      case $? in
+        0) descends=$(jq -c --arg s "$s" '.[$s] = true' <<<"$descends") ;;
+        1) ;;
+        *) ship_tooling "cannot read whether $s descends from the self-review stamp $sr_stamp" ;;
+      esac
+    done <<<"$stamps"
+  fi
   rec=$(awk '/^## / { f = ($0 ~ /^## Local gate[ \t\r]*$/) }
     f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ [^ ]+( .*)?$/' <<<"$lines" | tail -n 1) \
     || ship_tooling "cannot read local gate record"
@@ -79,7 +96,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   done
   answer=$(jq -n --arg text "$lines" --arg head "$head" --arg rhead "$rhead" --arg verdict "$rverdict" \
     --argjson gates "$rgates" --argjson ci "$ci" --argjson legs "$legs" --argjson reviewers "$reviewers" \
-    --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" --argjson cover "$cover" --argjson scope "$scope" \
+    --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" --argjson cover "$cover" --argjson scope "$scope" --argjson descends "$descends" \
     --arg round_re "$round_re" --arg words "$result_re" '
     def samehead($a; $b): $a != "" and $b != "" and (($a | startswith($b)) or ($b | startswith($a)));
     def named($leg): .name == $leg or (.name | startswith($leg + " ("));
@@ -119,7 +136,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       # The numeric Cap: of a reviewer as a one-element array, empty for `None.`.
       def cap_of($name): [$reviewers[] | select(.name == $name) | .cap | numbers];
       # `Stop: cap` that no re-raised declined finding caused.
-      def cap_unraised($name): stop($name) == "cap" and (reraised($name) | not);
+      def cap_unraised($name): (stop($name) | word) == "cap" and (reraised($name) | not);
       def cap_spent($name): cap_unraised($name)
         and (cap_of($name) as $cap | $cap != [] and rounds($name) == [range(1; $cap[0] + 1)]);
       # A docs-only end: `Stop: cap` on rounds reading 1..k, k short of any Cap:.
@@ -197,10 +214,13 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
              elif reviewed($r.name) | not then "reviewer " + $r.name + ": no dispositioned round"
              elif (stop($r.name) | stamp) == "" then unstamped("reviewer " + $r.name + ": tree unchanged")
              else stale("reviewer " + $r.name + ": tree unchanged"; stop($r.name) | stamp) end
-           else "reviewer " + $r.name + ": " + stop($r.name) end),
+           else "reviewer " + $r.name + ": " + (stop($r.name) | if word == "cap" then "cap" else . end) end),
        # A self-review stopped at its cap left its last fixes unread; a host
-       # reviewer that settled on the final head read them.
-       if (rests("Stop: self-review: ") | last // "") == "cap" and (any($reviewers[]; settled(.name)) | not)
+       # reviewer that settled on the final head read them, as did one whose
+       # last stop is stamped at the self-review stamp or a head descending from it.
+       (rests("Stop: self-review: ") | last // "") as $sr
+       | if ($sr | word) == "cap" and (any($reviewers[]; settled(.name)) | not)
+           and ((($sr | stamp) != "" and any($reviewers[]; $descends[stop(.name) | stamp] == true)) | not)
          then "self-review: stopped at cap, its last fixes read by no reviewer" else empty end,
        # A criterion is met only by a line carrying its proof; the last line decides.
        (criteria[] as $n | criterion($n) as $c

@@ -18,6 +18,7 @@
 #   lib/host.sh     the host adapter interface, --repo targeting
 #   lib/skills.sh   skill frontmatter and the composed-skill pin check
 #   lib/body.sh     issue and PR body text, fence-aware rewrites, body checks
+#   lib/outline.sh  the Change outline check: changed paths the body names
 #   lib/jq.sh       the id list and the jq programs the review mechanics embed
 #   lib/profile.sh  the ship profile's path and lines
 #   lib/poll.sh     a poll loop's host read, cursor, stale head, reviewer rows
@@ -44,6 +45,8 @@ source "$SHIP_SCRIPTS/lib/host.sh"
 source "$SHIP_SCRIPTS/lib/skills.sh"
 # shellcheck source=lib/body.sh
 source "$SHIP_SCRIPTS/lib/body.sh"
+# shellcheck source=lib/outline.sh
+source "$SHIP_SCRIPTS/lib/outline.sh"
 # shellcheck source=lib/jq.sh
 source "$SHIP_SCRIPTS/lib/jq.sh"
 # shellcheck source=lib/profile.sh
