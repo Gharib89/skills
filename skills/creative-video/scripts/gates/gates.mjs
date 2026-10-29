@@ -119,10 +119,12 @@ const sceneOf = (f) => sourceScene(f) ?? sceneAt(f.time);
 const quote = (t) => `"${t.length > 40 ? `${t.slice(0, 40)}...` : t}"`;
 
 const checked = await orFail(() => backend.check(proj, sampled, { env }));
-// A check that never reached the browser answers {ok: false, error} alone.
+// A check that never reached the browser answers {ok: false, error} alone:
+// `error` is a string on HyperFrames 0.8.206, {code, message} on 0.8.216.
+const reason = (e) => (e?.message ? `${e.message} (${e.code})` : e);
 for (const k of ["runtime", "layout", "contrast"])
   if (!checked[k])
-    fail(`hyperframes check: ${checked.error ?? `no ${k} result`}`);
+    fail(`hyperframes check: ${reason(checked.error) ?? `no ${k} result`}`);
 const { frames, events } = await orFail(() =>
   backend.probe(proj, uniq([...sampled, ...plan.flatMap((p) => p.grid)]), {
     env,

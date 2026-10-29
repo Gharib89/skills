@@ -155,3 +155,21 @@ test("a project missing its timeline, with a stale one, or short of a scene file
   );
   assert.equal(exec(gates, fx, []).code, 2);
 });
+
+test("a check that never reached the browser names its error, a string or HyperFrames 0.8.216's {code, message}", () => {
+  let r = runGates(
+    timed({ hook: '<p data-check-error="Command failed">a line</p>' }),
+  );
+  assert.equal(r.code, 1);
+  assert.equal(r.err, "gates: hyperframes check: Command failed\n");
+  r = runGates(
+    timed({
+      hook: '<p data-check-error="No composition found" data-check-code="runtime_error">a line</p>',
+    }),
+  );
+  assert.equal(r.code, 1);
+  assert.equal(
+    r.err,
+    "gates: hyperframes check: No composition found (runtime_error)\n",
+  );
+});
