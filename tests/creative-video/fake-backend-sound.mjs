@@ -9,6 +9,7 @@
 //                                  other file -20
 import fs from "node:fs";
 import path from "node:path";
+import { kenneyIndex } from "../../skills/creative-video/scripts/sound/kenney.mjs";
 import { log } from "./fake-backend-log.mjs";
 
 const asked = (call, query) =>
@@ -28,12 +29,14 @@ export async function openverse(query, { medium }) {
   return a ?? [];
 }
 
-// A pack unpacks to its licence and one sound.
+// A pack unpacks to its licence and one sound, of the first stem the word
+// index lists for it.
 export async function unzipSounds(zip, dir) {
   log({ call: "unzipSounds", zip, dir });
+  const [stem] = Object.keys(kenneyIndex()[path.basename(dir)]);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "License.txt"), "CC0");
-  fs.writeFileSync(path.join(dir, "click_001.ogg"), "ogg");
+  fs.writeFileSync(path.join(dir, `${stem}_001.ogg`), "ogg");
 }
 
 // A constant level every 0.1 s over `seconds`.

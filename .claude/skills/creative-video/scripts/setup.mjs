@@ -42,6 +42,7 @@ import {
   staged,
 } from "./lib/tools.mjs";
 import { stage } from "./lib/stage.mjs";
+import { AUDIO, entryOf, stemOf } from "./sound/kenney.mjs";
 
 const usage = "usage: node setup.mjs check|install [--voice <id>]";
 stage("setup");
@@ -196,7 +197,8 @@ async function fetchFiles(r, dir) {
   }
 }
 
-// Each Kenney pack's zip, checked by sha256, unpacked into `dir/<pack>`.
+// Each Kenney pack's zip, checked by sha256, unpacked into `dir/<pack>`; throws
+// when the pack holds a stem the word index (kenney.mjs) lacks.
 async function fetchPacks(r, dir) {
   for (const p of r.packs) {
     const zip = path.join(dir, `${p.name}.zip`);
@@ -206,6 +208,16 @@ async function fetchPacks(r, dir) {
       throw new Error(`${p.name}.zip has sha256 ${sum}, pinned ${p.sha256}`);
     await backend.unzipSounds(zip, path.join(dir, p.name));
     fs.rmSync(zip);
+    const unindexed = new Set(
+      fs
+        .readdirSync(path.join(dir, p.name))
+        .filter((f) => AUDIO.test(f) && !entryOf(p.name, f))
+        .map(stemOf),
+    );
+    if (unindexed.size)
+      throw new Error(
+        `${p.name} holds ${[...unindexed].join(", ")}, which the Kenney word index lacks`,
+      );
   }
 }
 
