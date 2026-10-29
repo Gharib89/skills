@@ -130,7 +130,7 @@
     "setup-project": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "0cbf01c895207c100d75e53ca948f486bc792a00fce2ace179a74687021b3cc3"
+      "computedHash": "64a700f0deb55f429eda630816bdfcaae6f32f6d96b22649d91b730cc80e2f5b"
     },
     "setup-skills": {
       "source": ".",
