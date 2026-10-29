@@ -180,7 +180,11 @@ const PACKS = {
     "glass_002.ogg",
   ],
   "rpg-audio": ["doorClose_1.ogg", "metalClick.ogg", "metalPot1.ogg"],
-  "sci-fi-sounds": ["doorClose_000.ogg", "spaceEngine_000.ogg"],
+  "sci-fi-sounds": [
+    "doorClose_000.ogg",
+    "spaceEngineLarge_000.ogg",
+    "spaceEngine_000.ogg",
+  ],
   "ui-audio": ["click1.wav", "mouseclick1.wav"],
 };
 
@@ -240,7 +244,7 @@ test("a bed comes only from a stem the index marks loopable", () => {
   assert.equal(engine.code, 0, engine.out + engine.err);
   assert.equal(
     engine.out.trim(),
-    "sound bed: kenney sci-fi-sounds/spaceEngine_000.ogg",
+    "sound bed: kenney sci-fi-sounds/spaceEngineLarge_000.ogg",
   );
 });
 

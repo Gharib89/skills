@@ -205,8 +205,8 @@ For each sound it searches Openverse for CC0 audio (a search that fails after
 Kenney packs setup installs (`sounds:kenney`): it picks the file whose name and
 word-index words hold the most of the query's words. The packs hold UI, casino,
 RPG, sci-fi and synth effects and short music stings; a bed comes only from the
-sci-fi engine, thruster and computer loops, so a bed query needs a word such as
-engine, spaceship, rocket or computer. It copies what it finds into
+one stem whose loop seam measures clean, the sci-fi large space engine, so a bed
+query needs engine, space or spaceship. It copies what it finds into
 `project/assets/sounds/` and writes the sound's `file`, `source`, `licence`,
 `creator`, `url` and `attribution` into `sound.json`. A sound its query found
 before, on any run, is copied again with no search. It prints `sound <event>:

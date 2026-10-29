@@ -1,7 +1,9 @@
 // The Kenney word index, setup/kenney-index.json. For each pack the
 // sounds:kenney row pins, it maps each file stem to `words` saying what the
 // sound is, added to its file name's words, and `loop: true` on a stem whose
-// files loop as a bed. Setup refuses a pack holding a stem the index lacks, so
+// every file's loop seam measures clean (the last-to-first sample jump within
+// the file's 99th-percentile step, the last and first 50 ms within 3 dB RMS),
+// so it loops as a bed; a 5 s length alone is no mark. Setup refuses a pack holding a stem the index lacks, so
 // a new pack or sha256 pin lands with its stems indexed.
 import fs from "node:fs";
 import { parseJson } from "../lib/json.mjs";

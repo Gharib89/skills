@@ -90,10 +90,10 @@
     "metalPot": { "words": ["clang", "cookware", "lid"] }
   },
   "sci-fi-sounds": {
-    "computerNoise": { "words": ["beeping"], "loop": true },
+    "computerNoise": { "words": ["beeping"] },
     "doorClose": { "words": ["sliding", "airlock", "hiss"] },
     "doorOpen": { "words": ["sliding", "airlock", "hiss"] },
-    "engineCircular": { "words": ["spaceship"], "loop": true },
+    "engineCircular": { "words": ["spaceship"] },
     "explosionCrunch": { "words": ["blast", "boom"] },
     "forceField": { "words": ["shield", "energy"] },
     "impactMetal": { "words": ["hit", "clang"] },
@@ -102,11 +102,11 @@
     "laserSmall": { "words": ["blaster", "pew"] },
     "lowFrequency_explosion": { "words": ["blast", "boom"] },
     "slime": { "words": ["goo", "squish", "splat"] },
-    "spaceEngine": { "words": ["spaceship"], "loop": true },
+    "spaceEngine": { "words": ["spaceship"] },
     "spaceEngineLarge": { "words": ["spaceship"], "loop": true },
-    "spaceEngineLow": { "words": ["spaceship"], "loop": true },
-    "spaceEngineSmall": { "words": ["spaceship"], "loop": true },
-    "thrusterFire": { "words": ["rocket", "jet"], "loop": true }
+    "spaceEngineLow": { "words": ["spaceship"] },
+    "spaceEngineSmall": { "words": ["spaceship"] },
+    "thrusterFire": { "words": ["rocket", "jet"] }
   },
   "ui-audio": {
     "click": { "words": ["tap", "press", "button", "ui"] },
