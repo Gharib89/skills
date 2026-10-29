@@ -12,8 +12,9 @@
 //                 `hidden` is never shown, opacity 0
 //   tl.<call>(... Date.now() or performance.now() ...) the scene's snapshots
 //                 differ between two launches
-//   at("<id>", "<word>")  a word the timeline lacks is a console_error, as the
-//                 browser running the scene's script reports it
+//   at("<id>", "<word>")  a word the timeline lacks, or with no nth one it
+//                 holds more than once, is a console_error, as the browser
+//                 running the scene's script reports it
 //   throw new Error("<text>")  the same console_error with the thrown text
 //   no-timeline   the scene registers no timeline and no error is reported,
 //                 as HyperFrames 0.8.206 does for a throwing script that also
@@ -40,7 +41,10 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { NO_WORD } from "../../skills/creative-video/scripts/render/anchors.mjs";
+import {
+  NO_WORD,
+  REPEATED_WORD,
+} from "../../skills/creative-video/scripts/render/anchors.mjs";
 import { log } from "./fake-backend-log.mjs";
 
 const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
@@ -176,10 +180,18 @@ export async function check(dir, times) {
     for (const a of m.html.matchAll(
       /at\("([^"]+)", "([^"]+)"(?:, (\d+))?\)/g,
     )) {
-      const words = (
-        timeline.scenes.find((s) => s.id === a[1])?.words ?? []
-      ).filter((w) => norm(w.text) === norm(a[2]));
-      if (!words[(+a[3] || 1) - 1])
+      const scene = timeline.scenes.find((s) => s.id === a[1]);
+      const words = (scene?.words ?? []).filter(
+        (w) => norm(w.text) === norm(a[2]),
+      );
+      if (!a[3] && words.length > 1)
+        runtime.push(
+          scriptError(
+            m.id,
+            `Error: ${REPEATED_WORD} "${a[2]}" in scene ${a[1]} at ${words.map((w) => `${(w.start - scene.start).toFixed(2)} s`).join(", ")}`,
+          ),
+        );
+      else if (!words[(+a[3] || 1) - 1])
         runtime.push(
           scriptError(
             m.id,

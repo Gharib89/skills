@@ -132,8 +132,8 @@ lands on its picture. Say in your delivery note what was measured, not heard.
 `<skill>` is the folder this file is in, `<run>` the run folder
 `creative-videos/<slug>` in the current repo, `<slug>` a short kebab-case name
 for the video. [reference/authoring.md](reference/authoring.md) holds the run
-folder's files, timing, the word anchors, the pinned CLI, the gates and the
-render.
+folder's files, timing, the word anchors, the pinned CLI and the render;
+[reference/gates.md](reference/gates.md) the gates.
 
 1. **Brief.** Write `<run>/brief.json`, `{ "length": <minutes> }`: the length
    asked for, about two minutes when none is. It may carry `"must"` and
@@ -231,7 +231,7 @@ render.
     change once chapters have rendered), and one to `over.html` changes only
     the mix.
 12. **Gates.** `node <skill>/scripts/gates/gates.mjs <run>`
-    ([the gates](reference/authoring.md#gates)); on exit 1 fix what each `gate
+    ([the gates](reference/gates.md)); on exit 1 fix what each `gate
     <name>: fail` line and its indented findings name, then run it again. An
     `invented` finding is fixed in the visual: take the fact off screen, or
     show one the narration states. On a

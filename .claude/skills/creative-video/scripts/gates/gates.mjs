@@ -48,7 +48,12 @@ import { rtlFindings } from "../lib/rtl.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
-import { NO_WORD, NO_WORD_RE } from "../render/anchors.mjs";
+import {
+  NO_WORD,
+  NO_WORD_RE,
+  REPEATED_WORD,
+  REPEATED_WORD_RE,
+} from "../render/anchors.mjs";
 import { HEIGHT, WIDTH, writeRoot } from "../render/root.mjs";
 import { inputsHash } from "./inputs.mjs";
 import { criticGate } from "./critic.mjs";
@@ -254,7 +259,8 @@ const reading = plan.flatMap((p) =>
 );
 
 // The runtime errors the browser reports while mounting the scenes. An at()
-// naming a word the alignment lacks is an anchor; any other error a scene's
+// naming a word the alignment lacks, or with no nth a word its scene repeats,
+// is an anchor; any other error a scene's
 // script raises is a script error, which would otherwise render a static frame
 // and pass every gate. `[HyperFrames] composition script error: <scene> <error>`
 // names the scene.
@@ -265,12 +271,20 @@ const flagged = new Set();
 const addOnce = (list, line) => list.includes(line) || list.push(line);
 for (const f of checked.runtime.findings) {
   const anchor = f.message?.match(NO_WORD_RE);
+  const repeated = f.message?.match(REPEATED_WORD_RE);
+  const scene = (anchor ?? repeated)?.[2];
+  const start = timeline.scenes.find((s) => s.id === scene)?.start ?? 0;
   if (anchor) {
-    const start = timeline.scenes.find((s) => s.id === anchor[2])?.start ?? 0;
-    flagged.add(anchor[2]);
+    flagged.add(scene);
     addOnce(
       anchors,
-      `${start.toFixed(2)} s ${anchor[2]}: ${NO_WORD} "${anchor[1]}"`,
+      `${start.toFixed(2)} s ${scene}: ${NO_WORD} "${anchor[1]}"`,
+    );
+  } else if (repeated) {
+    flagged.add(scene);
+    addOnce(
+      anchors,
+      `${start.toFixed(2)} s ${scene}: ${REPEATED_WORD} "${repeated[1]}" at ${repeated[3]}`,
     );
   } else if (f.severity === "error") {
     const named = f.message?.match(SCRIPT_ERROR);
