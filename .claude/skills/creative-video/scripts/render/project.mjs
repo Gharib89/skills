@@ -58,26 +58,34 @@ export const CAPTION_FACE = "assets/ibm-plex-sans-arabic-600.woff2";
 // role's name in its own span before its words. In an Arabic run (`language`
 // "ar") a cue reads right to left in CAPTION_FACE at a line height its marks
 // fit in, and each run of Latin words is one left-to-right `<bdi>` kept on one
-// line, so a term keeps its word order.
+// line, so a term keeps its word order. The run's punctuation at either end
+// (`«pull request»،`, `agent:`) stays outside the `<bdi>`, so it reads on the
+// Arabic side; the run is one word span, which the captions gate reads as its
+// words.
 export function captionsHtml(cues, language) {
   const ar = language === "ar";
   const words = (tokens) => {
     const parts = [];
     for (const t of tokens) {
-      const w = `<span class="w">${esc(t.text)}</span>`;
       const latin = ar && isLatin(t.text);
       // A number after a Latin word is part of its run (`GPT 4`), so the
       // isolation keeps its order; a number alone reads in place.
       const number = !/\p{L}/u.test(t.text) && /[0-9]/.test(t.text);
-      if ((latin || number) && parts.at(-1)?.latin) parts.at(-1).html.push(w);
-      else parts.push({ latin, html: [w] });
+      if ((latin || number) && parts.at(-1)?.latin)
+        parts.at(-1).text.push(t.text);
+      else parts.push({ latin, text: [t.text] });
     }
     return parts
-      .map((p) =>
-        p.latin
-          ? `<bdi class="lat" dir="ltr">${p.html.join(" ")}</bdi>`
-          : p.html.join(" "),
-      )
+      .map((p) => {
+        if (!p.latin)
+          return p.text
+            .map((w) => `<span class="w">${esc(w)}</span>`)
+            .join(" ");
+        const [, lead, term, tail] = p.text
+          .join(" ")
+          .match(/^([^A-Za-z0-9]*)(.*[A-Za-z0-9#+])(.*)$/s);
+        return `<span class="w">${esc(lead)}<bdi class="lat" dir="ltr">${esc(term)}</bdi>${esc(tail)}</span>`;
+      })
       .join(" ");
   };
   const cueDivs = cues

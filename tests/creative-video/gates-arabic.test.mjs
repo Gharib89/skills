@@ -157,7 +157,7 @@ test("Arabic captions read right to left in an Arabic face, each Latin run isola
   assert.match(cue, / dir="rtl"/);
   assert.match(
     cue,
-    /<bdi class="lat" dir="ltr"><span class="w">pull<\/span> <span class="w">request<\/span><\/bdi>/,
+    /<span class="w"><bdi class="lat" dir="ltr">pull request<\/bdi><\/span>/,
   );
   assert.deepEqual(
     cuesOf(html).map((c) => c.text),
@@ -173,10 +173,37 @@ test("a number after a Latin word in an Arabic caption is isolated with it, so G
     );
   assert.match(
     cue(["جرّبت", "GPT", "4", "النهارده"]),
-    /<bdi class="lat" dir="ltr"><span class="w">GPT<\/span> <span class="w">4<\/span><\/bdi> <span class="w">النهارده/,
+    /<span class="w"><bdi class="lat" dir="ltr">GPT 4<\/bdi><\/span> <span class="w">النهارده/,
   );
   assert.match(
     cue(["سنة", "2026"]),
     /<span class="w">سنة<\/span> <span class="w">2026<\/span><\/div>/,
+  );
+});
+
+test("punctuation around a Latin run in an Arabic caption sits outside its isolation, so it reads on the Arabic side", () => {
+  const html = captionsHtml(
+    [
+      {
+        start: 0,
+        end: 1,
+        tokens: ["ده", "الـ", "agent:", "يعدّل", "«pull", "request»،"].map(
+          (text) => ({ text }),
+        ),
+      },
+    ],
+    "ar",
+  );
+  assert.match(
+    html,
+    /<span class="w"><bdi class="lat" dir="ltr">agent<\/bdi>:<\/span>/,
+  );
+  assert.match(
+    html,
+    /<span class="w">«<bdi class="lat" dir="ltr">pull request<\/bdi>»،<\/span>/,
+  );
+  assert.deepEqual(
+    cuesOf(html).map((c) => c.text),
+    ["ده الـ agent: يعدّل «pull request»،"],
   );
 });
