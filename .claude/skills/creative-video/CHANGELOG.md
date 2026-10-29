@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.11.0 (2026-10-29)
+
+### Features
+
+- **creative-video**: At() refuses a repeated word with no nth
+  ([#1043](https://github.com/Gharib89/skills/pull/1043),
+  [`108a3fe`](https://github.com/Gharib89/skills/commit/108a3fec4c6872b42a28e5edf308e32ca861a7a3))
+
+
 ## v0.10.0 (2026-10-29)
 
 ### Features

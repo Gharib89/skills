@@ -8,7 +8,7 @@ description: >-
   checked or installed (`/creative-video setup`). A request for an "explainer
   video" goes to `explainer-video`.
 metadata:
-  version: 0.10.0
+  version: 0.11.0
 ---
 
 # creative-video
