@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.52.0 (2026-10-29)
+
+### Features
+
+- **ship**: A docs-only loop end read by the local review clears the cap hold
+  ([#1049](https://github.com/Gharib89/skills/pull/1049),
+  [`96deef4`](https://github.com/Gharib89/skills/commit/96deef44756a5a744e1687a6a7b50828d06186fe))
+
+
 ## v0.51.3 (2026-10-27)
 
 ### Bug Fixes
