@@ -105,10 +105,11 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
 
 The render refuses a run whose look the board has not approved, with
 `render: no approval of the look: ...`, before any render work and leaving
-`out/` as it was. The approval is the latest answers `board apply` printed
-`board: approved` for, with no later answers asking for a direction or a
-look; later scene notes leave it standing. An unattended
-run has no board: its `unattended.json` (SKILL.md step 4) stands in for the
+`out/` as it was. The approval is the first answers `board apply` printed
+`board: approved` for since the last answers asking for a direction or a look:
+answers asking for either cancel it, and later scene notes or a later
+approval (one on a later chapter's board) leave it standing. An unattended run
+has no board: its `unattended.json` (SKILL.md step 4) stands in for the
 approval, and the render prints `render: unattended run, no approval:
 direction <id>`.
 
@@ -116,6 +117,6 @@ A change after the approval is no new stop. The render compares the approved
 board with the project, as the build guard compares boards, and prints one
 line naming each scene whose file or narration changed, then the kit,
 `over.html` and each asset: `render: changed after board <n>'s approval:
-<ids>`. A later chapter's scene the approved board did not have is never
-named. Quote that line in `DELIVERY.md` (SKILL.md step 14), so the person
-sees what they approved that the video no longer shows as they saw it.
+<ids>`. A scene the approved board did not show, such as a later chapter's, is
+never named. Quote that line in `DELIVERY.md` (SKILL.md step 14), so the
+person sees what changed after they approved it.

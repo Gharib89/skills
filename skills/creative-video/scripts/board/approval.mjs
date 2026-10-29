@@ -86,10 +86,10 @@ export function changedSince(prev, now, voiced, chapterOf, named = []) {
 }
 
 // The board whose answers approved the look, `{ n, board }`, or null: the
-// latest answers that `board apply` printed `board: approved` for (an approval
-// with no direction, look or scene note), with no later answers asking for a
-// direction or a look. Later scene notes leave it standing, and a later
-// approval (on a later chapter's board) takes its place.
+// first answers `board apply` printed `board: approved` for (an approval with
+// no direction, look or scene note) since the last answers asking for a
+// direction or a look. Later scene notes leave it standing, and so does a
+// later approval: one on a later chapter's board changes nothing.
 export function approvedBoard(run) {
   const dir = path.join(run, "board");
   if (!fs.existsSync(dir)) return null;
@@ -102,7 +102,7 @@ export function approvedBoard(run) {
     .sort((a, b) => a - b)) {
     const a = read(`answers-${k}.json`);
     if (a.direction || a.look) n = null;
-    else if (a.approve && !a.scenes.length) n = k;
+    else if (a.approve && !a.scenes.length) n ??= k;
   }
   return n && { n, board: read(`${n}.json`) };
 }

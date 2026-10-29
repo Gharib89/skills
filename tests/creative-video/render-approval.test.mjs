@@ -32,6 +32,13 @@ function renders(fx) {
 const REFUSED =
   /^render: no approval of the look: run the storyboard until `board apply` prints `board: approved`/;
 
+function refused(fx, reason) {
+  ok(runGates(fx));
+  const r = exec(render, fx);
+  assert.equal(r.code, 1, r.out + r.err);
+  assert.match(r.err, reason);
+}
+
 test("an attended run with no approval is refused before any render, out/ left as it was", () => {
   const fx = attended();
   ok(runGates(fx));
@@ -48,8 +55,7 @@ test("an attended run with no approval is refused before any render, out/ left a
 test("answers that only comment on a scene are no approval", () => {
   const fx = attended();
   answer(fx, 1, "hook: slower");
-  ok(runGates(fx));
-  assert.match(exec(render, fx).err, REFUSED);
+  refused(fx, REFUSED);
 });
 
 test("the board's approval lets the render go ahead, naming nothing when nothing changed", () => {
@@ -64,9 +70,23 @@ test("a direction or a look asked after the approval cancels it", () => {
     const fx = attended();
     answer(fx, 1, "Approved: the look");
     answer(fx, 2, asked);
-    ok(runGates(fx));
-    assert.match(exec(render, fx).err, REFUSED, asked);
+    refused(fx, REFUSED);
   }
+});
+
+test("a later approval leaves the first standing, and one after a direction or a look takes over", () => {
+  const fx = attended();
+  answer(fx, 1, "Approved: the look");
+  answer(fx, 2, "hook: slower");
+  compose(fx, "hook", "<p>hook, slower</p>");
+  answer(fx, 3, "Approved: the look");
+  assert.ok(
+    renders(fx).includes("render: changed after board 1's approval: hook\n"),
+  );
+  answer(fx, 4, "Look: warmer");
+  answer(fx, 5, "Approved: the look");
+  const out = renders(fx);
+  assert.ok(!out.includes("approval:"), out);
 });
 
 test("scene notes after the approval do not cancel it, and the scenes they changed are named", () => {
@@ -93,6 +113,18 @@ test("an approved scene, the kit and an asset changed after the approval still r
       "render: changed after board 1's approval: context, the kit, assets/logo.svg\n",
     ),
   );
+});
+
+test("a scene the approved board did not show is not named, in chapter 1 too", () => {
+  const fx = attended();
+  answer(fx, 1, "Approved: the look");
+  // As if recap were scripted after the approval.
+  const bfile = path.join(fx.dir, "board", "1.json");
+  const board = readJson(bfile);
+  board.scenes = board.scenes.filter((s) => s.id !== "recap");
+  fs.writeFileSync(bfile, JSON.stringify(board));
+  const out = renders(fx);
+  assert.ok(!out.includes("approval:"), out);
 });
 
 test("a later chapter's scene the approved board did not have is not named", () => {
@@ -138,9 +170,5 @@ test("an unattended run's recorded direction lets the render go ahead, and its o
 test("an unattended record of the wrong shape is refused by name", () => {
   const fx = ready();
   fs.writeFileSync(path.join(fx.dir, "unattended.json"), "{}");
-  ok(runGates(fx));
-  assert.match(
-    exec(render, fx).err,
-    /^render: unattended\.json: direction is not text/,
-  );
+  refused(fx, /^render: unattended\.json: direction is not text/);
 });

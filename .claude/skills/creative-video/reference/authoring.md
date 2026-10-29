@@ -23,6 +23,9 @@ What you write, all committed as the video's recipe:
   `must and avoid` check reads.
 - `DIRECTIONS.md`: the three directions, the recommended one and why, and the
   pick (the person's on the storyboard, or yours and why on an unattended run).
+- `unattended.json` (unattended runs): `{ "direction": "<id>" }`, the render's
+  stand-in for the board's approval
+  ([storyboard.md](storyboard.md#the-render-holds-to-the-approval)).
 - `storyboard.json` and `directions/<id>.html` (attended runs): what the
   storyboard shows beyond the scenes, and a frame of each direction not picked
   ([storyboard.md](storyboard.md) step 1). The storyboard itself, `board/`, is
@@ -253,7 +256,7 @@ It refuses unless the storyboard approved the look
 `unattended.json` records an unattended run's direction, and unless
 `gates.json` shows every gate passing for the project as it stands. It prints
 `render: unattended run, no approval: direction <id>` for an unattended run,
-and `render: changed after board <n>'s approval: <what>` when something the
+and `render: changed after board <n>'s approval: <ids>` when something the
 approved board showed changed since. It renders the project, normalises the
 mix to -14 LUFS with a true peak ceiling of -1.5 dBTP, and writes
 `out/<slug>.mp4` (captions drawn in), `out/<slug>.srt` and `out/poster.png`.

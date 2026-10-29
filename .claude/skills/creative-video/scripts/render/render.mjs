@@ -6,9 +6,9 @@
 // Reads <run>/timeline.json and <run>/project/ (render/timing.mjs wrote both,
 // and the agent has authored a compositions/<id>.html per scene), and writes
 // the root again (render/root.mjs) so it names the project as it stands. It
-// refuses unless the board approved the look (board/approval.mjs: the latest
-// answers `board apply` printed `board: approved` for, with no direction or
-// look asked since) or <run>/unattended.json records an unattended run's
+// refuses unless the board approved the look (board/approval.mjs: the first
+// answers `board apply` printed `board: approved` for since any direction or
+// look asked) or <run>/unattended.json records an unattended run's
 // direction, and unless <run>/gates.json (gates/gates.mjs) passed for this
 // very project; a refusal leaves out/ as it was. Renders the
 // project with HyperFrames to <run>/.cache/render/raw.mp4, normalises its
@@ -33,9 +33,8 @@
 //         <m:ss>, budget <m:ss>`; then, unattended, `render: unattended run, no
 //         approval: direction <id>`, or, when anything the approved board
 //         showed changed since, `render: changed after board <n>'s approval:
-//         <ids>[, the kit][, over.html][, assets/<file>...]` (a later
-//         chapter's scene that board did not have is never named, and a change
-//         is no refusal); then one `delivery <check>: pass|fail:
+//         <ids>[, the kit][, over.html][, assets/<file>...]` (a scene that
+//         board did not show is never named, and a change is no refusal); then one `delivery <check>: pass|fail:
 //         <measured> vs <wanted>` line per
 //         check, `measured loudness: <lufs> LUFS integrated, <peak> dBTP
 //         true peak`, `delivered: <path>`, then `render: <slug>.mp4 <seconds> s,
@@ -150,17 +149,15 @@ if (unattended)
     `render: unattended run, no approval: direction ${unattended.direction}`,
   );
 else {
+  // Only what the approved board showed: a scene added since is not named.
+  const ids = timeline.scenes.map((s) => s.id);
+  const shown = new Set(approved.board.scenes.map((s) => s.id));
   const changed = changedSince(
     approved.board,
-    projectHashes(
-      project,
-      timeline.scenes.map((s) => s.id),
-    ),
+    projectHashes(project, ids),
     voicedText(voice),
-    Object.fromEntries(
-      (chapters ?? []).flatMap((c) => c.scenes.map((id) => [id, c.n])),
-    ),
-  );
+    {},
+  ).filter((c) => shown.has(c) || !ids.includes(c));
   if (changed.length)
     console.log(
       `render: changed after board ${approved.n}'s approval: ${changed.join(", ")}`,

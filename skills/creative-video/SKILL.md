@@ -156,8 +156,8 @@ folder's files, timing, the word anchors, the pinned CLI and the render;
    three wear it ([brand.md](reference/brand.md#wear-the-brand)). Make the
    recommended one without asking: attended, the person meets all three on the
    storyboard (step 11) and picks there; unattended, it stands: write
-   `<run>/unattended.json`, `{ "direction": "<id>" }`, for the render. Write
-   the pick and its reason into the file.
+   `<run>/unattended.json`, `{ "direction": "<id>" }`. Write the pick and its
+   reason into `DIRECTIONS.md`.
 5. **Spec and kit.** Read the `hyperframes` skill's `SKILL.md`, its
    `references/spec.md` and the references the concept needs, and this
    skill's [craft-teaching.md](reference/craft-teaching.md) and
@@ -253,12 +253,12 @@ folder's files, timing, the word anchors, the pinned CLI and the render;
 13. **Render.** `node <skill>/scripts/render/render.mjs <run>`; it refuses
     until the board approved the look (or `unattended.json` exists) and the
     gates pass on the current project. On exit 1 fix what it names and render
-    again. A change since the approval is no refusal: its `changed after`
-    line names it. In chapters it re-renders only the chapters that changed
-    ([authoring.md](reference/authoring.md#render)). Before a render that
-    follows a change to the kit or an asset, run it with `--estimate` first
-    and tell the person the `render: <k> of <n> chapter(s) to render` line it
-    prints, in full.
+    again. A change since the approval still renders; step 14 quotes its
+    `changed after` line. In chapters it re-renders only the chapters that
+    changed ([authoring.md](reference/authoring.md#render)). Before a render
+    that follows a change to the kit or an asset, run it with `--estimate`
+    first and tell the person the `render: <k> of <n> chapter(s) to render`
+    line it prints, in full.
 14. **Deliver.** Run `node <skill>/scripts/render/credits.mjs <run>` first:
     it writes `<run>/CREDITS.md`'s voices, sound and brand. Then add to it
     each source cited with its locators, and the faces outside the brand and
