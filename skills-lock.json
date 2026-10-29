@@ -52,7 +52,7 @@
     "grill-with-artifact": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "1a621d2181a647a094d06baec27e1778419dffaedc782320459e320923e8b8ec"
+      "computedHash": "2859ff6b96b97221bdff687fd595a7b320e6c3072ec8e760d3ea2513cc19d5b0"
     },
     "grill-with-docs": {
       "source": "mattpocock/skills",
@@ -130,17 +130,17 @@
     "setup-project": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "0cbf01c895207c100d75e53ca948f486bc792a00fce2ace179a74687021b3cc3"
+      "computedHash": "64a700f0deb55f429eda630816bdfcaae6f32f6d96b22649d91b730cc80e2f5b"
     },
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "57adc8aee4856ca09ff7646aecf16a127595f5d0c5af877a9bb50fa05b868ecc"
+      "computedHash": "342a414ace7408600b09ff6823306365e2ab432da343565e131e33a81f5aaee2"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "5418dcbdb6a876dcd55fb00d8291fc16afe7c1055f854fec4a73bddd31aff825"
+      "computedHash": "1ec99294be2f480dbe6c3f4952f2b5d7308291d9df163b34868867692fef6dee"
     },
     "show-me": {
       "source": "humanlayer/skills",
