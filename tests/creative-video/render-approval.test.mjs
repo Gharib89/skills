@@ -36,7 +36,7 @@ function refused(fx, reason, what = "") {
   ok(runGates(fx));
   const r = exec(render, fx);
   assert.equal(r.code, 1, `${what} ${r.out}${r.err}`);
-  assert.match(r.err, reason, what);
+  assert.match(r.err, reason, what && `${what}: ${r.err}`);
 }
 
 test("an attended run with no approval is refused before any render, out/ left as it was", () => {

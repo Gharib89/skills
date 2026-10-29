@@ -8,9 +8,9 @@
 // the root again (render/root.mjs) so it names the project as it stands. It
 // refuses unless the board approved the look (board/approval.mjs: the first
 // answers `board apply` printed `board: approved` for since the last answers
-// asking for a direction or a look) or <run>/unattended.json records an unattended run's
-// direction, and unless <run>/gates.json (gates/gates.mjs) passed for this
-// very project; a refusal leaves out/ as it was. Renders the
+// asking for a direction or a look) or <run>/unattended.json records an
+// unattended run's direction, and unless <run>/gates.json (gates/gates.mjs)
+// passed for this very project; a refusal leaves out/ as it was. Renders the
 // project with HyperFrames to <run>/.cache/render/raw.mp4, normalises its
 // audio to -14 LUFS with a true peak of -1.5 dBTP into out/<slug>.mp4, writes
 // out/<slug>.srt from the timeline's cues and out/poster.png from the middle of
@@ -152,12 +152,13 @@ else {
   // Only what the approved board showed: a scene added since is not named.
   const ids = timeline.scenes.map((s) => s.id);
   const shown = new Set(approved.board.scenes.map((s) => s.id));
+  const unshown = ids.filter((id) => !shown.has(id));
   const changed = changedSince(
     approved.board,
     projectHashes(project, ids),
     voicedText(voice),
     {},
-    ids.filter((id) => !shown.has(id)),
+    unshown,
   );
   if (changed.length)
     console.log(
