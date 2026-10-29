@@ -42,7 +42,7 @@ import {
   staged,
 } from "./lib/tools.mjs";
 import { stage } from "./lib/stage.mjs";
-import { AUDIO, indexed, stemOf } from "./sound/kenney.mjs";
+import { AUDIO, entryOf, stemOf } from "./sound/kenney.mjs";
 
 const usage = "usage: node setup.mjs check|install [--voice <id>]";
 stage("setup");
@@ -211,7 +211,7 @@ async function fetchPacks(r, dir) {
     const unindexed = new Set(
       fs
         .readdirSync(path.join(dir, p.name))
-        .filter((f) => AUDIO.test(f) && !indexed(p.name, f))
+        .filter((f) => AUDIO.test(f) && !entryOf(p.name, f))
         .map(stemOf),
     );
     if (unindexed.size)

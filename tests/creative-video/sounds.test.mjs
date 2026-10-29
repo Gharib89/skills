@@ -236,10 +236,10 @@ test("a bed comes only from a stem the index marks loopable", () => {
   );
   assert.equal(kitOf(fx).bed, undefined);
   kit(fx, { bed: { world: "a spaceship", query: "space engine", level: -28 } });
-  const hum = fetch(fx, { "space engine": ["timeout"] });
-  assert.equal(hum.code, 0, hum.out + hum.err);
+  const engine = fetch(fx, { "space engine": ["timeout"] });
+  assert.equal(engine.code, 0, engine.out + engine.err);
   assert.equal(
-    hum.out.trim(),
+    engine.out.trim(),
     "sound bed: kenney sci-fi-sounds/spaceEngine_000.ogg",
   );
 });
@@ -247,12 +247,12 @@ test("a bed comes only from a stem the index marks loopable", () => {
 test("a failed download is dropped like a failed search, and falls back to Kenney once installed", () => {
   const fx = fixture();
   kit(fx, { palette: [{ event: "ticket", query: "page turn" }] });
-  const dead = { ...hit("tear-1"), url: "https://cdn.example/dead/tear-1.mp3" };
+  const dead = { ...hit("page-1"), url: "https://cdn.example/dead/page-1.mp3" };
   const r = fetch(fx, { "page turn": [[dead]] });
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(
     kitOf(fx).dropped[0].why,
-    "openverse download failed (https://cdn.example/dead/tear-1.mp3: HTTP 404); the Kenney packs are not installed (run /creative-video setup)",
+    "openverse download failed (https://cdn.example/dead/page-1.mp3: HTTP 404); the Kenney packs are not installed (run /creative-video setup)",
   );
   packs(fx, { "rpg-audio": ["bookFlip1.ogg"] });
   kit(fx, { palette: [{ event: "ticket", query: "page turn" }] });

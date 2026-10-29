@@ -9,7 +9,7 @@
 //                                  other file -20
 import fs from "node:fs";
 import path from "node:path";
-import { INDEX } from "../../skills/creative-video/scripts/sound/kenney.mjs";
+import { kenneyIndex } from "../../skills/creative-video/scripts/sound/kenney.mjs";
 import { log } from "./fake-backend-log.mjs";
 
 const asked = (call, query) =>
@@ -33,7 +33,7 @@ export async function openverse(query, { medium }) {
 // index lists for it.
 export async function unzipSounds(zip, dir) {
   log({ call: "unzipSounds", zip, dir });
-  const [stem] = Object.keys(INDEX[path.basename(dir)]);
+  const [stem] = Object.keys(kenneyIndex()[path.basename(dir)]);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "License.txt"), "CC0");
   fs.writeFileSync(path.join(dir, `${stem}_001.ogg`), "ogg");

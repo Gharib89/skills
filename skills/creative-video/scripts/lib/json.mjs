@@ -1,5 +1,6 @@
 // The shapes of the run folder's JSON files, as their writers give them, and
-// of the skill's own data files (setup/rows.json, narrators.json), and
+// of the skill's own data files (setup/rows.json, setup/kenney-index.json,
+// narrators.json), and
 // the loader that holds a file to its shape, so a malformed file is refused as
 // `<file>: is missing`, `<file>: is not valid JSON (...)` or
 // `<file>: <field> <problem>`, which the stage prints after its own prefix,

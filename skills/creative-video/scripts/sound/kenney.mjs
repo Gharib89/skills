@@ -7,10 +7,14 @@ import fs from "node:fs";
 import { parseJson } from "../lib/json.mjs";
 
 const NAME = "setup/kenney-index.json";
-export const INDEX = parseJson(
-  NAME,
-  fs.readFileSync(new URL(`../../${NAME}`, import.meta.url), "utf8"),
-);
+let index;
+// The index, read on first use, so a malformed one is refused by the stage
+// reading it, after its handler is set, never at import.
+export const kenneyIndex = () =>
+  (index ??= parseJson(
+    NAME,
+    fs.readFileSync(new URL(`../../${NAME}`, import.meta.url), "utf8"),
+  ));
 
 export const AUDIO = /\.(ogg|wav|mp3)$/i;
 
@@ -20,12 +24,12 @@ export const AUDIO = /\.(ogg|wav|mp3)$/i;
 export const stemOf = (file) =>
   file.replace(/\.\w+$/, "").replace(/[_ -]?\d+$/, "");
 
-// A pack file's `words`, its name's (camelCase split, lowercased) and the
-// index's for its stem, and its stem's `loop`, or undefined for a stem the
-// index lacks.
-export function indexed(pack, file) {
+// A pack file's index entry: `words`, its name's (camelCase split, lowercased)
+// and the index's for its stem, and its stem's `loop`; undefined for a stem
+// the index lacks.
+export function entryOf(pack, file) {
   const stem = stemOf(file);
-  const entry = INDEX[pack]?.[stem];
+  const entry = kenneyIndex()[pack]?.[stem];
   if (!entry) return undefined;
   const name = stem
     .replace(/([a-z])([A-Z])/g, "$1 $2")

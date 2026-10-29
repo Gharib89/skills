@@ -23,7 +23,7 @@
     "creative-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "01e5a2533734cd54ce1319dd5ac5efd8c715ef392d22aebd99e0127cc5faf97b"
+      "computedHash": "240e18e2a6757932202b95b145e824754541f1668aacaedabd7690dc356fc3ea"
     },
     "domain-modeling": {
       "source": "mattpocock/skills",

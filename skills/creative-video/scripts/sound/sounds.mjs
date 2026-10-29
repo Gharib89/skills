@@ -32,7 +32,7 @@ import { readJson } from "../lib/json.mjs";
 import { SOUND, kitSounds } from "../lib/kit.mjs";
 import { stage } from "../lib/stage.mjs";
 import { dest, loadBackend } from "../lib/tools.mjs";
-import { AUDIO, indexed } from "./kenney.mjs";
+import { AUDIO, entryOf } from "./kenney.mjs";
 
 stage("sounds");
 const [run, ...rest] = process.argv.slice(2);
@@ -127,7 +127,7 @@ function fromKenney(query, bed) {
     if (!fs.statSync(path.join(KENNEY, pack)).isDirectory()) continue;
     for (const file of fs.readdirSync(path.join(KENNEY, pack)).sort()) {
       if (!AUDIO.test(file)) continue;
-      const entry = indexed(pack, file);
+      const entry = entryOf(pack, file);
       if (!entry || (bed && !entry.loop)) continue;
       const score = words.filter((w) =>
         entry.words.some((t) => t === w || t === `${w}s` || w === `${t}s`),
