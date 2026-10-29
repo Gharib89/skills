@@ -14,7 +14,7 @@ job" and every glossary and ADR write. With either one not installed, print
 these for the human and stop:
 
 ```sh
-npx skills add mattpocock/skills#49dd158d1076134a641b33efb035946536778336 --skill grilling --agent claude-code -y
+npx skills add mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa --skill grilling --agent claude-code -y
 npx skills add mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60 --skill domain-modeling --agent claude-code -y
 ```
 

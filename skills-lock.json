@@ -8,17 +8,17 @@
     },
     "code-review": {
       "source": "mattpocock/skills",
-      "ref": "f3fc5632f401156837ee3872f14fe33ccf1024ea",
+      "ref": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
       "sourceType": "github",
       "skillPath": "skills/engineering/code-review/SKILL.md",
-      "computedHash": "57cfd4ceb011f05e58a1a4f4cad3b2e03419d371f8990f4bcb32ff0d435a039f"
+      "computedHash": "c2745e2be960b82b9fddd82cf45265f42431e7b045c403f297b25f0f311e9210"
     },
     "codebase-design": {
       "source": "mattpocock/skills",
-      "ref": "f3fc5632f401156837ee3872f14fe33ccf1024ea",
+      "ref": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
       "sourceType": "github",
       "skillPath": "skills/engineering/codebase-design/SKILL.md",
-      "computedHash": "b2888e4f4e8c0af3bfd557575a64b905c44e6248c3101d72077816882b3a92b9"
+      "computedHash": "aa11a96c08451f4ff86052d5da94004a8c97bb4ea41b2ac8a4300c189f66c89c"
     },
     "creative-video": {
       "source": ".",
@@ -52,7 +52,7 @@
     "grill-with-artifact": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "cfcb66431843075b9a8204bc71da768eac3ba681ad91002dfc12be188e3302b2"
+      "computedHash": "1a621d2181a647a094d06baec27e1778419dffaedc782320459e320923e8b8ec"
     },
     "grill-with-docs": {
       "source": "mattpocock/skills",
@@ -63,10 +63,10 @@
     },
     "grilling": {
       "source": "mattpocock/skills",
-      "ref": "49dd158d1076134a641b33efb035946536778336",
+      "ref": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
       "sourceType": "github",
       "skillPath": "skills/productivity/grilling/SKILL.md",
-      "computedHash": "ef1641a2047b71b60f1942cd35efb47d3afc9d584dff5a0b01f8c7db923aaa08"
+      "computedHash": "e40cc1d348f6d935e28f1e24474302d7368f0a400429271a43b35fe154891dc5"
     },
     "hyperframes": {
       "source": "heygen-com/hyperframes",
@@ -98,10 +98,10 @@
     },
     "research": {
       "source": "mattpocock/skills",
-      "ref": "c55ee46073ed923f86ce59a5eb3b6d895095d1b7",
+      "ref": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
       "sourceType": "github",
       "skillPath": "skills/engineering/research/SKILL.md",
-      "computedHash": "c8c1cba327a6f824b554cd978079a3dadd7406d73174f8fb9bfef58824691970"
+      "computedHash": "5d85b64ecceed6b3f6d5996dc8af07180be8d1ff11ef3d26eda2acff078fbd39"
     },
     "retro": {
       "source": "mattpocock/skills",
@@ -122,25 +122,25 @@
     },
     "setup-matt-pocock-skills": {
       "source": "mattpocock/skills",
-      "ref": "49dd158d1076134a641b33efb035946536778336",
+      "ref": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
       "sourceType": "github",
       "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
-      "computedHash": "1d35d0afa3ded88c9324d38db08b2cff91cd03e0e11d64786bee41385cd7b9fb"
+      "computedHash": "50d6c45174f56a4323b24978f36fcc9169fae0b3abb026587bf636e468c4954c"
     },
     "setup-project": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "4b99a2004c77b60cb86bb8a0033f33cc3c2e6ba7c1e900bbdb68bf646bc9af8e"
+      "computedHash": "0cbf01c895207c100d75e53ca948f486bc792a00fce2ace179a74687021b3cc3"
     },
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "829f723e604039e17cf0d4088c93a6845288c5d78b77faa042860016e443270c"
+      "computedHash": "57adc8aee4856ca09ff7646aecf16a127595f5d0c5af877a9bb50fa05b868ecc"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "d225940d75fdd3f0dc2dc4e0bf8ef290203afa8753f83e87527c1da1ce780f8e"
+      "computedHash": "5418dcbdb6a876dcd55fb00d8291fc16afe7c1055f854fec4a73bddd31aff825"
     },
     "show-me": {
       "source": "humanlayer/skills",
@@ -184,10 +184,10 @@
     },
     "wayfinder": {
       "source": "mattpocock/skills",
-      "ref": "49dd158d1076134a641b33efb035946536778336",
+      "ref": "a496f5513d4a4cf889bc48e189e579f4b0bdf6aa",
       "sourceType": "github",
       "skillPath": "skills/engineering/wayfinder/SKILL.md",
-      "computedHash": "71d1296ae9f1ea0397f385f72d11ca3473827f5d067df4d06c58eb03377a57ce"
+      "computedHash": "22338d9356ef84430c5ca916f2632f226583d9d7366433f62bfde5b1b6781e9e"
     },
     "writing-for-agents": {
       "source": "mattpocock/skills",
