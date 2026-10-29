@@ -15,6 +15,9 @@ Your inputs, filled in by the run that dispatched you:
 - **Stills:** `{run}/{stills}/stills.json`, whose `{scene}` entry lists the
   scene's stills in time order, each `{ "t", "file" }`: `t` its video time in
   seconds, `file` its PNG in the stills folder, at full size
+- **Checks:** `{run}/{stills}/checks.json`, whose `{scene}` entry, when
+  there is one, lists what the gates measured in the scene but could not
+  judge
 - **Script:** `{run}/script.json`
 - **Excerpts:** `{run}/excerpts.json`
 - **Verdict:** `{run}/{stills}/{scene}.json`, which you write
@@ -51,7 +54,9 @@ back, so a still you skipped is a still nobody checked.
   its letters unjoined or reversed, a Latin term, number or mark out of order
   inside an Arabic line, or a sequence of steps or an arrow that runs left to
   right where the reading runs right to left. Canvas and 3D text count. Never
-  raised for a video in another language.
+  raised for a video in another language. Look in the stills for each line
+  `checks.json` lists for the scene, and raise `rtl` for the ones you see
+  wrong.
 
 **Staging is never `invented`.** The concept's world is the film's own: props,
 signs, a shop name, a game show's score, a character's name or line, a clock,

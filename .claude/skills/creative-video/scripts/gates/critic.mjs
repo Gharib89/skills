@@ -10,7 +10,7 @@ export const KINDS = ["unreadable", "invented", "rtl"];
 const KIND_LIST = `${KINDS.slice(0, -1).join(", ")} or ${KINDS.at(-1)}`;
 // Bumped when the verdict's format or what the critic reads changes, so a
 // verdict in the old one is judged again rather than refused or kept.
-const FORMAT = 1;
+const FORMAT = 2;
 const ROUNDS = 2;
 
 // `bad(why)` stops the run; `times` are the scene's still times in order.
@@ -50,9 +50,20 @@ const hash = (...v) =>
 
 // The critic gate's record for gates.json. `plan` is the gates' scenes with
 // their sample times, `stills` maps a sample time to `{ pixels, path }` from
-// the first snapshot launch, `prev` the critic's last record when the voice
-// is the same (rounds count per voice), `fail` refuses a malformed verdict.
-export function criticGate({ run, plan, stills, script, pack, prev, fail }) {
+// the first snapshot launch, `checks` maps a scene to what the gates measured
+// but could not judge, for the critic's rtl kind (checks.json beside the
+// stills), `prev` the critic's last record when the voice is the same (rounds
+// count per voice), `fail` refuses a malformed verdict.
+export function criticGate({
+  run,
+  plan,
+  stills,
+  script,
+  pack,
+  checks = {},
+  prev,
+  fail,
+}) {
   // Every critic reads every scene's narration and every cited excerpt, so a
   // scene's key takes all of them beside its own stills.
   const text = new Map((pack?.excerpts ?? []).map((x) => [x.id, x.text]));
@@ -67,6 +78,7 @@ export function criticGate({ run, plan, stills, script, pack, prev, fail }) {
         p.sc.id,
         p.samples.map((t) => stills.get(t).pixels),
         read,
+        checks[p.sc.id] ?? [],
         FORMAT,
       ),
     ]),
@@ -89,6 +101,7 @@ export function criticGate({ run, plan, stills, script, pack, prev, fail }) {
       });
     fs.writeFileSync(path.join(abs, "stills.json"), JSON.stringify(set));
     fs.writeFileSync(path.join(abs, "keys.json"), JSON.stringify(keys));
+    fs.writeFileSync(path.join(abs, "checks.json"), JSON.stringify(checks));
     // The last round's verdict on a scene whose key is unchanged is carried,
     // so only changed scenes are pending.
     const before = sameFormat && prev.stills !== dir ? prev.stills : null;

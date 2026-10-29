@@ -64,7 +64,7 @@ export function writeChapter(run, { timeline, voice }, n) {
   );
   fs.writeFileSync(
     path.join(dir, "compositions", "captions.html"),
-    captionsHtml(cues),
+    captionsHtml(cues, language),
   );
   fs.writeFileSync(
     path.join(dir, "index.html"),

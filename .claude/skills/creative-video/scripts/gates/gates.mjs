@@ -20,7 +20,8 @@
 // loudness and voice QC are the voice and render stages' own. A video in
 // chapters adds two gates: chapter titles (each chapter's first frame draws
 // every word of its title) and sound only (over.html draws no element, since a
-// chapter renders without it). Advisory warnings
+// chapter renders without it). An Arabic run adds joins (gates/joins.mjs), and
+// layout holds its text to lib/rtl.mjs's reading rules. Advisory warnings
 // (gates/warnings.mjs) never change the exit: effect rate, effect onset, scene
 // length, sentences, alike voices, dropped sound, pacing and clock.
 // stdout: `gate <name>: pass|fail|pending: <measured> vs <floor>` per gate (the
@@ -43,6 +44,7 @@ import path from "node:path";
 import { claimsKey } from "../lib/claims.mjs";
 import { maybeJson, readJson } from "../lib/json.mjs";
 import { soundKit, voicedCast } from "../lib/kit.mjs";
+import { rtlFindings } from "../lib/rtl.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
@@ -50,6 +52,7 @@ import { NO_WORD, NO_WORD_RE } from "../render/anchors.mjs";
 import { HEIGHT, WIDTH, writeRoot } from "../render/root.mjs";
 import { inputsHash } from "./inputs.mjs";
 import { criticGate } from "./critic.mjs";
+import { joinsFindings } from "./joins.mjs";
 import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
 import { BED_LU, bedLevel, licenceFindings } from "./sound-kit.mjs";
@@ -102,6 +105,7 @@ const plan = timeline.scenes.map((sc) => {
   return { sc, end, samples: uniq(Object.values(sampleTimes(sc))), grid };
 });
 const sampled = uniq(plan.flatMap((p) => p.samples));
+const arabic = script.language === "ar";
 const sceneAt = (t) =>
   (plan.find((p) => t >= p.sc.start - 1e-6 && t < p.end) ?? plan.at(-1)).sc.id;
 const sourceScene = (f) =>
@@ -117,6 +121,7 @@ for (const k of ["runtime", "layout", "contrast"])
 const { frames, events } = await orFail(() =>
   backend.probe(proj, uniq([...sampled, ...plan.flatMap((p) => p.grid)]), {
     env,
+    joins: arabic ? sampled : [],
   }),
 );
 // A scene's own text at a probe time: the captions are drawn over every scene.
@@ -218,7 +223,13 @@ for (const p of plan)
           p.sc.id,
           `${quote(e.text)} at y ${Math.round(top)}-${Math.round(bottom)}`,
         );
+      if (arabic)
+        rtlFindings(e, (what) =>
+          layout.add(t, p.sc.id, `${what} ${quote(e.text)}`),
+        );
     }
+const joins = collect();
+const { shaped, checks } = joinsFindings(plan, frames, joins.add);
 
 // Contrast: HyperFrames grades a failure a warning, the gate fails on it.
 const contrast = collect();
@@ -402,6 +413,13 @@ const judged = {
     "every <audio> but the narration has a licence record in sound.json",
   ],
   "bed level": [bed.evidence, `${BED_LU} LU`, bed.measured],
+  ...(arabic && {
+    joins: [
+      joins.lines(),
+      "every Arabic word shaped as one in the face it is drawn in",
+      `${shaped} split word(s) shaped`,
+    ],
+  }),
   "must and avoid": [
     coverage,
     "every must said or shown, no avoid said or shown",
@@ -436,6 +454,7 @@ gates.critic = criticGate({
   stills: new Map(a.map(([t, pixels, file]) => [t, { pixels, path: file }])),
   script,
   pack,
+  checks,
   prev: sameVoice ? prev.gates.critic : null,
   fail,
 });
