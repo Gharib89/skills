@@ -107,8 +107,7 @@ command line, run through this skill's pinned copy (`hf.mjs`,
 dark navy void with a glow, neon, floating particles, purple and blue
 gradients, everything centred and fading in) stays banned, with one more way
 out: the format concept needs it, and `SPEC.md` says why in one line. "It
-looks techy" is not a reason. A brand's colours and faces pass the list; its
-banned treatments still hold.
+looks techy" is not a reason.
 Where the `hyperframes` loop and [Make a video](#make-a-video) differ, these
 steps win: `DIRECTIONS.md` is its storylines, the stills review of step 10 is
 its review (no `REVIEW.md`, nothing but the sheets to the reviewer), the
@@ -142,12 +141,12 @@ render.
    not. The language is the one asked for, English when none is; the narrator
    the one asked for, else the language's default in `<skill>/narrators.json`.
    Name the audience (the one asked for, else a smart newcomer): it is the
-   researcher's `{audience}` and heads `DIRECTIONS.md`. A brand named, or
-   material given (a logo, a site, a deck): after step 2, run
-   [reference/brand.md](reference/brand.md)'s steps.
+   researcher's `{audience}` and heads `DIRECTIONS.md`.
 2. **Tools.** Run setup's check (below) with that narrator. A missing row:
    run setup's steps first. The `hyperframes` and `media-use`
-   skills must be installed (Composed skills, below).
+   skills must be installed (Composed skills, below). A brand named or
+   material given (a logo, a site, a deck): run
+   [reference/brand.md](reference/brand.md)'s steps.
 3. **Sources.** Read [reference/sources.md](reference/sources.md) and run its
    steps, to the outline and the still-standing check.
 4. **Directions.** Write `<run>/DIRECTIONS.md`: three directions that differ
@@ -258,12 +257,11 @@ render.
     and tell the person the line it prints, in full:
     `render: <k> of <n> chapter(s) to render, estimate <m:ss>, budget <m:ss>`.
 14. **Deliver.** Run `node <skill>/scripts/render/credits.mjs <run>` first:
-    it writes `<run>/CREDITS.md`'s voices and sound. Then add to it each
-    source cited with its locators, and the faces and their licences. Write
-    `<run>/DELIVERY.md` (the concept and why
-    it was picked; any brand, with what was fetched and from where, as
-   `CREDITS.md`'s `## Brand` lists it; what
-   was measured, quoting the render's `delivery` and
+    it writes `<run>/CREDITS.md`'s voices, sound and brand. Then add to it
+    each source cited with its locators, and the faces outside the brand and
+    their licences. Write `<run>/DELIVERY.md` (the concept and why it was
+    picked; any brand, with what was fetched and from where, as `CREDITS.md`'s
+    `## Brand` lists it; what was measured, quoting the render's `delivery` and
     `measured loudness` lines and the gates' `warn` lines, and what was only
     looked at; that the sound was measured, not heard, and each effect placed
     on its event's word; any source updated or withdrawn; the weakest shot and
