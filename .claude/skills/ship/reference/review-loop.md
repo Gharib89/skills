@@ -88,6 +88,15 @@ reviewer read the fixes: the human reads them at the merge gate. Where the head
 later moves past that `<sha>` (a hand-resolved conflict merge, a lint fix), the
 hold names the range to read, `<sha>..<head>`.
 
+A docs-only round before `Cap:` is spent (any docs-only round under `Cap:
+None.`) records `Docs-only: <reviewer>: tree unchanged at <sha>` instead, with
+`run-file note Evidence "<line>" --issue <issue>`, `<sha>` the head its local
+review read, once that review's fixes change no file; a docs-only round at the
+cap records `Past-cap:`. `gate clean` then clears that reviewer's `cap` stop
+while `<sha>` covers the PR head, unless a re-raised declined finding caused
+the stop. Where the head later moves past `<sha>`, `gate clean` holds, naming
+`<sha>..<head>`.
+
 ## Reading a round
 
 `poll-pr` returns the reviewer's rounds, each graded `substantive`, threads with

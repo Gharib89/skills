@@ -74,7 +74,7 @@ contract.
 | `run-file ran` | 3, per verification as its `Run:` line ends, stamping the head it ran at |
 | `run-file probe` | 4, a decline's claim, run and recorded as a `Probe:` line |
 | `run-file call` | any phase, before each direct call, writing its `## Direct calls` line |
-| `run-file note` | any phase, for each attested line (`Round:`, `Stop:`, `Past-cap:`, `Criterion`, `Noted:`, `Filed:`), one line each, appended under its section |
+| `run-file note` | any phase, for each attested line (`Round:`, `Stop:`, `Past-cap:`, `Docs-only:`, `Criterion`, `Noted:`, `Filed:`), one line each, appended under its section |
 | `base-fresh` | 5, and after every conflict resolution |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
 | `open-pr` | 6 |
