@@ -170,14 +170,10 @@ export const differing = (a, b) =>
   );
 
 // The rows a real render needs that are not installed: the npm-packages and
-// chrome rows, the Arabic caption face, and ffmpeg and ffprobe on PATH.
+// chrome rows, and ffmpeg and ffprobe on PATH.
 export function missingRows() {
   const missing = catalogue()
-    .filter(
-      (r) =>
-        ["npm", "chrome"].includes(r.kind) ||
-        r.id === "font:ibm-plex-sans-arabic",
-    )
+    .filter((r) => ["npm", "chrome"].includes(r.kind))
     .filter((r) => !fs.existsSync(path.join(dest(r), ".stamp")))
     .map((r) => r.id);
   if (["ffmpeg", "ffprobe"].some((t) => spawnSync(t, ["-version"]).error))

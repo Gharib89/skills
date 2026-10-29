@@ -20,7 +20,8 @@
 // loudness and voice QC are the voice and render stages' own. A video in
 // chapters adds two gates: chapter titles (each chapter's first frame draws
 // every word of its title) and sound only (over.html draws no element, since a
-// chapter renders without it). Advisory warnings
+// chapter renders without it). An Arabic run adds joins (gates/joins.mjs), and
+// layout holds its text to lib/rtl.mjs's reading rules. Advisory warnings
 // (gates/warnings.mjs) never change the exit: effect rate, effect onset, scene
 // length, sentences, alike voices, dropped sound, pacing and clock.
 // stdout: `gate <name>: pass|fail|pending: <measured> vs <floor>` per gate (the
@@ -51,6 +52,7 @@ import { NO_WORD, NO_WORD_RE } from "../render/anchors.mjs";
 import { HEIGHT, WIDTH, writeRoot } from "../render/root.mjs";
 import { inputsHash } from "./inputs.mjs";
 import { criticGate } from "./critic.mjs";
+import { joinsFindings } from "./joins.mjs";
 import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
 import { BED_LU, bedLevel, licenceFindings } from "./sound-kit.mjs";
@@ -226,22 +228,8 @@ for (const p of plan)
           layout.add(t, p.sc.id, `${what} ${quote(e.text)}`),
         );
     }
-
-// Joins, in an Arabic run: each word the joins measure shaped at a sample whose
-// split pieces differ from the word shaped whole. What shaping cannot judge
-// (a face with no file, a reversed Latin run) goes to the critic's rtl kind.
 const joins = collect();
-const asks = {};
-let shapedWords = 0;
-for (const p of plan)
-  for (const t of p.samples) {
-    const j = frames.find((f) => f.t === t).joins;
-    if (!j) continue;
-    shapedWords += j.checked;
-    for (const b of j.broken)
-      joins.add(t, p.sc.id, `"${b.word}" breaks its joins in ${b.face}`);
-    for (const a of j.asks) (asks[p.sc.id] ??= new Set()).add(a.what);
-  }
+const { shaped, checks } = joinsFindings(plan, frames, joins.add);
 
 // Contrast: HyperFrames grades a failure a warning, the gate fails on it.
 const contrast = collect();
@@ -429,7 +417,7 @@ const judged = {
     joins: [
       joins.lines(),
       "every Arabic word shaped as one in the face it is drawn in",
-      `${shapedWords} word(s) shaped`,
+      `${shaped} split word(s) shaped`,
     ],
   }),
   "must and avoid": [
@@ -466,9 +454,7 @@ gates.critic = criticGate({
   stills: new Map(a.map(([t, pixels, file]) => [t, { pixels, path: file }])),
   script,
   pack,
-  checks: Object.fromEntries(
-    Object.entries(asks).map(([id, whats]) => [id, [...whats]]),
-  ),
+  checks,
   prev: sameVoice ? prev.gates.critic : null,
   fail,
 });

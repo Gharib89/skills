@@ -59,7 +59,7 @@ test("an Arabic word split where the browser shapes alone fails the joins gate, 
   compose(fx, "hook", RTL(LINE("كتب")));
   r = runGates(fx);
   assert.equal(r.code, 0, r.out + r.err);
-  assert.match(gateLine(r, "joins"), /^pass: \d+ word\(s\) shaped vs /);
+  assert.match(gateLine(r, "joins"), /^pass: \d+ split word\(s\) shaped vs /);
 });
 
 test("the probe shapes the sample frames of an Arabic run and no frame of an English one", () => {

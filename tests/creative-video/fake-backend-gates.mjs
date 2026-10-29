@@ -217,17 +217,15 @@ function joinsAt(dir, t) {
   const out = { checked: 0, broken: [], asks: [] };
   for (const m of mounted(dir).filter((m) => m.id !== "captions"))
     if (t >= m.start && t < m.end) {
-      out.checked += texts(m, t - m.start)
-        .map((e) => e.text)
-        .join(" ")
-        .split(/\s+/)
-        .filter((w) => /\p{Script=Arabic}/u.test(w)).length;
       const marked = (k) =>
         [...m.html.matchAll(new RegExp(`data-joins-${k}="([^"]+)"`, "g"))].map(
           (x) => x[1],
         );
-      for (const word of marked("broken"))
+      // Only a split word is shaped, and a broken one is split.
+      for (const word of marked("broken")) {
+        out.checked++;
         out.broken.push({ scene: m.id, word, face: "Noto Naskh Arabic" });
+      }
       for (const word of marked("unresolved"))
         out.asks.push({
           scene: m.id,
