@@ -12,7 +12,8 @@
 // image weighs the same whatever its size, so every page counts. Colours a page
 // declares count only where a candidate its own images show confirms them, and
 // a PPTX theme's only where its exported PDF's pages do.
-// stdout: `brand ref <image>: <kind> · <source>` per reference image, then
+// stdout: `brand ref <image>: <kind> · <source>` per reference image, a
+//         page's source the linked page it was captured from, then
 //         `brand candidate <id>: <hex> · <share>% · <images>` per candidate,
 //         `brand declared <hex>: not in the reference images, dropped` per
 //         declared colour no candidate confirms (`its candidate is <hex>
@@ -269,6 +270,7 @@ export async function measure(run, given, backend) {
     const id = idOf(s, kind);
     const before = errors.length;
     let files = [];
+    let pages = [];
     try {
       if (kind === "image") {
         const to = path.join(refs, `${id}-1${path.extname(s).toLowerCase()}`);
@@ -287,7 +289,7 @@ export async function measure(run, given, backend) {
           files = await backend.videoFrames(s, out, opts);
         else {
           const site = await backend.capturePages(s, out, { ...opts, max: 5 });
-          files = site.images;
+          ({ images: files, pages } = site);
           declared.push(
             ...site.colors.map((hex) => ({ hex, kind, source: s })),
           );
@@ -299,9 +301,10 @@ export async function measure(run, given, backend) {
       refuse(s, `could not capture it: ${e.message}`);
     }
     if (errors.length > before) continue;
-    for (const f of files.slice(0, MAX)) {
-      images.push({ name: path.basename(f), file: f, kind, source: s });
-      report.push(`brand ref ${path.basename(f)}: ${kind} · ${s}`);
+    for (const [k, f] of files.slice(0, MAX).entries()) {
+      const page = pages[k] ?? s;
+      images.push({ name: path.basename(f), file: f, kind, source: s, page });
+      report.push(`brand ref ${path.basename(f)}: ${kind} · ${page}`);
     }
   }
   if (!errors.length && !images.length)
@@ -377,7 +380,7 @@ export async function measure(run, given, backend) {
     JSON.stringify(
       {
         sources: given.map((source, i) => ({ kind: kinds[i], source })),
-        images: images.map(({ name, source }) => ({ name, source })),
+        images: images.map(({ name, page }) => ({ name, source: page })),
         fonts: families,
         surfaces,
         accents,

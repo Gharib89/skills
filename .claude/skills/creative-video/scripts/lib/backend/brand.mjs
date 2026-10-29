@@ -21,14 +21,15 @@ export const pageKey = (u) => {
 // hero art never reads as the brand; inline SVG and text stay. Each screenshot
 // covers the page down to at most 5400 px, not the 900 px viewport, so the
 // colours are measured by area across the page and not by the hero alone. With
-// the images, the colours the visible elements declare and the families the
-// body and headings name.
+// the images, the page each was captured from, the colours the visible
+// elements declare and the families the body and headings name.
 export async function capturePages(url, out, { env, max }) {
   const browser = await sandboxed(env);
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1440, height: 900 });
     const images = [];
+    const pages = [];
     const colors = new Set();
     const fonts = [];
     const start = pageKey(url);
@@ -107,11 +108,12 @@ export async function capturePages(url, out, { env, max }) {
         clip: { x: 0, y: 0, width: 1440, height: Math.min(found.height, 5400) },
       });
       images.push(f);
+      pages.push(u);
       found.colors.forEach((c) => colors.add(c));
       fonts.push(...found.fonts);
       if (u === start) queue.push(...found.links.map(pageKey));
     }
-    return { images, colors: [...colors], fonts };
+    return { images, pages, colors: [...colors], fonts };
   } finally {
     await browser.close();
   }
