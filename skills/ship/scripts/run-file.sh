@@ -201,8 +201,8 @@
 #     <command>, character for character, or a node ID under it (<test>::<name>)
 #   probe: {run_file, ref, command, exit, head, last}
 #   call: {run_file, command, why}
-#   note: {run_file, section, line}; a `Criterion` or `Past-cap` line must take
-#     the form `gate clean` reads, or it is refused
+#   note: {run_file, section, line}; a `Criterion`, `Past-cap` or `Docs-only`
+#     line is refused unless in the form `gate clean` reads
 #   gate record: {run_file, head, verdict}
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
 #     for a record made without one; behind is null where git cannot count the

@@ -91,6 +91,20 @@ check 'the refusal names the form' 'a Past-cap line is `Past-cap: <reviewer>: tr
 # A docs-only fix-only diff ends the loop before Cap: is spent: no fallback is owed, and none covers it.
 capped; change_run '/^Round: primary 2/d'; held 'docs-only end before the cap' 'reviewer primary: cap'
 capped; change_run '/^Round: primary 2/d'; unheld 'docs-only end before the cap' 'reviewer fallback: not reviewed'
+# Its local review, recorded as `Docs-only:` on the head it read, clears the hold:
+# the loop's own rule ended it, and no fix went unread (#1034).
+docsonly() { capped; change_run '/^Round: primary 2/d'; }
+docsonly; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a docs-only end whose local review read the head'
+base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: cap/'; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'an uncapped docs-only end whose local review read the head'
+docsonly; printf 'Docs-only: primary: tree unchanged at 1234567\n' >> "$f"; held 'a docs-only local review at an uncovered head names the range to read' 'reviewer primary: docs-only end, local review read 1234567, head moved: read 1234567..abcdef0123456789'
+docsonly; printf 'Docs-only: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held "another reviewer's docs-only line" 'reviewer primary: cap'
+capped; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a docs-only line on a spent cap' 'reviewer primary: cap'
+docsonly; change_run 's/Round: primary 1:/Round: primary 2:/'; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a docs-only line on gapped rounds' 'reviewer primary: cap'
+docsonly; change_run 's/Round: primary 1: all dispositioned/Round: primary 1: re-raised declined: a finding/'; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a docs-only line on a re-raised declined finding' 'reviewer primary: cap'
+base; check_rc 'note takes a docs-only line' 0 "$(bash "$m" note 'Review evidence' 'Docs-only: primary: tree unchanged at abcdef0123456789' --file "$f" >/dev/null 2>&1; echo $?)"
+base; answer=$(bash "$m" note 'Review evidence' 'Docs-only: primary: tree unchanged' --file "$f" 2>/dev/null); rc=$?
+check_rc 'note refuses a docs-only line with no head' 1 "$rc"
+check 'the docs-only refusal names the form' 'a Docs-only line is `Docs-only: <reviewer>: tree unchanged at <sha>`, the form gate clean reads: Docs-only: primary: tree unchanged' "$(jq -r .error <<<"$answer")"
 # A primary whose later round did not land after a fix changed the tree owes its fallback a run (#551).
 landed() { base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not landed/'; }
 landed; held 'not-landed primary owes its fallback' 'reviewer fallback: not reviewed'

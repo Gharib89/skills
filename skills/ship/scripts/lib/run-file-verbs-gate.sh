@@ -17,6 +17,8 @@ gate)
   if [ "$sub" = summary ]; then
     [ -z "$head" ] || ship_tooling "$usage"
     [[ $src =~ ^[1-9][0-9]*$ ]] || ship_tooling "$usage"
+    # shellcheck source=run-file-gate-summary.sh
+    source "$SHIP_SCRIPTS/lib/run-file-gate-summary.sh"
     gate_summary "$src"
     exit $?
   elif [ "$sub" = clean ]; then
@@ -280,6 +282,8 @@ note)
   # The local review a run takes past a reviewer's cap: a line of its own, so the
   # reviewer's `Round:` lines still read 1..Cap (#880).
   case $text in Past-cap:*) [[ $text =~ ^Past-cap:\ .+:\ tree\ unchanged\ at\ [0-9a-f]{7,64}$ ]] || ship_fail "a Past-cap line is \`Past-cap: <reviewer>: tree unchanged at <sha>\`, the form gate clean reads: $text" ;; esac
+  # Its twin for a docs-only end before the cap, which clears that stop (#1034).
+  case $text in Docs-only:*) [[ $text =~ ^Docs-only:\ .+:\ tree\ unchanged\ at\ [0-9a-f]{7,64}$ ]] || ship_fail "a Docs-only line is \`Docs-only: <reviewer>: tree unchanged at <sha>\`, the form gate clean reads: $text" ;; esac
   append_to_section "## $sect" "$text"
   jq -n --arg f "$file" --arg s "$sect" --arg l "$text" '{run_file: $f, section: $s, line: $l}'
   ;;

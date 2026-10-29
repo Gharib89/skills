@@ -88,6 +88,12 @@ reviewer read the fixes: the human reads them at the merge gate. Where the head
 later moves past that `<sha>` (a hand-resolved conflict merge, a lint fix), the
 hold names the range to read, `<sha>..<head>`.
 
+A docs-only round's local review records `Docs-only: <reviewer>: tree
+unchanged at <sha>` the same way once its fixes change no file. That clears
+the reviewer's `cap` stop at the gate while `<sha>` covers the PR head,
+because the loop leaves docs-only fixes to this review by design. A head that
+moves past `<sha>` holds, naming the range to read.
+
 ## Reading a round
 
 `poll-pr` returns the reviewer's rounds, each graded `substantive`, threads with
