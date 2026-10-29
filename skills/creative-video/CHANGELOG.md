@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.13.0 (2026-10-29)
+
+### Features
+
+- **creative-video**: The Kenney fallback finds a sound by what it is
+  ([#1053](https://github.com/Gharib89/skills/pull/1053),
+  [`a7cff47`](https://github.com/Gharib89/skills/commit/a7cff4744e0945701d74803e97bcfe706b765580))
+
+
 ## v0.12.0 (2026-10-29)
 
 ### Features
