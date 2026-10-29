@@ -148,12 +148,15 @@ function faceUrls() {
 
 // The bytes a face URL serves from the project folder `root`, a data: URL's
 // own, or null for anything else.
-function urlBytes(href, origin, root) {
+export function urlBytes(href, origin, root) {
   const u = new URL(href);
   if (u.protocol === "data:") {
-    const [head, body] = href.slice(5).split(",", 2);
+    // The body is all after the first comma; a percent-encoded one may hold
+    // more.
+    const comma = href.indexOf(",");
+    const head = href.slice(5, comma);
     return Buffer.from(
-      decodeURIComponent(body),
+      decodeURIComponent(href.slice(comma + 1)),
       head.endsWith(";base64") ? "base64" : "latin1",
     );
   }
