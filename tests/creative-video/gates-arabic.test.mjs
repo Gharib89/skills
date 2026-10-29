@@ -122,7 +122,13 @@ test("the dir, isolated-Latin and line-height checks fail the layout gate of an 
       `${LINE("بيقرا البروفايل")}<bdi style="white-space: nowrap">React</bdi>`,
     ),
   );
-  compose(fx, "recap", RTL(LINE("كل تغيير")));
+  // A line height equal to the ink passes, and `normal` (no line height set)
+  // takes the face's own metrics, so it is not measured.
+  compose(
+    fx,
+    "recap",
+    RTL(`<p style="line-height: 1.4">كل تغيير</p><p>بيتراجع</p>`),
+  );
   assert.equal(runGates(fx).code, 0);
 });
 

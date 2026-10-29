@@ -50,7 +50,13 @@ function woff(entries) {
   head.write("wOFF", 0, "latin1");
   head.writeUInt32BE(0x00010000, 4);
   head.writeUInt16BE(entries.length, 12);
-  return Buffer.concat([head, dir, ...parts]);
+  return whole(Buffer.concat([head, dir, ...parts]));
+}
+
+// A WOFF's or WOFF2's header gives the file's whole length at byte 8.
+function whole(buf) {
+  buf.writeUInt32BE(buf.length, 8);
+  return buf;
 }
 
 const base128 = (n) => {
@@ -83,7 +89,7 @@ function woff2(entries) {
   head.writeUInt32BE(0x00010000, 4);
   head.writeUInt16BE(entries.length, 12);
   head.writeUInt32BE(packed.length, 20);
-  return Buffer.concat([head, dir, packed]);
+  return whole(Buffer.concat([head, dir, packed]));
 }
 
 test("a TTF or OTF is read as it is", () => {
@@ -119,6 +125,27 @@ test("a WOFF2 is unpacked to its tables, a transformed glyf and loca left out", 
   );
   assert.deepEqual(Object.keys(shaped).sort(), ["GSUB", "cmap"]);
   assert.deepEqual(shaped.GSUB, TABLES.GSUB);
+});
+
+test("a WOFF or WOFF2 whose length is not its header's, or that does not unpack, is refused, naming the face", () => {
+  const w = woff(Object.entries(TABLES));
+  assert.throws(
+    () => sfnt(w.subarray(0, w.length - 8), "assets/a.woff"),
+    /^Error: assets\/a\.woff: not a whole WOFF \(\d+ bytes, its header says \d+\)$/,
+  );
+  const w2 = woff2(Object.entries(TABLES).map(([t, d]) => [t, d, false]));
+  assert.throws(
+    () => sfnt(w2.subarray(0, w2.length - 8), "assets/a.woff2"),
+    /^Error: assets\/a\.woff2: not a whole WOFF2 /,
+  );
+  // The brotli stream after the directory overwritten: the length holds, the
+  // unpack fails.
+  const garbled = Buffer.from(w2);
+  garbled.fill(0xff, garbled.length - 16);
+  assert.throws(
+    () => sfnt(garbled, "assets/b.woff2"),
+    /^Error: assets\/b\.woff2: not a whole WOFF2 \(.+\)$/,
+  );
 });
 
 test("anything else is no font", () => {

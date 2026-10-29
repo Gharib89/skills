@@ -19,6 +19,7 @@ import { fromCache } from "./common.mjs";
 // run split across boxes whose last character sits left of its first, which
 // an RTL line has reversed.
 function restingWords() {
+  // lib/rtl.mjs's ARABIC_LETTER, written here since this runs in the page.
   const ARABIC = /(?=\p{Script=Arabic})\p{L}/u;
   const SKIP = "script, style, [data-layout-ignore]";
   const texts = (root) => {
@@ -114,7 +115,7 @@ function restingWords() {
           r.box.setAttribute("data-hf-joins", keys.get(r.box));
         }
       found.push({
-        text: text.replaceAll("‍", ""),
+        text: text.replaceAll("\u200d", ""),
         runs: runs.map((r) => ({ text: r.text, k: keys.get(r.box) })),
         reversed,
       });
@@ -193,8 +194,8 @@ export async function joinsMeasure(page, root, nodeDir) {
   // order, ZWJ's own glyph dropped; null where the face lacks a glyph.
   let served = null;
   const fonts = new Map();
-  const shaper = (bytes) => {
-    const font = bytes && sfnt(bytes);
+  const shaper = (bytes, name) => {
+    const font = bytes && sfnt(bytes, name);
     if (!font) return null;
     const hbFace = new hb.Face(new hb.Blob(new Uint8Array(font)));
     const hbFont = new hb.Font(hbFace);
@@ -213,7 +214,7 @@ export async function joinsMeasure(page, root, nodeDir) {
       buf.destroy?.();
       return out;
     };
-    const zwj = new Set(run("‍").map((x) => x.g));
+    const zwj = new Set(run("\u200d").map((x) => x.g));
     return {
       ps: hbFace.getName(6, "en"),
       glyphs: (text) => {
@@ -229,10 +230,15 @@ export async function joinsMeasure(page, root, nodeDir) {
     let found = null;
     if (isCustomFont) {
       served ??= (await page.evaluate(faceUrls))
-        .map((href) => shaper(urlBytes(href, origin, root)))
+        .map((href) =>
+          shaper(
+            urlBytes(href, origin, root),
+            href.startsWith("data:") ? "a face in a data: URL" : href,
+          ),
+        )
         .filter(Boolean);
       found = served.find((s) => s.ps === ps) ?? null;
-    } else found = shaper(systemFace(ps));
+    } else found = shaper(systemFace(ps), ps);
     fonts.set(ps, found);
     return found;
   };

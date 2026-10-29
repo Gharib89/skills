@@ -84,8 +84,8 @@ host at its start and length, the narration, the captions on top),
 `timing.js` and the caption track. In a video of two or more roles, a cue
 whose role differs from the last cue's opens with the role's name
 (`Learner: `), in the video and the SRT alike. In an Arabic run the captions
-read right to left in IBM Plex Sans Arabic, which it copies from the font
-store, each run of Latin words kept in order on one line. It prints `timing: <n>
+read right to left in IBM Plex Sans Arabic, each run of Latin words kept in
+order on one line. It prints `timing: <n>
 scene(s), <total> s` and one `timing: compositions/<id>.html to author` line
 per scene file not yet written. On exit 1, `timing: <why>` names what to fix:
 a `voice.json` that no longer matches `script.json` means voice again first.
@@ -166,12 +166,12 @@ it, never write in it.
 
 In an Arabic run, set the scene's text in a box marked `dir="rtl"`, each Latin
 term or number among Arabic words in a `<bdi>` with `white-space: nowrap`, at a
-line height no lower than the ink the face's letters span (the `layout` gate
-measures it); mark a code frame or a terminal `dir="ltr"`. Keep each Arabic
-word in one box: a letter in a box of its own (an `inline-block` span per
-character, as letter-by-letter animation makes) is drawn unjoined, and the
-`joins` gate fails it. Animate a word, a line or a clip mask, never its
-letters.
+line height no lower than the ink the face's letters span; the `layout` gate
+measures each. Mark a code frame or a terminal `dir="ltr"`, which it leaves as
+written. Keep each Arabic word in one box: a letter in a box of its own (an
+`inline-block` span per character, as letter-by-letter animation makes) is
+drawn unjoined, and the `joins` gate fails it. Animate a word, a line or a clip
+mask, never its letters.
 
 ## Sound
 
@@ -290,7 +290,9 @@ failing one indented under it. Each is a hard fail:
   fact on screen (one no narration sentence or cited excerpt states, or one
   they contradict; staging such as props, signs, scores and round numbers
   never is) and `rtl` (Arabic laid out the wrong way round). It gives no
-  scores. It also checks what `joins` measures but cannot judge.
+  scores. It also judges, under `rtl`, a word `joins` cannot shape (its face
+  resolves to no file) and a Latin or digit run split into boxes and read right
+  to left.
 - `chapter titles` (a video in chapters): every word of each chapter's title
   is drawn on that chapter's first frame.
 - `sound only` (a video in chapters): `over.html` holds `<audio>` and draws no
