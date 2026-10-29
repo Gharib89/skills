@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fixture, here } from "./voice-lib.mjs";
+import { png } from "./png-lib.mjs";
 import {
   calls,
   exec,
@@ -186,6 +187,7 @@ test("measure ranks colours by area across every page, each page weighing the sa
   const fx = machine();
   const site = {
     pages: [PAGE_A, PAGE_B],
+    urls: ["https://acme.test/", "https://acme.test/brand"],
     colors: ["#161b8d", "#161b8e", "#00ff00"],
     fonts: [
       { role: "title", stack: "'Source Serif 4', serif" },
@@ -225,6 +227,15 @@ test("measure ranks colours by area across every page, each page weighing the sa
   assert.match(
     r.out,
     /^brand ref acme-test-1\.png: page · https:\/\/acme\.test\/$/m,
+  );
+  // A linked page's image names the page it was captured from.
+  assert.match(
+    r.out,
+    /^brand ref acme-test-2\.png: page · https:\/\/acme\.test\/brand$/m,
+  );
+  assert.deepEqual(
+    c.images.map((i) => i.source),
+    ["https://acme.test/", "https://acme.test/brand"],
   );
   assert.match(
     r.out,
@@ -367,26 +378,6 @@ test("check refuses a measured colour of a given or fetched brand that brand/can
   assert.equal(brand(fx, ["check"]).code, 0);
 });
 
-// A PNG of one pixel, its colour type and the extra chunks named.
-const png = (colourType, ...chunks) => {
-  const chunk = (type, data) => {
-    const len = Buffer.alloc(4);
-    len.writeUInt32BE(data.length);
-    return Buffer.concat([len, Buffer.from(type), data, Buffer.alloc(4)]);
-  };
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(1, 0);
-  ihdr.writeUInt32BE(1, 4);
-  ihdr[8] = 8;
-  ihdr[9] = colourType;
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk("IHDR", ihdr),
-    ...chunks.map((t) => chunk(t, Buffer.alloc(1))),
-    chunk("IEND", Buffer.alloc(0)),
-  ]);
-};
-
 test("check refuses a logo that is a favicon or social card, an icon, a PNG with no transparency, an SVG holding a raster image, or a file that is missing", () => {
   const fx = machine();
   const logo = (file, source = "https://acme.test/press") => ({
@@ -408,8 +399,16 @@ test("check refuses a logo that is a favicon or social card, an icon, a PNG with
   refused(fx, /a favicon or social card is never the logo/);
   put(fx, logo("brand/mark.jpg"), { "brand/mark.jpg": "jpg" });
   refused(fx, /^brand: logo brand\/mark\.jpg: is not an \.svg or a \.png$/);
-  put(fx, logo("brand/mark.png"), { "brand/mark.png": png(2) });
-  refused(fx, /^brand: logo brand\/mark\.png: has no transparency/);
+  // No alpha, an alpha channel opaque edge to edge, a tRNS that clears no
+  // palette entry the image uses: each a box behind the mark.
+  for (const box of [
+    png(2, [[0, 255, 255, 255]]),
+    png(6, [[0, 255, 255, 255, 255]]),
+    png(3, [[0, 0]], { trns: [255, 0] }),
+  ]) {
+    put(fx, logo("brand/mark.png"), { "brand/mark.png": box });
+    refused(fx, /^brand: logo brand\/mark\.png: has no transparency/);
+  }
   put(fx, logo("brand/mark.svg"), {
     "brand/mark.svg": '<svg><image href="data:image/png;base64,AAAA"/></svg>',
   });
@@ -435,8 +434,19 @@ test("check passes a brand and copies its fonts and logo into project/assets/bra
   fs.mkdirSync(folder, { recursive: true });
   fs.writeFileSync(path.join(folder, "latin-700-normal.woff2"), "held");
   for (const [file, body, ext] of [
-    ["brand/mark.png", png(6), "png"],
-    ["brand/mark2.png", png(3, "tRNS"), "png"],
+    ["brand/mark.png", png(6, [[0, 0, 0, 0, 0]]), "png"],
+    ["brand/mark2.png", png(3, [[0, 0]], { trns: [0] }), "png"],
+    // Sub filter: the second pixel's alpha byte reads 255 but decodes to 254.
+    [
+      "brand/mark3.png",
+      png(6, [[1, 9, 9, 9, 255, 0, 0, 0, 255]], { w: 2 }),
+      "png",
+    ],
+    [
+      "brand/mark4.png",
+      png(2, [[0, 1, 2, 3]], { trns: [0, 1, 0, 2, 0, 3] }),
+      "png",
+    ],
     ["brand/mark.svg", "<svg><path d=''/></svg>", "svg"],
   ]) {
     put(fx, { ...GOOD, logo: { file, source: "given" } }, { [file]: body });

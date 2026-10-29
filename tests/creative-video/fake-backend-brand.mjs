@@ -35,14 +35,17 @@ function writeImages(out, list) {
   });
 }
 
-// CREATIVE_VIDEO_FAKE_SITE maps a URL to `{ pages, colors, fonts }`, each page
-// a list of bands.
+// CREATIVE_VIDEO_FAKE_SITE maps a URL to `{ pages, urls, colors, fonts }`, each
+// page a list of bands, and `urls` (optional) the URL each page was captured
+// from, the start URL where it has none.
 export async function capturePages(url, out, { max }) {
   log({ call: "capturePages", url, max });
   const site = JSON.parse(process.env.CREATIVE_VIDEO_FAKE_SITE ?? "{}")[url];
   if (!site) throw new Error(`net::ERR_NAME_NOT_RESOLVED at ${url}`);
+  const pages = site.pages.slice(0, max);
   return {
-    images: writeImages(out, site.pages.slice(0, max)),
+    images: writeImages(out, pages),
+    pages: pages.map((_, i) => site.urls?.[i] ?? url),
     colors: site.colors,
     fonts: site.fonts,
   };

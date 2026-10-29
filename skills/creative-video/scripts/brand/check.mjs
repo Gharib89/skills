@@ -27,6 +27,7 @@
 //         the font store and project/assets/brand/, and brand.json as it was
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { readBrand } from "../lib/brand.mjs";
 import { dest, installFont, LICENCES } from "../lib/tools.mjs";
 
@@ -44,14 +45,94 @@ const COMPANION = {
   handwriting: "noto-kufi-arabic",
 };
 
-// A PNG holds transparency when its colour type has an alpha channel (4, 6) or
-// it carries a tRNS chunk.
+// Adam7's passes, each `[x0, y0, dx, dy]`.
+const ADAM7 = [
+  [0, 0, 8, 8],
+  [4, 0, 8, 8],
+  [0, 4, 4, 8],
+  [2, 0, 4, 4],
+  [0, 2, 2, 4],
+  [1, 0, 2, 2],
+  [0, 1, 1, 2],
+];
+
+const paeth = (a, b, c) => {
+  const p = a + b - c;
+  const [pa, pb, pc] = [Math.abs(p - a), Math.abs(p - b), Math.abs(p - c)];
+  return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+};
+
+// A PNG holds transparency when one of its pixels is not fully opaque: an
+// alpha sample below its maximum, a palette index tRNS makes transparent, or
+// tRNS's key colour. A colour type or a chunk alone proves nothing: an RGBA
+// logo can be opaque edge to edge, so the scanlines are decoded and read.
 function transparent(png) {
   if (png.subarray(1, 4).toString() !== "PNG") return false;
-  const colourType = png[25];
-  if (colourType === 4 || colourType === 6) return true;
-  for (let o = 8; o + 8 <= png.length; o += 12 + png.readUInt32BE(o))
-    if (png.subarray(o + 4, o + 8).toString() === "tRNS") return true;
+  const [w, h] = [png.readUInt32BE(16), png.readUInt32BE(20)];
+  const [depth, type, interlace] = [png[24], png[25], png[28]];
+  const idat = [];
+  let trns = null;
+  for (let o = 8; o + 8 <= png.length; o += 12 + png.readUInt32BE(o)) {
+    const data = png.subarray(o + 8, o + 8 + png.readUInt32BE(o));
+    const name = png.subarray(o + 4, o + 8).toString();
+    if (name === "IDAT") idat.push(data);
+    if (name === "tRNS") trns = data;
+  }
+  const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[type];
+  if (!channels || (type !== 4 && type !== 6 && !trns)) return false;
+  let raw;
+  try {
+    raw = zlib.inflateSync(Buffer.concat(idat));
+  } catch {
+    return false;
+  }
+  const bits = channels * depth;
+  const bpp = Math.max(1, bits >> 3);
+  const max = 2 ** depth - 1;
+  const sample = (row, k) =>
+    depth === 16
+      ? row.readUInt16BE(k * 2)
+      : depth === 8
+        ? row[k]
+        : (row[(k * depth) >> 3] >> (8 - depth - ((k * depth) & 7))) & max;
+  const clear = (row, x) => {
+    if (type === 4 || type === 6)
+      return sample(row, x * channels + channels - 1) < max;
+    if (type === 3) return trns[sample(row, x)] < 255;
+    for (let ch = 0; ch < channels; ch++)
+      if (sample(row, x * channels + ch) !== trns.readUInt16BE(ch * 2))
+        return false;
+    return true;
+  };
+  let o = 0;
+  for (const [x0, y0, dx, dy] of interlace ? ADAM7 : [[0, 0, 1, 1]]) {
+    const pw = Math.max(0, Math.ceil((w - x0) / dx));
+    const ph = Math.max(0, Math.ceil((h - y0) / dy));
+    if (!pw || !ph) continue;
+    const stride = Math.ceil((pw * bits) / 8);
+    let prev = Buffer.alloc(stride);
+    for (let y = 0; y < ph; y++, o += 1 + stride) {
+      const filter = raw[o];
+      const row = Buffer.from(raw.subarray(o + 1, o + 1 + stride));
+      for (let i = 0; i < stride; i++) {
+        const a = i >= bpp ? row[i - bpp] : 0;
+        const c = i >= bpp ? prev[i - bpp] : 0;
+        const by =
+          filter === 1
+            ? a
+            : filter === 2
+              ? prev[i]
+              : filter === 3
+                ? (a + prev[i]) >> 1
+                : filter === 4
+                  ? paeth(a, prev[i], c)
+                  : 0;
+        row[i] = (row[i] + by) & 255;
+      }
+      for (let x = 0; x < pw; x++) if (clear(row, x)) return true;
+      prev = row;
+    }
+  }
   return false;
 }
 
