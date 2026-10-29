@@ -28,4 +28,10 @@ check "a .mjs file under no row's prefix is still a new root" \
   '{"rung":"turn","verdict":"unavailable","checks":{"new-root":"unavailable"}}' \
   "$(turn zz-new-root.mjs)"
 
+# The turn rung reads `git status`, so a live proof's untracked video folder in
+# a checkout stays out of it only while the root .gitignore lists the folder.
+for d in creative-videos explainers; do
+  check "$d/<slug>/ is ignored" "$d/x/kit.js" "$(git check-ignore --no-index "$d/x/kit.js")"
+done
+
 finish

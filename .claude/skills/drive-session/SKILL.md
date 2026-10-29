@@ -5,7 +5,7 @@ description: >-
   the user wants sessions driven in Herdr: a batch of `/ship` runs, or a skill
   smoke test in another checkout. Needs HERDR_ENV=1.
 metadata:
-  version: 0.7.0
+  version: 0.8.0
 ---
 
 # drive-session
@@ -98,7 +98,10 @@ and run `window` again at each `watch` wake until it exits 0.
    - `gone`: record it as crashed.
 6. **Answer** with `answer`: `--keys` for a dialog (a numbered option such as
    `1`, then `Enter`; `esc` to back out), `--text` at a prompt (`--text=<t>`
-   for text opening with `-`). Text that starts no turn (a local slash
+   for text opening with `-`). Text that answers a session's question or
+   stop opens with who chose: `Owner: ` before a reply you relay from the
+   user, `Supervisor: ` before your own answer, so a merge you decide is
+   `--text "Supervisor: merge"`. Text that starts no turn (a local slash
    command such as `/rename`, or an Enter that did not register) comes back
    from `answer` or `spawn` as a not-ok answer with `code`
    `agent_prompt_stalled` or `timeout`. (`spawn` has already pressed Enter up
@@ -140,8 +143,8 @@ and a timeout still lists it. Use `--rest` on a finished task (a merged PR, a
 smoke test's verdict) and never on a session waiting on an escalation, which
 runs again once you relay the reply. Ship decides clean, not you: at the gate,
 ask the session with `--text` to run `run-file gate clean` for its run and
-report the answer. Answer `--text merge` on `clean: true` with no unmet
-criterion in the summary.
+report the answer. Answer `--text "Supervisor: merge"` on `clean: true` with
+no unmet criterion in the summary.
 
 A gate that is not clean is still yours to decide when the summary names no
 unmet criterion and every `held_by` entry is one of these four, and no other
@@ -150,15 +153,15 @@ unchanged`) qualifies:
 
 - `reviewer <x>: past cap <n>, local review read <sha>, no host reviewer read
   it`: a reviewer capped, and a local review read the final head and stopped on
-  `tree unchanged`. Answer `--text merge`.
+  `tree unchanged`. Answer `--text "Supervisor: merge"`.
 - `reviewer <x>: small lane`: a host round read an earlier head. Ask the session
   with `--text` for one more host round on the final head, and answer
-  `--text merge` once it stops on `tree unchanged`.
+  `--text "Supervisor: merge"` once it stops on `tree unchanged`.
 - `reviewer <x>: cap` (several such entries may stand together, one per
   reviewer): the same one more host round, and the same answer.
 - `self-review: stopped at cap, its last fixes read by no reviewer`: the same
-  one more host round on the final head, and `--text merge` once it stops on
-  `tree unchanged`; with no reviewer on the profile, escalate.
+  one more host round on the final head, and `--text "Supervisor: merge"` once
+  it stops on `tree unchanged`; with no reviewer on the profile, escalate.
 
 A round that stops on findings or on cap again, any other `held_by` entry, and
 every unmet criterion are escalations that quote the `held_by`: a criterion
@@ -171,6 +174,11 @@ supervisor relays. A `reviewer <x>: past cap <n>, ..., head moved: read
 A supervised `/ship` is an **attended** run: you are the human present. Launch
 it as `/ship <issue>`, leaving `--unattended` to the user alone, and answer its
 hand-offs and questions the way the user would, by the escalation list.
+
+Your answers are the supervisor's: say in the launch prompt that only an
+`Owner:` answer is the owner's choice, so only it becomes owner feedback (a
+feedback memory quoting the owner), and that each Deviations line (a departure
+the run logs for its merge summary) names who chose it, owner or supervisor.
 
 After every merge, `git status` the main checkout, then `git pull --ff-only`
 there before the next spawn: sessions start there, and its `.claude/skills/`
@@ -239,6 +247,23 @@ line names the parent and any merge allowance
 
 Wake only on The run's background `watch`, never on `/loop` or a schedule.
 
+## Smoke tests
+
+A smoke test or live proof often runs in a throwaway checkout, a consumer
+made for the run. Before deleting one:
+
+1. Copy out the deliverables the user wants (a rendered video, its captions,
+   a report) to where the user named.
+2. Read the session with `--rest`, then close its tab, `herdr tab close <tab>`
+   with the `tab` its roster row records, so no idle session is left standing
+   in a deleted folder.
+3. Delete the checkout and its Claude Code project folders,
+   `~/.claude/projects/<slug>/` and every `<slug>--claude-worktrees-*/` beside
+   it (sessions in the checkout's worktrees), which hold the transcripts and
+   any memory they wrote. `<slug>` is the checkout's absolute path with every
+   character but a letter or digit turned into `-`: `/home/u/wip/proof_1.x`
+   is `-home-u-wip-proof-1-x`.
+
 ## The report
 
 When every session is at rest, report one row per session: its name, its task,
@@ -248,4 +273,5 @@ waiting, or crashed), with the PR link where there is one. To answer "what is
 step 5 would: that `read` acknowledges any event `watch` had not yet reported.
 
 Leave every supervised tab open, so the user can read each transcript. Close a
-tab only when the user asks.
+tab only when the user asks, or as Smoke tests says before deleting its
+throwaway checkout.
