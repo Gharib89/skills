@@ -132,6 +132,32 @@ reset; pr_body "$names$names_base"$'x_lib.sh tests/lib.sh skills/x/SKILL.md skil
 check "a longer token that ends in the basename is no mention" '["skills/ship/scripts/_lib.sh"]' "$(missing)"
 g -C "$repo" checkout -q fix/thing-1
 
+# A vendored skill (a lock entry whose source is not `.`) has no source twin,
+# so its folder, `.claude/skills/<name>/`, covers every changed file under it;
+# a skill this repo writes still owes its source files by name (#1045).
+g -C "$repo" checkout -q -b fix/vendored-1
+mkdir -p "$repo/.claude/skills/vend/refs" "$repo/.claude/skills/own" "$repo/skills/own"
+for f in .claude/skills/vend/SKILL.md .claude/skills/vend/refs/guide.md .claude/skills/own/own.md skills/own/own.md; do
+  echo v > "$repo/$f"
+done
+printf '%s\n' '{"version":1,"skills":{"vend":{"source":"owner/up"},"own":{"source":"."}}}' > "$repo/skills-lock.json"
+g -C "$repo" add -A && g -C "$repo" commit -q -m vendored >/dev/null 2>&1
+vend=$'## Change outline\n'"$names_base"
+reset; pr_body "$vend"$'- `.claude/skills/vend/`: refreshed\n- skills/own/own.md\n' fix/vendored-1
+check "a vendored skill's folder covers the files under it" '[]' "$(missing)"
+reset; pr_body "$vend"$'- `.claude/skills/vend/` and `.claude/skills/own/`\n' fix/vendored-1
+check "a skill this repo writes is not covered by its folder" '[".claude/skills/own/own.md","skills/own/own.md"]' "$(missing)"
+reset; pr_body "$vend"$'- `.claude/skills/ven/` and skills/own/own.md\n' fix/vendored-1
+check "a shorter folder name covers nothing" '[".claude/skills/vend/SKILL.md",".claude/skills/vend/refs/guide.md"]' "$(missing)"
+printf '%s\n' '{"version":1,"skills":{"own":{"source":"."}}}' > "$repo/skills-lock.json"
+reset; pr_body "$vend"$'- `.claude/skills/vend/` and skills/own/own.md\n' fix/vendored-1
+check "a folder the lock does not list covers nothing" '[".claude/skills/vend/SKILL.md",".claude/skills/vend/refs/guide.md"]' "$(missing)"
+echo 'not json' > "$repo/skills-lock.json"
+reset; pr_body "$vend"$'- `.claude/skills/vend/` and skills/own/own.md\n' fix/vendored-1
+check "a lock that is not JSON leaves the paths unknown" 'null' "$(missing)"
+git -C "$repo" checkout -q -- skills-lock.json
+g -C "$repo" checkout -q fix/thing-1
+
 g -C "$repo" checkout -q main
 reset; pr_body "$all"
 check "a checkout on another branch is null, not a diff against nothing" 'null' "$(missing)"
