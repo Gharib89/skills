@@ -69,20 +69,31 @@ export function supported(fx) {
 }
 
 // The gates stage run to its verdict: a pending critic is judged by
-// `critics` and the gates run again, the call log cleared first so it holds
-// that one run. `{ critic: false }` returns the first run as it ends.
-export function runGates(fx, extra = {}, { critic = true } = {}) {
-  const r = exec(gates, fx, [fx.dir], extra);
-  if (!critic || !/^gate critic: pending/m.test(r.out)) return r;
-  critics(fx);
+// `critics` in the stills folder its line names and the gates run again, the
+// call log cleared first so it holds that one run. `{ critic: false }` returns
+// the first run as it ends; `{ check: true }` makes both runs check runs.
+export function runGates(
+  fx,
+  extra = {},
+  { critic = true, check = false } = {},
+) {
+  const args = check ? [fx.dir, "--check"] : [fx.dir];
+  const r = exec(gates, fx, args, extra);
+  const pending = r.out.match(/^gate critic: pending: .* stills in (\S+)$/m);
+  if (!critic || !pending) return r;
+  critics(fx, {}, pending[1]);
   fs.rmSync(fx.log, { force: true });
-  return exec(gates, fx, [fx.dir], extra);
+  return exec(gates, fx, args, extra);
 }
 
 // The critic's verdict on each pending scene, as agents/critic.md writes it:
 // every still described, and `failures` maps a scene id to its failures.
-export function critics(fx, failures = {}) {
-  const dir = path.join(fx.dir, record(fx).gates.critic.stills);
+export function critics(
+  fx,
+  failures = {},
+  folder = record(fx).gates.critic.stills,
+) {
+  const dir = path.join(fx.dir, folder);
   const stills = readJson(path.join(dir, "stills.json"));
   for (const [id, list] of Object.entries(stills)) {
     const f = path.join(dir, `${id}.json`);

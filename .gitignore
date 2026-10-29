@@ -1,3 +1,6 @@
 .env
 node_modules/
 .playwright-mcp/
+# A live proof run inside a checkout writes its video folders here.
+/creative-videos/
+/explainers/
