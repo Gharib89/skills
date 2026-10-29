@@ -295,11 +295,13 @@ again, `none` skipping the issue's own checks. Every lane runs the same loop.
   single round, which a clean round 1 also ends at.
 
 Each round leaves `Round: self-review <n>: <text>`, its outcome in a line, and
-the loop leaves `Stop: self-review: <tree unchanged|cap>`: `tree unchanged`
-when the last round changed no file, even at the cap, and `cap` when the
-rounds reached it with the last fixes unread, which holds `run-file gate clean`
-unless a host reviewer stopped `tree unchanged at <sha>`, `<sha>` covering the
-final head.
+the loop leaves `Stop: self-review: <tree unchanged|cap at <sha>>`: `tree
+unchanged` when the last round changed no file, even at the cap, and `cap at
+<sha>` when the rounds reached it with the last fixes unread, `<sha>` the HEAD
+right after committing the last round's fixes. That holds `run-file gate clean`
+until a host reviewer read them: one stopped `tree unchanged` at a head
+covering the final head, or any whose last stop is stamped at that commit or a
+descendant of it.
 
 ## Consult current docs
 

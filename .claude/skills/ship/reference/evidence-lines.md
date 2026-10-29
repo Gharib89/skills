@@ -51,7 +51,9 @@ self-review's judgment, recorded in the Run file where it helps the summary.
 - **Round** and **Stop**, attested, for the
   [self-review loop](implement.md#phase-4-the-self-review-loop): at least one
   `Round: self-review <n>: <text>`, `<n>` a positive integer, and a
-  `Stop: self-review: <tree unchanged|cap>`, the last such line deciding.
+  `Stop: self-review: <tree unchanged|cap at <sha>>`, the last such line
+  deciding; a capped stop names `<sha>` as that loop defines it, and a bare
+  `cap` is still admitted.
 
 `close 7`'s `Round:` and `Stop:` lines
 ([review-loop.md](review-loop.md#the-exit)) are attested the same way.

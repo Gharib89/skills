@@ -168,6 +168,25 @@ passes 'a verification whose tab-separated globs no change matches' "$outside"
 profile
 run "$stamp" "tree unchanged at $stamp" "pass at 1234567890abcdef"
 holds 'a verification stamped at an unknown commit' "$stamp" "$(verif_stale 1234567890abcdef "$stamp")"
+# A self-review stopped `cap at <S>` is read by a host stop stamped at <S> or
+# a head descending from it, whatever its stop word (#1045).
+sr_capped='self-review: stopped at cap, its last fixes read by no reviewer'
+lacks() { check "$1 does not hold the self-review" false "$(gate "$2" | jq -r --arg r "$sr_capped" '.held_by | index($r) != null')"; }
+run "$outside" "cap at $outside" "pass at $outside"; printf 'Stop: self-review: cap at %s\n' "$stamp" >> "$f"
+lacks 'a host cap stamped at a descendant of the self-review stamp' "$outside"
+run "$outside" "tree unchanged at $stamp" "pass at $outside"; printf 'Stop: self-review: cap at %s\n' "$stamp" >> "$f"
+lacks 'a stale tree-unchanged stop at the self-review stamp' "$outside"
+holds 'and that stale stop keeps its own hold' "$outside" "$(reviewer_stale "$stamp" "$outside")"
+run "$outside" "cap at $stamp" "pass at $outside"; printf 'Stop: self-review: cap at %s\n' "$outside" >> "$f"
+holds 'a host stop stamped before the self-review stamp' "$outside" "$sr_capped"
+run "$offbase" "cap at $offbase" "pass at $offbase"; printf 'Stop: self-review: cap at %s\n' "$outside" >> "$f"
+holds 'a host stop on a head off the self-review stamp line' "$offbase" "$sr_capped"
+run "$outside" "cap" "pass at $outside"; printf 'Stop: self-review: cap at %s\n' "$stamp" >> "$f"
+holds 'an unstamped host stop' "$outside" "$sr_capped"
+run "$outside" "cap at $outside" "pass at $outside"; printf 'Stop: self-review: cap\n' >> "$f"
+holds 'an unstamped self-review cap keeps the settled-reviewer rule' "$outside" "$sr_capped"
+run "$outside" "cap at $outside" "pass at $outside"; printf 'Stop: self-review: cap at 1234567890abcdef\n' >> "$f"
+holds 'a self-review stamped at an unknown commit' "$outside" "$sr_capped"
 # Trailing blanks or a carriage return leave a stamp the same head.
 run "$clean_merge" "tree unchanged at $stamp"$' \r' "pass at $stamp"$' \r'
 passes 'stamps with trailing blanks' "$clean_merge"

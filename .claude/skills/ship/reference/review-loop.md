@@ -8,7 +8,6 @@
 - [Triage, fix, reply](#triage-fix-reply)
 - [The exit](#the-exit)
 - [Fallbacks](#fallbacks)
-- [Worked examples](#worked-examples)
 
 The review gate is phase 4's self-review plus green CI; the reviewers under the
 profile's `## Reviewers` are a second pair of eyes on top of it. So phase 7 is
@@ -16,7 +15,8 @@ best-effort: ask each reviewer for a round, wait a bounded time, triage whatever
 landed, and report what happened. A reviewer that answers nothing costs one
 bounded wait, not an investigation. Zero reviewers: skip the phase. A reviewer
 re-reads the **whole PR** each round: treat each round as a fresh read of the
-committed tree.
+committed tree. [review-loop-examples.md](review-loop-examples.md) maps real
+reviewers onto this loop.
 
 ## The round
 
@@ -237,12 +237,12 @@ Stop: <reviewer>: <reason>
 `<text>` is the round's outcome in a line. Write each line with `run-file note
 Evidence "<line>" --issue <issue>`. `close 7` and `gate clean` match the `not
 reviewed` prefix, so `Stop: <reviewer>: not reviewed: <reason>` satisfies every
-rule the bare form does. A reviewer that raises again a
-finding this run declined in an earlier round gets no `tree unchanged` stop for
-it: declining must never be a cheaper way past the gate than fixing. Fix the
-finding, and the round reads as any other. Leave it declined, and the round's
-text opens with `re-raised declined: <the finding>` and the reviewer stops on
-`cap`, which holds the gate, no fallback standing in for it: the human reads the
+rule the bare form does. A reviewer that raises again a finding this run
+declined in an earlier round gets no `tree unchanged` stop for it: declining
+must never be a cheaper way past the gate than fixing. Fix the finding, and the
+round reads as any other. Leave it declined, and the round's text opens with
+`re-raised declined: <the finding>` and the reviewer stops on `cap at <sha>`,
+which holds the gate, no fallback standing in for it: the human reads the
 declined finding at the merge gate. `gate clean` also holds a `tree unchanged`
 stop beside that opening. A fixed finding never gets that text. When the last
 fully read and dispositioned round changed no file, record `tree unchanged at
@@ -254,10 +254,12 @@ round the host opened with the PR (`auto-once`, or round 1's unbidden one), the
 head the PR opened on. Take it when the round starts, since another reviewer's
 fixes can move the PR's head past what a round read before its poll returns;
 `close 7` refuses the stop without it, and `gate clean` holds on the stop once
-its `<sha>` no longer covers the PR head. Otherwise `<reason>` is one of `cap`
-(`Cap:` spent, a docs-only fix-only diff ended the loop, or a declined finding
-came back: in each the last fixes or the declined finding went unread by a host
-round; only a spent `Cap:` drives a fallback), `tree unchanged at <sha>` (a
+its `<sha>` no longer covers the PR head. Otherwise `<reason>` is one of `cap
+at <sha>` (`Cap:` spent, a docs-only fix-only diff ended the loop, or a
+declined finding came back: in each the last fixes or the declined finding went
+unread by a host round; only a spent `Cap:` drives a fallback; `<sha>` taken
+as for `tree unchanged`; read as `cap`, the stamp read only by the self-review
+cap's lift; a bare `cap` is still admitted), `tree unchanged at <sha>` (a
 round's dispositions changed no file, so a further round would read the same
 tree), `small lane` (the lane's one requested round), `inline lane` (the lane
 requested no round), `auto-once` (the reviewer fires once, on PR open), `not
@@ -290,9 +292,10 @@ exit first, because a fallback's only input is how its primary exited.
 - Primary `not reviewed` for any reason other than `inline lane`, capped with
   findings, or `Stop: <primary>: not landed`: drive the fallback as an ordinary
   on-request reviewer under its own `Cap:`. Capped with findings is `Stop:
-  <primary>: cap` after it spent `Cap:` (rounds == Cap) on a last round whose
-  fixes changed the tree, so no host round read them; a `cap` from a
-  [re-raised declined finding](#the-exit) is not that and drives no fallback.
+  <primary>: cap` (or `cap at <sha>`) after it spent `Cap:` (rounds == Cap)
+  on a last round whose fixes changed the tree, so no host round read them; a
+  `cap` from a [re-raised declined finding](#the-exit) is not that and drives
+  no fallback.
   Its exit is its own, and its `## Review` line and merge-summary block both
   name the primary's reason (`fallback for codex: capped with findings` or
   `fallback for codex: not landed: blocked`, say), the only record of why a
@@ -307,20 +310,3 @@ exit first, because a fallback's only input is how its primary exited.
   ([small-lane.md](small-lane.md#the-inline-lane)).
 - Nothing is a fallback for a fallback: a chain is one deep.
 
-## Worked examples
-
-Brand-level detail lives in the host adapters; these show the mapping only.
-
-- **GitHub Copilot as `on-request`**: requested under one login, reviewing under
-  another, its check run under a third; the mechanics match each surface to its
-  own name. The `copilot_code_review` rule's `review_on_push` fixes the trigger
-  (`true` is `on-push`). Out of quota, the request still reads back, then the
-  host answers with a quota notice in place of a round: `poll-pr` reads it as
-  `refused_by` and the reviewer exits `not reviewed: blocked`, with no second
-  request sent. `never-queued` is the cause only where the request does not
-  read back.
-- **CodeRabbit as `on-push`**: reviews every push; `Resolve:` is its resolve
-  comment, posted once every thread carries a reply.
-- **Claude Code on GitHub Actions as an `on-request` fallback**: a comment of
-  its phrase starts a workflow run posting under `claude[bot]`; a run that
-  failed reads `not reviewed: infra-error` with its URL on `reviewer_run`.
