@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.13.1 (2026-10-29)
+
+### Bug Fixes
+
+- **creative-video**: Name a structured hyperframes check error
+  ([#1055](https://github.com/Gharib89/skills/pull/1055),
+  [`a23720a`](https://github.com/Gharib89/skills/commit/a23720a729505447a5b0559cf5d86b6bb0f73229))
+
+
 ## v0.13.0 (2026-10-29)
 
 ### Features
