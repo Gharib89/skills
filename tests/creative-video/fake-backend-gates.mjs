@@ -19,6 +19,10 @@
 //   no-timeline   the scene registers no timeline and no error is reported,
 //                 as HyperFrames 0.8.206 does for a throwing script that also
 //                 names a second timeline
+//   data-check-error="<message>"  the check never reached the browser and
+//                 answers {ok: false, error: "<message>"}, as 0.8.206 does;
+//                 with data-check-code="<code>" the error is {code, message},
+//                 as 0.8.216 answers it
 //   data-tween="<a>-<b>" the scene's tween windows, in scene seconds (no
 //                 tween: one across the scene)
 //   <audio data-sound="<t>">  a sound written in the scene file at scene
@@ -129,6 +133,12 @@ const scriptError = (scene, what) => ({
 
 export async function check(dir, times) {
   log({ call: "check", times });
+  for (const m of mounted(dir)) {
+    const message = m.html.match(/data-check-error="([^"]*)"/)?.[1];
+    const code = m.html.match(/data-check-code="([^"]*)"/)?.[1];
+    if (message !== undefined)
+      return { ok: false, error: code ? { code, message } : message };
+  }
   const layout = [];
   const contrast = [];
   const runtime = [];
