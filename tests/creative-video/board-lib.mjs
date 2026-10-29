@@ -52,24 +52,73 @@ export function writeStoryboard(fx, doc) {
   fs.writeFileSync(path.join(fx.dir, "storyboard.json"), JSON.stringify(doc));
 }
 
-// A direction's frame, authored as a scene file is.
-export function writeDirection(fx, id) {
+// A direction's frame, authored as a scene file is; `wears` is text it names
+// (the brand's colours and faces).
+export function writeDirection(fx, id, wears = "") {
   fs.mkdirSync(path.join(fx.dir, "directions"), { recursive: true });
   fs.writeFileSync(
     path.join(fx.dir, "directions", `${id}.html`),
-    scene(id, `<p>${id} look</p>`),
+    scene(id, `<p>${id} look</p><!-- ${wears} -->`),
   );
 }
 
+// A brand.json as the brand stage leaves it, with a logo and a replaced face.
+export const BRAND = {
+  name: "itworx",
+  from: "seed",
+  once: false,
+  colours: [
+    { hex: "#161b8c", name: "ink", basis: "declared", from: "seed" },
+    { hex: "#c03020", name: "red", basis: "declared", from: "seed" },
+  ],
+  faces: [
+    { family: "source-serif-4", role: "title", basis: "declared" },
+    {
+      family: "inter",
+      role: "text",
+      basis: "replaced",
+      was: "Helvetica Neue",
+      why: "Helvetica Neue is not on Fontsource",
+    },
+  ],
+  logo: { file: "brand/logo.svg", source: "https://example.com/press" },
+  fetched: [],
+};
+
+// The text that names every colour and face of `brand`.
+export const wears = (brand) =>
+  [
+    ...brand.colours.map((c) => c.hex.toUpperCase()),
+    ...brand.faces.map((f) => f.family.replaceAll("-", " ")),
+  ].join(" ");
+
+// Writes brand.json and its logo into the run folder, the kit's CSS wearing
+// the brand and a frame for each direction but the picked one.
+export function writeBrand(fx, brand = BRAND, picked = "switch") {
+  fs.writeFileSync(path.join(fx.dir, "brand.json"), JSON.stringify(brand));
+  if (brand.logo) {
+    fs.mkdirSync(path.join(fx.dir, "brand"), { recursive: true });
+    fs.writeFileSync(path.join(fx.dir, brand.logo.file), "<svg></svg>");
+  }
+  fs.mkdirSync(path.join(fx.dir, "project", "kit"), { recursive: true });
+  fs.writeFileSync(
+    path.join(fx.dir, "project", "kit", "brand.css"),
+    `/* ${wears(brand)} */`,
+  );
+  for (const d of DIRECTIONS)
+    if (d.id !== picked) writeDirection(fx, d.id, wears(brand));
+}
+
 // A timed run folder ready for `board build`: its storyboard.json and the
-// frame of each direction but the picked one.
-export function ready({ bodies, picked = "switch", extra } = {}) {
+// frame of each direction but the picked one, in `brand` when one is given.
+export function ready({ bodies, picked = "switch", extra, brand } = {}) {
   const fx = timed(bodies);
   const ids = readJson(path.join(fx.dir, "timeline.json")).scenes.map(
     (s) => s.id,
   );
   writeStoryboard(fx, storyboard(ids, picked, extra));
   for (const d of DIRECTIONS) if (d.id !== picked) writeDirection(fx, d.id);
+  if (brand) writeBrand(fx, brand, picked);
   return fx;
 }
 

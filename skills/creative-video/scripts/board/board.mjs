@@ -6,8 +6,8 @@
 //   node board.mjs <run-folder> apply <answers-file>
 //
 // build reads <run>/timeline.json, voice.json, script.json, storyboard.json,
-// directions/<id>.html for each direction not picked, excerpts.json (optional)
-// and <run>/project/, takes every scene's in, key and out stills
+// directions/<id>.html for each direction not picked, excerpts.json and
+// brand.json (both optional) and <run>/project/, takes every scene's in, key and out stills
 // (gates/samples.mjs) in one snapshot launch and one frame of each direction not
 // picked, and writes the board and its page. A scene is judged by the hash of
 // its file and by its narration. After answers that commented on scenes alone,
@@ -17,11 +17,19 @@
 // `chapters`) is shown while its later chapters are still being authored: a card
 // exists for each scene whose file exists, chapter 1's files must all exist, and
 // a scene file of a later chapter the answered board did not have is no change.
+// With a brand.json, each direction frame not picked and the kit's CSS
+// (project/kit/*.css) must each name every colour hex and every face of the
+// brand, and the board carries the brand for the page's strip, its logo copied
+// into the board folder.
 // apply reads an answers file, the answers document as JSON or the answers
-// text, and says what it asks: it accepts only answers to the latest board.
+// text, and says what it asks: it accepts only answers to the latest board. An
+// approval with a brand.json saves the brand to the store (lib/brand.mjs)
+// unless it was used once.
 // stdout: build, `board: <n> -> board/storyboard.html (<k> scenes, <m> stills,
 //         <c> changed)` then `board: files board/files.json`; apply, the
 //         lines below, each starting `board: `:
+//           brand <name> saved to the store    an approval with a brand.json
+//           brand <name> used once, not saved  prints one of these first
 //           approved; next: run the gates      only an approval
 //           these answers approve nothing and comment on nothing
 //           direction <id>
@@ -29,12 +37,15 @@
 //           redo <scene>: <note>               one per noted scene
 //           next: re-author <the whole chapter | only <ids>>, then build the board again
 // writes: build, board/<n>.json (the board document), board/storyboard.html,
-//         page.css, page.js, stills/<hash>.png, files.json (the Artifact
-//         publish's `files` map), .cache/board/ (the frames taken), the run
-//         folder's .gitignore and the root again (render/root.mjs); apply,
-//         board/answers-<n>.json
+//         page.css, page.js, stills/<hash>.png, brand/<hash>.<ext> (the
+//         brand's logo), files.json (the Artifact publish's `files` map),
+//         .cache/board/ (the frames taken), the run folder's .gitignore and
+//         the root again (render/root.mjs); apply, board/answers-<n>.json and
+//         the brand store's <name>/ folder for a brand to save
 // exit:   0 ok · 1 refused, `board: <why>` on stderr (a missing timeline,
-//         scene file, storyboard.json, direction frame or gsap.min.js; an
+//         scene file, storyboard.json, direction frame or gsap.min.js; a
+//         direction frame or the kit's CSS that does not name every colour and
+//         face of the brand, or a brand logo that is missing; an
 //         invalid storyboard.json; a script.json whose scenes are not the
 //         ones timed, in order, or whose narration is not the one voiced; a scene changed, added (but
 //         for a later chapter's) or gone, or
@@ -45,6 +56,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { readBrand, saveBrand } from "../lib/brand.mjs";
 import { maybeJson, readJson } from "../lib/json.mjs";
 import { mmss } from "../lib/length.mjs";
 import { readTimed, writeIgnore } from "../lib/runfolder.mjs";
@@ -53,6 +65,7 @@ import { hyperframesEnv, loadBackend, skill } from "../lib/tools.mjs";
 import { sampleTimes } from "../gates/samples.mjs";
 import { esc, HEIGHT, host, WIDTH, writeRoot } from "../render/root.mjs";
 import { readAnswers } from "./answers.mjs";
+import { boardBrand, wearBrand } from "./brand.mjs";
 
 stage("board");
 const [run, command, file, ...rest] = process.argv.slice(2);
@@ -271,6 +284,8 @@ async function build() {
         `script.json's scene ${id} is not the narration voiced: voice and time it again first`,
       );
   const sb = readStoryboard(shown);
+  const brand = readBrand(run);
+  if (brand) wearBrand(run, brand, sb.directions, fail);
   const n = Math.max(0, ...versions()) + 1;
   const hashes = Object.fromEntries(
     shown.map((s) => [
@@ -353,6 +368,7 @@ async function build() {
           : keep(await directionFrame(backend, env, d.id, script.language)),
     });
 
+  const withBrand = boardBrand(run, out, brand, sha, fail);
   // A chapter some of whose scene files are missing is being authored.
   const status = (c) => (c.scenes.every(has) ? "awaiting" : "authoring");
   const doc = {
@@ -374,6 +390,7 @@ async function build() {
       status: status(c),
     })),
     directions,
+    brand: withBrand.doc,
     kit,
     over,
     assets,
@@ -402,7 +419,10 @@ async function build() {
     path.join(out, "files.json"),
     JSON.stringify(
       Object.fromEntries(
-        ["page.css", "page.js", ...stills].map((f) => [f, path.join(out, f)]),
+        ["page.css", "page.js", ...stills, ...withBrand.files].map((f) => [
+          f,
+          path.join(out, f),
+        ]),
       ),
       null,
       2,
@@ -429,7 +449,7 @@ function citedSources(script, ids) {
 }
 
 // What one answers file asks of the agent.
-function apply() {
+async function apply() {
   const latest = Math.max(0, ...versions());
   if (!latest) fail("no board built yet: run build first");
   if (!fs.existsSync(file)) fail(`${file}: is missing`);
@@ -456,6 +476,13 @@ function apply() {
   const lines = (t) => t.replaceAll("\n", "\n  ");
   const { direction, look, scenes } = a;
   if (!direction && !look && !scenes.length) {
+    const brand = a.approve && readBrand(run);
+    if (brand) {
+      const { saved } = await saveBrand(run);
+      console.log(
+        `board: brand ${brand.name} ${saved ? "saved to the store" : "used once, not saved"}`,
+      );
+    }
     console.log(
       a.approve
         ? "board: approved; next: run the gates"
@@ -476,4 +503,4 @@ function apply() {
 }
 
 if (command === "build") await build();
-else apply();
+else await apply();

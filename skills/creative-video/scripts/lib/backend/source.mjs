@@ -52,7 +52,7 @@ export async function renderPage(url, { env }) {
 // where it starts; it does not where the kernel bars unprivileged user
 // namespaces (Ubuntu's AppArmor default) or as root, and there it runs
 // unsandboxed.
-function sandboxed(env) {
+export function sandboxed(env) {
   const launch = (args) =>
     fromCache(toolPaths().node)("puppeteer-core").launch({
       headless: true,

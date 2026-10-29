@@ -13,6 +13,7 @@ import { cited } from "./support-lib.mjs";
 import { sampleTimes } from "../../skills/creative-video/scripts/gates/samples.mjs";
 import {
   answersText,
+  BRAND,
   apply,
   boardDir,
   build,
@@ -20,6 +21,8 @@ import {
   ok,
   ready,
   storyboard,
+  wears,
+  writeDirection,
   writeStoryboard,
 } from "./board-lib.mjs";
 
@@ -479,4 +482,66 @@ test("after a look comment, a direction pick or no answers, any change builds", 
     assert.notEqual(two.kit, built(fx, 1).kit);
     assert.match(r.out, /\(3 scenes, \d+ stills, 1 changed\)/);
   }
+});
+
+test("a board with no brand.json carries brand null", () => {
+  const fx = ready();
+  ok(build(fx));
+  assert.equal(built(fx).brand, null);
+});
+
+test("a brand.json is carried on the board, its logo copied under its hash and listed in files.json", () => {
+  const fx = ready({ brand: BRAND });
+  ok(build(fx));
+  const { brand } = built(fx);
+  const file = path.join(fx.dir, "brand", "logo.svg");
+  assert.deepEqual(brand, {
+    name: "itworx",
+    from: "seed",
+    once: false,
+    colours: BRAND.colours,
+    faces: [
+      { family: "source-serif-4", role: "title", basis: "declared", was: null },
+      {
+        family: "inter",
+        role: "text",
+        basis: "replaced",
+        was: "Helvetica Neue",
+      },
+    ],
+    logo: {
+      file: `brand/${sha16(file)}.svg`,
+      source: "https://example.com/press",
+    },
+  });
+  assert.ok(fs.existsSync(path.join(fx.dir, "board", brand.logo.file)));
+  const files = readJson(path.join(fx.dir, "board", "files.json"));
+  assert.equal(
+    files[brand.logo.file],
+    path.join(fx.dir, "board", brand.logo.file),
+  );
+});
+
+test("a direction frame or the kit's CSS that does not name every brand colour and face refuses the build", () => {
+  const fx = ready({ brand: BRAND });
+  writeDirection(fx, "kitchen", wears(BRAND).replace("#C03020", ""));
+  const r = build(fx);
+  assert.equal(r.code, 1);
+  assert.equal(
+    r.err.trim(),
+    "board: directions/kitchen.html does not wear the brand: it names no #c03020",
+  );
+  writeDirection(fx, "kitchen", wears(BRAND));
+  fs.writeFileSync(
+    path.join(fx.dir, "project", "kit", "brand.css"),
+    "/* #161B8C #C03020 source serif 4 */",
+  );
+  const kit = build(fx);
+  assert.equal(kit.code, 1);
+  assert.equal(
+    kit.err.trim(),
+    "board: project/kit/*.css does not wear the brand: it names no inter",
+  );
+  fs.rmSync(path.join(fx.dir, "project", "kit"), { recursive: true });
+  assert.match(build(fx).err, /^board: project\/kit\/\*\.css does not wear/);
 });
