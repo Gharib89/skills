@@ -40,9 +40,9 @@ admitted() { check_rc "$1: exits ok" 0 "$status"; check "$1: closes the phase" c
 
 # --- close 7 ---------------------------------------------------------------------
 
-stops='cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed, not invoked: <primary> reviewed'
+stops='cap at <sha>, cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed, not invoked: <primary> reviewed'
 run7; held=$(cat "$rf"); close 7
-refused "phase 7 with no stop and no round" 'no Stop line for copilot: add `Stop: copilot: <cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed|not invoked: <primary> reviewed>`'
+refused "phase 7 with no stop and no round" 'no Stop line for copilot: add `Stop: copilot: <cap at <sha>|cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed|not invoked: <primary> reviewed>`'
 check "the same refusal names the other reviewer's stop" yes "$(has 'no Stop line for claude' "$err")"
 check "and each reviewer's missing round" yes "$(has 'no Round line for copilot: add `Round: copilot <n>: <text>`, one per round, unless it stopped `not reviewed`, `not invoked: <primary> reviewed` or `inline lane`' "$err")"
 check "and the other's" yes "$(has 'no Round line for claude' "$err")"
@@ -115,6 +115,12 @@ run7; add 'Round: copilot 1: clean' 'Stop: copilot: tree unchanged' 'Stop: claud
 refused "a tree-unchanged stop with no head" 'Stop line for copilot has no head: write `Stop: copilot: tree unchanged at <sha>`, the head read-pr returned for the round'
 run7; add 'Round: copilot 1: clean' 'Stop: copilot: tree unchanged at HEAD' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
 refused "a tree-unchanged stop whose head is no sha" "Stop line for copilot has reason 'tree unchanged at HEAD', whose head is not a commit sha"
+
+# A cap may name the head its last round read (#1045).
+run7; add 'Round: copilot 1: fixed' 'Stop: copilot: cap at abcdef0123456789' 'Stop: claude: not reviewed'; close 7
+admitted "a cap stamped with the head the last round read"
+run7; add 'Round: copilot 1: fixed' 'Stop: copilot: cap at HEAD' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
+refused "a cap stamp that is no sha" "Stop line for copilot has reason 'cap at HEAD', whose head is not a commit sha"
 
 run7; add 'Stop: copilot: cap: blocked' 'Stop: claude: cap' 'Round: claude 1: x'; held=$(cat "$rf"); close 7
 refused "a reason that only starts with a listed one" "Stop line for copilot has reason 'cap: blocked'"

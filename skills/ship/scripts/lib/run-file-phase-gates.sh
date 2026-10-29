@@ -94,15 +94,17 @@ EORESTS
   r=$(trim_end "$(rests "Stop: self-review: " | tail -n 1)")
   case $r in
     "tree unchanged" | cap) ;;
-    "") gap "no Stop line for self-review: add \`Stop: self-review: <tree unchanged|cap>\`" ;;
-    *) gap "Stop line for self-review has reason '$r', which is not one of tree unchanged, cap" ;;
+    "cap at "*) [[ ${r#"cap at "} =~ ^[0-9a-f]{7,64}$ ]] ||
+      gap "Stop line for self-review has reason '$r', whose head is not a commit sha" ;;
+    "") gap "no Stop line for self-review: add \`Stop: self-review: <tree unchanged|cap at <sha>>\`" ;;
+    *) gap "Stop line for self-review has reason '$r', which is not one of tree unchanged, cap at <sha>, cap" ;;
   esac
   refuse_gaps 4
 }
 
 # Phase 7: each reviewer the checklist row names has its stop reason and, unless
 # it never reviewed, a round.
-stop_reasons="cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed, not invoked: <primary> reviewed"
+stop_reasons="cap at <sha>, cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed, not invoked: <primary> reviewed"
 gate_phase7() { # gate_phase7 <phase 7 row>
   local list names nm stop r ok p ps
   case $1 in *", one bounded pass each"*) ;; *) return 0 ;; esac
@@ -117,14 +119,15 @@ EONAMES
   while IFS= read -r nm; do
     stop=$(rests "Stop: $nm: " | tail -n 1)
     stop=$(trim_end "$stop")
-    # Only an unchanged tree settles a reviewer, so only it names the head it
-    # read: the clean gate holds it once the PR moves past that head.
+    # Only an unchanged tree settles a reviewer, so it must name the head it
+    # read: the clean gate holds it once the PR moves past that head. A cap may
+    # name its head, which lifts a capped self-review's hold.
     case $stop in
       cap | "small lane" | "inline lane" | auto-once | "not landed" | "not reviewed" | "not reviewed: "?* | "not invoked: "?*" reviewed") ;;
-      "tree unchanged at "*) [[ ${stop#"tree unchanged at "} =~ ^[0-9a-f]{7,64}$ ]] ||
+      "tree unchanged at "* | "cap at "*) [[ ${stop##*" at "} =~ ^[0-9a-f]{7,64}$ ]] ||
         gap "Stop line for $nm has reason '$stop', whose head is not a commit sha" ;;
       "tree unchanged") gap "Stop line for $nm has no head: write \`Stop: $nm: tree unchanged at <sha>\`, the head read-pr returned for the round" ;;
-      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed|not invoked: <primary> reviewed>\`" ;;
+      "") gap "no Stop line for $nm: add \`Stop: $nm: <cap at <sha>|cap|tree unchanged at <sha>|small lane|inline lane|auto-once|not landed|not reviewed|not invoked: <primary> reviewed>\`" ;;
       *) gap "Stop line for $nm has reason '$stop', which is not one of $stop_reasons" ;;
     esac
     # A fallback not invoked names a primary on the row that stopped reviewed;
