@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.0 (2026-10-29)
+
+### Features
+
+- **ship**: Move code-review and codebase-design to a496f55
+  ([#1052](https://github.com/Gharib89/skills/pull/1052),
+  [`0490956`](https://github.com/Gharib89/skills/commit/0490956482c9d1abf1cfb6f710b707be40039cb8))
+
+
 ## v0.4.3 (2026-10-18)
 
 ### Refactoring
