@@ -151,23 +151,20 @@ function faceUrls() {
 export function urlBytes(href, origin, root) {
   const u = new URL(href);
   if (u.protocol === "data:") {
-    // As Fetch's data: URL processor reads it: the body is everything after
-    // the first comma, raw commas included, percent-decoded byte by byte (a
-    // face is binary, not UTF-8 text), then base64-decoded where the head
-    // ends `;base64` in any case.
-    const comma = href.indexOf(",");
+    // Split as Fetch's data: URL processor splits it: the fragment dropped,
+    // the body everything after the first comma, raw commas included,
+    // percent-decoded byte by byte (a face is binary, not UTF-8 text), then
+    // base64-decoded where the head ends `;base64`, in any case and spacing.
+    const url = href.split("#")[0];
+    const comma = url.indexOf(",");
     if (comma < 0) return null;
-    const bytes = Buffer.from(
-      href
-        .slice(comma + 1)
-        .replace(/%([0-9a-f]{2})/gi, (_, h) =>
-          String.fromCharCode(parseInt(h, 16)),
-        ),
-      "latin1",
-    );
-    return /;base64$/i.test(href.slice(5, comma))
-      ? Buffer.from(bytes.toString("latin1"), "base64")
-      : bytes;
+    const body = url
+      .slice(comma + 1)
+      .replace(/%([0-9a-f]{2})/gi, (_, h) =>
+        String.fromCharCode(parseInt(h, 16)),
+      );
+    const base64 = /; *base64 *$/i.test(url.slice("data:".length, comma));
+    return Buffer.from(body, base64 ? "base64" : "latin1");
   }
   if (u.origin !== origin) return null;
   const file = path.join(root, decodeURIComponent(u.pathname));

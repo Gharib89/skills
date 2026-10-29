@@ -24,6 +24,12 @@ test("a base64 data: face is decoded, its marker in any case", () => {
   assert.equal(hex(`data:font/ttf;BASE64,${body}`), "0001ff");
 });
 
+test("a data: face's fragment and the spaces around base64 are not its body", () => {
+  assert.equal(hex("data:font/ttf,ab#frag"), "6162");
+  assert.equal(hex("data:font/ttf;base64,AAH/#frag"), "0001ff");
+  assert.equal(hex("data:font/ttf; base64 ,AAH/"), "0001ff");
+});
+
 test("a data: URL with no comma has no face", () => {
   assert.equal(urlBytes("data:abc", origin, "/"), null);
 });
