@@ -225,7 +225,9 @@
 #     verifications passed at a covered head or were
 #     inapplicable or deferred to a green associated CI leg, and each
 #     reviewer's loop stopped on tree unchanged at a covered head with a
-#     dispositioned Round, or
+#     dispositioned Round, or on cap after dispositioned Rounds 1 through n,
+#     n short of any Cap:, a docs-only end whose last `Docs-only:` line is
+#     stamped at a covered head (an uncovered one holds, naming the range), or
 #     on inline lane for an on-request reviewer while the last Lane: line
 #     reads inline, the round `--inline` waived, which covers no primary. A
 #     not-reviewed or not-landed primary, or one that spent its Cap: (dispositioned Round
@@ -262,9 +264,6 @@ set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
 usage='usage: run-file init <issue|slug> [--scratchpad <dir>] [--rebuild] [--state <n>=<spec>] [--tripwires <t>] [--verifications <v>] [--reviewers <r>] [--legs <l>] [--from-profile [<path>]] [--criteria <file|->] | open <n> | next <n> | close <n> [--result <name>=<word>[: <note>]] [--head <sha>] | skip <n> <reason> | grade <patch|minor|breaking> | gate record <file|-> [--head <sha>] | gate read --head <sha> | gate clean <ci-file|-> --head <sha> | gate summary <pr> | timing | ran <name>... <where> | prove <test> <path>... [--fix <commit>] <where> [-- <command>...] | probe <ref> <where> -- <command>... | call <why> <where> -- <command>... | note <section> <line>, each taking <where>: --file <path> or --issue <n|slug> [--scratchpad <dir>, default ${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>] resolving <root>/ship-<issue>/run.md'
-# The recovery both refusals of a missing record carry, rather than prose a
-# compacted run may no longer hold.
-rebuild_hint="rebuild it with \`run-file init <issue> --rebuild [--scratchpad <dir>]\`, re-passing the --tripwires, --verifications, --reviewers, --legs and --criteria the run began with and one --state per phase the transcript accounts for (open for the one that was running, or 3 and 4 both open if they overlapped, no invented range), then log what was lost in the deviations log"
 ship_help "$usage" "$@"
 ship_args "$usage" arg "$@"
 verb=$1; shift

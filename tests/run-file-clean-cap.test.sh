@@ -102,6 +102,9 @@ capped; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f
 docsonly; change_run 's/Round: primary 1:/Round: primary 2:/'; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a docs-only line on gapped rounds' 'reviewer primary: cap'
 docsonly; change_run 's/Round: primary 1: all dispositioned/Round: primary 1: re-raised declined: a finding/'; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a docs-only line on a re-raised declined finding' 'reviewer primary: cap'
 base; check_rc 'note takes a docs-only line' 0 "$(bash "$m" note 'Review evidence' 'Docs-only: primary: tree unchanged at abcdef0123456789' --file "$f" >/dev/null 2>&1; echo $?)"
+for bad in 'abc123' 'ABCDEF0123456789'; do
+  base; check_rc "note refuses a docs-only line at $bad" 1 "$(bash "$m" note 'Review evidence' "Docs-only: primary: tree unchanged at $bad" --file "$f" >/dev/null 2>&1; echo $?)"
+done
 base; answer=$(bash "$m" note 'Review evidence' 'Docs-only: primary: tree unchanged' --file "$f" 2>/dev/null); rc=$?
 check_rc 'note refuses a docs-only line with no head' 1 "$rc"
 check 'the docs-only refusal names the form' 'a Docs-only line is `Docs-only: <reviewer>: tree unchanged at <sha>`, the form gate clean reads: Docs-only: primary: tree unchanged' "$(jq -r .error <<<"$answer")"

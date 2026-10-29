@@ -185,7 +185,8 @@ exit words and exit write-up:
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned is replied to and resolved per `Resolve:`, every section the rounds
 grew is rewritten, the title matches `Grade:`, any local review a cap, docs-only
-or not-landed round earned is dispositioned, `close 7` took each reviewer's
+or not-landed round earned is dispositioned (its `Past-cap:` or `Docs-only:`
+line recorded where one applies), `close 7` took each reviewer's
 `Round:` and `Stop:` lines, and `read-pr` shows a `## Review` line per reviewer.
 
 **8 · CI.** CI runs from PR-open and overlaps phase 7; `ci-wait <pr>` covers it,

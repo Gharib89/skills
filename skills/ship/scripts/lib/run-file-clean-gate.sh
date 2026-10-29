@@ -44,7 +44,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     ' <<<"$profile" | jq -Rs 'reduce (split("\n")[] | select(. != "") | split("\t") | [.[0], (.[1:] | join("\t"))]) as $r ([];
       if $r[0] == "name" then . + [{name: $r[1], leg: null, paths: null}]
       elif length > 0 then .[-1][$r[0]] = $r[1] else . end)') || ship_tooling "cannot read profile verifications"
-  # Every head a stop, a `Past-cap:` line or a result was stamped at: whether it covers the PR head,
+  # Every head a stop, a `Past-cap:` or `Docs-only:` line or a result was stamped at: whether it covers the PR head,
   # and, per Verification with `Paths:`, whether its globs saw no change since.
   # Trimmed as the jq below trims each line, so both read the same stamp.
   stamps=$(sed $'s/[ \t\r]*$//' <<<"$lines" | grep -oE ' at [0-9a-f]{7,64}(: |$)' | sed 's/^ at //; s/: $//' | sort -u)
@@ -116,17 +116,18 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
       # evidence of a spent cap.
       def rounds($name): [rests("Round: " + $name + " ")[] | select(test($round_re))
         | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique;
-      def capnum($name): [$reviewers[] | select(.name == $name) | .cap | numbers];
-      def cap_spent($name): stop($name) == "cap" and (reraised($name) | not)
-        and (capnum($name) as $cap | $cap != [] and rounds($name) == [range(1; $cap[0] + 1)]);
-      # A docs-only end: `Stop: cap` on rounds reading 1..n, n short of any Cap:.
-      def docs_only_end($name): stop($name) == "cap" and (reraised($name) | not)
-        and (rounds($name) as $n | capnum($name) as $cap | $n != [] and $n == [range(1; ($n | length) + 1)]
-             and ($cap == [] or ($n | length) < $cap[0]));
-      # The head the last local review past the cap read with its tree unchanged.
-      def pastcap_stamp($name): rests("Past-cap: " + $name + ": tree unchanged at ") | last // "";
-      # The head the last local review of a docs-only end read with its tree unchanged.
-      def docsonly_stamp($name): rests("Docs-only: " + $name + ": tree unchanged at ") | last // "";
+      # The numeric Cap: of a reviewer as a one-element array, empty for `None.`.
+      def cap_of($name): [$reviewers[] | select(.name == $name) | .cap | numbers];
+      def capped($name): stop($name) == "cap" and (reraised($name) | not);
+      def cap_spent($name): capped($name)
+        and (cap_of($name) as $cap | $cap != [] and rounds($name) == [range(1; $cap[0] + 1)]);
+      # A docs-only end: `Stop: cap` on rounds reading 1..k, k short of any Cap:.
+      def docs_only_end($name): capped($name)
+        and (rounds($name) as $rounds | ($rounds | length) as $k | cap_of($name) as $cap
+             | $k > 0 and $rounds == [range(1; $k + 1)] and ($cap == [] or $k < $cap[0]));
+      # The head the last local review of a `Past-cap` or `Docs-only` kind read
+      # with its tree unchanged.
+      def local_stamp($kind; $name): rests($kind + ": " + $name + ": tree unchanged at ") | last // "";
       def owes_fallback($name): (stop($name) | IN("not reviewed", "not landed")) or cap_spent($name);
       # A revocation appends its own Lane: line, so a stale inline stop holds.
       def inline_run: (rests("Lane: ") | last // "") == "inline";
@@ -177,17 +178,17 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
          | if $r.fallback_for != null and (owes_fallback($r.fallback_for) | not) then empty
            elif settled($r.name) or (stop($r.name) == "inline lane" and $r.trigger == "on-request" and inline_run) then empty
            elif owes_fallback($r.name) and any($reviewers[]; .fallback_for == $r.name and settled(.name)) then empty
-           elif cap_spent($r.name) and pastcap_stamp($r.name) != "" then
-             pastcap_stamp($r.name) as $s
+           elif cap_spent($r.name) and local_stamp("Past-cap"; $r.name) != "" then
+             local_stamp("Past-cap"; $r.name) as $s
              # A covering stamp names the hold but never lifts it: no host reviewer read those
              # fixes. One that no longer covers the PR head (a hand-resolved conflict merge, a
              # later fix) leaves the range a human reads to waive the cap.
-             | "reviewer " + $r.name + ": past cap " + ([$r.cap | numbers] | first | tostring) + ", local review read " + $s + ", "
+             | "reviewer " + $r.name + ": past cap " + (cap_of($r.name) | first | tostring) + ", local review read " + $s + ", "
                + (if $cover[$s] == true then "no host reviewer read it" else "head moved: read " + $s + ".." + $head end)
            # Docs-only fixes are what the loop leaves to a local review, so one that
            # read the PR head clears the stop (#1034).
-           elif docs_only_end($r.name) and docsonly_stamp($r.name) != "" then
-             docsonly_stamp($r.name) as $s
+           elif docs_only_end($r.name) and local_stamp("Docs-only"; $r.name) != "" then
+             local_stamp("Docs-only"; $r.name) as $s
              | if $cover[$s] == true then empty
                else "reviewer " + $r.name + ": docs-only end, local review read " + $s + ", head moved: read " + $s + ".." + $head end
            elif (stop($r.name) | word) == "tree unchanged" then

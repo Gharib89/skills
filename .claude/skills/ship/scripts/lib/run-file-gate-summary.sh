@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Run-file mechanic: the merge-gate summary. Sourced by ../run-file.sh, never run.
+# Run-file mechanic: the merge-gate summary. Sourced by run-file-verbs-gate.sh for
+# `gate summary` alone, after ../run-file.sh has sourced gate_clean; never run.
 # shellcheck disable=SC2154 # shares the globals of run-file.sh (file, head)
 
 # The merge-gate summary's two gate-derived lines, from the clean gate's own
