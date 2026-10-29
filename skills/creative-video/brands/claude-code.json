@@ -1,0 +1,20 @@
+{
+  "name": "claude-code",
+  "once": false,
+  "colours": [
+    { "hex": "#f5f4ed", "name": "ground", "basis": "declared", "from": "seed" },
+    { "hex": "#141413", "name": "ink", "basis": "declared", "from": "seed" },
+    { "hex": "#cc6c54", "name": "clay", "basis": "declared", "from": "seed" }
+  ],
+  "faces": [
+    {
+      "family": "source-serif-4",
+      "role": "title",
+      "basis": "declared",
+      "weights": [600]
+    },
+    { "family": "inter", "role": "text", "basis": "declared", "weights": [400] }
+  ],
+  "logo": null,
+  "fetched": []
+}

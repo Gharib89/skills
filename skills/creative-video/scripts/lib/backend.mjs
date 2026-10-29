@@ -1,8 +1,10 @@
 // Everything setup and the stages reach outside the machine or the skill: npm,
 // HyperFrames' Chrome download, ffmpeg and ffprobe, the Fontsource API and CDN,
-// Hugging Face, PATH, the models, the source readers, and Openverse and the
-// Kenney packs. Callers load it through tools.mjs's loadBackend.
+// Hugging Face, PATH, the models, the source readers, the brand's reference
+// images, and Openverse and the Kenney packs. Callers load it through
+// tools.mjs's loadBackend.
 export * from "./backend/browser.mjs";
+export * from "./backend/brand.mjs";
 export * from "./backend/gates.mjs";
 export * from "./backend/media.mjs";
 export * from "./backend/sound.mjs";

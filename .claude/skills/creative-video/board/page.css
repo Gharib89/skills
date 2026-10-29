@@ -73,6 +73,14 @@ textarea:disabled { opacity: .6; }
 .dir.chosen { border-color: var(--warn); box-shadow: 0 0 0 2px var(--warn); }
 .dir img, .stills img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--r-sm); border: 1px solid var(--line); background: var(--hover); }
 .dir figcaption { display: flex; gap: 6px 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.brand { padding: 16px 20px 20px; display: grid; gap: 12px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 12px; }
+.swatch { margin: 0; display: grid; gap: 6px; width: 11rem; }
+.chip { display: block; height: 3rem; border-radius: var(--r-sm); border: 1px solid var(--line-strong); }
+.swatch figcaption { display: flex; gap: 4px 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.faces { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 14px; }
+.logo { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.logo img { display: block; max-height: 3rem; max-width: 12rem; }
 .cards { display: grid; gap: 16px; }
 .card { padding: 16px 20px 20px; display: grid; gap: 12px; min-width: 0; }
 .chead { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }

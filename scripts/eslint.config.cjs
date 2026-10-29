@@ -55,6 +55,7 @@ module.exports = [
       "skills/explainer-video/scripts/lib/backend/browser.mjs",
       "skills/explainer-video/scripts/lib/backend/source.mjs",
       "skills/creative-video/scripts/lib/backend/source.mjs",
+      "skills/creative-video/scripts/lib/backend/brand.mjs",
       "skills/creative-video/scripts/lib/backend/gates.mjs",
       "skills/creative-video/scripts/lib/backend/joins.mjs",
     ],
@@ -86,4 +87,15 @@ module.exports = [
         : []),
     ];
   }),
+  // creative-video's storyboard page: brand.js loads before page.js, and each
+  // calls what the other declares.
+  ...[
+    ["page", "brand"],
+    ["brand", "page"],
+  ].map(([file, other]) => ({
+    files: [`skills/creative-video/board/${file}.js`],
+    languageOptions: {
+      globals: declaredNames(`skills/creative-video/board/${other}.js`),
+    },
+  })),
 ];

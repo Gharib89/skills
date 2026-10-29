@@ -144,16 +144,19 @@ render.
    researcher's `{audience}` and heads `DIRECTIONS.md`.
 2. **Tools.** Run setup's check (below) with that narrator. A missing row:
    run setup's steps first. The `hyperframes` and `media-use`
-   skills must be installed (Composed skills, below).
+   skills must be installed (Composed skills, below). A brand named or
+   material given (a logo, a site, a deck): run
+   [reference/brand.md](reference/brand.md)'s steps.
 3. **Sources.** Read [reference/sources.md](reference/sources.md) and run its
    steps, to the outline and the still-standing check.
 4. **Directions.** Write `<run>/DIRECTIONS.md`: three directions that differ
    in kind, each a paragraph (the concept, its arc, its cast and audience
    device, its sound and colour), one bold, one the subject drawn directly
-   when that fits, and one marked recommended with why. Make the recommended
-   one without asking: attended, the person meets all three on the storyboard
-   (step 11) and picks there; unattended, it stands. Write the pick and its
-   reason into the file.
+   when that fits, and one marked recommended with why; with a brand, all
+   three wear it ([brand.md](reference/brand.md#wear-the-brand)). Make the
+   recommended one without asking: attended, the person meets all three on the
+   storyboard (step 11) and picks there; unattended, it stands. Write the pick
+   and its reason into the file.
 5. **Spec and kit.** Read the `hyperframes` skill's `SKILL.md`, its
    `references/spec.md` and the references the concept needs, and this
    skill's [craft-teaching.md](reference/craft-teaching.md) and
@@ -199,11 +202,13 @@ render.
 10. **Look: the stills review.** `node <skill>/scripts/hf.mjs <run> check
     --json` until it reports no errors, then `node <skill>/scripts/hf.mjs
     <run> snapshot --review --json`, and describe each frame as a stranger
-    would. Dispatch one subagent with `<skill>/agents/stills-reviewer.md` as
-    its prompt, `{sheets}` every path in the output's `review.sheets`,
-    `{notes}` `<run>/.cache/review/stills-notes.md`, and nothing else from the
-    run. Fix every P0 and every default it or you named, fix each P1 or write
-    in `DELIVERY.md` why it stays, then snapshot what changed.
+    would; with a brand, hold each logo against `brand.json`'s file, its
+    colours unchanged. Dispatch one subagent with
+    `<skill>/agents/stills-reviewer.md` as its prompt, `{sheets}` every path
+    in the output's `review.sheets`, `{notes}`
+    `<run>/.cache/review/stills-notes.md`, and nothing else from the run. Fix
+    every P0 and every default it or you named, fix each P1 or write in
+    `DELIVERY.md` why it stays, then snapshot what changed.
 11. **Storyboard.** Attended: read
     [reference/storyboard.md](reference/storyboard.md) and run its steps until
     `board apply` prints `board: approved`. That one look approval covers the
@@ -254,10 +259,11 @@ render.
     and tell the person the line it prints, in full:
     `render: <k> of <n> chapter(s) to render, estimate <m:ss>, budget <m:ss>`.
 14. **Deliver.** Run `node <skill>/scripts/render/credits.mjs <run>` first:
-    it writes `<run>/CREDITS.md`'s voices and sound. Then add to it each
-    source cited with its locators, and the faces and their licences. Write
-    `<run>/DELIVERY.md` (the concept and why
-    it was picked; what was measured, quoting the render's `delivery` and
+    it writes `<run>/CREDITS.md`'s voices, sound and brand. Then add to it
+    each source cited with its locators, and the faces outside the brand and
+    their licences. Write `<run>/DELIVERY.md` (the concept and why it was
+    picked; any brand, with what was fetched and from where, as `CREDITS.md`'s
+    `## Brand` lists it; what was measured, quoting the render's `delivery` and
     `measured loudness` lines and the gates' `warn` lines, and what was only
     looked at; that the sound was measured, not heard, and each effect placed
     on its event's word; any source updated or withdrawn; the weakest shot and

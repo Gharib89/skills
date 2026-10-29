@@ -54,6 +54,23 @@ nothing outside this table, and every field below is in every board.
 | `board.directions[].recommended` | boolean | Whether it is the one recommended. |
 | `board.directions[].picked` | boolean | Whether it is the one the scenes are authored in. |
 | `board.directions[].frame` | string | Its frame, a still, a path relative to the page. The picked direction's is chapter 1's first scene at its key. |
+| `board.brand` | object or null | The brand strip, from `brand.json`; null with no brand. |
+| `board.brand.name` | string | The brand's name. |
+| `board.brand.from` | string | Where it came from: `store`, `seed`, `fetched` or `given`. |
+| `board.brand.once` | boolean | Whether it is used for this video only, so the approval does not save it. |
+| `board.brand.colours` | array | The brand's anchor colours, in `brand.json`'s order. |
+| `board.brand.colours[].hex` | string | The colour, `#rrggbb`. |
+| `board.brand.colours[].name` | string | Its name. |
+| `board.brand.colours[].basis` | string | `measured` (a colour candidate of the brand's own pages) or `declared`. |
+| `board.brand.colours[].from` | string | Where it came from: a page's URL, a file, or `seed`. |
+| `board.brand.faces` | array | The brand's faces. |
+| `board.brand.faces[].family` | string | Its Fontsource id. |
+| `board.brand.faces[].role` | string | What it sets (`title`, `text`). |
+| `board.brand.faces[].basis` | string | `measured`, `declared` or `replaced`. |
+| `board.brand.faces[].was` | string or null | The family a `replaced` face stands in for; null otherwise. |
+| `board.brand.logo` | object or null | The logo; null with no logo. |
+| `board.brand.logo.file` | string | The logo, a path relative to the page: `brand/<first 16 hex of its sha-256>.<ext>`. |
+| `board.brand.logo.source` | string | Where it came from: a URL, or `given`. |
 | `board.kit` | string | The hash of the project's kit files; the guard compares it with the latest answered board's. |
 | `board.over` | string or null | The hash of `compositions/over.html`, null without one; the guard compares it with the latest answered board's. |
 | `board.assets` | object | Each file under `assets/` but `narration.wav` and `gsap.min.js`, by its path there, to its hash; the guard refuses one of the latest answered board's that changed or went. |
@@ -112,8 +129,8 @@ document is read from the database instead.
 
 - The agent writes `storyboard.json` and `directions/<id>.html`; `build` writes
   the board and the page, and `files.json`, the `files` map of the Artifact
-  publish: the page's style and script and every still, by the path the page
-  names them.
+  publish: the page's style and scripts, every still and the brand's logo, by
+  the path the page names them.
 - The page reads the board it embeds. On the artifact page (its db capability
   resolves) it writes the answers document, wakes the session with a comment
   that carries the answers text, and reads the `answers` collection to show a
