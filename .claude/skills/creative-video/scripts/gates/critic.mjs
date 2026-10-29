@@ -60,7 +60,7 @@ export function criticGate({
   stills,
   script,
   pack,
-  checks = {},
+  checks,
   prev,
   fail,
 }) {

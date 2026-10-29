@@ -100,12 +100,25 @@ function woff2(buf) {
 }
 
 // The sfnt of a font file's bytes, or null when they are no font this reads.
-export function sfnt(buf) {
+// A WOFF or WOFF2 whose length is not its header's, or that does not unpack,
+// is refused, naming the face `name`, since the face a scene draws in has to
+// be fixed, not skipped.
+export function sfnt(buf, name) {
   if (buf.length < 12) return null;
   const sig = buf.toString("latin1", 0, 4);
   if (sig === "OTTO" || sig === "true" || buf.readUInt32BE(0) === 0x00010000)
     return buf;
-  if (sig === "wOFF") return woff(buf);
-  if (sig === "wOF2") return woff2(buf);
-  return null;
+  if (sig !== "wOFF" && sig !== "wOF2") return null;
+  try {
+    // Both headers give the file's whole length at byte 8.
+    if (buf.readUInt32BE(8) !== buf.length)
+      throw new Error(
+        `${buf.length} bytes, its header says ${buf.readUInt32BE(8)}`,
+      );
+    return sig === "wOFF" ? woff(buf) : woff2(buf);
+  } catch (e) {
+    throw new Error(
+      `${name}: not a whole ${sig === "wOFF" ? "WOFF" : "WOFF2"} (${e.message})`,
+    );
+  }
 }
