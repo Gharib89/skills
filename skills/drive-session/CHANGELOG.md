@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.8.0 (2026-10-29)
+
+### Features
+
+- **creative-video,drive-session**: A gates check run, answers that name who chose, and smoke-test
+  cleanup ([#1056](https://github.com/Gharib89/skills/pull/1056),
+  [`ad4be8b`](https://github.com/Gharib89/skills/commit/ad4be8b6db420d05b9c87b0f850c980ad365dfbf))
+
+
 ## v0.7.0 (2026-10-29)
 
 ### Features
