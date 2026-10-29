@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.8.0 (2026-10-29)
+
+### Features
+
+- **creative-video**: A cast of voices and a recorded CC0 sound kit
+  ([#1038](https://github.com/Gharib89/skills/pull/1038),
+  [`57f8982`](https://github.com/Gharib89/skills/commit/57f8982bd02c46b70a54dda585b0ffecdf403705))
+
+
 ## v0.7.0 (2026-10-28)
 
 ### Features
