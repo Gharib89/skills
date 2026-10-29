@@ -273,11 +273,12 @@ for (const f of checked.runtime.findings) {
   const repeated = f.message?.match(REPEATED_WORD_RE);
   const anchor = missing ?? repeated;
   if (anchor) {
-    const start = timeline.scenes.find((s) => s.id === anchor[2])?.start ?? 0;
-    flagged.add(anchor[2]);
+    const [, word, scene, times] = anchor;
+    const start = timeline.scenes.find((s) => s.id === scene)?.start ?? 0;
+    flagged.add(scene);
     addOnce(
       anchors,
-      `${start.toFixed(2)} s ${anchor[2]}: ${missing ? NO_WORD : REPEATED_WORD} "${anchor[1]}"${repeated ? ` at ${repeated[3]}` : ""}`,
+      `${start.toFixed(2)} s ${scene}: ${missing ? NO_WORD : REPEATED_WORD} "${word}"${times ? ` at ${times}` : ""}`,
     );
   } else if (f.severity === "error") {
     const named = f.message?.match(SCRIPT_ERROR);

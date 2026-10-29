@@ -205,7 +205,7 @@ const rtl = (parts, split) =>
 const codeFrame = (attrs) =>
   rtl(["كتب"], false).replace("</p>", `</p><div${attrs}>print("مرحبا")</div>`);
 // Scene one narrated "Scene scene.", so its first word is said twice. Written
-// in stage order, so support.json and voice.json stay newer than the script.
+// in the order the stages write them, so support.json and voice.json stay newer than the script.
 const twice = (run) => {
   for (const [file, edit] of [
     ["script.json", (j) => (j.scenes[0].narration = ["Scene scene."])],

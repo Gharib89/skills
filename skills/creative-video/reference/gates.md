@@ -31,7 +31,7 @@ failing one indented under it. Each is a hard fail:
 - `reading`: each text stays fully visible for 0.8 s up to 3 words, else 0.3 s
   a word and at least 1.2 s.
 - `caption band`: no readable text in the bottom 220 px, the captions' own.
-- `anchors`: every `at(scene, word)` names a word the narration holds, with
+- `anchors`: every `at(scene, word, nth)` names a word the narration holds, with
   its `nth` where the scene says the word more than once. A finding reads
   `<scene start in the video> s <scene>: <message>`; a repeated word's message
   ends with its occurrences' scene-local starts, the times `at()` answers.
