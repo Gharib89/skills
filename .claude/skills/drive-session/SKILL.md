@@ -100,7 +100,7 @@ and run `window` again at each `watch` wake until it exits 0.
    `1`, then `Enter`; `esc` to back out), `--text` at a prompt (`--text=<t>`
    for text opening with `-`). Text that answers a session's question or
    stop opens with who chose: `Owner: ` before a reply you relay from the
-   user, `Supervisor: ` before your own answer, so the merge answer is
+   user, `Supervisor: ` before your own answer, so a merge you decide is
    `--text "Supervisor: merge"`. Text that starts no turn (a local slash
    command such as `/rename`, or an Enter that did not register) comes back
    from `answer` or `spawn` as a not-ok answer with `code`

@@ -12,7 +12,7 @@ Observed on the probe PRs #504 and #505 for #500, where the docs say otherwise: 
 
 ## claude
 
-`.github/workflows/claude-review.yml` drives it. It runs when `codex` exits `not reviewed`, is capped with findings (both rounds spent, the second one's fixes changing the tree) or stops `not landed` (round 1's fixes changed the tree and round 2 did not land). The workflow posts its findings as one formal review per round, which is what `poll-pr --reviewer claude --since <iso>` lands, and the action attaches the per-file ones as inline threads on that review.
+`.github/workflows/claude-review.yml` drives it. It runs on the `codex` exits [the profile's block](ship.md#claude) lists: of those, `codex` capped with findings means both its rounds spent, the second one's fixes changing the tree, and `not landed` means round 1's fixes changed the tree and round 2 did not land. The workflow posts its findings as one formal review per round, which is what `poll-pr --reviewer claude --since <iso>` lands, and the action attaches the per-file ones as inline threads on that review.
 
 `Login:` is `claude[bot]`: the round is posted by `anthropics/claude-code-action` under the Claude GitHub App the workflow's `claude_code_oauth_token` authenticates, not under the Actions identity. Only the `if: failure()` comment below the action runs on `github.token`, and that comment is not a round, so the login the loop awaits is the app's.
 
