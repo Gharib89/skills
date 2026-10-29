@@ -11,6 +11,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { readJson } from "../lib/json.mjs";
+import { soundKit } from "../lib/kit.mjs";
+import { bedHtml } from "./bed.mjs";
 
 export const WIDTH = 1920;
 export const HEIGHT = 1080;
@@ -28,8 +30,16 @@ export const captionsHost = (duration) =>
 
 // A root of `hosts` in the project folder `proj`, `total` seconds long, its
 // <head> loading the kit's .css and .js sorted, with the narration clip unless
-// `narration` is false.
-export function rootHtml({ proj, title, language, total, hosts, narration }) {
+// `narration` is false, and the `bed` clip's markup when given.
+export function rootHtml({
+  proj,
+  title,
+  language,
+  total,
+  hosts,
+  narration,
+  bed = "",
+}) {
   const kit = fs.existsSync(path.join(proj, "kit"))
     ? fs.readdirSync(path.join(proj, "kit")).sort()
     : [];
@@ -44,6 +54,7 @@ export function rootHtml({ proj, title, language, total, hosts, narration }) {
   const clip = narration
     ? `\n      <audio id="narration" class="clip" src="assets/narration.wav" data-start="0" data-duration="${total}" data-volume="1" data-track-index="4"></audio>`
     : "";
+  const bedClip = bed && `\n      ${bed}`;
   return `<!doctype html>
 <html lang="${language}">
   <head>
@@ -59,7 +70,7 @@ export function rootHtml({ proj, title, language, total, hosts, narration }) {
 ${[...head, "  </head>"].join("\n")}
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="${total}" data-width="${WIDTH}" data-height="${HEIGHT}">
-${hosts.join("\n")}${clip}
+${hosts.join("\n")}${clip}${bedClip}
     </div>
     <script>
       window.__timelines["main"] = gsap.timeline({ paused: true });
@@ -69,9 +80,14 @@ ${hosts.join("\n")}${clip}
 `;
 }
 
+// The whole project's root; sound.json's bed, once sound/sounds.mjs gave it a
+// file, plays in it (render/bed.mjs), so the one mix of a video in chapters
+// carries it and no chapter's video-only render does.
 export function writeRoot(run) {
-  const { total, scenes } = readJson(run, "timeline.json");
+  const timeline = readJson(run, "timeline.json");
+  const { total, scenes } = timeline;
   const { language } = readJson(run, "script.json");
+  const { bed } = soundKit(run) ?? {};
   const proj = path.join(run, "project");
   const has = (id) =>
     fs.existsSync(path.join(proj, "compositions", `${id}.html`));
@@ -91,6 +107,7 @@ export function writeRoot(run) {
       total,
       hosts,
       narration: true,
+      bed: bed?.file ? bedHtml(bed, timeline) : "",
     }),
   );
 }

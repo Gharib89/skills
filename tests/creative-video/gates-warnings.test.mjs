@@ -3,8 +3,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { project } from "./timing-lib.mjs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { warnings } from "../../skills/creative-video/scripts/gates/warnings.mjs";
+import { narrator } from "../../skills/creative-video/scripts/lib/narrators.mjs";
+import { exec, project, readJson, timing } from "./timing-lib.mjs";
 import { compose, record, runGates, timed, timeline } from "./gates-lib.mjs";
+import { run as voice, writeCast } from "./voice-lib.mjs";
 
 const warns = (r, name) =>
   [...r.out.matchAll(new RegExp(`^warn ${name}: (.*)$`, "gm"))].map(
@@ -137,6 +142,154 @@ test("a scene over 30 s warns, and so does a sentence over 25 words", () => {
   assert.deepEqual(warns(exact, "scene length"), []);
   const over = runGates(timed({}, { scenes: [nearly("Fox.")] }));
   assert.match(warns(over, "scene length")[0], /^hook: 30\.1 s, over 30 s$/);
+});
+
+// Writes `cast` as `fx`'s cast.json, gives its script.json the top-level
+// `extra` fields and each scene the `roles` its id maps to, then voices and
+// times the run again, so voice.json records that cast.
+function recast(fx, cast, roles, extra = {}) {
+  const file = path.join(fx.dir, "script.json");
+  const script = readJson(file);
+  fs.writeFileSync(
+    file,
+    JSON.stringify({
+      ...script,
+      ...extra,
+      scenes: script.scenes.map((s) => ({ ...s, roles: roles[s.id] })),
+    }),
+  );
+  writeCast(fx, cast);
+  const v = voice(fx);
+  assert.equal(v.code, 0, v.out + v.err);
+  const t = exec(timing, fx);
+  assert.equal(t.code, 0, t.out + t.err);
+}
+
+test("two roles on one Kokoro voice in the script's language warn whatever their style lines", () => {
+  const fx = timed(
+    {},
+    {
+      scenes: [
+        {
+          id: "hook",
+          narration: [
+            "Ship drives one issue to a merged pull request.",
+            "Why not merge it by hand?",
+            "Because the review comes first.",
+          ],
+        },
+        {
+          id: "context",
+          narration: [
+            "It reads the profile first.",
+            "Then it claims the issue.",
+            "So no other run takes it.",
+          ],
+        },
+      ],
+    },
+  );
+  recast(
+    fx,
+    {
+      narrator: { voices: { en: "af_heart" } },
+      learner: { voices: { en: "af_heart", ar: "ar-eg-csagent-2" } },
+      rival: { voices: { en: "am_fenrir" }, style: "a smug rival" },
+      critic: { voices: { en: "am_fenrir" }, style: "a smug rival" },
+      host: { voices: { en: "am_fenrir" }, style: "a calm host" },
+      guide: { voices: { ar: "ar-eg-csagent-2" } },
+    },
+    {
+      hook: [null, "learner", "rival"],
+      context: ["critic", "host", "rival"],
+    },
+  );
+  const r = runGates(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const alike = [
+    "narrator and learner both speak af_heart",
+    "rival and critic both speak am_fenrir",
+    "rival and host both speak am_fenrir",
+    "critic and host both speak am_fenrir",
+  ];
+  assert.deepEqual(warns(r, "alike voices"), alike);
+  assert.deepEqual(
+    record(fx).warnings.filter((w) => w.startsWith("alike voices")),
+    alike.map((a) => `alike voices: ${a}`),
+  );
+});
+
+// The alike voices warnings for `castVoices`, each speaking role's
+// narrators.json entry.
+const alike = (castVoices) =>
+  warnings({
+    plan: [],
+    events: {},
+    script: { scenes: [] },
+    castVoices,
+    sound: null,
+    total: 60,
+    proj: fileURLToPath(new URL("./no-project/", import.meta.url)),
+  }).filter((w) => w.startsWith("alike voices"));
+
+test("on Gemini, which acts the style line, two roles on one voice warn only when their style lines match", () => {
+  const gemini = (style) => ({ ...narrator("ar-eg-csagent-2", "ar"), style });
+  assert.deepEqual(
+    alike({
+      narrator: narrator("ar-eg-csagent-2", "ar"),
+      host: gemini("a calm host"),
+      rival: gemini("a calm host"),
+      critic: gemini("a sharp critic"),
+    }),
+    [
+      "alike voices: host and rival both speak ar-eg-csagent-2 in the same style",
+    ],
+  );
+});
+
+const alikeWarns = (fx) => warns(runGates(fx), "alike voices");
+
+test("the narrator role a cast leaves out counts when it speaks: script.json's narrator, else the language's default", () => {
+  const fx = timed();
+  const learner = (id) => ({ learner: { voices: { en: id } } });
+  const roles = { context: [null, "learner"] };
+  recast(fx, learner("af_heart"), roles);
+  assert.deepEqual(alikeWarns(fx), [
+    "narrator and learner both speak af_heart",
+  ]);
+  recast(fx, learner("am_fenrir"), roles, { narrator: "am_fenrir" });
+  assert.deepEqual(alikeWarns(fx), [
+    "narrator and learner both speak am_fenrir",
+  ]);
+  recast(fx, learner("am_fenrir"), roles, { narrator: undefined });
+  assert.deepEqual(alikeWarns(fx), []);
+});
+
+test("a role no sentence speaks never warns: a cast role, or the narrator role a cast leaves out", () => {
+  const fx = timed();
+  recast(
+    fx,
+    {
+      host: { voices: { en: "af_heart" } },
+      learner: { voices: { en: "am_fenrir" } },
+      extra: { voices: { en: "am_fenrir" } },
+    },
+    { hook: ["host"], context: ["learner", "host"], recap: ["learner"] },
+  );
+  assert.deepEqual(alikeWarns(fx), []);
+});
+
+test("alike voices judges the voices voice.json voiced, not a cast.json edited since", () => {
+  const fx = timed();
+  const roles = { context: [null, "learner"] };
+  recast(fx, { learner: { voices: { en: "af_heart" } } }, roles);
+  writeCast(fx, { learner: { voices: { en: "am_fenrir" } } });
+  assert.deepEqual(alikeWarns(fx), [
+    "narrator and learner both speak af_heart",
+  ]);
+  recast(fx, { learner: { voices: { en: "am_fenrir" } } }, roles);
+  writeCast(fx, { learner: { voices: { en: "af_heart" } } });
+  assert.deepEqual(alikeWarns(fx), []);
 });
 
 test("a scene or kit file reading the clock or a random draw is named, and captions.html is left alone", () => {

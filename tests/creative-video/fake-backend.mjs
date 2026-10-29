@@ -29,6 +29,7 @@ export * from "./fake-backend-voice.mjs";
 export * from "./fake-backend-media.mjs";
 export * from "./fake-backend-sources.mjs";
 export * from "./fake-backend-gates.mjs";
+export * from "./fake-backend-sound.mjs";
 
 export async function npmCi(dir, env) {
   log({
@@ -74,8 +75,10 @@ export async function fontMeta(id) {
   };
 }
 
+// A URL under /dead/ answers HTTP 404, as the real download throws.
 export async function download(url, file) {
   log({ call: "download", url });
+  if (url.includes("/dead/")) throw new Error(`${url}: HTTP 404`);
   fs.writeFileSync(file, "woff2");
 }
 

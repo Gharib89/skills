@@ -2,9 +2,15 @@
 // texts and write them into narrators.json, where a script budgets scene
 // characters.
 //
-//   node maintainer/calibrate-rates.mjs <language> [narrators.json]
+//   node maintainer/calibrate-rates.mjs <language> [--all] [--file narrators.json] [id ...]
 //
-// Needs the voice rows installed (`node scripts/setup.mjs install`). The rate
+// Resumable: narrators.json is written after each narrator, a narrator that
+// already has a numeric rate is skipped unless --all, and ids name the narrators
+// of the language to calibrate, none meaning every one. A new narrator carries
+// rate and pause null until calibrated, and a script naming it is refused.
+// Needs the voice rows installed (`node scripts/setup.mjs install`); a Gemini
+// narrator needs its key and spends its quota, so a quota stop leaves what was
+// written and the next run goes on from the narrator it stopped at. The rate
 // is spoken characters (`chars` in scripts/lib/length.mjs) per second of
 // speech, each sentence timed from its first word's start to its last word's
 // end; the pause a sentence is the audio's seconds less its speech, over its
@@ -15,14 +21,23 @@
 // between sentences included, the same budget: elevenlabs-george. Its rate is
 // converted, not measured: 3.07 words a second times 4.36, the English texts'
 // characters a word (#783).
+//
+// The Gemini Egyptian voice list, probed 2026-10-28 with
+// `GET https://generativelanguage.googleapis.com/v1beta/voices?languageCode=ar-EG`
+// (paged by `next_page_token`): 92 voices, 90 of them beyond the two first
+// narrators, each now a narrators.json entry.
 // stdout: `calibrate <id> text <k>: <rate> chars/s, <pause> s a sentence` per
 //         text, then `calibrate <id>: <rate> chars/s, <pause> s a sentence`,
-//         the values written, per narrator of that language
-// exit:   0 written · 1 synthesis or alignment failed · 2 usage
+//         the values written, per narrator calibrated, or
+//         `calibrate <id>: skipped, already calibrated (--all measures it
+//         again)` per narrator skipped
+// stderr: `calibrate: stopped at <id>: <why>` when synthesis or alignment fails
+// exit:   0 every narrator asked for calibrated or skipped · 1 synthesis or
+//         alignment failed, the narrators before it kept · 2 usage
 import fs from "node:fs";
 import path from "node:path";
-import { parseJson } from "../scripts/lib/json.mjs";
 import { chars, sentences } from "../scripts/lib/length.mjs";
+import { parseNarrators } from "../scripts/lib/narrators.mjs";
 import { loadBackend, skill, toolPaths } from "../scripts/lib/tools.mjs";
 import { align } from "../scripts/voice/align.mjs";
 
@@ -72,22 +87,49 @@ const TEXTS = {
   ],
 };
 
-const [language, file = path.join(skill, "narrators.json"), ...rest] =
-  process.argv.slice(2);
-if (!TEXTS[language] || rest.length) {
+const usage = (why) => {
   console.error(
-    `usage: node calibrate-rates.mjs <${Object.keys(TEXTS).join("|")}> [narrators.json]`,
+    `${why ? `calibrate: ${why}\n` : ""}usage: node calibrate-rates.mjs <${Object.keys(TEXTS).join("|")}> [--all] [--file narrators.json] [id ...]`,
   );
   process.exit(2);
+};
+const args = process.argv.slice(2);
+const language = args.shift();
+let all = false;
+let file = path.join(skill, "narrators.json");
+const ids = [];
+while (args.length) {
+  const a = args.shift();
+  if (a === "--all") all = true;
+  else if (a === "--file") file = args.shift() ?? usage("--file needs a path");
+  else if (a.startsWith("--")) usage(`no option ${a}`);
+  else ids.push(a);
 }
+if (!TEXTS[language]) usage();
 
-const doc = parseJson("narrators.json", fs.readFileSync(file, "utf8"));
+// The narrators as every reader sees them, and the file's own entries, which
+// take the rate and pause and are written back over the defaults block.
+const body = fs.readFileSync(file, "utf8");
+const seen = parseNarrators(body);
+const doc = JSON.parse(body);
+const ofLanguage = seen.filter((n) => n.language === language);
+for (const id of ids)
+  if (!ofLanguage.some((n) => n.id === id))
+    usage(`no ${language} narrator ${id}`);
 const tools = toolPaths();
 const backend = await loadBackend();
 const ctc = await backend.aligner({ language, tools });
 const r2 = (x) => +x.toFixed(2);
+let stoppedAt;
 try {
-  for (const n of doc.narrators.filter((n) => n.language === language)) {
+  for (const n of ofLanguage.filter((n) => !ids.length || ids.includes(n.id))) {
+    if (!all && Number.isFinite(n.rate)) {
+      console.log(
+        `calibrate ${n.id}: skipped, already calibrated (--all measures it again)`,
+      );
+      continue;
+    }
+    stoppedAt = n.id;
     const sum = { chars: 0, speech: 0, silence: 0, sentences: 0 };
     for (const [k, text] of TEXTS[language].entries()) {
       const said = sentences(text).map((s) => s.split(/\s+/));
@@ -117,12 +159,17 @@ try {
     }
     n.rate = r2(sum.chars / sum.speech);
     n.pause = r2(sum.silence / sum.sentences);
+    Object.assign(doc.narrators[seen.indexOf(n)], {
+      rate: n.rate,
+      pause: n.pause,
+    });
+    // Written now, not at the end: a later narrator's quota stop keeps this one.
+    fs.writeFileSync(file, JSON.stringify(doc, null, 2) + "\n");
     console.log(
       `calibrate ${n.id}: ${n.rate} chars/s, ${n.pause} s a sentence`,
     );
   }
 } catch (e) {
-  console.error(`calibrate: ${e.message}`);
+  console.error(`calibrate: stopped at ${stoppedAt}: ${e.message}`);
   process.exit(1);
 }
-fs.writeFileSync(file, JSON.stringify(doc, null, 2) + "\n");

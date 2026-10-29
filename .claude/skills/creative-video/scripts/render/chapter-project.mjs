@@ -89,12 +89,14 @@ export function writeChapter(run, { timeline, voice }, n) {
 // counts for the chapters whose files name its path (`assets/<file>`), so a new
 // one costs only the chapters that use it; one no file of the project names (a
 // name a script builds at run time) counts for every chapter, since which
-// chapter loads it cannot be read.
+// chapter loads it cannot be read. The kit's sound.json is no input: the bed it
+// names plays in the whole project's root alone, and a palette sound counts by
+// the scene file naming it.
 function chapterKey(dir, proj) {
   const outside = (root) => (f) =>
     !["assets", ".hyperframes"].includes(
       path.relative(root, f).split(path.sep)[0],
-    );
+    ) && path.relative(root, f) !== path.join("kit", "sound.json");
   const names = (files) => {
     const text = files.map((f) => fs.readFileSync(f, "utf8")).join("\n");
     return (a) =>

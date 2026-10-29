@@ -200,6 +200,50 @@
       "licence": "OFL-1.1"
     },
     {
+      "id": "sounds:kenney",
+      "kind": "sounds",
+      "packs": [
+        {
+          "name": "rpg-audio",
+          "url": "https://opengameart.org/sites/default/files/RPGsounds_Kenney.zip",
+          "sha256": "3ae398ad63e293f9c450bda22d5d81c3af69c74df66fc1400f33c012c0bbc231"
+        },
+        {
+          "name": "ui-audio",
+          "url": "https://opengameart.org/sites/default/files/UI_SFX_Set.zip",
+          "sha256": "66026b9e39859b85964dbb3ee7a2d1fc46a6a406bb3e97c8b0defee0e25fb369"
+        },
+        {
+          "name": "casino-audio",
+          "url": "https://opengameart.org/sites/default/files/kenney_casino-audio.zip",
+          "sha256": "f36250766ac5bc378c13708ddf12a23a8e54a3251f8d482c7536e51b5dbafa18"
+        },
+        {
+          "name": "digital-audio",
+          "url": "https://opengameart.org/sites/default/files/Digital_SFX_Set.zip",
+          "sha256": "022f0f4b73da55989567fe2b373c8af89d74f5d015257e293cab497ca606d063"
+        },
+        {
+          "name": "interface-sounds",
+          "url": "https://opengameart.org/sites/default/files/kenney_interfaceSounds.zip",
+          "sha256": "f2193d072726d6758a5f7871b2dcc54dcce0d5c35c6f0a62f92549b327c81232"
+        },
+        {
+          "name": "sci-fi-sounds",
+          "url": "https://opengameart.org/sites/default/files/sci-fi_sounds.zip",
+          "sha256": "119340f351a5098ad814f78719438c0da355a9ce8a4c8a3af6a8d48aa3d49e04"
+        },
+        {
+          "name": "music-jingles",
+          "url": "https://opengameart.org/sites/default/files/jingleSounds_Kenney.zip",
+          "sha256": "be324b6cf26e35c95c2a344569a2470512819d0246cc81328bef3499de3682e5"
+        }
+      ],
+      "neededBy": "sounds (when Openverse finds none)",
+      "size": 11865462,
+      "licence": "CC0-1.0 (Kenney's sound packs)"
+    },
+    {
       "id": "ffmpeg",
       "kind": "system",
       "command": "ffmpeg",

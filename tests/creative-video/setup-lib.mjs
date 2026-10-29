@@ -22,19 +22,23 @@ export const FAKE_SHA = crypto
   .update("woff2")
   .digest("hex");
 
+// A catalogue row with each model file and sound pack pinned to the fake's body.
+const fakePinned = (r) =>
+  r.kind === "model"
+    ? { ...r, files: r.files.map((f) => ({ ...f, sha256: FAKE_SHA })) }
+    : r.kind === "sounds"
+      ? { ...r, packs: r.packs.map((p) => ({ ...p, sha256: FAKE_SHA })) }
+      : r;
+
 // A copy of the skill in a fresh temp dir, its catalogue replaced when `rows` is
-// given; otherwise the real catalogue, each model file pinned to the fake's body.
+// given; otherwise the real catalogue, pinned to the fake's body.
 export function fixture(rows) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "creative-video-"));
   temps.push(tmp);
   const skill = path.join(tmp, "skill");
   fs.cpSync(source, skill, { recursive: true });
   const catalogue = path.join(skill, "setup", "rows.json");
-  rows ??= JSON.parse(fs.readFileSync(catalogue, "utf8")).rows.map((r) =>
-    r.kind === "model"
-      ? { ...r, files: r.files.map((f) => ({ ...f, sha256: FAKE_SHA })) }
-      : r,
-  );
+  rows ??= JSON.parse(fs.readFileSync(catalogue, "utf8")).rows.map(fakePinned);
   fs.writeFileSync(catalogue, JSON.stringify({ rows }));
   return { tmp, skill, log: path.join(tmp, "calls.jsonl") };
 }
@@ -82,15 +86,11 @@ export const fontDir = (fx) =>
 export const machine = (cap) =>
   cap ? { CREATIVE_VIDEO_FAKE_GPU: String(cap) } : {};
 
-// The real catalogue with each model file pinned to the fake's body.
+// The real catalogue pinned to the fake's body.
 export const realRows = () =>
   JSON.parse(
     fs.readFileSync(path.join(source, "setup", "rows.json"), "utf8"),
-  ).rows.map((r) =>
-    r.kind === "model"
-      ? { ...r, files: r.files.map((f) => ({ ...f, sha256: FAKE_SHA })) }
-      : r,
-  );
+  ).rows.map(fakePinned);
 
 // The machine's platform, as backend.platform() reports it.
 export const on = (platform, extra = {}) => ({

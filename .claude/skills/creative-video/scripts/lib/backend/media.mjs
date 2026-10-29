@@ -94,6 +94,21 @@ export async function loudness(file) {
   return { lufs: +lufs, peak: +peak };
 }
 
+// The short-term loudness (ebur128's sliding 3 s, LUFS) of `file`'s audio,
+// looped, over its first `seconds`: `[t, lufs]` every 0.1 s, each the 3 s
+// ending at t (measured on ffmpeg 7: the value printed with a frame at pts p
+// covers up to p + 0.1). Under 3 s in, and in silence, it is -Infinity.
+export async function shortTerm(file, seconds) {
+  const err = ffmpeg([
+    ...["-stream_loop", "-1", "-i", file, "-t", String(seconds), "-vn"],
+    ...["-af", "ebur128=metadata=1,ametadata=print:key=lavfi.r128.S"],
+    ...["-f", "null", "-"],
+  ]);
+  return [...err.matchAll(/pts_time:([\d.]+)\s*\n.*lavfi\.r128\.S=(\S+)/g)].map(
+    ([, t, s]) => [+(+t + 0.1).toFixed(3), +s > -120 ? +s : -Infinity],
+  );
+}
+
 // The loudnorm filter of `input`'s audio at `lufs` integrated and `peak` true
 // peak (LRA 11), pass 2 linear from pass 1's measurements so speech keeps its
 // dynamics.
@@ -154,11 +169,20 @@ export async function fontMeta(id) {
   return r.json();
 }
 
-// Streamed to disk: a model file can outgrow what one buffer holds.
+// Streamed to disk: a model file can outgrow what one buffer holds. It lands
+// as `<file>.part` and is renamed whole, so a stream that dies leaves nothing a
+// reader would take for the file.
 export async function download(url, file) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
-  await pipeline(Readable.fromWeb(r.body), fs.createWriteStream(file));
+  const part = `${file}.part`;
+  try {
+    await pipeline(Readable.fromWeb(r.body), fs.createWriteStream(part));
+  } catch (e) {
+    fs.rmSync(part, { force: true });
+    throw e;
+  }
+  fs.renameSync(part, file);
 }
 
 // onnxruntime's CUDA provider files from its NuGet package into `dir`, the

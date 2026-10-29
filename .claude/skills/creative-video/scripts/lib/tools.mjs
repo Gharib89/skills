@@ -37,11 +37,13 @@ export function loadBackend() {
 // The tool cache's folder per row kind, each holding one install per lock hash.
 export const TOOL_DIRS = { npm: "node", chrome: "chrome", cuda: "onnx-cuda" };
 
-// A font by family and version in the font store; a model by its pinned
-// revision; npm packages and Chrome by the lockfile's hash.
+// A font by family and version in the font store, the Kenney sound packs in
+// the sound store beside it; a model by its pinned revision; npm packages and
+// Chrome by the lockfile's hash.
 export function dest(r, dirs = userDirs()) {
   if (r.kind === "font")
     return path.join(dirs.data, "fonts", `${r.family}@${r.version}`);
+  if (r.kind === "sounds") return path.join(dirs.data, "sounds", "kenney");
   if (r.kind === "model")
     return path.join(
       dirs.cache,

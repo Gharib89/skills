@@ -10,7 +10,8 @@ The shape of `script.json` in the run folder:
     {
       "id": "hook",
       "narration": ["First sentence.", "Second."],
-      "cites": [["ex-1"], []]
+      "cites": [["ex-1"], []],
+      "roles": [null, "learner"]
     }
   ]
 }
@@ -32,23 +33,41 @@ request`); QC spells them in Arabic letters as a speaker says them. An acronym
 of more than four capitals QC reads as a word: write it as its letters' names
 in Arabic.
 
+`roles` is optional: one role per sentence, like `cites`. `null`, or no `roles`
+at all, means `narrator`. Any other role needs `project/kit/cast.json`: per
+role a `narrators.json` id per language and the style line it speaks in:
+
+```json
+{ "narrator": { "voices": { "en": "af_heart" } },
+  "learner": { "voices": { "en": "am_fenrir" }, "style": "a curious student" } }
+```
+
+Without `cast.json`, `script.json`'s `narrator` voices every sentence; a
+`cast.json` with no `narrator` role keeps that voice for it. Cast only
+narrators whose `narrators.json` `rate` is a number; voice refuses a null one.
+A role speaks its voice in the script's language, `style` replacing that
+narrator's own (Gemini acts it; Kokoro and ElevenLabs ignore it). Each run of
+consecutive sentences of one role is voiced in its voice, the runs one after
+another, never overlapping; `voice.json` records each sentence's role
+(`roles`), and captions name a new one.
+
 1. **Tools.** Voice needs the npm packages and its narrator's rows: English
    `model:kokoro-82m` and `model:wav2vec2-base-960h`, plus `onnx-cuda` where
    setup lists it; Egyptian Arabic
    `model:egyptian-arabic-wav2vec2` and `key:gemini`; an ElevenLabs narrator
-   `key:elevenlabs` and `model:wav2vec2-base-960h`. Run the setup
+   `key:elevenlabs` and `model:wav2vec2-base-960h`. First run the setup
    check with `--voice` set to the narrator this stage uses (`narrator`, else
-   the language's default above) first; any row missing, run SKILL.md's Setup
-   steps before voicing.
+   the language's default above), then once per other voice `cast.json`
+   names; any row missing, run SKILL.md's Setup steps before voicing.
 2. **Voice.** `node <skill>/scripts/voice/voice.mjs creative-videos/<slug>`.
    It prints one line per scene, `voice <id>: voiced|cached · recall ·
    precision · rate · pass|fail: <why>`, a failing one ending in `heard:
-   <file>`, then a summary line. A scene whose narration, narrator and language
-   are unchanged is a cache hit and is not voiced again. Once every scene
-   passes, with a `brief.json` in the run folder, a `voice length: pass|fail`
-   line follows the scene lines: the scenes' total voiced seconds, then each
-   scene's, and whether they plus the one-second closing hold land within 10
-   percent of `brief.json`'s `length`, in minutes.
+   <file>`, then a summary line. A scene whose narration, voices, styles and
+   language are unchanged is a cache hit and is not voiced again. Once every
+   scene passes, with a `brief.json` in the run folder, a `voice length:
+   pass|fail` line follows the scene lines: the scenes' total voiced seconds,
+   then each scene's, and whether they plus the one-second closing hold land
+   within 10 percent of `brief.json`'s `length`, in minutes.
 3. **On a pass** (exit 0), the stage has written `voice.json` in the run
    folder: per scene its WAV under `.cache/voice/`, its duration and each
    word's start and end in seconds from the start of that scene's WAV. Report
@@ -71,11 +90,11 @@ in Arabic.
    is an input or tool error (an unknown narrator, a scene with no narration,
    a Gemini narrator with no `GEMINI_API_KEY`, an ElevenLabs narrator with no
    `ELEVENLABS_API_KEY`, a failed synthesis): relay the stderr message as
-   printed. Keep `script.json`'s `narrator`: only the user changes it.
+   printed. Only the user changes a narrator (`script.json`, `cast.json`).
 5. **On `voice: Gemini quota reached`** (or `ElevenLabs`), the key has hit
    that vendor's limit: a rate or daily limit, or spent credits. The line
    quotes the vendor's own message, and the scenes it counts as kept are
    cached. Relay the line and ask the user to pick one: voice again once the
    quota resets (tomorrow, for a daily quota) or the credits are topped up,
    which voices only the missing scenes; set another key (a paid one, for a
-   free-tier limit); or change `script.json`'s `narrator`.
+   free-tier limit); or change the narrator (`script.json`, `cast.json`).

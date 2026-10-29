@@ -7,7 +7,8 @@
 // every scene back to back on the frame grid (render/grid.mjs) from its voice
 // duration, the last held 1 s. Writes <run>/timeline.json (the voice.json's
 // hash, the total, each scene's start, duration and absolute word times, the
-// caption cues: one per sentence, broken early at a long one, and, when
+// caption cues: one per sentence, broken early at a long one, a cue naming
+// its role when the video has two or more and the last cue's differs, and, when
 // script.json carries `chapters`, each chapter's number, title, window and scenes
 // on the grid) and, in <run>/project/, which it creates but otherwise never deletes from or
 // touches (the agent's scene files and kit/ live there):
@@ -27,8 +28,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { maybeJson, readJson } from "../lib/json.mjs";
+import { rolesOf, voices, voicesOf } from "../lib/kit.mjs";
 import { HOLD } from "../lib/length.mjs";
-import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { voiceHash, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { catalogue, dest } from "../lib/tools.mjs";
@@ -57,18 +58,24 @@ script.scenes.forEach((s, i) => {
   const v = voice.scenes[i];
   if (
     v?.id !== s.id ||
-    v.words.map((w) => w.text).join(" ") !== s.narration.join(" ")
+    v.words.map((w) => w.text).join(" ") !== s.narration.join(" ") ||
+    JSON.stringify(v.roles) !== JSON.stringify(rolesOf(s))
   )
     fail(`voice.json does not match scene ${s.id}: run the voice stage again`);
 });
 if (voice.scenes.length !== script.scenes.length)
   fail("voice.json does not match script.json: run the voice stage again");
-const narrator =
-  script.narrator ?? findNarrator(undefined, script.language)?.id;
-if (voice.narrator !== narrator || voice.language !== script.language)
-  fail(
-    `voice.json holds narrator ${voice.narrator}, the script asks for ${narrator}: run the voice stage again`,
-  );
+// Each role's voice and style as script.json and the cast ask for them now; a
+// narrator speaks one language, so the voices hold the script's language too.
+const asked = voicesOf(voices(run, script));
+const held = voice.voices;
+const said = (n) =>
+  n ? `${n.narrator}${n.style ? ` ("${n.style}")` : ""}` : "no voice";
+for (const role of new Set([...Object.keys(asked), ...Object.keys(held)]))
+  if (said(asked[role]) !== said(held[role]))
+    fail(
+      `voice.json holds ${role} ${said(held[role])}, the script asks for ${said(asked[role])}: run the voice stage again`,
+    );
 // A scene id is a file name, an element id and a timeline key.
 for (const { id } of script.scenes) {
   if (!/^[a-z0-9-]+$/.test(id))
@@ -98,10 +105,11 @@ const total = written(grid.total);
 // A sentence is a list of one-word tokens: a cue breaks at a sentence end, or
 // before the word that would take it past the line.
 const cues = captionCues(
-  script.scenes.map((s) => ({
+  script.scenes.map((s, i) => ({
     captions: s.narration.map((n) =>
       n.split(/\s+/).map((text) => ({ text, words: 1 })),
     ),
+    roles: voice.scenes[i].roles,
   })),
   scenes,
 );

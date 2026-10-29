@@ -25,6 +25,7 @@
 //                 data-moved="<y>" its script moved its start to <y>
 //   <audio data-created="<t>">  a sound its script created at video seconds
 //                 <t>, its `id` if it has one
+//   either one's `src` is the file it plays
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -220,16 +221,18 @@ export async function probe(dir, times) {
       sounds: [...m.html.matchAll(/<audio\b([^>]*)>/g)].flatMap(([, a]) => {
         const attr = (name) => a.match(new RegExp(`${name}="([^"]*)"`))?.[1];
         const [authored, created] = [attr("data-sound"), attr("data-created")];
+        const src = attr("src") ?? null;
         if (authored)
           return [
             {
               id: attr("id") ?? "",
               start: +(attr("data-moved") ?? authored),
               authored: +authored,
+              src,
             },
           ];
         return created
-          ? [{ id: attr("id") ?? "", start: +created, authored: null }]
+          ? [{ id: attr("id") ?? "", start: +created, authored: null, src }]
           : [];
       }),
     };

@@ -27,6 +27,16 @@ test("the cues read back from the composition, their words unescaped and inner t
   ]);
 });
 
+test("a cue's role name reads back as its who and its text's prefix, not as a word", () => {
+  const html = cueDiv(0, 1, ["Two."]).replace(
+    '<span class="w"',
+    '<span class="who">Learner:</span> <span class="w"',
+  );
+  assert.deepEqual(cuesOf(html), [
+    { start: 0, end: 1, who: "Learner", text: "Learner: Two." },
+  ]);
+});
+
 const timeline = {
   total: 2,
   scenes: [

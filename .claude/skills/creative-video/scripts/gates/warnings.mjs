@@ -1,8 +1,8 @@
 // The gates stage's advisory warnings: reported, never a refusal. Each is a
 // `<name>: <detail>` line, over the plan (each scene's window), the probe's
 // events (each scene's tween windows in its own seconds, and its sounds, judged
-// in its own seconds by gates/sounds.mjs), the script and, for the clock scan,
-// the project's scene and kit files.
+// in its own seconds by gates/sounds.mjs), the script, the cast, the sound kit
+// and, for the clock scan, the project's scene and kit files.
 import fs from "node:fs";
 import path from "node:path";
 import { sentences } from "../lib/length.mjs";
@@ -88,6 +88,28 @@ const longSentences = (script) =>
     ),
   );
 
+// Two roles of `castVoices` a viewer cannot tell apart: each pair speaks one
+// narrator, and on Gemini, the one backend that acts the style line, one style
+// line too.
+function alikeVoices(castVoices) {
+  const roles = Object.entries(castVoices);
+  return roles.flatMap(([a, n], i) => {
+    const acts = n.backend === "gemini";
+    return roles
+      .slice(i + 1)
+      .filter(([, m]) => m.id === n.id && (!acts || m.style === n.style))
+      .map(
+        ([b]) =>
+          `alike voices: ${a} and ${b} both speak ${n.id}${acts ? " in the same style" : ""}`,
+      );
+  });
+}
+
+// Each sound sound/sounds.mjs found nowhere and dropped from `sound`
+// (sound.json, or null).
+const droppedSounds = (sound) =>
+  (sound?.dropped ?? []).map((d) => `dropped sound: ${d.event}: ${d.why}`);
+
 const clockReads = (proj) =>
   [...listed(proj, "compositions"), ...listed(proj, "kit")].flatMap((f) => {
     const code = fs.readFileSync(path.join(proj, f), "utf8");
@@ -96,8 +118,18 @@ const clockReads = (proj) =>
   });
 
 // The warnings in print order, as `<name>: <detail>` lines. `total` is the
-// video's length in seconds, `proj` the project folder.
-export function warnings({ plan, events, script, total, proj }) {
+// video's length in seconds, `proj` the project folder, `castVoices` maps each
+// role some sentence speaks to its narrators.json entry, the style voice.json
+// voiced it in applied, and `sound` is kit/sound.json or null.
+export function warnings({
+  plan,
+  events,
+  script,
+  castVoices,
+  sound,
+  total,
+  proj,
+}) {
   const eventsOf = (id) => events[id] ?? { tweens: [], sounds: [] };
   const sounds = plan.flatMap((p) =>
     eventsOf(p.sc.id).sounds.map((s) => p.sc.start + sceneSeconds(p.sc, s)),
@@ -117,6 +149,8 @@ export function warnings({ plan, events, script, total, proj }) {
   }
   out.push(
     ...longSentences(script),
+    ...alikeVoices(castVoices),
+    ...droppedSounds(sound),
     `pacing: ${((starts + sounds.length) / (total / 60)).toFixed(1)} change events a minute; ${dead.join("; ") || "no dead stretch"}`,
     ...clockReads(proj),
   );

@@ -3,15 +3,17 @@
 //   node voice.mjs <run-folder>
 //
 // Reads <run>/script.json: { language, narrator?, scenes: [{ id, narration:
-// [sentence, ...] }] }; the narrator defaults to the language's first default
-// one in narrators.json. Each scene's audio and timings are cached in
-// <run>/.cache/voice/ under the hash of its narration, narrator and language
-// (ADR 0016). With no scene cached,
-// the whole narration is one synthesis call, split per scene at the aligner's
-// word times; otherwise each uncached scene is its own call. A scene failing
-// voice QC is not cached. Once every scene passes, with <run>/brief.json, the
-// voiced scenes and the render's closing hold must land within 10 percent of
-// the brief's `length`.
+// [sentence, ...], roles? }] }, and <run>/project/kit/cast.json, each role's
+// voice, when there is one (lib/kit.mjs); the narrator defaults to the
+// language's first default one in narrators.json. Each scene's audio and
+// timings are cached in <run>/.cache/voice/ under the hash of its narration,
+// each run's voice and style, and language (ADR 0016). With no scene cached, the whole
+// narration is voiced at once, otherwise each uncached scene alone: one
+// synthesis call per run of consecutive sentences one role speaks, the calls
+// joined in order, aligned once and split per scene at the aligner's word
+// times. A scene failing voice QC is not cached. Once every scene passes,
+// with <run>/brief.json, the voiced scenes and the render's closing hold must
+// land within 10 percent of the brief's `length`.
 // stdout: one line per scene, `voice <id>: voiced|cached · recall · precision ·
 //         rate · pass` or `... · fail: <why>; heard: <file>`, that file
 //         (relative to the run folder) holding what the aligner heard; once
@@ -19,10 +21,12 @@
 //         `voice length: pass|fail: the scenes voice <s> s (<id> <s> s, ...)
 //         and the <hold> s hold vs the brief's <s> s ±10%`; then one summary
 //         line
-// writes: <run>/voice.json, the word timeline, only when every scene and the
-//         length pass; <run>/.cache/voice/<key>.heard.txt per voiced scene
-// stderr: a Gemini or ElevenLabs narrator with no key is refused before any
-//         synthesis; a quota stop counts the scenes kept
+// writes: <run>/voice.json, the word timeline with each sentence's role
+//         and each role's voice, only when every scene and the length pass;
+//         <run>/.cache/voice/<key>.heard.txt per voiced scene
+// stderr: a narrator with no calibrated rate, or a Gemini or ElevenLabs
+//         narrator with no key, is refused before any synthesis; a quota stop
+//         counts the scenes kept
 // exit:   0 every scene and the length pass · 1 refused for its input or a
 //         missing key, a scene fails QC, the length fails, a quota stop, or
 //         synthesis or alignment failed · 2 usage
@@ -30,6 +34,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { maybeJson, readJson } from "../lib/json.mjs";
+import { CAST, rolesOf, voices, voicesOf } from "../lib/kit.mjs";
 import { HOLD, fitsLength } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
@@ -57,13 +62,22 @@ const script = readJson(run, "script.json");
 const brief = maybeJson(run, "brief.json");
 writeIgnore(run);
 const { language } = script;
-const narrator = findNarrator(script.narrator, language);
-if (!narrator) {
-  console.error(
-    `voice: no narrator ${script.narrator ?? "default"} for ${language}`,
-  );
-  process.exit(1);
-}
+// Each role's narrator, the narrator role's first.
+const cast = voices(run, script);
+const narrator = cast.narrator;
+// The roles some sentence speaks: `voices` keeps the narrator role even when
+// every sentence is another's, and a voice never heard is refused nothing.
+const spoken = new Set(script.scenes.flatMap(rolesOf));
+const speaking = Object.entries(cast).filter(([role]) => spoken.has(role));
+// A narrator new to narrators.json carries a null rate until calibrated, and a
+// script budgeted at none would be cut to NaN.
+for (const [, n] of speaking)
+  if (!Number.isFinite(n.rate)) {
+    console.error(
+      `voice: narrator ${n.id} has no calibrated rate; run maintainer/calibrate-rates.mjs ${language} ${n.id}`,
+    );
+    process.exit(1);
+  }
 const empty = script.scenes.find((s) => !s.narration?.join("").trim());
 if (empty) {
   console.error(`voice: scene ${empty.id} has no narration`);
@@ -78,11 +92,34 @@ fs.mkdirSync(cacheDir, { recursive: true });
 // What the aligner heard of a voiced scene, kept pass or fail, so a QC failure
 // can be read word by word against the narration.
 const heardFile = (key) => path.join(cacheDir, `${key}.heard.txt`);
+// `sentences` ({ role, text }) as runs: consecutive sentences of one role
+// joined, each one synthesis call in its role's voice.
+const runsOf = (sentences) =>
+  sentences.reduce((runs, { role, text }) => {
+    const last = runs.at(-1);
+    if (last?.role === role) last.text += ` ${text}`;
+    else runs.push({ role, text });
+    return runs;
+  }, []);
 const scenes = script.scenes.map((s) => {
   const text = s.narration.join(" ");
+  const roles = rolesOf(s);
+  const sentences = s.narration.map((t, i) => ({ role: roles[i], text: t }));
+  const runs = runsOf(sentences).map((r) => ({ ...r, n: cast[r.role] }));
+  // A scene one voice speaks in its narrators.json style keys as it did before
+  // the cast, so a cache voiced then stays a hit.
+  const plain =
+    runs.length === 1 &&
+    runs[0].n.style === findNarrator(runs[0].n.id, language).style;
   const key = crypto
     .createHash("sha256")
-    .update(JSON.stringify([text, narrator.id, language]))
+    .update(
+      JSON.stringify(
+        plain
+          ? [text, runs[0].n.id, language]
+          : [runs.map((r) => [r.text, r.n.id, r.n.style]), language],
+      ),
+    )
     .digest("hex")
     .slice(0, 16);
   const meta = path.join(cacheDir, `${key}.json`);
@@ -93,20 +130,38 @@ const scenes = script.scenes.map((s) => {
     id: s.id,
     text,
     words: text.split(/\s+/),
+    roles,
+    sentences,
     key,
     cached: hit ? JSON.parse(fs.readFileSync(meta, "utf8")) : null,
   };
 });
 
-// Synthesise `group`'s narration in one call, align it, and cut it into one
-// result per scene at the midpoints of the gaps between scenes.
+// Synthesise `group`'s narration one run at a time, the runs joined end to end
+// so no two lines overlap, align it once, and cut it into one result per scene
+// at the midpoints of the gaps between scenes.
 async function voice(group, ctc) {
-  const { samples, sampleRate } = await backend.synthesize({
-    text: group.map((s) => s.text).join(" "),
-    narrator,
-    language,
-    tools,
-  });
+  const parts = [];
+  for (const r of runsOf(group.flatMap((s) => s.sentences)))
+    parts.push(
+      await backend.synthesize({
+        text: r.text,
+        narrator: cast[r.role],
+        language,
+        tools,
+      }),
+    );
+  calls += parts.length;
+  // Every backend answers at one rate (24 kHz).
+  const { sampleRate } = parts[0];
+  const samples = new Float32Array(
+    parts.reduce((n, p) => n + p.samples.length, 0),
+  );
+  let at = 0;
+  for (const p of parts) {
+    samples.set(p.samples, at);
+    at += p.samples.length;
+  }
   const { em, words } = await align(
     samples,
     sampleRate,
@@ -173,25 +228,33 @@ function wav(file, samples, rate) {
 const missing = scenes.filter((s) => !s.cached);
 // A Gemini or ElevenLabs narrator speaks only on the user's own key, its
 // backend's key row in setup/rows.json: no other narrator stands in, since
-// script.json names this narrator.
-const keyRow = catalogue().find(
-  (r) => r.kind === "key" && r.backend === narrator.backend,
-);
-if (missing.length && keyRow && !process.env[keyRow.env]) {
-  console.error(
-    `voice: narrator ${narrator.id} needs ${keyRow.env}: get a free key at ${keyRow.get}, or choose another narrator in script.json`,
+// script.json or the cast names this narrator, and the refusal names which.
+const castFile = maybeJson(run, CAST);
+for (const [role, n] of speaking) {
+  const keyRow = catalogue().find(
+    (r) => r.kind === "key" && r.backend === n.backend,
   );
-  process.exit(1);
+  if (missing.length && keyRow && !process.env[keyRow.env]) {
+    console.error(
+      `voice: narrator ${n.id} needs ${keyRow.env}: get a free key at ${keyRow.get}, or choose another narrator in ${castFile?.[role] ? CAST : "script.json"}`,
+    );
+    process.exit(1);
+  }
 }
 // A repeat of a missing scene's narration takes its entry rather than a call
-// of its own, which on Gemini is a request off the quota.
+// of its own, which on Gemini is a request off the quota. A whole script one
+// voice speaks is one call; with more than one voice a scene takes a call per
+// run, so each scene is voiced and cached on its own, and a quota stop keeps
+// the scenes before it.
 const groups =
-  missing.length === scenes.length
+  missing.length === scenes.length &&
+  runsOf(missing.flatMap((s) => s.sentences)).length === 1
     ? [missing]
     : missing
         .filter((s, i) => missing.findIndex((m) => m.key === s.key) === i)
         .map((s) => [s]);
 let failed = 0;
+let calls = 0;
 // Scenes with the same narration share a cache key and so one WAV: the first
 // slice voiced is the one written, and a repeat takes its entry.
 const byKey = new Map();
@@ -227,7 +290,7 @@ try {
   // Each group is cached as it passes, so a rerun voices only what is missing.
   if (e.quota)
     console.error(
-      `voice: ${e.vendor} quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota) or the credits are topped up, which voices only the missing scenes; set another key (a paid one, for a free-tier limit); or choose another narrator in script.json`,
+      `voice: ${e.vendor} quota reached (${e.message}); ${kept} scene(s) voiced before it are kept. Voice again once the quota resets (tomorrow, for a daily quota) or the credits are topped up, which voices only the missing scenes; set another key (a paid one, for a free-tier limit); or choose another narrator in script.json${castFile ? ` or ${CAST}` : ""}`,
     );
   else console.error(`voice: ${e.message}`);
   process.exit(1);
@@ -244,7 +307,6 @@ for (const s of scenes) {
     `voice ${s.id}: ${s.cached ? "cached" : "voiced"} · recall ${q.recall} · precision ${q.precision} · rate ${q.rate} chars/s · ${verdict}`,
   );
 }
-const calls = groups.length;
 const summary = `${scenes.length} scene(s), ${missing.length} voiced in ${calls} call(s), ${scenes.length - missing.length} cached`;
 if (failed) {
   console.log(`voice QC failed: ${failed} scene(s); ${summary}`);
@@ -272,7 +334,12 @@ fs.writeFileSync(
     {
       narrator: narrator.id,
       language,
-      scenes: scenes.map((s) => ({ id: s.id, ...(s.cached ?? s.voiced) })),
+      voices: voicesOf(cast),
+      scenes: scenes.map((s) => ({
+        id: s.id,
+        ...(s.cached ?? s.voiced),
+        roles: s.roles,
+      })),
     },
     null,
     2,
