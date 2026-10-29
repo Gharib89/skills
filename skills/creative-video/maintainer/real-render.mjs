@@ -200,6 +200,10 @@ const rtl = (parts, split) =>
           .join("")
       : parts.join("")
   }</p></section>`;
+// A code frame holding Arabic after an Arabic line, its own `dir` set by
+// `attrs`.
+const codeFrame = (attrs) =>
+  rtl(["كتب"], false).replace("</p>", `</p><div${attrs}>print("مرحبا")</div>`);
 // A named timeline no element carries, which the probe must skip.
 const EXTRA = 'window.__timelines["extra"] = gsap.timeline({ paused: true });';
 const pairs = [
@@ -257,6 +261,14 @@ const pairs = [
     bad: [rtl(["ك", "ت", "ب"], true)],
     good: [rtl(["ك", "ت", "ب"], false)],
     names: /"كتب" breaks its joins in IBM Plex Sans Arabic/,
+  },
+  {
+    gate: "layout",
+    name: "layout on a code frame in an Arabic run",
+    language: "ar",
+    bad: [codeFrame("")],
+    good: [codeFrame(' dir="ltr"')],
+    names: /Latin run not isolated in "print\("مرحبا"\)"/,
   },
 ];
 let fixture = 0;

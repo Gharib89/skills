@@ -124,11 +124,14 @@ test("the dir, isolated-Latin and line-height checks fail the layout gate of an 
     ),
   );
   // A line height equal to the ink passes, and `normal` (no line height set)
-  // takes the face's own metrics, so it is not measured.
+  // takes the face's own metrics, so it is not measured. A code frame marked
+  // `dir="ltr"` itself is left as written, Arabic in it included.
   compose(
     fx,
     "recap",
-    RTL(`<p style="line-height: 1.4">كل تغيير</p><p>بيتراجع</p>`),
+    RTL(
+      `<p style="line-height: 1.4">كل تغيير</p><p>بيتراجع</p><div dir="ltr">print("مرحبا")</div>`,
+    ),
   );
   assert.equal(runGates(fx).code, 0);
 });

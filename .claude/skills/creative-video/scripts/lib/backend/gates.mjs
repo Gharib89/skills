@@ -262,10 +262,11 @@ function measureFrame() {
       },
       fontPx: parseFloat(cs.fontSize) * scale,
       opacity,
-      // Reading direction (lib/rtl.mjs): the element's own, the `dir` it sits
-      // in, how it is isolated and wrapped, and its line height against its ink.
+      // Reading direction (lib/rtl.mjs): the element's own, the `dir` it carries
+      // or sits in, how it is isolated and wrapped, and its line height against
+      // its ink.
       dir: cs.direction,
-      within: el.parentElement?.closest("[dir]")?.getAttribute("dir") ?? null,
+      within: el.closest("[dir]")?.getAttribute("dir") ?? null,
       bidi: cs.unicodeBidi,
       wrap: cs.whiteSpace,
       lineH:

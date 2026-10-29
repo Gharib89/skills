@@ -26,11 +26,12 @@
 //   <audio data-created="<t>">  a sound its script created at video seconds
 //                 <t>, its `id` if it has one
 //   either one's `src` is the file it plays
-// Reading direction: `dir="<d>"` on a text element is its direction; on an
-// element holding others it is the `dir` every text element sits in, whose
-// direction it is too (else ltr). A <bdi> is isolated; a style's
-// `unicode-bidi`, `white-space` and `line-height` are read as written. Every
-// text is drawn in Noto Naskh Arabic, whose letters' ink is 1.4 em.
+// Reading direction: `dir="<d>"` on a text element is its direction and the
+// `dir` it carries; on an element holding others it is the `dir` every text
+// element sits in, whose direction it is too (else ltr). A <bdi> is isolated;
+// a style's `unicode-bidi`, `white-space` and `line-height` are read as
+// written. Every text is drawn in Noto Naskh Arabic, whose letters' ink is
+// 1.4 em.
 // The joins measure, at the times the probe is asked to shape:
 //   data-joins-broken="<word>"      the word breaks its joins in that face
 //   data-joins-unresolved="<word>"  the word's face resolves to no file
@@ -92,7 +93,7 @@ function texts(m, local) {
       const css = (p) => e[2].match(new RegExp(`${p}:\\s*([\\w.-]+)`))?.[1];
       return {
         dir: e[2].match(/\bdir="(\w+)"/)?.[1] ?? within ?? "ltr",
-        within: within ?? null,
+        within: e[2].match(/\bdir="(\w+)"/)?.[1] ?? within ?? null,
         bidi: e[1] === "bdi" ? "isolate" : (css("unicode-bidi") ?? "normal"),
         wrap: css("white-space") ?? "normal",
         lineH: css("line-height") ? +css("line-height") : null,
