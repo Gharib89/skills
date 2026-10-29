@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.12.0 (2026-10-29)
+
+### Features
+
+- **creative-video**: Render refuses a look the board has not approved
+  ([#1050](https://github.com/Gharib89/skills/pull/1050),
+  [`9392242`](https://github.com/Gharib89/skills/commit/9392242966d5da4790674499442e67743dbc084b))
+
+
 ## v0.11.0 (2026-10-29)
 
 ### Features
