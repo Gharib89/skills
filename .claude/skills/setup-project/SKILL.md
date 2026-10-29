@@ -236,8 +236,7 @@ is handed to another session.
 
   ```sh
   npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --agent claude-code -y
-  npx skills add mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa --skill setup-matt-pocock-skills --agent claude-code -y
-  npx skills add mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa --skill code-review --agent claude-code -y
+  npx skills add mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa --skill setup-matt-pocock-skills --skill code-review --skill codebase-design --agent claude-code -y
   npx skills add mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea --skill tdd --agent claude-code -y
   npx skills add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill writing-for-agents --agent claude-code -y
   npx skills add mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60 --skill triage --agent claude-code -y
