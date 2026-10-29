@@ -202,11 +202,13 @@ render.
 10. **Look: the stills review.** `node <skill>/scripts/hf.mjs <run> check
     --json` until it reports no errors, then `node <skill>/scripts/hf.mjs
     <run> snapshot --review --json`, and describe each frame as a stranger
-    would. Dispatch one subagent with `<skill>/agents/stills-reviewer.md` as
-    its prompt, `{sheets}` every path in the output's `review.sheets`,
-    `{notes}` `<run>/.cache/review/stills-notes.md`, and nothing else from the
-    run. Fix every P0 and every default it or you named, fix each P1 or write
-    in `DELIVERY.md` why it stays, then snapshot what changed.
+    would; with a brand, hold each logo against `brand.json`'s file, its
+    colours unchanged. Dispatch one subagent with
+    `<skill>/agents/stills-reviewer.md` as its prompt, `{sheets}` every path
+    in the output's `review.sheets`, `{notes}`
+    `<run>/.cache/review/stills-notes.md`, and nothing else from the run. Fix
+    every P0 and every default it or you named, fix each P1 or write in
+    `DELIVERY.md` why it stays, then snapshot what changed.
 11. **Storyboard.** Attended: read
     [reference/storyboard.md](reference/storyboard.md) and run its steps until
     `board apply` prints `board: approved`. That one look approval covers the

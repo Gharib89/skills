@@ -60,8 +60,8 @@ video, a logo file). With no brand, the concept owns the whole look.
    ... dropped` line alone is not one). A face is its Fontsource id:
    `measured` when Fontsource holds the family a `brand font` line names under
    OFL-1.1 or Apache-2.0, else `replaced` by an admitted family of the same
-   class, with `was` and a one-line `why`; `declared` is a seed's, never a
-   fetched brand's. `logo` is null when none was found.
+   class, with `was` and a one-line `why` (a seed's faces are `declared`).
+   `logo` is null when none was found.
 5. **Check.** `brand check` until it exits 0. It fetches the faces into the
    font store and copies them and the logo into `project/assets/brand/`,
    printing each file's path and each face's Arabic companion (the face an
@@ -77,7 +77,8 @@ lines name the brand.
 
 - **All three directions wear it.** Each direction frame not picked and the
   kit's CSS name every brand colour by its `#rrggbb` hex and every face by its
-  Fontsource id: `board build` refuses one that does not. The directions still
+  Fontsource id, or that id with spaces for hyphens: `board build` refuses one
+  that does not. The directions still
   differ in kind of concept.
 - **The logo** sits on the opening and closing frames, staged inside the
   concept (on the set, on the product, in the world), never recoloured,
