@@ -256,9 +256,10 @@ It refuses unless the storyboard approved the look
 `unattended.json` records an unattended run's direction, and unless
 `gates.json` shows every gate passing for the project as it stands. It prints
 `render: unattended run, no approval: direction <id>` for an unattended run,
-and `render: changed after board <n>'s approval: <ids>` when something the
-approved board showed changed since. It renders the project, normalises the
-mix to -14 LUFS with a true peak ceiling of -1.5 dBTP, and writes
+and `render: changed after board <n>'s approval: <what>` (its scenes, then the
+kit, `over.html` or `assets/<file>`) when something the approved board showed
+changed since. It renders the project, normalises the mix to -14 LUFS with a
+true peak ceiling of -1.5 dBTP, and writes
 `out/<slug>.mp4` (captions drawn in), `out/<slug>.srt` and `out/poster.png`.
 It prints one `delivery <check>: pass` or
 `delivery <check>: fail: <measured> vs <wanted>` line per check

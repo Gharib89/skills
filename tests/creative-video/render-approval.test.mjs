@@ -32,11 +32,11 @@ function renders(fx) {
 const REFUSED =
   /^render: no approval of the look: run the storyboard until `board apply` prints `board: approved`/;
 
-function refused(fx, reason) {
+function refused(fx, reason, what = "") {
   ok(runGates(fx));
   const r = exec(render, fx);
-  assert.equal(r.code, 1, r.out + r.err);
-  assert.match(r.err, reason);
+  assert.equal(r.code, 1, `${what} ${r.out}${r.err}`);
+  assert.match(r.err, reason, what);
 }
 
 test("an attended run with no approval is refused before any render, out/ left as it was", () => {
@@ -70,7 +70,7 @@ test("a direction or a look asked after the approval cancels it", () => {
     const fx = attended();
     answer(fx, 1, "Approved: the look");
     answer(fx, 2, asked);
-    refused(fx, REFUSED);
+    refused(fx, REFUSED, asked);
   }
 });
 
