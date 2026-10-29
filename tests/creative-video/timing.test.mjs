@@ -15,6 +15,8 @@ import {
 import {
   NO_WORD,
   NO_WORD_RE,
+  REPEATED_WORD,
+  REPEATED_WORD_RE,
 } from "../../skills/creative-video/scripts/render/anchors.mjs";
 import { wavSeconds } from "../../skills/creative-video/scripts/render/narration.mjs";
 import { SCENES, write } from "./voice-lib.mjs";
@@ -189,6 +191,32 @@ test("the message at() throws in timing.js is the one the gates stage's anchors 
   }
   assert.ok(message.startsWith(NO_WORD), message);
   assert.deepEqual(message.match(NO_WORD_RE).slice(1), ["nowhere", "context"]);
+});
+
+test("at() with no nth on a word its scene repeats throws the occurrences the anchors pattern reads back; a single word or an explicit nth answers", () => {
+  const fx = voiced();
+  assert.equal(exec(timing, fx).code, 0);
+  const words = readJson(path.join(fx.dir, "voice.json")).scenes[1].words;
+  const window = {};
+  vm.runInNewContext(read(project(fx, "timing.js")), { window });
+  // "It reads the profile first. Then it claims the issue so no other run takes
+  // it.": "it" is words[0], [6] and [15]; "profile" is said once.
+  assert.equal(window.at("context", "profile"), r3(words[3].start));
+  assert.equal(window.at("context", "it", 1), r3(words[0].start));
+  assert.equal(window.at("context", "It", 2), r3(words[6].start));
+  let message;
+  try {
+    window.at("context", "It");
+  } catch (e) {
+    message = e.message;
+  }
+  assert.ok(message?.startsWith(REPEATED_WORD), message);
+  const times = [0, 6, 15].map((i) => `${r3(words[i].start).toFixed(2)} s`);
+  assert.deepEqual(message.match(REPEATED_WORD_RE).slice(1), [
+    "It",
+    "context",
+    times.join(", "),
+  ]);
 });
 
 test("captions.html reads back through the caption gate's cuesOf as the timeline's cues", () => {

@@ -48,7 +48,12 @@ import { rtlFindings } from "../lib/rtl.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
-import { NO_WORD, NO_WORD_RE } from "../render/anchors.mjs";
+import {
+  NO_WORD,
+  NO_WORD_RE,
+  REPEATED_WORD,
+  REPEATED_WORD_RE,
+} from "../render/anchors.mjs";
 import { HEIGHT, WIDTH, writeRoot } from "../render/root.mjs";
 import { inputsHash } from "./inputs.mjs";
 import { criticGate } from "./critic.mjs";
@@ -254,23 +259,26 @@ const reading = plan.flatMap((p) =>
 );
 
 // The runtime errors the browser reports while mounting the scenes. An at()
-// naming a word the alignment lacks is an anchor; any other error a scene's
-// script raises is a script error, which would otherwise render a static frame
-// and pass every gate. `[HyperFrames] composition script error: <scene> <error>`
-// names the scene.
+// naming a word the alignment lacks, or a word its scene repeats with no nth,
+// is an anchor; any other error a scene's script raises is a script error,
+// which would otherwise render a static frame and pass every gate.
+// `[HyperFrames] composition script error: <scene> <error>` names the scene.
 const SCRIPT_ERROR = /^\[HyperFrames\] composition script error: (\S+)\s*/;
 const anchors = [];
 const scriptErrors = [];
 const flagged = new Set();
 const addOnce = (list, line) => list.includes(line) || list.push(line);
 for (const f of checked.runtime.findings) {
-  const anchor = f.message?.match(NO_WORD_RE);
+  const missing = f.message?.match(NO_WORD_RE);
+  const repeated = f.message?.match(REPEATED_WORD_RE);
+  const anchor = missing ?? repeated;
   if (anchor) {
-    const start = timeline.scenes.find((s) => s.id === anchor[2])?.start ?? 0;
-    flagged.add(anchor[2]);
+    const [, word, scene, times] = anchor;
+    const start = timeline.scenes.find((s) => s.id === scene)?.start ?? 0;
+    flagged.add(scene);
     addOnce(
       anchors,
-      `${start.toFixed(2)} s ${anchor[2]}: ${NO_WORD} "${anchor[1]}"`,
+      `${start.toFixed(2)} s ${scene}: ${missing ? NO_WORD : REPEATED_WORD} "${word}"${times ? ` at ${times}` : ""}`,
     );
   } else if (f.severity === "error") {
     const named = f.message?.match(SCRIPT_ERROR);
@@ -398,7 +406,10 @@ const judged = {
     "each text readable 0.8 s (up to 3 words) or 0.3 s a word, 1.2 s at least",
   ],
   "caption band": [band.lines(), "no readable text in the bottom 220 px"],
-  anchors: [anchors, "every anchor names an aligned word"],
+  anchors: [
+    anchors,
+    "every anchor names an aligned word, its nth where repeated",
+  ],
   "script errors": [scriptErrors, "every scene's script runs"],
   sounds: [
     soundFindings(plan, events),

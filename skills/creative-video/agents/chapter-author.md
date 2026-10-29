@@ -29,10 +29,10 @@ Your inputs, filled in by the run that dispatched you:
 ## Author
 
 Write `{run}/project/compositions/<id>.html` for each of your scenes, every
-event that answers a word placed at `at(<id>, word)`, each sound created by the
-scene's script at the `at()` of the event it marks. Your chapter's first scene
-opens on a hard cut: its very first frame draws the chapter's title, from
-`script.json`, fully, with no fade or build in; the rest of that scene is
+event that answers a word placed at `at(<id>, word, nth)`, each sound created by
+the scene's script at the `at()` of the event it marks. Your chapter's first
+scene opens on a hard cut: its very first frame draws the chapter's title,
+from `script.json`, fully, with no fade or build in; the rest of that scene is
 yours. No visual transition crosses into or out of your chapter. Open with a
 reach-back to what the last chapter left the viewer with (a prediction or a
 retrieval frame) where the script gives you one.

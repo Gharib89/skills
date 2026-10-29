@@ -204,6 +204,21 @@ const rtl = (parts, split) =>
 // `attrs`.
 const codeFrame = (attrs) =>
   rtl(["كتب"], false).replace("</p>", `</p><div${attrs}>print("مرحبا")</div>`);
+// Scene one narrated "Scene scene.", so its first word is said twice. Written
+// in the order the stages write them, so support.json and voice.json stay
+// newer than the script.
+const twice = (run) => {
+  for (const [file, edit] of [
+    ["script.json", (j) => (j.scenes[0].narration = ["Scene scene."])],
+    ["support.json", (j) => (j.sentences[0].text = "Scene scene.")],
+    ["voice.json", (j) => (j.scenes[0].words[1].text = "scene.")],
+  ]) {
+    const p = path.join(run, file);
+    const j = JSON.parse(fs.readFileSync(p, "utf8"));
+    edit(j);
+    fs.writeFileSync(p, JSON.stringify(j));
+  }
+};
 // A named timeline no element carries, which the probe must skip.
 const EXTRA = 'window.__timelines["extra"] = gsap.timeline({ paused: true });';
 const pairs = [
@@ -237,6 +252,21 @@ const pairs = [
     gate: "anchors",
     bad: [BOX + line(300), 'tl.to("#b", { x: 300 }, at("one", "nosuchword"));'],
     good: [BOX + line(300), 'tl.to("#b", { x: 300 }, at("one", "Scene"));'],
+  },
+  {
+    gate: "anchors",
+    name: "anchors on a repeated word",
+    bad: [
+      BOX + line(300),
+      'tl.to("#b", { x: 300 }, at("one", "Scene"));',
+      twice,
+    ],
+    good: [
+      BOX + line(300),
+      'tl.to("#b", { x: 300 }, at("one", "Scene", 2));',
+      twice,
+    ],
+    names: /repeated word, name its nth: "Scene" at 0\.00 s, \d+\.\d\d s vs /,
   },
   {
     gate: "script errors",
