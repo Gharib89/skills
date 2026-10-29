@@ -11,8 +11,9 @@
 // search failing after 30 s tried once more, and the first result in a format
 // the render plays is downloaded into the store (a failed download counts as
 // no result). Else the Kenney packs setup
-// installed are searched by their file names' words. Else the sound is dropped
-// from the kit into its `dropped` list, where it replaces an earlier drop of
+// installed are searched by their file names' words and the word index's
+// (kenney.mjs), a bed only among stems it marks loopable. Else the sound is
+// dropped from the kit into its `dropped` list, where it replaces an earlier drop of
 // its event, as a sound found does. The store is
 // <data>/creative-video/sounds/: openverse/<id>.<ext>, kenney/<pack>/<file> and
 // queries.json.
@@ -31,6 +32,7 @@ import { readJson } from "../lib/json.mjs";
 import { SOUND, kitSounds } from "../lib/kit.mjs";
 import { stage } from "../lib/stage.mjs";
 import { dest, loadBackend } from "../lib/tools.mjs";
+import { AUDIO, INDEX, stemOf } from "./kenney.mjs";
 
 stage("sounds");
 const [run, ...rest] = process.argv.slice(2);
@@ -113,9 +115,10 @@ async function fromOpenverse(query, medium) {
   };
 }
 
-// The Kenney file whose name holds the most of the query's words (a plural
-// counts), the first by path on a tie, or why there is none.
-function fromKenney(query) {
+// The Kenney file whose words, its name's and the word index's for its stem,
+// hold the most of the query's words (a plural counts), the first by path on a
+// tie, or why there is none. A bed takes only a stem the index marks `loop`.
+function fromKenney(query, bed) {
   if (!fs.existsSync(path.join(KENNEY, ".stamp")))
     return "the Kenney packs are not installed (run /creative-video setup)";
   const words = query.toLowerCase().match(/[a-z0-9]+/g) ?? [];
@@ -123,19 +126,24 @@ function fromKenney(query) {
   for (const pack of fs.readdirSync(KENNEY).sort()) {
     if (!fs.statSync(path.join(KENNEY, pack)).isDirectory()) continue;
     for (const file of fs.readdirSync(path.join(KENNEY, pack)).sort()) {
-      if (!/\.(ogg|wav|mp3)$/i.test(file)) continue;
-      const tokens = file
-        .replace(/\.\w+$/, "")
-        .replace(/([a-z])([A-Z])/g, "$1 $2")
-        .toLowerCase()
-        .match(/[a-z]+/g);
+      if (!AUDIO.test(file)) continue;
+      const entry = INDEX[pack]?.[stemOf(file)];
+      if (!entry || (bed && !entry.loop)) continue;
+      const tokens = [
+        ...stemOf(file)
+          .replace(/([a-z])([A-Z])/g, "$1 $2")
+          .toLowerCase()
+          .match(/[a-z]+/g),
+        ...entry.words,
+      ];
       const score = words.filter((w) =>
         tokens.some((t) => t === w || t === `${w}s` || w === `${t}s`),
       ).length;
       if (score > best.score) best = { score, pack, file };
     }
   }
-  if (!best.score) return `no Kenney file name matches "${query}"`;
+  if (!best.score)
+    return `no Kenney ${bed ? "loop" : "sound"} matches "${query}"`;
   return {
     source: `kenney:${best.pack}/${best.file}`,
     file: `assets/sounds/${best.pack}-${best.file}`,
@@ -160,7 +168,7 @@ async function find(kind, sound) {
   let said = "cached";
   if (!found || !fs.existsSync(stored(found))) {
     const ov = await fromOpenverse(sound.query, kind === "bed");
-    const k = typeof ov === "string" && fromKenney(sound.query);
+    const k = typeof ov === "string" && fromKenney(sound.query, kind === "bed");
     found = typeof ov === "string" ? k : ov;
     if (typeof found === "string") return { why: `${ov}; ${k}` };
     said = found.source.replace(":", " ");

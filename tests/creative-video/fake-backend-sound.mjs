@@ -11,6 +11,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { log } from "./fake-backend-log.mjs";
 
+const INDEX = JSON.parse(
+  fs.readFileSync(
+    new URL(
+      "../../skills/creative-video/setup/kenney-index.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
+
 const asked = (call, query) =>
   fs
     .readFileSync(process.env.CREATIVE_VIDEO_FAKE_LOG, "utf8")
@@ -28,12 +38,14 @@ export async function openverse(query, { medium }) {
   return a ?? [];
 }
 
-// A pack unpacks to its licence and one sound.
+// A pack unpacks to its licence and one sound, of the first stem the word
+// index lists for it.
 export async function unzipSounds(zip, dir) {
   log({ call: "unzipSounds", zip, dir });
+  const [stem] = Object.keys(INDEX[path.basename(dir)]);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "License.txt"), "CC0");
-  fs.writeFileSync(path.join(dir, "click_001.ogg"), "ogg");
+  fs.writeFileSync(path.join(dir, `${stem}_001.ogg`), "ogg");
 }
 
 // A constant level every 0.1 s over `seconds`.

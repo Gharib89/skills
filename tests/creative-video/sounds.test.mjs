@@ -137,25 +137,110 @@ test("a search that times out is tried once more", () => {
   assert.equal(asked(fx, "openverse").length, 2);
 });
 
-test("two timeouts fall back to the Kenney pack whose file names match the query", () => {
+// The Kenney packs installed in the store, each holding the named files.
+function packs(fx, files) {
+  for (const [pack, names] of Object.entries(files)) {
+    fs.mkdirSync(store(fx, "kenney", pack), { recursive: true });
+    for (const f of [...names, "License.txt"])
+      fs.writeFileSync(store(fx, "kenney", pack, f), f);
+  }
+  fs.writeFileSync(store(fx, "kenney", ".stamp"), "");
+}
+
+test("two timeouts fall back to the Kenney pack whose index words match the query", () => {
   const fx = fixture();
   kit(fx, { palette: [{ event: "ticket", query: "paper tear" }] });
-  const pack = store(fx, "kenney", "rpg-audio");
-  fs.mkdirSync(pack, { recursive: true });
-  for (const f of ["bookFlip1.ogg", "paperTear2.ogg", "License.txt"])
-    fs.writeFileSync(path.join(pack, f), f);
-  fs.writeFileSync(store(fx, "kenney", ".stamp"), "");
+  packs(fx, { "rpg-audio": ["bookClose.ogg", "bookFlip1.ogg"] });
   const r = fetch(fx, { "paper tear": ["timeout"] });
   assert.equal(r.code, 0, r.out + r.err);
-  assert.equal(r.out.trim(), "sound ticket: kenney rpg-audio/paperTear2.ogg");
+  assert.equal(r.out.trim(), "sound ticket: kenney rpg-audio/bookFlip1.ogg");
   assert.equal(asked(fx, "openverse").length, 2);
   const [entry] = kitOf(fx).palette;
-  assert.equal(entry.source, "kenney:rpg-audio/paperTear2.ogg");
-  assert.equal(entry.file, "assets/sounds/rpg-audio-paperTear2.ogg");
-  assert.equal(entry.licence, "CC0-1.0");
-  assert.equal(entry.creator, "Kenney");
+  assert.deepEqual(entry, {
+    event: "ticket",
+    query: "paper tear",
+    source: "kenney:rpg-audio/bookFlip1.ogg",
+    file: "assets/sounds/rpg-audio-bookFlip1.ogg",
+    licence: "CC0-1.0",
+    creator: "Kenney",
+    url: "https://kenney.nl/assets/rpg-audio",
+    attribution: '"bookFlip1.ogg" by Kenney (kenney.nl), CC0 1.0',
+  });
   assert.ok(
-    fs.existsSync(project(fx, "assets", "sounds", "rpg-audio-paperTear2.ogg")),
+    fs.existsSync(project(fx, "assets", "sounds", "rpg-audio-bookFlip1.ogg")),
+  );
+});
+
+// Real file names from the seven packs setup pins.
+const PACKS = {
+  "interface-sounds": [
+    "bong_001.ogg",
+    "click_001.ogg",
+    "glass_001.ogg",
+    "glass_002.ogg",
+  ],
+  "rpg-audio": ["doorClose_1.ogg", "metalClick.ogg", "metalPot1.ogg"],
+  "sci-fi-sounds": ["doorClose_000.ogg", "spaceEngine_000.ogg"],
+  "ui-audio": ["click1.wav", "mouseclick1.wav"],
+};
+
+test("with Openverse down, a sound a pack holds is found by what it is, and one no pack holds is dropped with why", () => {
+  const fx = fixture();
+  const queries = [
+    "service bell",
+    "spoon clink",
+    "door slam",
+    "mouse click",
+    "frying pan sizzle",
+    "receipt printer",
+  ];
+  kit(fx, {
+    bed: { world: "a diner", query: "restaurant kitchen ambience", level: -28 },
+    palette: queries.map((query, i) => ({ event: `e${i}`, query })),
+  });
+  packs(fx, PACKS);
+  const down = Object.fromEntries(
+    [...queries, "restaurant kitchen ambience"].map((q) => [q, ["timeout"]]),
+  );
+  const r = fetch(fx, down);
+  assert.equal(r.code, 0, r.out + r.err);
+  const why = (q, kind = "sound") =>
+    `openverse failed twice (timed out after 30 s); no Kenney ${kind} matches "${q}"`;
+  assert.deepEqual(r.out.trim().split("\n"), [
+    `sound bed: dropped: ${why("restaurant kitchen ambience", "loop")}`,
+    "sound e0: kenney interface-sounds/bong_001.ogg",
+    "sound e1: kenney interface-sounds/glass_001.ogg",
+    "sound e2: kenney rpg-audio/doorClose_1.ogg",
+    "sound e3: kenney interface-sounds/click_001.ogg",
+    `sound e4: dropped: ${why("frying pan sizzle")}`,
+    `sound e5: dropped: ${why("receipt printer")}`,
+    `warn dropped sound: bed: ${why("restaurant kitchen ambience", "loop")}`,
+    `warn dropped sound: e4: ${why("frying pan sizzle")}`,
+    `warn dropped sound: e5: ${why("receipt printer")}`,
+  ]);
+  for (const s of kitOf(fx).palette) {
+    assert.equal(s.licence, "CC0-1.0");
+    assert.equal(s.creator, "Kenney");
+  }
+});
+
+test("a bed comes only from a stem the index marks loopable", () => {
+  const fx = fixture();
+  kit(fx, { bed: { world: "a hallway", query: "door slam", level: -28 } });
+  packs(fx, PACKS);
+  const r = fetch(fx, { "door slam": ["timeout"] });
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.match(
+    r.out,
+    /^sound bed: dropped: .*; no Kenney loop matches "door slam"$/m,
+  );
+  assert.equal(kitOf(fx).bed, undefined);
+  kit(fx, { bed: { world: "a spaceship", query: "engine hum", level: -28 } });
+  const hum = fetch(fx, { "engine hum": ["timeout"] });
+  assert.equal(hum.code, 0, hum.out + hum.err);
+  assert.equal(
+    hum.out.trim(),
+    "sound bed: kenney sci-fi-sounds/spaceEngine_000.ogg",
   );
 });
 
@@ -169,16 +254,13 @@ test("a failed download is dropped like a failed search, and falls back to Kenne
     kitOf(fx).dropped[0].why,
     "openverse download failed (https://cdn.example/dead/tear-1.mp3: HTTP 404); the Kenney packs are not installed (run /creative-video setup)",
   );
-  const pack = store(fx, "kenney", "rpg-audio");
-  fs.mkdirSync(pack, { recursive: true });
-  fs.writeFileSync(path.join(pack, "paperTear2.ogg"), "ogg");
-  fs.writeFileSync(store(fx, "kenney", ".stamp"), "");
+  packs(fx, { "rpg-audio": ["bookFlip1.ogg"] });
   kit(fx, { palette: [{ event: "ticket", query: "paper tear" }] });
   const again = fetch(fx, { "paper tear": [[dead]] });
   assert.equal(again.code, 0, again.out + again.err);
   assert.equal(
     again.out.trim(),
-    "sound ticket: kenney rpg-audio/paperTear2.ogg",
+    "sound ticket: kenney rpg-audio/bookFlip1.ogg",
   );
 });
 

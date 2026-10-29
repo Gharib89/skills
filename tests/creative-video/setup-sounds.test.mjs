@@ -4,10 +4,21 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { FAKE_SHA, calls, fixture, realRows, row, run } from "./setup-lib.mjs";
+import {
+  FAKE_SHA,
+  calls,
+  fixture,
+  realRows,
+  row,
+  run,
+  source,
+} from "./setup-lib.mjs";
 
 const kenney = realRows().find((r) => r.id === "sounds:kenney");
 const npm = realRows().find((r) => r.kind === "npm");
+const index = JSON.parse(
+  fs.readFileSync(path.join(source, "setup", "kenney-index.json"), "utf8"),
+);
 const store = (fx) =>
   path.join(fx.tmp, "data", "creative-video", "sounds", "kenney");
 
@@ -37,10 +48,24 @@ test("install downloads each pinned pack, checks its sha256 and unpacks it into 
     const dir = path.join(store(fx), p.name);
     assert.deepEqual(fs.readdirSync(dir).sort(), [
       "License.txt",
-      "click_001.ogg",
+      `${Object.keys(index[p.name])[0]}_001.ogg`,
     ]);
   }
   assert.ok(fs.existsSync(path.join(store(fx), ".stamp")));
+});
+
+test("a pack holding a stem the word index lacks fails the row and leaves no store", () => {
+  const fx = fixture([npm, kenney]);
+  const file = path.join(fx.skill, "setup", "kenney-index.json");
+  const { beltHandle, ...rest } = index["rpg-audio"];
+  fs.writeFileSync(file, JSON.stringify({ ...index, "rpg-audio": rest }));
+  const r = run(fx, ["install"]);
+  assert.equal(r.code, 1);
+  assert.equal(
+    row(r.out, "sounds:kenney")[2],
+    "failed: rpg-audio holds beltHandle, which the Kenney word index lacks",
+  );
+  assert.ok(!fs.existsSync(path.join(store(fx), ".stamp")));
 });
 
 test("a pack whose sha256 differs fails the row and leaves no store", () => {
