@@ -4,6 +4,16 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { parseJson, SHAPES } from "../lib/json.mjs";
+
+// Board document or answers file `f` of board folder `dir`, held to its shape:
+// a malformed one is refused as `board/<f>: <field> <problem>`.
+export const boardFile = (dir, f) =>
+  parseJson(
+    `board/${f}`,
+    fs.readFileSync(path.join(dir, f), "utf8"),
+    SHAPES[`board/${f.replace(/\d+/, "<n>")}`],
+  );
 
 export const sha = (bytes) =>
   crypto.createHash("sha256").update(bytes).digest("hex").slice(0, 16);
@@ -93,16 +103,15 @@ export function changedSince(prev, now, voiced, chapterOf, named = []) {
 export function approvedBoard(run) {
   const dir = path.join(run, "board");
   if (!fs.existsSync(dir)) return null;
-  const read = (f) => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8"));
   let n = null;
   for (const k of fs
     .readdirSync(dir)
     .flatMap((f) => /^answers-(\d+)\.json$/.exec(f)?.[1] ?? [])
     .map(Number)
     .sort((a, b) => a - b)) {
-    const a = read(`answers-${k}.json`);
+    const a = boardFile(dir, `answers-${k}.json`);
     if (a.direction || a.look) n = null;
     else if (a.approve && !a.scenes.length) n ??= k;
   }
-  return n && { n, board: read(`${n}.json`) };
+  return n && { n, board: boardFile(dir, `${n}.json`) };
 }

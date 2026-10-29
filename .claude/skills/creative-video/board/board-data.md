@@ -137,7 +137,8 @@ document is read from the database instead.
   that carries the answers text, and reads the `answers` collection to show a
   chapter approved. Opened as a file, it shows the answers text for the person
   to paste into the terminal.
-- `apply` reads the answers document or text and writes `answers-<n>.json`; the
+- `apply` reads the answers document or text and, once it accepts them (an
+  approval's brand check included), writes `answers-<n>.json`; the
   builds until the next answers read it to guard the scenes and mark what
   changed.
 - The render (`scripts/render/render.mjs`) reads every `answers-<n>.json` for

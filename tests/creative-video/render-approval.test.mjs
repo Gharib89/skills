@@ -167,6 +167,29 @@ test("an unattended run's recorded direction lets the render go ahead, and its o
   );
 });
 
+test("an answers or board file of the wrong shape is refused by name", () => {
+  for (const [f, edit, reason] of [
+    [
+      "answers-1.json",
+      (a) => delete a.scenes,
+      /^render: board\/answers-1\.json: scenes is not a list/,
+    ],
+    [
+      "1.json",
+      (b) => delete b.assets,
+      /^render: board\/1\.json: assets is not an object/,
+    ],
+  ]) {
+    const fx = attended();
+    answer(fx, 1, "Approved: the look");
+    const file = path.join(fx.dir, "board", f);
+    const doc = readJson(file);
+    edit(doc);
+    fs.writeFileSync(file, JSON.stringify(doc));
+    refused(fx, reason, f);
+  }
+});
+
 test("an unattended record of the wrong shape is refused by name", () => {
   const fx = ready();
   fs.writeFileSync(path.join(fx.dir, "unattended.json"), "{}");

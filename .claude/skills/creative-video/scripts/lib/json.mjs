@@ -189,6 +189,13 @@ export const SHAPES = {
     }),
     scenes: map(obj({ title: text, notes: text })),
   }),
+  // A board document and the answers `apply` kept for it (board/board-data.md),
+  // keyed by their pattern: what the render and the build guard compare.
+  "board/<n>.json": obj({
+    scenes: list(obj({ id: text, hash: text, narration: text })),
+    assets: map(text),
+  }),
+  "board/answers-<n>.json": obj({ scenes: list(obj({ id: text })) }),
   // An unattended run's record (SKILL.md step 4): the direction it took with
   // no one to approve the look, which the render accepts in place of the
   // board's approval.
@@ -217,16 +224,17 @@ export function readJson(run, name) {
   return parseJson(name, fs.readFileSync(file, "utf8"));
 }
 
-// `body`, the text of run-folder file `name`, parsed and held to its shape.
+// `body`, the text of run-folder file `name`, parsed and held to its shape,
+// `SHAPES[name]` or the one a numbered file's pattern key names.
 // Throws `<name>: is not valid JSON (...)` or `<name>: <field> <problem>`.
-export function parseJson(name, body) {
+export function parseJson(name, body, shape = SHAPES[name]) {
   let v;
   try {
     v = JSON.parse(body);
   } catch (e) {
     throw new Error(`${name}: is not valid JSON (${e.message})`);
   }
-  const bad = SHAPES[name](v, "");
+  const bad = shape(v, "");
   if (bad) throw new Error(`${name}: ${bad[0] ? `${bad[0]} ` : ""}${bad[1]}`);
   return v;
 }

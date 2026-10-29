@@ -66,7 +66,13 @@ import { hyperframesEnv, loadBackend, skill } from "../lib/tools.mjs";
 import { sampleTimes } from "../gates/samples.mjs";
 import { esc, HEIGHT, host, WIDTH, writeRoot } from "../render/root.mjs";
 import { readAnswers } from "./answers.mjs";
-import { changedSince, projectHashes, sha, voicedText } from "./approval.mjs";
+import {
+  boardFile,
+  changedSince,
+  projectHashes,
+  sha,
+  voicedText,
+} from "./approval.mjs";
 import { approvedBrand, brandStrip, copyLogo, wearBrand } from "./brand.mjs";
 
 stage("board");
@@ -139,12 +145,16 @@ function readStoryboard(shown) {
 function guardScenes(now, voiced, chapterOf) {
   const k = latestAnswered();
   if (!k) return;
-  const a = JSON.parse(
-    fs.readFileSync(path.join(out, `answers-${k}.json`), "utf8"),
-  );
+  const a = boardFile(out, `answers-${k}.json`);
   if (!a.scenes.length || a.direction || a.look) return;
   const named = a.scenes.map((s) => s.id);
-  const changed = changedSince(readBoard(k), now, voiced, chapterOf, named);
+  const changed = changedSince(
+    boardFile(out, `${k}.json`),
+    now,
+    voiced,
+    chapterOf,
+    named,
+  );
   if (changed.length)
     fail(
       `${changed.join(", ")} changed, but board ${k}'s comments named only ${named.join(", ")}: re-author only those scenes`,
@@ -413,6 +423,14 @@ async function apply() {
     fail(`no direction ${a.direction} in board ${latest}`);
   if (askedDirection?.picked)
     fail(`direction ${a.direction} is the one in use: pick another, or none`);
+  const { direction, look, scenes } = a;
+  // Checked before the answers are kept: a refused approval is none to the render.
+  const brand =
+    a.approve &&
+    !direction &&
+    !look &&
+    !scenes.length &&
+    approvedBrand(run, board.brand, latest, sha, fail);
   fs.writeFileSync(
     path.join(out, `answers-${latest}.json`),
     JSON.stringify(a, null, 2) + "\n",
@@ -420,10 +438,7 @@ async function apply() {
 
   // A text continues on lines indented two spaces, as the answers text does.
   const lines = (t) => t.replaceAll("\n", "\n  ");
-  const { direction, look, scenes } = a;
   if (!direction && !look && !scenes.length) {
-    const brand =
-      a.approve && approvedBrand(run, board.brand, latest, sha, fail);
     if (brand) {
       const { name, saved } = await saveBrand(run, brand);
       console.log(
