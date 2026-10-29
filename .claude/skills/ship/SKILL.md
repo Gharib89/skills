@@ -5,7 +5,7 @@ argument-hint: "[issue-number] [--unattended | [--rework [\"<feedback>\"]] [--in
 metadata:
   version: 0.53.0
   profile-schema: 5
-  composes: mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:tdd mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:codebase-design mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:writing-for-agents mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:code-review upstash/context7#3131245817e9e40626d8f43ce85dabab09d4ff35:find-docs humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c:show-me
+  composes: mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:tdd mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa:codebase-design mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:writing-for-agents mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa:code-review upstash/context7#3131245817e9e40626d8f43ce85dabab09d4ff35:find-docs humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c:show-me
 ---
 
 # ship
