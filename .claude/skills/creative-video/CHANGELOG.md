@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.0 (2026-10-29)
+
+### Features
+
+- **creative-video**: Wear a named, given or fetched brand
+  ([#1041](https://github.com/Gharib89/skills/pull/1041),
+  [`4e0c989`](https://github.com/Gharib89/skills/commit/4e0c9897cdbb51fc54c9b21a9a36edd7205b1666))
+
+
 ## v0.9.0 (2026-10-29)
 
 ### Features
