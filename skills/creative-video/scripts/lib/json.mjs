@@ -189,6 +189,10 @@ export const SHAPES = {
     }),
     scenes: map(obj({ title: text, notes: text })),
   }),
+  // An unattended run's record (SKILL.md step 4): the direction it took with
+  // no one to approve the look, which the render accepts in place of the
+  // board's approval.
+  "unattended.json": obj({ direction: text }),
   // The source snapshot.
   "snapshots/sources.json": obj({
     minutes: number,

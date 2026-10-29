@@ -248,15 +248,21 @@ The gates stage, what each gate judges and how a failure is fixed are in
 node <skill>/scripts/render/render.mjs <run>
 ```
 
-It refuses unless `gates.json` shows every gate passing for the project as it
-stands. It renders the project, normalises the mix to -14 LUFS with a true peak
-ceiling of -1.5 dBTP, and writes `out/<slug>.mp4` (captions drawn in),
-`out/<slug>.srt` and `out/poster.png`. It prints one `delivery <check>: pass`
-or `delivery <check>: fail: <measured> vs <wanted>` line per check
-(`resolution`, `frame rate`, `aspect`, `duration`, `audio`,
-`captions` (the video's caption cues against the timeline's words and the
-SRT), `loudness` within 1 LU, `true peak` at most -1 dBTP), a `measured
-loudness:` line with both values, `delivered: <path of out/<slug>.mp4>`, then
+It refuses unless the storyboard approved the look
+([storyboard.md](storyboard.md#the-render-holds-to-the-approval)), or
+`unattended.json` records an unattended run's direction, and unless
+`gates.json` shows every gate passing for the project as it stands. It prints
+`render: unattended run, no approval: direction <id>` for an unattended run,
+and `render: changed after board <n>'s approval: <what>` when something the
+approved board showed changed since. It renders the project, normalises the
+mix to -14 LUFS with a true peak ceiling of -1.5 dBTP, and writes
+`out/<slug>.mp4` (captions drawn in), `out/<slug>.srt` and `out/poster.png`.
+It prints one `delivery <check>: pass` or
+`delivery <check>: fail: <measured> vs <wanted>` line per check
+(`resolution`, `frame rate`, `aspect`, `duration`, `audio`, `captions` (the
+video's caption cues against the timeline's words and the SRT), `loudness`
+within 1 LU, `true peak` at most -1 dBTP), a `measured loudness:` line with
+both values, `delivered: <path of out/<slug>.mp4>`, then
 `render: <slug>.mp4 <seconds> s, <n> scene(s)`.
 
 A video in chapters renders each chapter on its own, one at a time, video

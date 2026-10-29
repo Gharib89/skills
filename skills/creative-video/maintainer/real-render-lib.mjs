@@ -93,12 +93,16 @@ export const authored = (id, body, js = "") => `<template>
 // its two words spread over it, and its composition authored (the sliding box,
 // or `html`). Each sentence states no fact, so it cites nothing and the support
 // checker's verdict is `connective`. The claims check passes it, the timing
-// stage times it, the render stage renders it.
+// stage times it, the render stage renders it, as an unattended run.
 export function runFolder(dir, name, scenes, language = "en") {
   const run = path.join(dir, name);
   const comps = path.join(run, "project", "compositions");
   fs.mkdirSync(path.join(run, "voice"), { recursive: true });
   fs.mkdirSync(comps, { recursive: true });
+  fs.writeFileSync(
+    path.join(run, "unattended.json"),
+    JSON.stringify({ direction: "fixture" }),
+  );
   const narration = (id) => `Scene ${id}.`;
   fs.writeFileSync(
     path.join(run, "script.json"),
