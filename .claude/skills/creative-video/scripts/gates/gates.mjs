@@ -2,7 +2,11 @@
 // full render (ADR 0019: output and narration, never scene code, but for the
 // <audio> starts a scene file writes).
 //
-//   node gates.mjs <run-folder>
+//   node gates.mjs <run-folder> [--check]
+//
+// `--check` is a check run: every gate judged and printed as a counted run
+// would, but no gates.json written, so it spends no fix attempt and, since the
+// render reads gates.json, unlocks no render.
 //
 // Reads <run>/timeline.json, voice.json, script.json, brief.json (optional:
 // `must` and `avoid` word lists), excerpts.json, claims.json, the critic's
@@ -30,9 +34,12 @@
 //         when red ending `; next: fix attempt <a> of 2` or, past two, `; stop:
 //         red after two fix attempts, no video`, on a red second critic round
 //         `; stop: the critic's second round is red, no video`, and with only
-//         the critic left `; next: run the critic, round <r> of 2`
-// writes: <run>/gates.json (the inputs and voice it is of, the attempts, each
-//         gate's status, measured, floor and evidence, the warnings),
+//         the critic left `; next: run the critic, round <r> of 2`; a check
+//         run's red names no fix attempt, and its line ends `; check run:
+//         gates.json not written`
+// writes: <run>/gates.json, not on a check run (the inputs and voice it is of,
+//         the attempts, each gate's status, measured, floor and evidence, the
+//         warnings),
 //         .cache/gates/frames/a and b, the critic's stills under
 //         .cache/critic/<key>, and the root again (render/root.mjs)
 // exit:   0 every gate passes · 1 a gate fails or the critic is pending, or
@@ -62,12 +69,14 @@ import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
 import { BED_LU, bedLevel, licenceFindings } from "./sound-kit.mjs";
 import { soundFindings } from "./sounds.mjs";
+import { fixAttempts, summaryLine } from "./verdict.mjs";
 import { warnings } from "./warnings.mjs";
 
 stage("gates");
-const [run, ...rest] = process.argv.slice(2);
+const check = process.argv.includes("--check");
+const [run, ...rest] = process.argv.slice(2).filter((a) => a !== "--check");
 if (!run || rest.length) {
-  console.error("usage: node gates.mjs <run-folder>");
+  console.error("usage: node gates.mjs <run-folder> [--check]");
   process.exit(2);
 }
 function fail(why) {
@@ -83,12 +92,11 @@ async function orFail(call) {
 }
 
 // The floors: type of at least 18 px inside a margin of 5% of each side, the
-// bottom 220 px left to the captions, at most two fix attempts.
+// bottom 220 px left to the captions (the fix cap: gates/verdict.mjs).
 const TEXT_PX = 18;
 const MARGIN_X = Math.round(WIDTH * 0.05);
 const MARGIN_Y = Math.round(HEIGHT * 0.05);
 const BAND = HEIGHT - 220;
-const MAX_ATTEMPTS = 2;
 
 const { timeline, voice: voiced } = readTimeline(run, fail);
 const script = readJson(run, "script.json");
@@ -484,28 +492,23 @@ const warned = warnings({
   proj,
 });
 
-// The fix cap: a red run on one voice is one fix attempt, the same inputs
-// judged again are none, and a pass or a new voice starts the count again. The
-// voice, not script.json: the gates judge the voiced words, so a script edited
-// without voicing again changes nothing they judge. A critic still to judge is
-// no pass, and the critic's red second round is final.
-const attempts = gates.critic.final
-  ? MAX_ATTEMPTS + 1
-  : !failing
-    ? pending && sameVoice
-      ? (prev.attempts ?? 0)
-      : 0
-    : sameVoice && prev.inputs === inputs
-      ? Math.max(prev.attempts ?? 0, 1)
-      : (sameVoice ? (prev.attempts ?? 0) : 0) + 1;
-fs.writeFileSync(
-  path.join(run, "gates.json"),
-  JSON.stringify(
-    { inputs, voice, attempts, gates, warnings: warned },
-    null,
-    2,
-  ) + "\n",
-);
+const attempts = fixAttempts({
+  gates,
+  failing,
+  pending,
+  sameVoice,
+  prev,
+  inputs,
+});
+if (!check)
+  fs.writeFileSync(
+    path.join(run, "gates.json"),
+    JSON.stringify(
+      { inputs, voice, attempts, gates, warnings: warned },
+      null,
+      2,
+    ) + "\n",
+  );
 
 for (const [name, g] of Object.entries(gates)) {
   console.log(
@@ -514,19 +517,5 @@ for (const [name, g] of Object.entries(gates)) {
   for (const e of g.evidence.slice(1)) console.log(`  ${e}`);
 }
 for (const w of warned) console.log(`warn ${w}`);
-console.log(
-  `gates: ${Object.keys(gates).length - failing - pending} pass, ${failing} fail${
-    pending ? ", 1 pending" : ""
-  }${
-    gates.critic.final
-      ? "; stop: the critic's second round is red, no video"
-      : failing
-        ? attempts > MAX_ATTEMPTS
-          ? "; stop: red after two fix attempts, no video"
-          : `; next: fix attempt ${attempts} of ${MAX_ATTEMPTS}`
-        : pending
-          ? `; next: run the critic, round ${gates.critic.rounds.length + 1} of 2`
-          : ""
-  }`,
-);
+console.log(summaryLine({ gates, failing, pending, attempts, check }));
 process.exit(failing || pending ? 1 : 0);

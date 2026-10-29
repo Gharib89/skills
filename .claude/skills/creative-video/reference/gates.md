@@ -99,7 +99,10 @@ scene(s) judged, stills in <dir>` and the exit is 1. Fix the failing gates
 first; once none fails, the last line ends `; next: run the critic, round <r>
 of 2`: dispatch the critics on `<dir>`, relative to the run folder (SKILL.md
 step 12), then run the
-gates again. A scene whose stills, and the narration and
+gates again. A scene has no verdict when `stills.json` in `<dir>` names it
+and no `<scene>.json` sits beside it. An `invented` finding is fixed in the
+visual: take the fact off screen, or show one the narration states. A scene
+whose stills, and the narration and
 excerpts every critic reads, are unchanged keeps its last verdict, so only a
 changed scene is judged again. The critic has two rounds per voice: a red
 second round is final, `; stop: the critic's second round is red, no video`,
@@ -117,6 +120,12 @@ or a new voice (the narration voiced and timed again), starts the count again;
 `script.json` edited without voicing again does not. Gates judge the project
 as it is: change a scene, the kit or an asset after a pass and the render
 refuses until they pass again.
+
+`gates.mjs <run> --check` is a **check run**: it judges and prints every gate
+as a counted run does, its last line ending `; check run: gates.json not
+written`, and writes no `gates.json`. So it spends no fix attempt, and a
+passing check run unlocks no render: run the gates once more without the flag
+to record the pass the render reads.
 
 Exit 1 with a `gates: <why>` line on stderr and no gate lines is a refusal (no
 timeline, a timing older than the voice, a missing scene file, a `gates.json`

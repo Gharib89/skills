@@ -107,6 +107,9 @@ and run `window` again at each `watch` wake until it exits 0.
    reached the pane, and `watch` will not report the session until something
    starts a turn, so `read` it: text still in the input box gets
    `--keys Enter`; a session back at its prompt gets its next `--text`.
+   Text that answers a session's question or stop, a `merge` included, opens
+   with who chose: `Owner: ` before a reply you relay from the user,
+   `Supervisor: ` before your own answer.
 7. **Loop** from step 3 while any session is running. A session waiting on an
    escalation is idle but not marked at rest; once you relay the user's reply,
    it runs again, so start step 3 again. When `watch` exits 1 on no live
@@ -171,6 +174,11 @@ supervisor relays. A `reviewer <x>: past cap <n>, ..., head moved: read
 A supervised `/ship` is an **attended** run: you are the human present. Launch
 it as `/ship <issue>`, leaving `--unattended` to the user alone, and answer its
 hand-offs and questions the way the user would, by the escalation list.
+
+Your answers are the supervisor's, never the owner's: say in the launch prompt
+that a supervised session never saves a `Supervisor:` answer as owner feedback
+(a feedback memory quoting it as the owner's choice), and that a Deviations
+line names who chose, owner or supervisor.
 
 After every merge, `git status` the main checkout, then `git pull --ff-only`
 there before the next spawn: sessions start there, and its `.claude/skills/`
@@ -239,6 +247,21 @@ line names the parent and any merge allowance
 
 Wake only on The run's background `watch`, never on `/loop` or a schedule.
 
+## Smoke tests
+
+A smoke test or live proof often runs in a throwaway checkout, a consumer
+made for the run. Before deleting one:
+
+1. Copy out the deliverables the user wants (a rendered video, its captions,
+   a report) to where the user named.
+2. Close the tab driving it with `herdr tab close`, so no idle session is left
+   standing in a deleted folder.
+3. Delete the checkout and its Claude Code project folder,
+   `~/.claude/projects/<slug>/`, which holds the sessions' transcripts and any
+   memory they wrote. `<slug>` is the checkout's absolute path with every
+   character but a letter or digit turned into `-`: `/home/u/wip/proof_1.x`
+   is `-home-u-wip-proof-1-x`.
+
 ## The report
 
 When every session is at rest, report one row per session: its name, its task,
@@ -248,4 +271,5 @@ waiting, or crashed), with the PR link where there is one. To answer "what is
 step 5 would: that `read` acknowledges any event `watch` had not yet reported.
 
 Leave every supervised tab open, so the user can read each transcript. Close a
-tab only when the user asks.
+tab only when the user asks, or as Smoke tests says before deleting its
+throwaway checkout.
