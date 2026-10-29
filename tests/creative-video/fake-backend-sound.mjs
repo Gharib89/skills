@@ -9,17 +9,8 @@
 //                                  other file -20
 import fs from "node:fs";
 import path from "node:path";
+import { INDEX } from "../../skills/creative-video/scripts/sound/kenney.mjs";
 import { log } from "./fake-backend-log.mjs";
-
-const INDEX = JSON.parse(
-  fs.readFileSync(
-    new URL(
-      "../../skills/creative-video/setup/kenney-index.json",
-      import.meta.url,
-    ),
-    "utf8",
-  ),
-);
 
 const asked = (call, query) =>
   fs

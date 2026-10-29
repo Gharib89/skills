@@ -4,21 +4,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import {
-  FAKE_SHA,
-  calls,
-  fixture,
-  realRows,
-  row,
-  run,
-  source,
-} from "./setup-lib.mjs";
+import { INDEX as index } from "../../skills/creative-video/scripts/sound/kenney.mjs";
+import { FAKE_SHA, calls, fixture, realRows, row, run } from "./setup-lib.mjs";
 
 const kenney = realRows().find((r) => r.id === "sounds:kenney");
 const npm = realRows().find((r) => r.kind === "npm");
-const index = JSON.parse(
-  fs.readFileSync(path.join(source, "setup", "kenney-index.json"), "utf8"),
-);
 const store = (fx) =>
   path.join(fx.tmp, "data", "creative-video", "sounds", "kenney");
 

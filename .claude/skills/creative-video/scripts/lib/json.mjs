@@ -53,6 +53,8 @@ const words = list(obj({ text, start: number, end: number }));
 export const SHAPES = {
   // The setup catalogue: every reader keys a row by its id and kind.
   "setup/rows.json": obj({ rows: list(obj({ id: text, kind: text })) }),
+  // The Kenney word index the sound stage scores a pack's files by.
+  "setup/kenney-index.json": map(map(obj({ words: list(text) }))),
   // The narrators setup and the voice stage pick from.
   "narrators.json": obj({
     narrators: list(

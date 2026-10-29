@@ -149,16 +149,16 @@ function packs(fx, files) {
 
 test("two timeouts fall back to the Kenney pack whose index words match the query", () => {
   const fx = fixture();
-  kit(fx, { palette: [{ event: "ticket", query: "paper tear" }] });
+  kit(fx, { palette: [{ event: "ticket", query: "page turn" }] });
   packs(fx, { "rpg-audio": ["bookClose.ogg", "bookFlip1.ogg"] });
-  const r = fetch(fx, { "paper tear": ["timeout"] });
+  const r = fetch(fx, { "page turn": ["timeout"] });
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(r.out.trim(), "sound ticket: kenney rpg-audio/bookFlip1.ogg");
   assert.equal(asked(fx, "openverse").length, 2);
   const [entry] = kitOf(fx).palette;
   assert.deepEqual(entry, {
     event: "ticket",
-    query: "paper tear",
+    query: "page turn",
     source: "kenney:rpg-audio/bookFlip1.ogg",
     file: "assets/sounds/rpg-audio-bookFlip1.ogg",
     licence: "CC0-1.0",
@@ -235,8 +235,8 @@ test("a bed comes only from a stem the index marks loopable", () => {
     /^sound bed: dropped: .*; no Kenney loop matches "door slam"$/m,
   );
   assert.equal(kitOf(fx).bed, undefined);
-  kit(fx, { bed: { world: "a spaceship", query: "engine hum", level: -28 } });
-  const hum = fetch(fx, { "engine hum": ["timeout"] });
+  kit(fx, { bed: { world: "a spaceship", query: "space engine", level: -28 } });
+  const hum = fetch(fx, { "space engine": ["timeout"] });
   assert.equal(hum.code, 0, hum.out + hum.err);
   assert.equal(
     hum.out.trim(),
@@ -246,17 +246,17 @@ test("a bed comes only from a stem the index marks loopable", () => {
 
 test("a failed download is dropped like a failed search, and falls back to Kenney once installed", () => {
   const fx = fixture();
-  kit(fx, { palette: [{ event: "ticket", query: "paper tear" }] });
+  kit(fx, { palette: [{ event: "ticket", query: "page turn" }] });
   const dead = { ...hit("tear-1"), url: "https://cdn.example/dead/tear-1.mp3" };
-  const r = fetch(fx, { "paper tear": [[dead]] });
+  const r = fetch(fx, { "page turn": [[dead]] });
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(
     kitOf(fx).dropped[0].why,
     "openverse download failed (https://cdn.example/dead/tear-1.mp3: HTTP 404); the Kenney packs are not installed (run /creative-video setup)",
   );
   packs(fx, { "rpg-audio": ["bookFlip1.ogg"] });
-  kit(fx, { palette: [{ event: "ticket", query: "paper tear" }] });
-  const again = fetch(fx, { "paper tear": [[dead]] });
+  kit(fx, { palette: [{ event: "ticket", query: "page turn" }] });
+  const again = fetch(fx, { "page turn": [[dead]] });
   assert.equal(again.code, 0, again.out + again.err);
   assert.equal(
     again.out.trim(),

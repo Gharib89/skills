@@ -1,15 +1,15 @@
-// The Kenney word index, setup/kenney-index.json: for each pack the
-// sounds:kenney row pins, each file stem's words saying what the sound is,
-// beside the words its file name gives, and `loop: true` on a stem whose
-// files loop as a bed. Setup refuses a pack holding a stem it lacks, and the
-// sha256 pins keep the packs it describes fixed.
+// The Kenney word index, setup/kenney-index.json. For each pack the
+// sounds:kenney row pins, it maps each file stem to `words` saying what the
+// sound is, added to its file name's words, and `loop: true` on a stem whose
+// files loop as a bed. Setup refuses a pack holding a stem the index lacks, so
+// a new pack or sha256 pin lands with its stems indexed.
 import fs from "node:fs";
+import { parseJson } from "../lib/json.mjs";
 
-export const INDEX = JSON.parse(
-  fs.readFileSync(
-    new URL("../../setup/kenney-index.json", import.meta.url),
-    "utf8",
-  ),
+const NAME = "setup/kenney-index.json";
+export const INDEX = parseJson(
+  NAME,
+  fs.readFileSync(new URL(`../../${NAME}`, import.meta.url), "utf8"),
 );
 
 export const AUDIO = /\.(ogg|wav|mp3)$/i;
@@ -19,3 +19,17 @@ export const AUDIO = /\.(ogg|wav|mp3)$/i;
 // `jingles_NES`).
 export const stemOf = (file) =>
   file.replace(/\.\w+$/, "").replace(/[_ -]?\d+$/, "");
+
+// A pack file's `words`, its name's (camelCase split, lowercased) and the
+// index's for its stem, and its stem's `loop`, or undefined for a stem the
+// index lacks.
+export function indexed(pack, file) {
+  const stem = stemOf(file);
+  const entry = INDEX[pack]?.[stem];
+  if (!entry) return undefined;
+  const name = stem
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .match(/[a-z]+/g);
+  return { words: [...name, ...entry.words], loop: entry.loop === true };
+}
