@@ -118,6 +118,82 @@ test("credits name the voices voice.json voiced, not a cast.json edited since", 
   assert.match(read(file(fx)), /^- chef: am_fenrir \(kokoro, Apache-2\.0\)$/m);
 });
 
+test("a brand.json is credited as a Brand section: where it came from, each colour, face and fetched page, and the logo or none", () => {
+  const fx = fixture();
+  voice(fx);
+  const doc = {
+    name: "itworx",
+    from: "fetched",
+    once: true,
+    colours: [
+      {
+        hex: "#161b8c",
+        name: "ink",
+        basis: "measured",
+        from: "https://itworx.test/",
+      },
+      { hex: "#ffffff", name: "ground", basis: "declared", from: "seed" },
+    ],
+    faces: [
+      { family: "inter", role: "text", basis: "measured", licence: "OFL-1.1" },
+      {
+        family: "source-serif-4",
+        role: "title",
+        basis: "replaced",
+        was: "Tiempos Headline",
+        why: "not on Fontsource",
+        licence: "OFL-1.1",
+      },
+    ],
+    logo: null,
+    fetched: [{ url: "https://itworx.test/", gave: "colours, faces" }],
+  };
+  const brand = path.join(fx.dir, "brand.json");
+  fs.writeFileSync(brand, JSON.stringify(doc));
+  fs.writeFileSync(
+    file(fx),
+    "# Credits\n\n## Brand\n\n- stale\n\n## Faces\n\n- a face\n",
+  );
+  const r = exec(credits, fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  const section = read(file(fx)).match(/^## Brand\n\n([\s\S]*?)\n\n## /m)[1];
+  assert.equal(
+    section,
+    [
+      "- itworx, from fetched, used once",
+      "- colour #161b8c (ink): measured, https://itworx.test/",
+      "- colour #ffffff (ground): declared, seed",
+      "- face inter (text): measured, OFL-1.1",
+      "- face source-serif-4 (title): replaced, replaces Tiempos Headline, OFL-1.1",
+      "- logo: none found",
+      "- fetched https://itworx.test/: colours, faces",
+    ].join("\n"),
+  );
+  assert.match(read(file(fx)), /^## Faces\n\n- a face\n/m);
+  fs.writeFileSync(
+    brand,
+    JSON.stringify({
+      ...doc,
+      once: false,
+      from: "store",
+      fetched: [],
+      logo: { file: "brand/logo.svg", source: "https://itworx.test/press" },
+    }),
+  );
+  assert.equal(exec(credits, fx).code, 0);
+  assert.match(
+    read(file(fx)),
+    /^- itworx, from store\n(- colour .*\n){2}(- face .*\n){2}- logo: https:\/\/itworx\.test\/press\n\n/m,
+  );
+});
+
+test("a run with no brand.json has no Brand section", () => {
+  const fx = fixture();
+  voice(fx);
+  assert.equal(exec(credits, fx).code, 0);
+  assert.doesNotMatch(read(file(fx)), /## Brand/);
+});
+
 test("a run with no voice.json, or one with no voices or no roles, is refused by name", () => {
   const fx = fixture();
   const r = exec(credits, fx);

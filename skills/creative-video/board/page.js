@@ -136,6 +136,7 @@ function view(S) {
     <nav class="tabs" role="tablist">${b.chapters.map((c) => tab(S, c)).join("")}</nav>
     <section class="chapter" role="tabpanel" aria-labelledby="tab-${esc(chapter.n)}">
       ${chapter.n === 1 ? directionsPanel(S, b) : ""}
+      ${chapter.n === 1 ? brandPanel(b.brand) : ""}
       ${statusOf(S, chapter.n) === "being authored" ? '<p class="lede">This chapter is being authored: its scenes join the board as they are made.</p>' : ""}
       <div class="cards">${cardsOf(S, chapter.n)
         .map((c) => card(S, c))

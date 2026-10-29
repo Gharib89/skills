@@ -87,4 +87,15 @@ module.exports = [
         : []),
     ];
   }),
+  // creative-video's storyboard page: brand.js loads before page.js, and each
+  // calls what the other declares.
+  ...[
+    ["page", "brand"],
+    ["brand", "page"],
+  ].map(([file, other]) => ({
+    files: [`skills/creative-video/board/${file}.js`],
+    languageOptions: {
+      globals: declaredNames(`skills/creative-video/board/${other}.js`),
+    },
+  })),
 ];

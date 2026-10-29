@@ -37,7 +37,7 @@
 //           redo <scene>: <note>               one per noted scene
 //           next: re-author <the whole chapter | only <ids>>, then build the board again
 // writes: build, board/<n>.json (the board document), board/storyboard.html,
-//         page.css, page.js, stills/<hash>.png, brand/<hash>.<ext> (the
+//         page.css, brand.js, page.js, stills/<hash>.png, brand/<hash>.<ext> (the
 //         brand's logo), files.json (the Artifact publish's `files` map),
 //         .cache/board/ (the frames taken), the run folder's .gitignore and
 //         the root again (render/root.mjs); apply, board/answers-<n>.json and
@@ -402,7 +402,7 @@ async function build() {
   );
 
   const board = path.join(skill, "board");
-  for (const f of ["page.css", "page.js"])
+  for (const f of ["page.css", "brand.js", "page.js"])
     fs.copyFileSync(path.join(board, f), path.join(out, f));
   const embedded = JSON.stringify(doc).replaceAll("<", "\\u003c");
   fs.writeFileSync(
@@ -419,10 +419,9 @@ async function build() {
     path.join(out, "files.json"),
     JSON.stringify(
       Object.fromEntries(
-        ["page.css", "page.js", ...stills, ...withBrand.files].map((f) => [
-          f,
-          path.join(out, f),
-        ]),
+        ["page.css", "brand.js", "page.js", ...stills, ...withBrand.files].map(
+          (f) => [f, path.join(out, f)],
+        ),
       ),
       null,
       2,

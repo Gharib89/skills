@@ -8,16 +8,21 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { readAnswers } from "../../skills/creative-video/scripts/board/answers.mjs";
-import { boardDir, built, build, ok, ready } from "./board-lib.mjs";
+import { BRAND, boardDir, built, build, ok, ready } from "./board-lib.mjs";
 
 const read = (f) => fs.readFileSync(f, "utf8");
+// brand.js loads before page.js, as page.html has them.
+const brandSource = read(path.join(boardDir, "brand.js"));
 const source = read(path.join(boardDir, "page.js"));
 const ctx = vm.createContext({ console, TextEncoder });
+vm.runInContext(brandSource, ctx);
 vm.runInContext(source, ctx);
 const B = ctx.Board;
 const clone = (o) => JSON.parse(JSON.stringify(o));
 
-const fx = ready();
+// The board holds a brand with a logo, so every path of board-data.md's
+// brand rows is in the document the tests below compare with.
+const fx = ready({ brand: BRAND });
 ok(build(fx));
 const doc = built(fx);
 
@@ -339,6 +344,56 @@ test("a board keeps its draft until it is sent or answered, then keeps none of i
     throw new Error("SecurityError");
   };
   assert.equal(B.storeDraft(refuses, S), false);
+});
+
+test("chapter 1's tab shows the brand: each colour with its hex, name and basis, each face with its role and basis, and the logo with its source", () => {
+  const v = B.view(B.newState(clone(doc)));
+  assert.match(v, /<section class="brand panel" data-brand="itworx">/);
+  assert.match(v, /style="background:#161b8c"/);
+  assert.match(
+    v,
+    /<code>#c03020<\/code> <b dir="auto">red<\/b> <span class="tag">declared<\/span>/,
+  );
+  assert.match(
+    v,
+    /<span class="label">title<\/span> <b>source-serif-4<\/b> <span class="tag">declared<\/span>/,
+  );
+  assert.match(
+    v,
+    /<b>inter<\/b> <span class="tag warn">replaces Helvetica Neue<\/span>/,
+  );
+  assert.ok(v.includes(`<img alt="itworx logo" src="${doc.brand.logo.file}">`));
+  assert.ok(
+    v.includes(
+      '<a href="https://example.com/press" rel="noopener noreferrer">https://example.com/press</a>',
+    ),
+  );
+
+  const noLogo = clone(doc);
+  noLogo.brand.logo = null;
+  noLogo.brand.once = true;
+  const bare = B.view(B.newState(noLogo));
+  assert.match(bare, /<span class="label">no logo<\/span>/);
+  assert.match(bare, /seed, used for this video only/);
+  assert.ok(!bare.includes('<img alt="itworx logo"'));
+
+  const none = clone(doc);
+  none.brand = null;
+  assert.ok(!B.view(B.newState(none)).includes('class="brand panel"'));
+});
+
+test("the brand strip escapes what the board holds and lets only a hex colour and an https source through", () => {
+  const edited = clone(doc);
+  edited.brand.name = "<b>x</b>";
+  edited.brand.colours[0].hex = 'red;" onload="boom()';
+  edited.brand.logo.source = "javascript:boom()";
+  edited.brand.faces[0].role = "<i>r</i>";
+  const v = B.view(B.newState(edited));
+  assert.ok(!v.includes("<b>x</b>"));
+  assert.ok(!v.includes("<i>r</i>"));
+  assert.ok(v.includes('style="background:transparent"'));
+  assert.ok(!v.includes('<a href="javascript:'));
+  assert.ok(v.includes("javascript:boom()"));
 });
 
 test("the view escapes what the board holds", () => {

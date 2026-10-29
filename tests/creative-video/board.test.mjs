@@ -197,7 +197,7 @@ test("the sources are the titles of the sources the script cites, in first-cited
   assert.deepEqual(built(fx).plan[0].sources, ["The loop paper", "Ship docs"]);
 });
 
-test("the page is the board embedded in storyboard.html beside page.css and page.js, and files.json lists them with every still", () => {
+test("the page is the board embedded in storyboard.html beside page.css, brand.js and page.js, and files.json lists them with every still", () => {
   const fx = ready({
     extra: { title: "Why <agentic> & </script> co" },
   });
@@ -213,7 +213,7 @@ test("the page is the board embedded in storyboard.html beside page.css and page
   );
   assert.deepEqual(JSON.parse(m[1]), built(fx));
   assert.ok(!m[1].includes("<"), "every < is escaped");
-  for (const f of ["page.css", "page.js"]) {
+  for (const f of ["page.css", "brand.js", "page.js"]) {
     assert.equal(
       fs.readFileSync(path.join(out, f), "utf8"),
       fs.readFileSync(path.join(boardDir, f), "utf8"),
@@ -233,7 +233,7 @@ test("the page is the board embedded in storyboard.html beside page.css and page
   ];
   assert.deepEqual(
     Object.keys(files).sort(),
-    ["page.css", "page.js", ...stills].sort(),
+    ["page.css", "brand.js", "page.js", ...stills].sort(),
   );
   for (const [published, from] of Object.entries(files)) {
     assert.ok(path.isAbsolute(from), published);
