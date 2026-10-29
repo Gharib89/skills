@@ -144,7 +144,7 @@ report the answer. Answer `--text merge` on `clean: true` with no unmet
 criterion in the summary.
 
 A gate that is not clean is still yours to decide when the summary names no
-unmet criterion and every `held_by` entry is one of these three, and no other
+unmet criterion and every `held_by` entry is one of these four, and no other
 `reviewer <x>:` entry (`not landed`, `no dispositioned round`, a stale `tree
 unchanged`) qualifies:
 
@@ -156,6 +156,8 @@ unchanged`) qualifies:
   `--text merge` once it stops on `tree unchanged`.
 - `reviewer <x>: cap` (several such entries may stand together, one per
   reviewer): the same one more host round, and the same answer.
+- `self-review: stopped at cap, its last fixes read by no reviewer`: the same
+  one more host round on the final head, and the same answer.
 
 A round that stops on findings or on cap again, any other `held_by` entry, and
 every unmet criterion are escalations that quote the `held_by`: a criterion

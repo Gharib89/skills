@@ -121,12 +121,12 @@
 #   the self-review loop in close 7's vocabulary: at least one
 #     `Round: self-review <n>: <text>`, <n> a positive integer, and
 #     `Stop: self-review: <reason>`, the last such line deciding, the reason
-#     tree unchanged or cap.
+#     tree unchanged, cap or `cap at <sha>`.
 # `close 7` reads the reviewers from the phase's checklist row (nothing is held
 # where the row names none, or names what is not a list of names) and needs a
 # `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
-# one of cap, `tree unchanged at <sha>` (<sha> the PR head the round read; a
-# bare `tree unchanged` is refused), small lane, inline lane, auto-once, not
+# one of cap, `cap at <sha>` (read as cap), `tree unchanged at <sha>` (<sha> the PR head the
+# round read; a bare `tree unchanged` is refused), small lane, inline lane, auto-once, not
 # landed, not reviewed (also spelled `not reviewed: <reason>`, read as the same
 # stop here and in `gate clean`) or `not invoked: <primary> reviewed` (a fallback
 # whose primary, a reviewer on the row, stopped on none of not reviewed, not
@@ -239,7 +239,8 @@
 #     outside Legs:, nonblank Override evidence, tracker drafts beside the
 #     Run file (excluding .base.md), and a last `Stop: self-review: cap`
 #     where no reviewer stopped on tree unchanged at a covered head with a
-#     dispositioned Round hold the gate. So does each `## Criteria` entry that
+#     dispositioned Round hold the gate; a last `cap at <S>` is also lifted by
+#     a reviewer whose last stop is stamped at <S> or a descendant. So does each `## Criteria` entry that
 #     is not met or has no `Criterion <n>:` line, and a reviewer with a Round
 #     whose text opens `re-raised declined: ` stopping on tree unchanged: it
 #     stops on cap, which that round also keeps from owing a fallback. An
