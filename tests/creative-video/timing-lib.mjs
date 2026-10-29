@@ -22,9 +22,26 @@ export const hf = path.join(scripts, "hf.mjs");
 // A run folder with its voice stage done and the npm row installed.
 export function voiced(scenes, language) {
   const fx = fixture(scenes, language);
-  const v = voice(fx);
+  // An Arabic script is voiced by a Gemini narrator, which needs a key.
+  const v = voice(fx, language === "ar" ? { GEMINI_API_KEY: "test-key" } : {});
   if (v.code !== 0) throw new Error(`voice stage failed: ${v.out}${v.err}`);
   install(fx);
+  if (language === "ar") {
+    // The font store's caption face, which timing copies into the project.
+    const face = path.join(
+      fx.tmp,
+      "home",
+      ".local",
+      "share",
+      "creative-video",
+      "fonts",
+      "ibm-plex-sans-arabic@5.3.0",
+    );
+    fs.mkdirSync(face, { recursive: true });
+    for (const f of ["arabic-400-normal.woff2", "arabic-600-normal.woff2"])
+      fs.writeFileSync(path.join(face, f), "wOF2");
+    fs.writeFileSync(path.join(face, ".stamp"), "");
+  }
   return fx;
 }
 

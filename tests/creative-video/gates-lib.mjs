@@ -46,9 +46,9 @@ export function compose(fx, id, body, js) {
 // A voiced, timed run folder with every scene authored and the claims check
 // passed: `bodies` maps a scene id to its markup, the others show one readable
 // line; `brief` is written before timing, `scenes` replace the fixture's
-// script.
-export function timed(bodies = {}, { brief, scenes = SCENES } = {}) {
-  const fx = voiced(cited(scenes));
+// script, spoken in `language`.
+export function timed(bodies = {}, { brief, scenes = SCENES, language } = {}) {
+  const fx = voiced(cited(scenes), language);
   supported(fx);
   if (brief)
     fs.writeFileSync(path.join(fx.dir, "brief.json"), JSON.stringify(brief));

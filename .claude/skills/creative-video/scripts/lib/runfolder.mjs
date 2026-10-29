@@ -21,6 +21,7 @@ const REBUILDABLE = [
   "project/compositions/captions.html",
   "project/assets/narration.wav",
   "project/assets/gsap.min.js",
+  "project/assets/ibm-plex-sans-arabic-600.woff2",
   "project/.hyperframes/",
 ];
 const BLOCK = `${BEGIN} (each run folder commits its recipe only)

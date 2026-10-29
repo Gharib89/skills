@@ -1,6 +1,7 @@
 // The text of the HyperFrames project's generated files that the whole project
 // (render/timing.mjs) and each chapter's project (render/chapter-project.mjs)
 // share, so a chapter's is the whole's with its own clock.
+import { isLatin } from "../lib/rtl.mjs";
 import { NO_WORD } from "./anchors.mjs";
 import { HEIGHT, WIDTH, esc } from "./root.mjs";
 
@@ -49,20 +50,73 @@ window.at = (scene, word, nth = 1) => {
 };
 `;
 
+// The face an Arabic run's captions are set in, copied by the timing stage from
+// the font store into the project's assets, so every machine draws the same.
+export const CAPTION_FACE = "assets/ibm-plex-sans-arabic-600.woff2";
+
 // compositions/captions.html: `cues` as HyperFrames cue clips, a cue's
-// role's name in its own span before its words.
-export function captionsHtml(cues) {
+// role's name in its own span before its words. In an Arabic run (`language`
+// "ar") a cue reads right to left in CAPTION_FACE at a line height its marks
+// fit in, and each run of Latin words is one left-to-right `<bdi>` kept on one
+// line, so a term keeps its word order. The run's punctuation at either end
+// (`«pull request»،`, `agent:`) stays outside the `<bdi>`, so it reads on the
+// Arabic side; the run is one word span, which the captions gate reads as its
+// words.
+export function captionsHtml(cues, language) {
+  const ar = language === "ar";
+  const words = (tokens) => {
+    const parts = [];
+    for (const t of tokens) {
+      const latin = ar && isLatin(t.text);
+      // A number after a Latin word is part of its run (`GPT 4`), so the
+      // isolation keeps its order; a number alone reads in place.
+      const number = !/\p{L}/u.test(t.text) && /[0-9]/.test(t.text);
+      if ((latin || number) && parts.at(-1)?.latin)
+        parts.at(-1).text.push(t.text);
+      else parts.push({ latin, text: [t.text] });
+    }
+    return parts
+      .map((p) => {
+        if (!p.latin)
+          return p.text
+            .map((w) => `<span class="w">${esc(w)}</span>`)
+            .join(" ");
+        const [, lead, term, tail] = p.text
+          .join(" ")
+          .match(/^([^A-Za-z0-9]*)(.*[A-Za-z0-9#+])(.*)$/s);
+        return `<span class="w">${esc(lead)}<bdi class="lat" dir="ltr">${esc(term)}</bdi>${esc(tail)}</span>`;
+      })
+      .join(" ");
+  };
   const cueDivs = cues
     .map(
       (c, i) =>
-        `    <div class="cue clip" data-start="${c.start}" data-duration="${(c.end - c.start).toFixed(3)}" id="cue-${i + 1}">${c.who ? `<span class="who">${esc(c.who)}:</span> ` : ""}${c.tokens
-          .map((t) => `<span class="w">${esc(t.text)}</span>`)
-          .join(" ")}</div>`,
+        `    <div class="cue clip" data-start="${c.start}" data-duration="${(c.end - c.start).toFixed(3)}" id="cue-${i + 1}"${ar ? ' dir="rtl"' : ""}>${c.who ? `<span class="who">${esc(c.who)}:</span> ` : ""}${words(c.tokens)}</div>`,
     )
     .join("\n");
+  const face = ar
+    ? `    @font-face {
+      font-family: "IBM Plex Sans Arabic";
+      src: url("${CAPTION_FACE}") format("woff2");
+      font-weight: 600;
+    }
+`
+    : "";
+  const font = ar
+    ? `font: 600 44px "IBM Plex Sans Arabic", sans-serif;
+      line-height: 1.7;`
+    : "font: 700 44px Inter, sans-serif;";
+  const isolated = ar
+    ? `
+    .who,
+    .lat {
+      unicode-bidi: isolate;
+      white-space: nowrap;
+    }`
+    : "";
   return `<template>
   <style>
-    #root {
+${face}    #root {
       position: absolute;
       inset: 0;
     }
@@ -72,10 +126,10 @@ export function captionsHtml(cues) {
       right: 160px;
       bottom: 96px;
       text-align: center;
-      font: 700 44px Inter, sans-serif;
+      ${font}
       color: #fff;
       text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
-    }
+    }${isolated}
   </style>
   <div id="root" data-composition-id="captions" data-width="${WIDTH}" data-height="${HEIGHT}">
 ${cueDivs}

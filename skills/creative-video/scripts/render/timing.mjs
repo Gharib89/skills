@@ -14,6 +14,8 @@
 // touches (the agent's scene files and kit/ live there):
 //   assets/narration.wav   the scenes' WAVs joined on the grid
 //   assets/gsap.min.js     copied from the tool cache's npm install
+//   assets/ibm-plex-sans-arabic-600.woff2   an Arabic run's caption face,
+//                          copied from the font store
 //   timing.js              window.TIMING (scene starts in the video, durations
 //                          and word times local to each scene) and
 //                          window.at(scene, word, nth), the
@@ -22,7 +24,8 @@
 //   index.html             the root (render/root.mjs)
 // stdout: `timing: <n> scene(s), <total> s`, then one `timing: compositions/<id>.html
 //         to author` line per scene file not yet written
-// exit:   0 timed · 1 refused, `timing: <why>` on stderr (a plan of chapters
+// exit:   0 timed · 1 refused, `timing: <why>` on stderr (an Arabic run whose
+//         caption face is not installed, a plan of chapters
 //         that does not fit the scenes, a chapter under 2 or over 6 minutes
 //         within 10%, a brief over 6 minutes with no plan) · 2 usage
 import fs from "node:fs";
@@ -32,12 +35,18 @@ import { rolesOf, voices, voicesOf } from "../lib/kit.mjs";
 import { HOLD } from "../lib/length.mjs";
 import { voiceHash, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
-import { catalogue, dest } from "../lib/tools.mjs";
+import { catalogue, dest, fontGap } from "../lib/tools.mjs";
 import { planChapters } from "./chapters.mjs";
 import { captionCues } from "./cues.mjs";
 import { gridScenes, written } from "./grid.mjs";
 import { joinNarration, wavSeconds } from "./narration.mjs";
-import { captionsHtml, shift, timingJs, timingScenes } from "./project.mjs";
+import {
+  CAPTION_FACE,
+  captionsHtml,
+  shift,
+  timingJs,
+  timingScenes,
+} from "./project.mjs";
 import { writeRoot } from "./root.mjs";
 
 stage("timing");
@@ -86,6 +95,11 @@ for (const { id } of script.scenes) {
 const npm = catalogue().find((r) => r.kind === "npm");
 if (!fs.existsSync(path.join(dest(npm), ".stamp")))
   fail(`${npm.id} is not installed: run /creative-video setup`);
+const face =
+  script.language === "ar" &&
+  catalogue().find((r) => r.id === "font:ibm-plex-sans-arabic");
+const faceGap = face && fontGap(face);
+if (faceGap) fail(`${faceGap}: run /creative-video setup`);
 
 // Scenes back to back on the frame grid, every word time absolute.
 const grid = gridScenes(
@@ -157,7 +171,15 @@ fs.copyFileSync(
 // start in the video, which a sound a script creates is placed by.
 const local = timingScenes(scenes, voice, (s) => s.start);
 fs.writeFileSync(path.join(proj, "timing.js"), timingJs(total, local));
-fs.writeFileSync(path.join(comps, "captions.html"), captionsHtml(cues));
+if (face)
+  fs.copyFileSync(
+    path.join(dest(face), "arabic-600-normal.woff2"),
+    path.join(proj, CAPTION_FACE),
+  );
+fs.writeFileSync(
+  path.join(comps, "captions.html"),
+  captionsHtml(cues, script.language),
+);
 
 writeRoot(run);
 

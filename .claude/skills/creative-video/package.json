@@ -8,6 +8,7 @@
   "dependencies": {
     "@mozilla/readability": "0.6.0",
     "gsap": "3.14.2",
+    "harfbuzzjs": "1.6.4",
     "hyperframes": "0.8.206",
     "jszip": "3.10.2",
     "kokoro-js": "1.2.1",

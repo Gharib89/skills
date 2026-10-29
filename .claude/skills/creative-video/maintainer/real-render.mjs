@@ -2,19 +2,22 @@
 // gates and render stages with real HyperFrames, and prove what the fake backend
 // cannot: the delivered MP4 has exactly the frame grid's frames, three renders
 // match frame for frame, two chapters rendered apart and joined by the chapter
-// join have the sum of their frames and a chapter mark each, and seven hard
+// join have the sum of their frames and a chapter mark each, and eight hard
 // gates (determinism, layout, caption band, anchors, script errors, must and
-// avoid, sounds) each fail a fixture built to fail them and pass the same
-// fixture without the defect: layout also on a clip held at the key or the out
-// sample only, script errors beside a timeline no element carries, must and
-// avoid on a word a module script writes, sounds on a start a script moves,
-// its passing twin a sound the script creates, which renders where the gates
-// placed it. Contrast and reading have no real-render fixture.
+// avoid, sounds, joins) each fail a fixture built to fail them and pass the
+// same fixture without the defect: layout also on a clip held at the key or
+// the out sample only, script errors beside a timeline no element carries,
+// must and avoid on a word a module script writes, sounds on a start a script
+// moves, its passing twin a sound the script creates, which renders where the
+// gates placed it, joins on an Arabic word split into a box per letter in IBM
+// Plex Sans Arabic. A digit run split the same way on a right-to-left line
+// reaches the critic's checks. Contrast and reading have no real-render
+// fixture.
 //
 //   node maintainer/real-render.mjs
 //
-// Needs the npm-packages and chrome rows installed (`node scripts/setup.mjs
-// install`) and the ffmpeg row. The fixtures are run folders
+// Needs the npm-packages, chrome and font:ibm-plex-sans-arabic rows installed
+// (`node scripts/setup.mjs install`) and the ffmpeg row. The fixtures are run folders
 // (real-render-lib.mjs) voiced by tones of whole frames. The whole's 122
 // frames are 4.0666... s, which a grid writing its times rounded to the voice
 // stage's 3 places instead of truncated would render as 123.
@@ -187,6 +190,20 @@ const moduled = (word) => (run) => {
     JSON.stringify({ length: 0.2, must: ["quantum"] }),
   );
 };
+// Arabic text in the caption face an Arabic run's timing stage copies in, on a
+// right-to-left line: `parts` each in a box of its own when `split`.
+const rtl = (parts, split) =>
+  `<section dir="rtl" style="position:absolute;left:200px;right:200px;top:300px;font:600 80px 'IBM Plex Sans Arabic';line-height:1.7;color:#fff"><p>${
+    split
+      ? parts
+          .map((c) => `<span style="display:inline-block">${c}</span>`)
+          .join("")
+      : parts.join("")
+  }</p></section>`;
+// A code frame holding Arabic after an Arabic line, its own `dir` set by
+// `attrs`.
+const codeFrame = (attrs) =>
+  rtl(["كتب"], false).replace("</p>", `</p><div${attrs}>print("مرحبا")</div>`);
 // A named timeline no element carries, which the probe must skip.
 const EXTRA = 'window.__timelines["extra"] = gsap.timeline({ paused: true });';
 const pairs = [
@@ -238,15 +255,33 @@ const pairs = [
     bad: [line(300) + MODULE, "", moduled("plain")],
     good: [line(300) + MODULE, "", moduled("quantum")],
   },
+  {
+    gate: "joins",
+    language: "ar",
+    bad: [rtl(["ك", "ت", "ب"], true)],
+    good: [rtl(["ك", "ت", "ب"], false)],
+    names: /"كتب" breaks its joins in IBM Plex Sans Arabic/,
+  },
+  {
+    gate: "layout",
+    name: "layout on a code frame in an Arabic run",
+    language: "ar",
+    bad: [codeFrame("")],
+    good: [codeFrame(' dir="ltr"')],
+    names: /Latin run not isolated in "print\("مرحبا"\)"/,
+  },
 ];
 let fixture = 0;
-function gateOf(gate, [body, js, setup]) {
-  const run = runFolder(work, `gate-${++fixture}`, [
-    { id: "one", frames: 90, html: authored("one", body, js) },
-  ]);
+function gateOf(gate, [body, js, setup], language) {
+  const run = runFolder(
+    work,
+    `gate-${++fixture}`,
+    [{ id: "one", frames: 90, html: authored("one", body, js) }],
+    language,
+  );
   setup?.(run);
   runStage("render/timing.mjs", run);
-  return judged(gate, run);
+  return { ...judged(gate, run), run };
 }
 function judged(gate, run) {
   const r = spawnSync(
@@ -263,17 +298,36 @@ function judged(gate, run) {
     );
   return { status: m[1], measured: m[2], out: r.stdout };
 }
-for (const { gate, name = gate, bad, good, warn } of pairs) {
-  const [b, g] = [gateOf(gate, bad), gateOf(gate, good)];
+for (const { gate, name = gate, bad, good, warn, language, names } of pairs) {
+  const [b, g] = [gateOf(gate, bad, language), gateOf(gate, good, language)];
   const warned = (r) => new RegExp(`^warn ${warn}:`, "m").test(r.out);
   check(
     `gate ${name}`,
     b.status === "fail" &&
       g.status === "pass" &&
-      (!warn || (warned(b) && !warned(g))),
+      (!warn || (warned(b) && !warned(g))) &&
+      (!names || names.test(b.measured)),
     `failing twin: ${b.measured}; passing twin: ${g.measured}`,
   );
 }
+
+// A digit run split into a box per digit on a right-to-left line reads right
+// to left, which shaping cannot judge: it reaches the critic's checks.
+const reversed = gateOf("joins", [rtl(["2", "0", "2", "6"], true)], "ar");
+const stills = JSON.parse(
+  fs.readFileSync(path.join(reversed.run, "gates.json"), "utf8"),
+).gates.critic.stills;
+const asked = JSON.parse(
+  fs.readFileSync(path.join(reversed.run, stills, "checks.json"), "utf8"),
+).one;
+check(
+  "critic checks",
+  reversed.status === "pass" &&
+    asked?.includes(
+      '"2026": a Latin or digit run split into boxes, read right to left',
+    ),
+  `joins ${reversed.status}; checks: ${JSON.stringify(asked ?? [])}`,
+);
 
 // The sounds gate on a scene that starts 1.5 s in: a 2 kHz beep written at
 // 0.3 s that the script moves to 1 s fails it, since the render plays 0.3 s;

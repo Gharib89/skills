@@ -87,13 +87,14 @@ export const authored = (id, body, js = "") => `<template>
 </template>
 `;
 
-// The run folder `<dir>/<name>` as the voice stage and the agent leave it: one
+// The run folder `<dir>/<name>` in `language` as the voice stage and the agent
+// leave it, voiced by the language's default narrator: one
 // scene per `{ id, frames, html }`, voiced by a tone exactly `frames` long with
 // its two words spread over it, and its composition authored (the sliding box,
 // or `html`). Each sentence states no fact, so it cites nothing and the support
 // checker's verdict is `connective`. The claims check passes it, the timing
 // stage times it, the render stage renders it.
-export function runFolder(dir, name, scenes) {
+export function runFolder(dir, name, scenes, language = "en") {
   const run = path.join(dir, name);
   const comps = path.join(run, "project", "compositions");
   fs.mkdirSync(path.join(run, "voice"), { recursive: true });
@@ -102,7 +103,7 @@ export function runFolder(dir, name, scenes) {
   fs.writeFileSync(
     path.join(run, "script.json"),
     JSON.stringify({
-      language: "en",
+      language,
       scenes: scenes.map(({ id }) => ({
         id,
         narration: [narration(id)],
@@ -148,12 +149,12 @@ export function runFolder(dir, name, scenes) {
       roles: ["narrator"],
     };
   });
-  const n = narrator(undefined, "en");
+  const n = narrator(undefined, language);
   fs.writeFileSync(
     path.join(run, "voice.json"),
     JSON.stringify({
       narrator: n.id,
-      language: "en",
+      language,
       voices: voicesOf({ narrator: n }),
       scenes: voiced,
     }),

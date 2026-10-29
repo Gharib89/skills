@@ -83,7 +83,9 @@ lengths, the last one held 1 s, and writes the root `index.html` (each scene's
 host at its start and length, the narration, the captions on top),
 `timing.js` and the caption track. In a video of two or more roles, a cue
 whose role differs from the last cue's opens with the role's name
-(`Learner: `), in the video and the SRT alike. It prints `timing: <n>
+(`Learner: `), in the video and the SRT alike. In an Arabic run the captions
+read right to left in IBM Plex Sans Arabic, each run of Latin words kept in
+order on one line. It prints `timing: <n>
 scene(s), <total> s` and one `timing: compositions/<id>.html to author` line
 per scene file not yet written. On exit 1, `timing: <why>` names what to fix:
 a `voice.json` that no longer matches `script.json` means voice again first.
@@ -162,6 +164,15 @@ moves one.
 Readable text stays out of the caption band, the bottom 220 px: paint behind
 it, never write in it.
 
+In an Arabic run, set the scene's text in a box marked `dir="rtl"`, each Latin
+term or number among Arabic words in a `<bdi>` with `white-space: nowrap`, at a
+line height no lower than the ink the face's letters span; the `layout` gate
+measures each. Mark a code frame or a terminal `dir="ltr"`: the gate leaves
+such a frame as written. Keep each Arabic word in one box: a letter in a box of
+its own (an `inline-block` span per character, as letter-by-letter animation
+makes) is drawn unjoined, and the `joins` gate fails it. Animate a word, a line
+or a clip mask, never its letters.
+
 ## Sound
 
 Write `project/kit/sound.json` with the kit, before any scene:
@@ -238,7 +249,9 @@ failing one indented under it. Each is a hard fail:
   draw in a scene makes them differ.
 - `layout`: no HyperFrames layout error, and no clipped or overlapping text in
   any one sample frame (HyperFrames grades those info, the gate fails them), no
-  readable text under 18 px or outside a margin of 5% of each side.
+  readable text under 18 px or outside a margin of 5% of each side. In an
+  Arabic run, also the Arabic reading rules of
+  [Scenes on word times](#scenes-on-word-times).
 - `contrast`: WCAG AA, 4.5:1, 3:1 for large text.
 - `reading`: each text stays fully visible for 0.8 s up to 3 words, else 0.3 s
   a word and at least 1.2 s.
@@ -260,6 +273,8 @@ failing one indented under it. Each is a hard fail:
 - `bed level`: the bed at least 15 LU under the voice in each 3 s window that
   holds a word, by short-term loudness, its level and lane applied. It names
   each window under 15 LU, and passes as `no bed` without one.
+- `joins` (an Arabic run): each Arabic word split across boxes, shaped piece
+  by piece in the face Chrome draws it in, matches the word shaped whole.
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no
   `avoid` word is: said in the voiced narration (not `script.json`, which can
   change after the voice), shown fully drawn in a sample frame.
@@ -275,7 +290,9 @@ failing one indented under it. Each is a hard fail:
   fact on screen (one no narration sentence or cited excerpt states, or one
   they contradict; staging such as props, signs, scores and round numbers
   never is) and `rtl` (Arabic laid out the wrong way round). It gives no
-  scores.
+  scores. It also judges, under `rtl`, a word `joins` cannot shape (its face
+  resolves to no file) and a Latin or digit run split into boxes and read right
+  to left.
 - `chapter titles` (a video in chapters): every word of each chapter's title
   is drawn on that chapter's first frame.
 - `sound only` (a video in chapters): `over.html` holds `<audio>` and draws no

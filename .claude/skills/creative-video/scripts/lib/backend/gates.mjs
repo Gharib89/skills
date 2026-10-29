@@ -9,6 +9,7 @@ import { HEIGHT, WIDTH } from "../../render/root.mjs";
 import { toolPaths } from "../tools.mjs";
 import { cliPath, findChrome } from "./browser.mjs";
 import { fromCache } from "./common.mjs";
+import { joinsMeasure } from "./joins.mjs";
 
 // The pinned CLI run in the project with its output captured.
 function captured(args, { dir, env }) {
@@ -204,6 +205,26 @@ function seek(page, t) {
 function measureFrame() {
   const r1 = (n) => Math.round(n * 10) / 10;
   const sub = '[data-composition-id]:not([data-composition-id="main"])';
+  // The ink Arabic's letters span in an element's face and weight, in ems, as
+  // canvas measures it once per face and weight: the least line height that
+  // keeps two lines of them apart. Letters and hamza seats, no marks: the
+  // floor is the face's, not the line's.
+  const pen = document.createElement("canvas").getContext("2d");
+  const LETTERS = "ءآأإئابةتثجحخدذرزسشصضطظعغفقكلمنهوىي";
+  const inks = new Map();
+  const ink = (cs) => {
+    const key = `${cs.fontWeight} ${cs.fontFamily}`;
+    if (!inks.has(key)) {
+      pen.font = `${cs.fontWeight} 100px ${cs.fontFamily}`;
+      const m = pen.measureText(LETTERS);
+      inks.set(
+        key,
+        Math.round(m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) /
+          100,
+      );
+    }
+    return inks.get(key);
+  };
   const out = [];
   for (const el of document.querySelectorAll("#root *")) {
     const texts = [...el.childNodes].filter(
@@ -227,6 +248,7 @@ function measureFrame() {
     let opacity = 1;
     for (let a = el; a; a = a.parentElement)
       opacity *= +getComputedStyle(a).opacity;
+    const cs = getComputedStyle(el);
     const scale = el.offsetHeight > 0 ? r.height / el.offsetHeight : 1;
     out.push({
       text: own,
@@ -238,8 +260,23 @@ function measureFrame() {
         right: r1(Math.max(...glyphs.map((g) => g.right))),
         bottom: r1(Math.max(...glyphs.map((g) => g.bottom))),
       },
-      fontPx: parseFloat(getComputedStyle(el).fontSize) * scale,
+      fontPx: parseFloat(cs.fontSize) * scale,
       opacity,
+      // Reading direction (lib/rtl.mjs): the element's own, the `dir` it carries
+      // or sits in, how it is isolated and wrapped, and its line height against
+      // its ink.
+      dir: cs.direction,
+      within: el.closest("[dir]")?.getAttribute("dir") ?? null,
+      bidi: cs.unicodeBidi,
+      wrap: cs.whiteSpace,
+      lineH:
+        cs.lineHeight === "normal"
+          ? null
+          : Math.round(
+              (parseFloat(cs.lineHeight) / parseFloat(cs.fontSize)) * 100,
+            ) / 100,
+      face: cs.fontFamily.split(",")[0].replace(/["']/g, "").trim(),
+      ink: ink(cs),
     });
   }
   return out;
@@ -347,10 +384,15 @@ async function sceneEvents() {
 
 // The text the project shows at each of `times`, what over.html paints there,
 // and what moves and sounds in each scene:
-// `{ frames: [{ t, texts, over }], events: { <scene>: { tweens, sounds } } }`.
-export async function probe(dir, times, { env }) {
+// `{ frames: [{ t, texts, over, joins? }], events: { <scene>: { tweens, sounds } } }`.
+// A frame whose time is in `joins` also carries the joins measure
+// (joins.mjs) there.
+export async function probe(dir, times, { env, joins = [] }) {
   const { page, close } = await open(dir, env);
   try {
+    const shaped = joins.length
+      ? await joinsMeasure(page, path.resolve(dir), toolPaths().node)
+      : null;
     const frames = [];
     for (const t of times) {
       await seek(page, t);
@@ -358,6 +400,7 @@ export async function probe(dir, times, { env }) {
         t,
         texts: await page.evaluate(measureFrame),
         over: await page.evaluate(overPaints),
+        ...(joins.includes(t) && { joins: await shaped.at() }),
       });
     }
     return { frames, events: await page.evaluate(sceneEvents) };
