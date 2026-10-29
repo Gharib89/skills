@@ -6,7 +6,8 @@ showing the chapter's status; every scene a card of three
 stills (in, key, out) rendered from the authored scene, its timecode, its
 narration and short notes, with a comment box; one comment for the whole look;
 the chapter plan as a table, with no stop of its own; and on chapter 1's board
-the three directions as one frame each. In a video in chapters the person
+the three directions as one frame each, and with a brand its brand strip
+([brand.md](brand.md#approve-and-save)). In a video in chapters the person
 approves on chapter 1's board alone; a later chapter shows in the plan and its
 tab while its author works, and its cards appear on the board built once it
 replies. A later chapter's board needs no new approval, and an approval
@@ -76,7 +77,8 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
    it prints:
    - `board: approved`: go on to SKILL.md step 12, unless this is a later
      chapter's board (SKILL.md step 11): then change nothing and wait for that
-     step's replies.
+     step's replies. With a brand, the line before it says whether the
+     approval saved the brand to the store.
    - `board: these answers approve nothing and comment on nothing`: tell the
      person, and end the turn with the board still posted.
    - `board: direction <id>`: set `picked` to it in `storyboard.json` and write

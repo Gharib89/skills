@@ -32,6 +32,8 @@ Write `{notes}` with three parts.
    change`, ranked **P0** (unreadable, wrong, broken, a frame that teaches
    nothing a stranger can name) then **P1** (weak: two focal points, text too
    small at phone width, a frame that repeats the one before). No P2s.
+   A logo is P0 where it looks recoloured, stretched, squashed or cropped, or
+   sits as a small mark in a corner rather than as part of the frame.
 
 Give no scores or ratings, and no praise: a score finds nothing to fix.
 Describe what is there.
