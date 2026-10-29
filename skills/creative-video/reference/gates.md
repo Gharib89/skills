@@ -98,16 +98,15 @@ verdict, its line reads `gate critic: pending: round <r> of 2, <k> of <n>
 scene(s) judged, stills in <dir>` and the exit is 1. Fix the failing gates
 first; once none fails, the last line ends `; next: run the critic, round <r>
 of 2`: dispatch the critics on `<dir>`, relative to the run folder (SKILL.md
-step 12), then run the
-gates again. A scene has no verdict when `stills.json` in `<dir>` names it
-and no `<scene>.json` sits beside it. An `invented` finding is fixed in the
-visual: take the fact off screen, or show one the narration states. A scene
-whose stills, and the narration and
-excerpts every critic reads, are unchanged keeps its last verdict, so only a
-changed scene is judged again. The critic has two rounds per voice: a red
-second round is final, `; stop: the critic's second round is red, no video`,
-and a later gates run past two rounds carries the second round's verdict
-(`carried: no third round`).
+step 12), then run the gates again. A scene has no verdict when `stills.json`
+in `<dir>` names it and no `<scene>.json` sits beside it. A scene whose
+stills, and the narration and excerpts every critic reads, are unchanged keeps
+its last verdict, so only a changed scene is judged again. The critic has two
+rounds per voice: a red second round is final, `; stop: the critic's second
+round is red, no video`, and a later gates run past two rounds carries the
+second round's verdict (`carried: no third round`). An `invented` finding is
+fixed in the visual: take the fact off screen, or show one the narration
+states.
 
 ## Fix attempts and refusals
 

@@ -98,7 +98,10 @@ and run `window` again at each `watch` wake until it exits 0.
    - `gone`: record it as crashed.
 6. **Answer** with `answer`: `--keys` for a dialog (a numbered option such as
    `1`, then `Enter`; `esc` to back out), `--text` at a prompt (`--text=<t>`
-   for text opening with `-`). Text that starts no turn (a local slash
+   for text opening with `-`). Text that answers a session's question or
+   stop opens with who chose: `Owner: ` before a reply you relay from the
+   user, `Supervisor: ` before your own answer, so the merge answer is
+   `--text "Supervisor: merge"`. Text that starts no turn (a local slash
    command such as `/rename`, or an Enter that did not register) comes back
    from `answer` or `spawn` as a not-ok answer with `code`
    `agent_prompt_stalled` or `timeout`. (`spawn` has already pressed Enter up
@@ -107,9 +110,6 @@ and run `window` again at each `watch` wake until it exits 0.
    reached the pane, and `watch` will not report the session until something
    starts a turn, so `read` it: text still in the input box gets
    `--keys Enter`; a session back at its prompt gets its next `--text`.
-   Text that answers a session's question or stop, a `merge` included, opens
-   with who chose: `Owner: ` before a reply you relay from the user,
-   `Supervisor: ` before your own answer.
 7. **Loop** from step 3 while any session is running. A session waiting on an
    escalation is idle but not marked at rest; once you relay the user's reply,
    it runs again, so start step 3 again. When `watch` exits 1 on no live
@@ -175,10 +175,10 @@ A supervised `/ship` is an **attended** run: you are the human present. Launch
 it as `/ship <issue>`, leaving `--unattended` to the user alone, and answer its
 hand-offs and questions the way the user would, by the escalation list.
 
-Your answers are the supervisor's, never the owner's: say in the launch prompt
-that a supervised session never saves a `Supervisor:` answer as owner feedback
-(a feedback memory quoting it as the owner's choice), and that a Deviations
-line names who chose, owner or supervisor.
+Your answers are the supervisor's: say in the launch prompt that only an
+`Owner:` answer is the owner's choice, so only it becomes owner feedback (a
+feedback memory quoting the owner), and that each Deviations line (a departure
+the run logs for its merge summary) names who chose it, owner or supervisor.
 
 After every merge, `git status` the main checkout, then `git pull --ff-only`
 there before the next spawn: sessions start there, and its `.claude/skills/`
@@ -254,11 +254,13 @@ made for the run. Before deleting one:
 
 1. Copy out the deliverables the user wants (a rendered video, its captions,
    a report) to where the user named.
-2. Close the tab driving it with `herdr tab close`, so no idle session is left
-   standing in a deleted folder.
-3. Delete the checkout and its Claude Code project folder,
-   `~/.claude/projects/<slug>/`, which holds the sessions' transcripts and any
-   memory they wrote. `<slug>` is the checkout's absolute path with every
+2. Read the session with `--rest`, then close its tab, `herdr tab close <tab>`
+   with the `tab` its roster row records, so no idle session is left standing
+   in a deleted folder.
+3. Delete the checkout and its Claude Code project folders,
+   `~/.claude/projects/<slug>/` and every `<slug>--claude-worktrees-*/` beside
+   it (sessions in the checkout's worktrees), which hold the transcripts and
+   any memory they wrote. `<slug>` is the checkout's absolute path with every
    character but a letter or digit turned into `-`: `/home/u/wip/proof_1.x`
    is `-home-u-wip-proof-1-x`.
 

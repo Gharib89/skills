@@ -1,5 +1,5 @@
-// The gates stage's verdict on one run (gates/gates.mjs): the fix cap's count
-// and the summary line it prints last.
+// The fix cap of one gates run (gates/gates.mjs): its count of fix attempts,
+// and the summary line the run prints last.
 
 const MAX_ATTEMPTS = 2;
 

@@ -235,7 +235,8 @@ folder's files, timing, the word anchors, the pinned CLI and the render;
 12. **Gates.** `node <skill>/scripts/gates/gates.mjs <run>`
     ([the gates](reference/gates.md)); on exit 1 fix what each `gate
     <name>: fail` line and its indented findings name, then run it again, at
-    most two fix attempts (`--check` spends none and unlocks no render;
+    most two fix attempts
+    ([`--check`](reference/gates.md#fix-attempts-and-refusals) spends none;
     [fixing a critic finding](reference/gates.md#the-critic)). On a
     `; stop:` line do not render or deliver: report the red gates and their
     findings, and stop.

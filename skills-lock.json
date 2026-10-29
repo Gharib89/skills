@@ -23,7 +23,7 @@
     "creative-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "10c10c27077807e2b055f3eb2d87810f9b3cca1f5c167ebe7b031be77c65c95a"
+      "computedHash": "a0ca3be30afc63ef352aeca188cf6ec2990728a9d7c797f2417a6074e45e50cb"
     },
     "domain-modeling": {
       "source": "mattpocock/skills",
@@ -35,7 +35,7 @@
     "drive-session": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "5f74243b3e917d392c10923997a1a09e497086640a77f3f529801237b0744979"
+      "computedHash": "5b568a386c353bb3c9b2e96ea008b0789fb1ef946901f135b2090f8af14268a6"
     },
     "explainer-video": {
       "source": ".",

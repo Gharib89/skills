@@ -39,9 +39,9 @@
 //         gates.json not written`
 // writes: <run>/gates.json, not on a check run (the inputs and voice it is of,
 //         the attempts, each gate's status, measured, floor and evidence, the
-//         warnings),
-//         .cache/gates/frames/a and b, the critic's stills under
-//         .cache/critic/<key>, and the root again (render/root.mjs)
+//         warnings); on every run, a check run too, .cache/gates/frames/a and
+//         b, the critic's stills under .cache/critic/<key>, and the root again
+//         (render/root.mjs)
 // exit:   0 every gate passes · 1 a gate fails or the critic is pending, or
 //         `gates: <why>` on stderr (the render's own refusals: no timeline, an
 //         older voice, a missing scene file; a malformed critic verdict) ·
@@ -69,7 +69,7 @@ import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
 import { BED_LU, bedLevel, licenceFindings } from "./sound-kit.mjs";
 import { soundFindings } from "./sounds.mjs";
-import { fixAttempts, summaryLine } from "./verdict.mjs";
+import { fixAttempts, summaryLine } from "./fix-cap.mjs";
 import { warnings } from "./warnings.mjs";
 
 stage("gates");
@@ -92,7 +92,7 @@ async function orFail(call) {
 }
 
 // The floors: type of at least 18 px inside a margin of 5% of each side, the
-// bottom 220 px left to the captions (the fix cap: gates/verdict.mjs).
+// bottom 220 px left to the captions (the fix cap: gates/fix-cap.mjs).
 const TEXT_PX = 18;
 const MARGIN_X = Math.round(WIDTH * 0.05);
 const MARGIN_Y = Math.round(HEIGHT * 0.05);

@@ -25,7 +25,7 @@ Tripwires: None.
 
 Two CI legs report on a PR head: `bump-guard` reads the PR title and body rather than the diff, and `check-full` runs `scripts/check.sh full` on the head. The repo is public, so CI minutes cost nothing, and this script runs only what CI cannot or must not: `secrets` over the base range, so a secret is caught before the push, and `version-lines`, which needs the base `check-full` lacks. Every check `full` would report (its `runner`, a `TURN_ROWS` member's `typecheck:` and `tests:` checks, and each `FULL_ROWS` row: `tests`, `derived-copies`, the prose checks, `contract`) is a gate of the same name, `deferred-to-ci` and unrun, its names read from `check.sh`'s configuration block so they cannot drift. Ship's clean gate admits a `deferred-to-ci` gate only while every CI check on the head is green. No `full` check needs this machine. The small lane is the same gate, `secrets` and `version-lines` with the rest deferred, so the recorded node is only what the run records.
 
-Gate notes (the test catalog, `prose-budget`, `version-lines`, `stray-files`, `self-contained`, `contract`, `derived-copies`): [ship-gates.md](ship-gates.md). Read it when a gate fails or a new test or check needs placing; a run needs nothing in it at start.
+Gate notes (the test catalog, `prose-budget`, `version-lines`, `stray-files`, `self-contained`, `contract`, `derived-copies`, the local gate's stderr reports): [ship-gates.md](ship-gates.md). Read it when a gate fails or a new test or check needs placing; a run needs nothing in it at start.
 
 ## CI
 
@@ -52,7 +52,7 @@ Gating: no
 Fallback-for: None.
 Instructions: AGENTS.md
 
-Native Codex code review through the ChatGPT Codex Connector GitHub app, on the maintainer's ChatGPT subscription: no API key, no Actions workflow. This repo's primary reviewer, driven on every run and capped at two rounds; `claude` below stands in for it when it exits `not reviewed`, is capped with findings, or stops `not landed`. The review rules Codex reads are the `## Code Review Rules` section of the root `AGENTS.md`. How a round answers, setup, disabling it and probe evidence: [ship-reviewers.md](ship-reviewers.md#codex).
+Native Codex code review through the ChatGPT Codex Connector GitHub app, on the maintainer's ChatGPT subscription: no API key, no Actions workflow. This repo's primary reviewer, driven on every run and capped at two rounds; `claude` below is its fallback. The review rules Codex reads are the `## Code Review Rules` section of the root `AGENTS.md`. How a round answers, setup, disabling it and probe evidence: [ship-reviewers.md](ship-reviewers.md#codex).
 
 ### claude
 
