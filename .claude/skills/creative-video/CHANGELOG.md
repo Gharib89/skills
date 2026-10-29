@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.9.0 (2026-10-29)
+
+### Features
+
+- **creative-video**: Egyptian Arabic captions, the joins gate and rtl checks
+  ([#1040](https://github.com/Gharib89/skills/pull/1040),
+  [`d51fe48`](https://github.com/Gharib89/skills/commit/d51fe484859cb2e90ffdacd3d49e326819fbaf45))
+
+
 ## v0.8.0 (2026-10-29)
 
 ### Features
