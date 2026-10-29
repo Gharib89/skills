@@ -6,12 +6,16 @@
 # `## Change outline` section does not mention. <paths> is newline-separated. A
 # path is mentioned when the section names it by its full path, or by its
 # basename when no other changed path shares that basename (a derived copy whose
-# source twin is changed mirrors it and does not count): both bounded as `ship_paths_cited` bounds a path, so `_lib.sh` is no
-# mention of `tests/lib.sh` and one bare `SKILL.md` covers no two. A derived copy
+# source twin is changed mirrors it and does not count): both bounded as
+# `ship_paths_cited` bounds a path, so `_lib.sh` is no mention of
+# `tests/lib.sh` and one bare `SKILL.md` covers no two. A derived copy
 # under `.claude/skills/<rest>` is also mentioned when its source twin
 # `skills/<rest>` is changed and mentioned, since the copy mirrors the source.
-# `skills-lock.json` and any `CHANGELOG.md` are generated, never expected in an
-# outline. The section is found by the same `ship_inert` rule as the headings, so
+# A path under `.claude/skills/<name>/` of a vendored skill, one the repo root's
+# `skills-lock.json` lists with a `source` other than `.`, is also mentioned when
+# the section cites the folder `.claude/skills/<name>/`: it has no source twin.
+# A lock that cannot be read is no answer (exit 2). `skills-lock.json` and any
+# `CHANGELOG.md` are generated, never expected in an outline. The section is found by the same `ship_inert` rule as the headings, so
 # a `## Change outline` in a fence is not one; a body with no such heading
 # mentions nothing, and every expected path is missing.
 ship_outline_missing() { # <body> <paths>
@@ -45,16 +49,17 @@ ship_outline_missing() { # <body> <paths>
 # _ship_outline_vendored <text> <path>: true when <path> sits under
 # `.claude/skills/<name>/`, the text cites that folder, and the repo root's
 # `skills-lock.json` lists `<name>` with a `source` other than `.`: a vendored
-# skill has no source twin to name. No lock file covers nothing. Exit 0 named,
-# 1 not named, 2 the matcher or the lock read failed.
+# skill has no source twin to name. With no lock file, no skill is vendored.
+# Exit 0 named, 1 not named, 2 the matcher or the lock read failed.
 _ship_outline_vendored() { # <text> <path>
-  local dir c lock src
-  dir=${2#.claude/skills/}; dir=.claude/skills/${dir%%/*}/
-  c=$(ship_paths_cited "$1" "$dir") || return 2
+  local name c lock src
+  name=${2#.claude/skills/}; name=${name%%/*}
+  c=$(ship_paths_cited "$1" ".claude/skills/$name/") || return 2
   [ -n "$c" ] || return 1
   lock=$(git rev-parse --show-toplevel 2>/dev/null)/skills-lock.json || return 2
   [ -e "$lock" ] || return 1
-  src=$(jq -r --arg n "$(basename "$dir")" '.skills[$n].source // "."' "$lock" 2>/dev/null) || return 2
+  # -e: an empty lock prints nothing, which would read as vendored.
+  src=$(jq -er --arg n "$name" '.skills[$n].source // "."' "$lock" 2>/dev/null) || return 2
   [ "$src" != . ]
 }
 

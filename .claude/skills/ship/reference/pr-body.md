@@ -57,7 +57,9 @@ written for its reader.
 
 Draw it from the diff at phase 6, not from phase 2's design; a redraw is not a
 deviation. `read-pr`'s `outline_missing` lists the changed paths the outline
-does not mention, and is the read-back check for it.
+does not mention, and is the read-back check for it. A vendored skill's files
+(its `skills-lock.json` `source` not `.`) are mentioned by their folder,
+`.claude/skills/<name>/`, since they have no source twin to name.
 
 It is a `diff` fence over a call tree, control flow, pseudocode or component
 tree, showing what the change **does**. Text forms only: Azure DevOps renders

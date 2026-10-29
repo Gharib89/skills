@@ -155,6 +155,9 @@ check "a folder the lock does not list covers nothing" '[".claude/skills/vend/SK
 echo 'not json' > "$repo/skills-lock.json"
 reset; pr_body "$vend"$'- `.claude/skills/vend/` and skills/own/own.md\n' fix/vendored-1
 check "a lock that is not JSON leaves the paths unknown" 'null' "$(missing)"
+: > "$repo/skills-lock.json"
+reset; pr_body "$vend"$'- `.claude/skills/vend/` and skills/own/own.md\n' fix/vendored-1
+check "an empty lock leaves the paths unknown" 'null' "$(missing)"
 git -C "$repo" checkout -q -- skills-lock.json
 g -C "$repo" checkout -q fix/thing-1
 

@@ -185,6 +185,8 @@ run "$outside" "cap" "pass at $outside"; printf 'Stop: self-review: cap at %s\n'
 holds 'an unstamped host stop' "$outside" "$sr_capped"
 run "$outside" "cap at $outside" "pass at $outside"; printf 'Stop: self-review: cap\n' >> "$f"
 holds 'an unstamped self-review cap keeps the settled-reviewer rule' "$outside" "$sr_capped"
+run "$outside" "cap at $outside" "pass at $outside"; printf 'Stop: self-review: cap at 1234567890abcdef\n' >> "$f"
+holds 'a self-review stamped at an unknown commit' "$outside" "$sr_capped"
 # Trailing blanks or a carriage return leave a stamp the same head.
 run "$clean_merge" "tree unchanged at $stamp"$' \r' "pass at $stamp"$' \r'
 passes 'stamps with trailing blanks' "$clean_merge"

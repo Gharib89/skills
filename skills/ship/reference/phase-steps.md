@@ -97,7 +97,8 @@ the rails and depth checks in
 [implement.md](implement.md#phase-4-triage-and-depth-checks), then
 [loop](implement.md#phase-4-the-self-review-loop), the Standards
 axis alone over each round's **fix-only diff**, until a round changes no file
-(`tree unchanged`) or reaches preflight's `self_review_cap` (`cap`).
+(`tree unchanged`) or reaches preflight's `self_review_cap` (`cap at <sha>`,
+see [implement.md](implement.md)).
 `run-file close 4` refuses until the Run file holds the
 [evidence lines](evidence-lines.md): each round's
 `Round: self-review`, the loop's `Stop: self-review:`, and a `Reverted-fix:`

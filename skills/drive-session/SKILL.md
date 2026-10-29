@@ -157,7 +157,8 @@ unchanged`) qualifies:
 - `reviewer <x>: cap` (several such entries may stand together, one per
   reviewer): the same one more host round, and the same answer.
 - `self-review: stopped at cap, its last fixes read by no reviewer`: the same
-  one more host round on the final head, and the same answer.
+  one more host round on the final head, and `--text merge` once it stops on
+  `tree unchanged`; with no reviewer on the profile, escalate.
 
 A round that stops on findings or on cap again, any other `held_by` entry, and
 every unmet criterion are escalations that quote the `held_by`: a criterion

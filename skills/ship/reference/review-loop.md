@@ -237,12 +237,12 @@ Stop: <reviewer>: <reason>
 `<text>` is the round's outcome in a line. Write each line with `run-file note
 Evidence "<line>" --issue <issue>`. `close 7` and `gate clean` match the `not
 reviewed` prefix, so `Stop: <reviewer>: not reviewed: <reason>` satisfies every
-rule the bare form does. A reviewer that raises again a
-finding this run declined in an earlier round gets no `tree unchanged` stop for
-it: declining must never be a cheaper way past the gate than fixing. Fix the
-finding, and the round reads as any other. Leave it declined, and the round's
-text opens with `re-raised declined: <the finding>` and the reviewer stops on
-`cap`, which holds the gate, no fallback standing in for it: the human reads the
+rule the bare form does. A reviewer that raises again a finding this run
+declined in an earlier round gets no `tree unchanged` stop for it: declining
+must never be a cheaper way past the gate than fixing. Fix the finding, and the
+round reads as any other. Leave it declined, and the round's text opens with
+`re-raised declined: <the finding>` and the reviewer stops on `cap at <sha>`,
+which holds the gate, no fallback standing in for it: the human reads the
 declined finding at the merge gate. `gate clean` also holds a `tree unchanged`
 stop beside that opening. A fixed finding never gets that text. When the last
 fully read and dispositioned round changed no file, record `tree unchanged at
@@ -258,8 +258,8 @@ its `<sha>` no longer covers the PR head. Otherwise `<reason>` is one of `cap
 at <sha>` (`Cap:` spent, a docs-only fix-only diff ended the loop, or a
 declined finding came back: in each the last fixes or the declined finding went
 unread by a host round; only a spent `Cap:` drives a fallback; `<sha>` taken
-as for `tree unchanged`, read as `cap` by every rule), `tree unchanged at
-<sha>` (a
+as for `tree unchanged`; read as `cap`, the stamp read only by the self-review
+cap's lift; a bare `cap` is still admitted), `tree unchanged at <sha>` (a
 round's dispositions changed no file, so a further round would read the same
 tree), `small lane` (the lane's one requested round), `inline lane` (the lane
 requested no round), `auto-once` (the reviewer fires once, on PR open), `not
@@ -292,9 +292,10 @@ exit first, because a fallback's only input is how its primary exited.
 - Primary `not reviewed` for any reason other than `inline lane`, capped with
   findings, or `Stop: <primary>: not landed`: drive the fallback as an ordinary
   on-request reviewer under its own `Cap:`. Capped with findings is `Stop:
-  <primary>: cap` after it spent `Cap:` (rounds == Cap) on a last round whose
-  fixes changed the tree, so no host round read them; a `cap` from a
-  [re-raised declined finding](#the-exit) is not that and drives no fallback.
+  <primary>: cap` (or `cap at <sha>`) after it spent `Cap:` (rounds == Cap)
+  on a last round whose fixes changed the tree, so no host round read them; a
+  `cap` from a [re-raised declined finding](#the-exit) is not that and drives
+  no fallback.
   Its exit is its own, and its `## Review` line and merge-summary block both
   name the primary's reason (`fallback for codex: capped with findings` or
   `fallback for codex: not landed: blocked`, say), the only record of why a
