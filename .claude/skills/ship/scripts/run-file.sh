@@ -132,9 +132,9 @@
 # <primary> reviewed` (a fallback whose primary, a reviewer on the row, stopped
 # on none of not reviewed, not landed, inline lane or not invoked), and unless
 # it is `not reviewed`, `not invoked: <primary> reviewed` or `inline lane` at
-# least one `Round: <reviewer> <n>: <text>`, <n> a positive integer. `grade` writes
-# `Grade: <word>` under the `## Grade` section, replacing the line a call before
-# it wrote.
+# least one `Round: <reviewer> <n>: <text>`, <n> a positive integer. `grade`
+# writes `Grade: <word>` under the `## Grade` section, replacing the line a call
+# before it wrote.
 #
 # `ran <name>... <where>` marks, for each verification name the Run file's
 # results section knows, that its `Run:` line has just run: it appends
@@ -244,10 +244,9 @@
 #     each `## Criteria` entry that is not met or has no `Criterion <n>:`
 #     line, and a reviewer with a Round whose text opens `re-raised declined: `
 #     stopping on tree unchanged: it stops on cap, which that round also keeps
-#     from owing a fallback. An
-#     ordinary deviation, a Ship-defect line or a defect draft does not hold
-#     it: a defect that breaks a gating step fails that step's evidence. This
-#     read is independent of Merge.
+#     from owing a fallback. An ordinary deviation, a Ship-defect line or a
+#     defect draft does not hold it: a defect that breaks a gating step fails
+#     that step's evidence. This read is independent of Merge.
 #     A stamp covers <sha> when it is <sha>, or when every later commit on
 #     <sha>'s first-parent line is a clean base merge: two parents, the second
 #     an ancestor of the local origin/HEAD (fetch first, or an unfetched base

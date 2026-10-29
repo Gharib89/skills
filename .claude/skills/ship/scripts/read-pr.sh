@@ -17,10 +17,10 @@
 #   branch changes against the base (the three-dot diff to HEAD) that the
 #   body's `## Change outline` section does not mention, [] when it mentions
 #   each. A path is mentioned by its full path or its basename, which a derived
-#   copy under `.claude/skills/` shares with its source; a vendored skill's files (lock `source` not `.`)
-#   are also mentioned by their folder, `.claude/skills/<name>/`.
-#   `skills-lock.json` and `CHANGELOG.md` are not expected, and a body with no
-#   such section misses every path. null where the paths cannot be known: the
+#   copy under `.claude/skills/` shares with its source; a vendored skill's
+#   files (lock `source` not `.`) are also mentioned by their folder,
+#   `.claude/skills/<name>/`. `skills-lock.json` and `CHANGELOG.md` are not
+#   expected, and a body with no such section misses every path. null where the paths cannot be known: the
 #   checkout is not on the PR's head branch, the base does not resolve, or a
 #   folder mention meets a lock that cannot be read (no answer, not an outline
 #   that misses nothing).
