@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.15.0 (2026-10-29)
+
+### Features
+
+- **creative-video**: Move hyperframes and media-use to 6df754f (HyperFrames 0.8.216)
+  ([#1057](https://github.com/Gharib89/skills/pull/1057),
+  [`66a4881`](https://github.com/Gharib89/skills/commit/66a4881a001e2a581fdd7050c212ed150e4b002d))
+
+
 ## v0.14.0 (2026-10-29)
 
 ### Features
