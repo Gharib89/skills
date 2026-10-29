@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 // package.json to its version.
 const ENGINE = {
   "9ebc1f8a13fc2c6756f92394688e35f9891eb5c8": "0.8.206",
+  "6df754fbf3289ee0dc19e123e0628cc69218e518": "0.8.216",
 };
 
 const root = path.join(
@@ -67,26 +68,26 @@ test("a media-use lock ref apart from the hyperframes ref fails", () => {
   s.lock.skills["media-use"].ref = "0".repeat(40);
   assert.match(
     check(s.lock, s.pkg, s.pkgLock),
-    /media-use is locked at 0{40}, hyperframes at 9ebc1f8/,
+    /media-use is locked at 0{40}, hyperframes at 6df754f/,
   );
 });
 
 test("a package.json pinning another version, or a caret range, fails", () => {
-  for (const v of ["0.8.207", "^0.8.206"]) {
+  for (const v of ["0.8.217", "^0.8.216"]) {
     const s = shipped();
     s.pkg.dependencies.hyperframes = v;
     assert.equal(
       check(s.lock, s.pkg, s.pkgLock),
-      `package.json pins hyperframes ${v}, the ref 9ebc1f8a13fc2c6756f92394688e35f9891eb5c8 carries 0.8.206`,
+      `package.json pins hyperframes ${v}, the ref 6df754fbf3289ee0dc19e123e0628cc69218e518 carries 0.8.216`,
     );
   }
 });
 
 test("a lockfile resolving another version fails", () => {
   const s = shipped();
-  s.pkgLock.packages["node_modules/hyperframes"].version = "0.8.207";
+  s.pkgLock.packages["node_modules/hyperframes"].version = "0.8.217";
   assert.match(
     check(s.lock, s.pkg, s.pkgLock),
-    /package-lock\.json resolves hyperframes 0\.8\.207/,
+    /package-lock\.json resolves hyperframes 0\.8\.217/,
   );
 });
