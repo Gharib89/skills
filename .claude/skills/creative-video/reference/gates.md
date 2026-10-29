@@ -5,7 +5,7 @@
 - [Running them](#running-them)
 - [Warnings](#warnings)
 - [The critic](#the-critic)
-- [The result](#the-result)
+- [Fix attempts and refusals](#fix-attempts-and-refusals)
 
 ## Running them
 
@@ -32,7 +32,9 @@ failing one indented under it. Each is a hard fail:
   a word and at least 1.2 s.
 - `caption band`: no readable text in the bottom 220 px, the captions' own.
 - `anchors`: every `at(scene, word)` names a word the narration holds, with
-  its `nth` where the scene says the word more than once.
+  its `nth` where the scene says the word more than once. A finding reads
+  `<scene start in the video> s <scene>: <message>`; a repeated word's message
+  ends with its occurrences' scene-local starts, the times `at()` answers.
 - `script errors`: no scene's script throws (an error HyperFrames reports from
   running it, other than an anchor), each named `<scene>: <message>`, and
   every scene registers its timeline (one missing means its script stopped).
@@ -104,7 +106,7 @@ second round is final, `; stop: the critic's second round is red, no video`,
 and a later gates run past two rounds carries the second round's verdict
 (`carried: no third round`).
 
-## The result
+## Fix attempts and refusals
 
 The last line is `gates: <p> pass, <f> fail`, with `, 1 pending` while the
 critic is. Each red run after a change to

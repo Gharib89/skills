@@ -196,7 +196,8 @@ folder's files, timing, the word anchors, the pinned CLI and the render;
    every re-voice.
 9. **Scenes.** Author `<run>/project/compositions/<id>.html` for every
    `to author` line timing printed, each event that answers a word placed at
-   `at(scene, word)`, each effect's clip at the `at()` of the event it marks.
+   `at(scene, word, nth)`, each effect's clip at the `at()` of the event it
+   marks.
    In chapters, author chapter 1's scenes only, its first frame drawing the
    chapter's title; the other chapters wait for step 11's approval.
 10. **Look: the stills review.** `node <skill>/scripts/hf.mjs <run> check

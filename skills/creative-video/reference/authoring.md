@@ -133,9 +133,10 @@ window.__timelines["kitchen"] = tl;
 ```
 
 `at(scene, word, nth)` is the scene-local start of the `nth` word of that
-scene that reads as `word`, compared without case or punctuation. Leave `nth`
-out only for a word the scene says once: on a word it repeats, `at()` with no
-`nth` throws each occurrence's time, so name the one you mean
+scene that reads as `word`, compared without case or punctuation. Give `nth`
+whenever the scene says the word more than once, counted the same way (`You`
+and `you.` are one word): `at()` with no `nth` on a repeated word throws each
+occurrence's scene-local start, so you pick the one you mean
 (`at("kitchen", "send", 2)`). A word the narration no longer holds throws,
 so a rewritten line breaks its anchors where you see it, not as drift in the
 render. Never type a time a word already gives; offsets from an anchor

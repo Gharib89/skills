@@ -25,7 +25,7 @@ test("an at() naming a word the scene lacks fails anchors by scene and word, and
   only(r, "anchors");
   assert.match(
     gateLine(r, "anchors"),
-    /^fail: 1 finding\(s\), first: \d+\.\d\d s context: at: no word "nosuchword" vs every anchor names an aligned word$/,
+    /^fail: 1 finding\(s\), first: \d+\.\d\d s context: at: no word "nosuchword" vs every anchor names an aligned word, its nth where repeated$/,
   );
   assert.equal(runGates(anchored("profile")).code, 0);
 });
@@ -36,7 +36,7 @@ test("an at() with no nth on a word its scene repeats fails anchors by scene, wo
   only(r, "anchors");
   assert.match(
     gateLine(r, "anchors"),
-    /^fail: 1 finding\(s\), first: \d+\.\d\d s context: at: repeated word, name its nth: "it" at \d+\.\d\d s, \d+\.\d\d s, \d+\.\d\d s vs every anchor names an aligned word$/,
+    /^fail: 1 finding\(s\), first: \d+\.\d\d s context: at: repeated word, name its nth: "it" at \d+\.\d\d s, \d+\.\d\d s, \d+\.\d\d s vs every anchor names an aligned word, its nth where repeated$/,
   );
   assert.equal(runGates(anchored("it", 2)).code, 0);
 });
