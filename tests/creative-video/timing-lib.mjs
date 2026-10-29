@@ -19,9 +19,14 @@ export const timing = path.join(scripts, "render", "timing.mjs");
 export const render = path.join(scripts, "render", "render.mjs");
 export const hf = path.join(scripts, "hf.mjs");
 
-// A run folder with its voice stage done and the npm row installed.
+// A run folder with its voice stage done and the npm row installed, unattended
+// (its recorded direction lets the render go ahead without a board).
 export function voiced(scenes, language) {
   const fx = fixture(scenes, language);
+  fs.writeFileSync(
+    path.join(fx.dir, "unattended.json"),
+    JSON.stringify({ direction: "switch" }),
+  );
   // An Arabic script is voiced by a Gemini narrator, which needs a key.
   const v = voice(fx, language === "ar" ? { GEMINI_API_KEY: "test-key" } : {});
   if (v.code !== 0) throw new Error(`voice stage failed: ${v.out}${v.err}`);

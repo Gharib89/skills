@@ -1,5 +1,10 @@
 # The storyboard
 
+## Contents
+
+- [The steps](#the-steps)
+- [The render holds to the approval](#the-render-holds-to-the-approval)
+
 The **storyboard** is where the person meets the video before the expensive
 render, and approves its look once. It is a page with one tab per chapter
 showing the chapter's status; every scene a card of three
@@ -17,6 +22,8 @@ local file when the session has no artifact tools.
 documents. Each version of the storyboard is a **board**, numbered from 1.
 `<skill>` and `<run>` are as in [SKILL.md](../SKILL.md), and `board` below is
 `node <skill>/scripts/board/board.mjs <run>`.
+
+## The steps
 
 1. **Inputs.** Write `<run>/storyboard.json`: the video's `title`, the
    chapter's `focus` in one line (in chapters, each chapter's comes from the
@@ -93,3 +100,23 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
 
    Then snapshot what changed as the stills review does (SKILL.md step 10),
    and build again from step 3: the board comes back.
+
+## The render holds to the approval
+
+The render refuses a run whose look the board has not approved, with
+`render: no approval of the look: ...`, before any render work and leaving
+`out/` as it was. The approval is the first answers `board apply` printed
+`board: approved` for since the last answers asking for a direction or a look:
+answers asking for either cancel it, and later scene notes or a later
+approval (one on a later chapter's board) leave it standing. An unattended run
+has no board: its `unattended.json` (SKILL.md step 4) stands in for the
+approval, and the render prints `render: unattended run, no approval:
+direction <id>`.
+
+A change after the approval is no new stop. The render compares the approved
+board with the project, as the build guard compares boards, and prints one
+line naming each scene whose file or narration changed, then the kit,
+`over.html` and each asset: `render: changed after board <n>'s approval:
+<ids>`. A scene the approved board did not show, such as a later chapter's, is
+never named. Quote that line in `DELIVERY.md` (SKILL.md step 14), so the
+person sees what changed after they approved it.
