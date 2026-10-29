@@ -66,7 +66,10 @@ export function captionsHtml(cues, language) {
     for (const t of tokens) {
       const w = `<span class="w">${esc(t.text)}</span>`;
       const latin = ar && isLatin(t.text);
-      if (latin && parts.at(-1)?.latin) parts.at(-1).html.push(w);
+      // A number after a Latin word is part of its run (`GPT 4`), so the
+      // isolation keeps its order; a number alone reads in place.
+      const number = !/\p{L}/u.test(t.text) && /[0-9]/.test(t.text);
+      if ((latin || number) && parts.at(-1)?.latin) parts.at(-1).html.push(w);
       else parts.push({ latin, html: [w] });
     }
     return parts

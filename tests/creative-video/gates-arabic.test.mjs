@@ -5,6 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
 import { cuesOf } from "../../skills/creative-video/scripts/gates/captions.mjs";
+import { captionsHtml } from "../../skills/creative-video/scripts/render/project.mjs";
 import { calls, project, read, readJson } from "./timing-lib.mjs";
 import {
   compose,
@@ -158,5 +159,21 @@ test("Arabic captions read right to left in an Arabic face, each Latin run isola
   assert.deepEqual(
     cuesOf(html).map((c) => c.text),
     timeline(fx).cues.map((c) => c.text),
+  );
+});
+
+test("a number after a Latin word in an Arabic caption is isolated with it, so GPT 4 does not read 4 GPT", () => {
+  const cue = (texts) =>
+    captionsHtml(
+      [{ start: 0, end: 1, tokens: texts.map((text) => ({ text })) }],
+      "ar",
+    );
+  assert.match(
+    cue(["جرّبت", "GPT", "4", "النهارده"]),
+    /<bdi class="lat" dir="ltr"><span class="w">GPT<\/span> <span class="w">4<\/span><\/bdi> <span class="w">النهارده/,
+  );
+  assert.match(
+    cue(["سنة", "2026"]),
+    /<span class="w">سنة<\/span> <span class="w">2026<\/span><\/div>/,
   );
 });
