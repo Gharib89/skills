@@ -226,7 +226,8 @@
 #     inapplicable or deferred to a green associated CI leg, and each
 #     reviewer's loop stopped on tree unchanged at a covered head with a
 #     dispositioned Round, or on cap after dispositioned Rounds 1 through n,
-#     n short of any Cap:, a docs-only end whose last `Docs-only:` line is
+#     n short of any Cap:, none re-raising a declined finding, a docs-only
+#     end whose last `Docs-only:` line is
 #     stamped at a covered head (an uncovered one holds, naming the range), or
 #     on inline lane for an on-request reviewer while the last Lane: line
 #     reads inline, the round `--inline` waived, which covers no primary. A

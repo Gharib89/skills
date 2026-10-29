@@ -118,11 +118,12 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
         | capture("^(?<n>[1-9][0-9]*):").n | tonumber] | unique;
       # The numeric Cap: of a reviewer as a one-element array, empty for `None.`.
       def cap_of($name): [$reviewers[] | select(.name == $name) | .cap | numbers];
-      def capped($name): stop($name) == "cap" and (reraised($name) | not);
-      def cap_spent($name): capped($name)
+      # `Stop: cap` that no re-raised declined finding caused.
+      def cap_unraised($name): stop($name) == "cap" and (reraised($name) | not);
+      def cap_spent($name): cap_unraised($name)
         and (cap_of($name) as $cap | $cap != [] and rounds($name) == [range(1; $cap[0] + 1)]);
       # A docs-only end: `Stop: cap` on rounds reading 1..k, k short of any Cap:.
-      def docs_only_end($name): capped($name)
+      def docs_only_end($name): cap_unraised($name)
         and (rounds($name) as $rounds | ($rounds | length) as $k | cap_of($name) as $cap
              | $k > 0 and $rounds == [range(1; $k + 1)] and ($cap == [] or $k < $cap[0]));
       # The head the last local review of a `Past-cap` or `Docs-only` kind read
