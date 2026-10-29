@@ -167,11 +167,11 @@ it, never write in it.
 In an Arabic run, set the scene's text in a box marked `dir="rtl"`, each Latin
 term or number among Arabic words in a `<bdi>` with `white-space: nowrap`, at a
 line height no lower than the ink the face's letters span; the `layout` gate
-measures each. Mark a code frame or a terminal `dir="ltr"`, which it leaves as
-written. Keep each Arabic word in one box: a letter in a box of its own (an
-`inline-block` span per character, as letter-by-letter animation makes) is
-drawn unjoined, and the `joins` gate fails it. Animate a word, a line or a clip
-mask, never its letters.
+measures each. Mark a code frame or a terminal `dir="ltr"`: the gate leaves
+such a frame as written. Keep each Arabic word in one box: a letter in a box of
+its own (an `inline-block` span per character, as letter-by-letter animation
+makes) is drawn unjoined, and the `joins` gate fails it. Animate a word, a line
+or a clip mask, never its letters.
 
 ## Sound
 

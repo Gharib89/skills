@@ -138,12 +138,16 @@ test("a WOFF or WOFF2 whose length is not its header's, or that does not unpack,
     () => sfnt(w2.subarray(0, w2.length - 8), "assets/a.woff2"),
     /^Error: assets\/a\.woff2: not a whole WOFF2 /,
   );
-  // The brotli stream after the directory overwritten: the length holds, the
-  // unpack fails.
-  const garbled = Buffer.from(w2);
-  garbled.fill(0xff, garbled.length - 16);
+  // Compressed data overwritten, the length kept, so the unpack fails: a WOFF's
+  // one table, long enough that it is stored deflated, from its first byte at
+  // 44 + 20; a WOFF2's brotli stream at its end.
+  const deflated = woff([["GSUB", Buffer.alloc(200, "A")]]);
   assert.throws(
-    () => sfnt(garbled, "assets/b.woff2"),
+    () => sfnt(Buffer.from(deflated).fill(0xff, 64, 68), "assets/b.woff"),
+    /^Error: assets\/b\.woff: not a whole WOFF \(.+\)$/,
+  );
+  assert.throws(
+    () => sfnt(Buffer.from(w2).fill(0xff, w2.length - 16), "assets/b.woff2"),
     /^Error: assets\/b\.woff2: not a whole WOFF2 \(.+\)$/,
   );
 });
