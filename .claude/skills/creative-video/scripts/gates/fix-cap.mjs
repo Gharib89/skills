@@ -35,10 +35,12 @@ export function summaryLine({ gates, failing, pending, attempts, check }) {
   }${
     gates.critic.final
       ? "; stop: the critic's second round is red, no video"
-      : failing && !check
-        ? attempts > MAX_ATTEMPTS
-          ? "; stop: red after two fix attempts, no video"
-          : `; next: fix attempt ${attempts} of ${MAX_ATTEMPTS}`
+      : failing
+        ? check
+          ? ""
+          : attempts > MAX_ATTEMPTS
+            ? "; stop: red after two fix attempts, no video"
+            : `; next: fix attempt ${attempts} of ${MAX_ATTEMPTS}`
         : pending
           ? `; next: run the critic, round ${gates.critic.rounds.length + 1} of 2`
           : ""

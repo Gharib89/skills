@@ -143,8 +143,8 @@ and a timeout still lists it. Use `--rest` on a finished task (a merged PR, a
 smoke test's verdict) and never on a session waiting on an escalation, which
 runs again once you relay the reply. Ship decides clean, not you: at the gate,
 ask the session with `--text` to run `run-file gate clean` for its run and
-report the answer. Answer `--text merge` on `clean: true` with no unmet
-criterion in the summary.
+report the answer. Answer `--text "Supervisor: merge"` on `clean: true` with
+no unmet criterion in the summary.
 
 A gate that is not clean is still yours to decide when the summary names no
 unmet criterion and every `held_by` entry is one of these four, and no other
@@ -153,15 +153,15 @@ unchanged`) qualifies:
 
 - `reviewer <x>: past cap <n>, local review read <sha>, no host reviewer read
   it`: a reviewer capped, and a local review read the final head and stopped on
-  `tree unchanged`. Answer `--text merge`.
+  `tree unchanged`. Answer `--text "Supervisor: merge"`.
 - `reviewer <x>: small lane`: a host round read an earlier head. Ask the session
   with `--text` for one more host round on the final head, and answer
-  `--text merge` once it stops on `tree unchanged`.
+  `--text "Supervisor: merge"` once it stops on `tree unchanged`.
 - `reviewer <x>: cap` (several such entries may stand together, one per
   reviewer): the same one more host round, and the same answer.
 - `self-review: stopped at cap, its last fixes read by no reviewer`: the same
-  one more host round on the final head, and `--text merge` once it stops on
-  `tree unchanged`; with no reviewer on the profile, escalate.
+  one more host round on the final head, and `--text "Supervisor: merge"` once
+  it stops on `tree unchanged`; with no reviewer on the profile, escalate.
 
 A round that stops on findings or on cap again, any other `held_by` entry, and
 every unmet criterion are escalations that quote the `held_by`: a criterion

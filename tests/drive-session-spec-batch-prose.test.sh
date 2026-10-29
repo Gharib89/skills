@@ -32,9 +32,9 @@ done
 # supervisor decides.
 allowance=$(awk '/^The \*\*merge allowance\*\*/{f=1} /^## /{f=0} f' skills/drive-session/SKILL.md | tr '\n' ' ' | tr -s ' ')
 allow_rules=(
-  "the past-cap hold is merged|stopped on \`tree unchanged\`. Answer \`--text merge\`.|stopped on \`tree unchanged\`. Escalate it."
-  "a small lane hold asks for one more host round|a host round read an earlier head. Ask the session with \`--text\` for one more host round|a host round read an earlier head. Answer \`--text merge\` at once"
-  "a cap hold takes the same extra round|the same one more host round, and the same answer|answer \`--text merge\` with no further host round"
+  "the past-cap hold is merged|stopped on \`tree unchanged\`. Answer \`--text \"Supervisor: merge\"\`.|stopped on \`tree unchanged\`. Escalate it."
+  "a small lane hold asks for one more host round|a host round read an earlier head. Ask the session with \`--text\` for one more host round|a host round read an earlier head. Answer \`--text \"Supervisor: merge\"\` at once"
+  "a cap hold takes the same extra round|the same one more host round, and the same answer|answer \`--text \"Supervisor: merge\"\` with no further host round"
   "other holds and unmet criteria are escalations|any other \`held_by\` entry, and every unmet criterion are escalations|any other \`held_by\` entry, and every unmet criterion are merged"
   "other reviewer entries do not qualify|and no other \`reviewer <x>:\` entry (\`not landed\`|and every other \`reviewer <x>:\` entry (\`not landed\`"
   "a round that stops on findings or cap again escalates|A round that stops on findings or on cap again,|A round that stops on findings or on cap again is merged,"

@@ -87,6 +87,15 @@ test("a check run on changed inputs prints every gate and the summary but writes
   assert.match(runGates(fx).out, /; next: fix attempt 2 of 2$/m);
 });
 
+test("a red check run with the critic pending asks for no critic: the failing gates come first", () => {
+  const fx = timed({ context: RED });
+  const r = runGates(fx, {}, { check: true, critic: false });
+  assert.match(
+    r.out,
+    /^gates: 11 pass, 1 fail, 1 pending; check run: gates\.json not written$/m,
+  );
+});
+
 test("gates.json records the inputs, the voice, each gate's verdict with its evidence, and the warnings", () => {
   const fx = timed({ context: RED });
   runGates(fx);
