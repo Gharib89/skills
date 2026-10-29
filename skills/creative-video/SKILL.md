@@ -234,9 +234,9 @@ folder's files, timing, the word anchors, the pinned CLI and the render;
     the mix.
 12. **Gates.** `node <skill>/scripts/gates/gates.mjs <run>`
     ([the gates](reference/gates.md)); on exit 1 fix what each `gate
-    <name>: fail` line and its indented findings name, then run it again. An
-    `invented` finding is fixed in the visual: take the fact off screen, or
-    show one the narration states. On a
+    <name>: fail` line and its indented findings name, then run it again, at
+    most two fix attempts (`--check` spends none and unlocks no render;
+    [fixing a critic finding](reference/gates.md#the-critic)). On a
     `; stop:` line do not render or deliver: report the red gates and their
     findings, and stop.
     On `; next: run the critic`, the `gate critic: pending` line names the
@@ -244,12 +244,12 @@ folder's files, timing, the word anchors, the pinned CLI and the render;
     with `<skill>/agents/critic.md` as its prompt, `{run}` the run folder,
     `{scene}` the scene's id and `{stills}` that folder as the line prints it,
     relative to the run folder (`.cache/critic/<key>`), at most 20 at once,
-    the next batch once all have replied; then run the gates again. A scene
-    has no verdict when `stills.json` there names it and no `<scene>.json`
-    sits beside it. Never read the stills or the verdicts in this thread: the
-    gates read them. A `gates: critic verdict <scene>.json: <why>` refusal
-    goes, word for word, to that scene's critic by SendMessage to fix its
-    verdict; once it replies, run the gates again.
+    the next batch once all have replied; then run the gates again ([which
+    scene has none](reference/gates.md#the-critic)). Never read the stills or
+    the verdicts in this thread: the gates read them. A `gates: critic
+    verdict <scene>.json: <why>` refusal goes, word for word, to that scene's
+    critic by SendMessage to fix its verdict; once it replies, run the gates
+    again.
 13. **Render.** `node <skill>/scripts/render/render.mjs <run>`; it refuses
     until the board approved the look (or `unattended.json` exists) and the
     gates pass on the current project. On exit 1 fix what it names and render

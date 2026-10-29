@@ -30,6 +30,26 @@ test("a render with no gates.json, or after the project changed, or on a red rec
   assert.ok(!rendered(fx));
 });
 
+test("a check run that passes unlocks no render, before any record or after a red one; a counted pass does", () => {
+  const fx = timed();
+  const check = () => runGates(fx, {}, { check: true });
+  assert.equal(check().code, 0);
+  let r = exec(render, fx);
+  assert.equal(r.code, 1);
+  assert.match(r.err, REFUSED);
+  compose(fx, "hook", "<p>a clipped line</p>");
+  assert.equal(runGates(fx).code, 1);
+  compose(fx, "hook", "<p>a fitting line</p>");
+  assert.equal(check().code, 0);
+  r = exec(render, fx);
+  assert.equal(r.code, 1);
+  assert.match(r.err, REFUSED);
+  assert.ok(!rendered(fx));
+  assert.equal(runGates(fx).code, 0);
+  r = exec(render, fx);
+  assert.equal(r.code, 0, r.out + r.err);
+});
+
 test("a gates.json that is not JSON, or lacks its gates, is refused by name before any render", () => {
   const fx = timed();
   const record = path.join(fx.dir, "gates.json");

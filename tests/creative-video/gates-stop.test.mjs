@@ -70,6 +70,23 @@ test("a pass resets the count, and so does a new voice, but not a script.json ed
   assert.equal(record(fx).attempts, 0);
 });
 
+test("a check run on changed inputs prints every gate and the summary but writes no gates.json, so it spends no fix attempt", () => {
+  const fx = timed({ context: RED });
+  assert.equal(runGates(fx).code, 1);
+  const file = path.join(fx.dir, "gates.json");
+  const before = fs.readFileSync(file, "utf8");
+  compose(fx, "context", "<p>another clipped line</p>");
+  const r = runGates(fx, {}, { check: true });
+  assert.equal(r.code, 1);
+  assert.equal(r.out.match(/^gate [a-z ]+: (pass|fail): /gm).length, 13, r.out);
+  assert.match(
+    r.out,
+    /^gates: 12 pass, 1 fail; check run: gates\.json not written$/m,
+  );
+  assert.equal(fs.readFileSync(file, "utf8"), before);
+  assert.match(runGates(fx).out, /; next: fix attempt 2 of 2$/m);
+});
+
 test("gates.json records the inputs, the voice, each gate's verdict with its evidence, and the warnings", () => {
   const fx = timed({ context: RED });
   runGates(fx);
