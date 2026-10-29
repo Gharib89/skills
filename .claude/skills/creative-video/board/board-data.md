@@ -21,6 +21,7 @@ the answers.
 | `board/storyboard.html` | `build` | with each board: the page with that board embedded |
 | `board/answers-<n>.json` | `apply` | the normalized answers of board `<n>` |
 | database `answers/board-<n>` | the page, on Submit | once per Submit of version `<n>`, on the artifact page only |
+| `unattended.json` (run folder) | the agent, SKILL.md step 4 | an unattended run only, which has no board: `{ "direction": "<id>" }`, the direction taken |
 
 The page is never fed boards through a database: a new board is the same
 `storyboard.html` published again, which keeps the artifact's URL.
@@ -136,6 +137,12 @@ document is read from the database instead.
   that carries the answers text, and reads the `answers` collection to show a
   chapter approved. Opened as a file, it shows the answers text for the person
   to paste into the terminal.
-- `apply` reads the answers document or text and writes `answers-<n>.json`; the
+- `apply` reads the answers document or text and, once it accepts them (an
+  approval's brand check included), writes `answers-<n>.json`; the
   builds until the next answers read it to guard the scenes and mark what
   changed.
+- The render (`scripts/render/render.mjs`) reads every `answers-<n>.json` for
+  the approval and the approved board's `<n>.json` to name what changed
+  since, and, with no approval, `unattended.json` in its place, as
+  [storyboard.md](../reference/storyboard.md#the-render-holds-to-the-approval)
+  says.

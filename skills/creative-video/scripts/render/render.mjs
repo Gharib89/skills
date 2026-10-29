@@ -6,8 +6,11 @@
 // Reads <run>/timeline.json and <run>/project/ (render/timing.mjs wrote both,
 // and the agent has authored a compositions/<id>.html per scene), and writes
 // the root again (render/root.mjs) so it names the project as it stands. It
-// refuses unless <run>/gates.json (gates/gates.mjs) passed for this very
-// project, and a refusal leaves out/ as it was. Renders the
+// refuses unless the board approved the look (board/approval.mjs: the first
+// answers `board apply` printed `board: approved` for since the last answers
+// asking for a direction or a look) or <run>/unattended.json records an
+// unattended run's direction, and unless <run>/gates.json (gates/gates.mjs)
+// passed for this very project; a refusal leaves out/ as it was. Renders the
 // project with HyperFrames to <run>/.cache/render/raw.mp4, normalises its
 // audio to -14 LUFS with a true peak of -1.5 dBTP into out/<slug>.mp4, writes
 // out/<slug>.srt from the timeline's cues and out/poster.png from the middle of
@@ -27,9 +30,13 @@
 // render-rates.json; `--estimate` prints that line and exits 0, rendering
 // nothing, touching nothing in out/ and not asking for passed gates.
 // stdout: in chapters, first `render: <k> of <n> chapter(s) to render, estimate
-//         <m:ss>, budget <m:ss>`; then one `delivery <check>: pass|fail:
-//         <measured> vs <wanted>` line per
-//         check, `measured loudness: <lufs> LUFS integrated, <peak> dBTP
+//         <m:ss>, budget <m:ss>`; then, unattended, `render: unattended run, no
+//         approval: direction <id>`, or, when anything the approved board
+//         showed changed since, `render: changed after board <n>'s approval:
+//         <ids>[, the kit][, over.html][, assets/<file>...]` (a scene that
+//         board did not show is never named, and a change is no refusal);
+//         then one `delivery <check>: pass|fail: <measured> vs <wanted>` line
+//         per check, `measured loudness: <lufs> LUFS integrated, <peak> dBTP
 //         true peak`, `delivered: <path>`, then `render: <slug>.mp4 <seconds> s,
 //         <n> scene(s)`
 // writes: <run>/.cache/render/raw.mp4 (chapter-<n>/, chapter-<n>-<key>.mp4,
@@ -39,6 +46,12 @@
 //         delivery check failed · 2 usage
 import fs from "node:fs";
 import path from "node:path";
+import {
+  approvedBoard,
+  changedSince,
+  projectHashes,
+  voicedText,
+} from "../board/approval.mjs";
 import { captionFindings, cuesOf } from "../gates/captions.mjs";
 import { inputsHash } from "../gates/inputs.mjs";
 import { estimate, loadRates } from "../lib/estimate.mjs";
@@ -113,6 +126,13 @@ if (estimateOnly) {
   process.exit(0);
 }
 writeRoot(run);
+// The look the board approved, else an unattended run's recorded direction.
+const approved = approvedBoard(run);
+const unattended = !approved && maybeJson(run, "unattended.json");
+if (!approved && !unattended)
+  fail(
+    "no approval of the look: run the storyboard until `board apply` prints `board: approved` (an unattended run records its direction in unattended.json)",
+  );
 // The gates stage's record must be of this very project and have passed.
 const record = maybeJson(run, "gates.json");
 if (
@@ -124,6 +144,27 @@ if (
 const backend = await loadBackend();
 const env = hyperframesEnv();
 const parts = chapters && chapterParts();
+if (unattended)
+  console.log(
+    `render: unattended run, no approval: direction ${unattended.direction}`,
+  );
+else {
+  // Only what the approved board showed: a scene added since is not named.
+  const ids = timeline.scenes.map((s) => s.id);
+  const shown = new Set(approved.board.scenes.map((s) => s.id));
+  const unshown = ids.filter((id) => !shown.has(id));
+  const changed = changedSince(
+    approved.board,
+    projectHashes(project, ids),
+    voicedText(voice),
+    {},
+    unshown,
+  );
+  if (changed.length)
+    console.log(
+      `render: changed after board ${approved.n}'s approval: ${changed.join(", ")}`,
+    );
+}
 const out = path.join(run, "out");
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out);

@@ -55,7 +55,6 @@
 //         answers of an older board, naming an unknown scene or direction or
 //         the one in use, cut to fit, or unreadable; an approval of a
 //         brand.json changed since the board showed it) · 2 usage
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { readBrand, saveBrand } from "../lib/brand.mjs";
@@ -67,6 +66,13 @@ import { hyperframesEnv, loadBackend, skill } from "../lib/tools.mjs";
 import { sampleTimes } from "../gates/samples.mjs";
 import { esc, HEIGHT, host, WIDTH, writeRoot } from "../render/root.mjs";
 import { readAnswers } from "./answers.mjs";
+import {
+  boardFile,
+  changedSince,
+  projectHashes,
+  sha,
+  voicedText,
+} from "./approval.mjs";
 import { approvedBrand, brandStrip, copyLogo, wearBrand } from "./brand.mjs";
 
 stage("board");
@@ -102,38 +108,6 @@ const latestAnswered = () =>
 const readBoard = (n) =>
   JSON.parse(fs.readFileSync(path.join(out, `${n}.json`), "utf8"));
 
-const sha = (bytes) =>
-  crypto.createHash("sha256").update(bytes).digest("hex").slice(0, 16);
-
-// Every file under kit/, nested ones too: each one's name and bytes, sorted.
-function kitHash(proj) {
-  const dir = path.join(proj, "kit");
-  const h = crypto.createHash("sha256");
-  if (fs.existsSync(dir))
-    for (const f of fs.readdirSync(dir, { recursive: true }).sort())
-      if (fs.statSync(path.join(dir, f)).isFile())
-        h.update(`${f}\0`).update(fs.readFileSync(path.join(dir, f)));
-  return h.digest("hex").slice(0, 16);
-}
-
-// Each file under assets/ but the two timing writes, by name: a scene may add
-// one, but one that changes or goes changes every scene that uses it.
-function assetHashes(proj) {
-  const dir = path.join(proj, "assets");
-  if (!fs.existsSync(dir)) return {};
-  return Object.fromEntries(
-    fs
-      .readdirSync(dir, { recursive: true })
-      .sort()
-      .filter(
-        (f) =>
-          !["narration.wav", "gsap.min.js"].includes(f) &&
-          fs.statSync(path.join(dir, f)).isFile(),
-      )
-      .map((f) => [f, sha(fs.readFileSync(path.join(dir, f)))]),
-  );
-}
-
 // storyboard.json held to what the stage relies on beyond its shape; `shown`
 // are the timed scenes that have a file, the ones it must have an entry for.
 function readStoryboard(shown) {
@@ -166,32 +140,21 @@ function readStoryboard(shown) {
 
 // After answers that commented on scenes, with no look or direction, only those
 // scenes may change: notes beside an approval win over it, as apply prints.
-// `scenes` maps each id to its file's hash and its narration; `chapterOf`, each
-// timed id to its chapter.
-function guardScenes(scenes, kit, over, assets, chapterOf) {
+// `now` is the project's projectHashes, `voiced` each scene's narration;
+// `chapterOf` maps each timed id to its chapter.
+function guardScenes(now, voiced, chapterOf) {
   const k = latestAnswered();
   if (!k) return;
-  const a = JSON.parse(
-    fs.readFileSync(path.join(out, `answers-${k}.json`), "utf8"),
-  );
+  const a = boardFile(out, `answers-${k}.json`);
   if (!a.scenes.length || a.direction || a.look) return;
-  const prev = readBoard(k);
-  const was = new Map(
-    prev.scenes.map((s) => [s.id, `${s.hash} ${s.narration}`]),
-  );
   const named = a.scenes.map((s) => s.id);
-  // A scene added or gone counts as changed, but for a later chapter's file
-  // newly authored, as a new asset is.
-  const changed = [...new Set([...was.keys(), ...Object.keys(scenes)])].filter(
-    (id) =>
-      !named.includes(id) &&
-      was.get(id) !== scenes[id] &&
-      !(!was.has(id) && chapterOf[id] > 1),
+  const changed = changedSince(
+    boardFile(out, `${k}.json`),
+    now,
+    voiced,
+    chapterOf,
+    named,
   );
-  if (kit !== prev.kit) changed.push("the kit");
-  if (over !== prev.over) changed.push("over.html");
-  for (const [f, h] of Object.entries(prev.assets))
-    if (assets[f] !== h) changed.push(`assets/${f}`);
   if (changed.length)
     fail(
       `${changed.join(", ")} changed, but board ${k}'s comments named only ${named.join(", ")}: re-author only those scenes`,
@@ -277,9 +240,7 @@ async function build() {
       `script.json's scenes are not the scenes timed (${timed}): voice and time it again first`,
     );
   const narrationOf = new Map(script.scenes.map((s) => [s.id, s.narration]));
-  const voiced = new Map(
-    voice.scenes.map((v) => [v.id, v.words.map((w) => w.text).join(" ")]),
-  );
+  const voiced = voicedText(voice);
   for (const { id } of timeline.scenes)
     if (narrationOf.get(id).join(" ") !== voiced.get(id))
       fail(
@@ -290,20 +251,12 @@ async function build() {
   if (brand) wearBrand(run, brand, sb.directions, fail);
   const strip = brandStrip(run, brand, sha, fail);
   const n = Math.max(0, ...versions()) + 1;
-  const hashes = Object.fromEntries(
-    shown.map((s) => [
-      s.id,
-      sha(fs.readFileSync(path.join(proj, "compositions", `${s.id}.html`))),
-    ]),
+  const now = projectHashes(
+    proj,
+    shown.map((s) => s.id),
   );
-  const kit = kitHash(proj);
-  const overFile = path.join(proj, "compositions", "over.html");
-  const over = fs.existsSync(overFile) ? sha(fs.readFileSync(overFile)) : null;
-  const assets = assetHashes(proj);
-  const seen = Object.fromEntries(
-    shown.map((s) => [s.id, `${hashes[s.id]} ${voiced.get(s.id)}`]),
-  );
-  if (n > 1) guardScenes(seen, kit, over, assets, chapterOf);
+  const { hashes, kit, over, assets } = now;
+  if (n > 1) guardScenes(now, voiced, chapterOf);
   writeIgnore(run);
   writeRoot(run);
 
@@ -470,6 +423,14 @@ async function apply() {
     fail(`no direction ${a.direction} in board ${latest}`);
   if (askedDirection?.picked)
     fail(`direction ${a.direction} is the one in use: pick another, or none`);
+  const { direction, look, scenes } = a;
+  // Checked before the answers are kept: a refused approval is none to the render.
+  const brand =
+    a.approve &&
+    !direction &&
+    !look &&
+    !scenes.length &&
+    approvedBrand(run, board.brand, latest, sha, fail);
   fs.writeFileSync(
     path.join(out, `answers-${latest}.json`),
     JSON.stringify(a, null, 2) + "\n",
@@ -477,10 +438,7 @@ async function apply() {
 
   // A text continues on lines indented two spaces, as the answers text does.
   const lines = (t) => t.replaceAll("\n", "\n  ");
-  const { direction, look, scenes } = a;
   if (!direction && !look && !scenes.length) {
-    const brand =
-      a.approve && approvedBrand(run, board.brand, latest, sha, fail);
     if (brand) {
       const { name, saved } = await saveBrand(run, brand);
       console.log(

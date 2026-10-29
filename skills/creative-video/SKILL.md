@@ -8,7 +8,7 @@ description: >-
   checked or installed (`/creative-video setup`). A request for an "explainer
   video" goes to `explainer-video`.
 metadata:
-  version: 0.11.0
+  version: 0.12.0
 ---
 
 # creative-video
@@ -155,8 +155,9 @@ folder's files, timing, the word anchors, the pinned CLI and the render;
    when that fits, and one marked recommended with why; with a brand, all
    three wear it ([brand.md](reference/brand.md#wear-the-brand)). Make the
    recommended one without asking: attended, the person meets all three on the
-   storyboard (step 11) and picks there; unattended, it stands. Write the pick
-   and its reason into the file.
+   storyboard (step 11) and picks there; unattended, it stands: write
+   `<run>/unattended.json`, `{ "direction": "<id>" }`. Write the pick and its
+   reason into `DIRECTIONS.md`.
 5. **Spec and kit.** Read the `hyperframes` skill's `SKILL.md`, its
    `references/spec.md` and the references the concept needs, and this
    skill's [craft-teaching.md](reference/craft-teaching.md) and
@@ -213,8 +214,8 @@ folder's files, timing, the word anchors, the pinned CLI and the render;
 11. **Storyboard.** Attended: read
     [reference/storyboard.md](reference/storyboard.md) and run its steps until
     `board apply` prints `board: approved`. That one look approval covers the
-    whole video: the gates and the render follow with no further stop.
-    Unattended, skip the storyboard.
+    whole video (the render refuses without it): the gates and the render
+    follow with no further stop. Unattended, skip the storyboard.
     **In chapters**, attended or not, once chapter 1 is approved (unattended:
     once step 10 is done), dispatch one subagent per remaining chapter, all in
     one turn, with `<skill>/agents/chapter-author.md` as its prompt, `{run}`,
@@ -250,22 +251,22 @@ folder's files, timing, the word anchors, the pinned CLI and the render;
     goes, word for word, to that scene's critic by SendMessage to fix its
     verdict; once it replies, run the gates again.
 13. **Render.** `node <skill>/scripts/render/render.mjs <run>`; it refuses
-    until the gates pass on the current project. On exit 1 fix what it names
-    and render again. In chapters it renders each chapter one at a time,
-    keeping each chapter's render, so a later render re-renders only the
-    chapters that changed; a change to the kit changes every chapter, one to
-    an asset only the chapters whose files name its path (every chapter when
-    no file names it, as a name a script builds). Before a render that
-    follows a change to the kit or an asset, run it with `--estimate` first
-    and tell the person the line it prints, in full:
-    `render: <k> of <n> chapter(s) to render, estimate <m:ss>, budget <m:ss>`.
+    until the board approved the look (or `unattended.json` exists) and the
+    gates pass on the current project. On exit 1 fix what it names and render
+    again. A change since the approval still renders; step 14 quotes its
+    `changed after` line. In chapters it re-renders only the chapters that
+    changed ([authoring.md](reference/authoring.md#render)). Before a render
+    that follows a change to the kit or an asset, run it with `--estimate`
+    first and tell the person the `render: <k> of <n> chapter(s) to render`
+    line it prints, in full.
 14. **Deliver.** Run `node <skill>/scripts/render/credits.mjs <run>` first:
     it writes `<run>/CREDITS.md`'s voices, sound and brand. Then add to it
     each source cited with its locators, and the faces outside the brand and
     their licences. Write `<run>/DELIVERY.md` (the concept and why it was
     picked; any brand, with what was fetched and from where, as `CREDITS.md`'s
-    `## Brand` lists it; what was measured, quoting the render's `delivery` and
-    `measured loudness` lines and the gates' `warn` lines, and what was only
+    `## Brand` lists it; what was measured, quoting the render's
+    `changed after`, `delivery` and `measured loudness` lines
+    and the gates' `warn` lines, and what was only
     looked at; that the sound was measured, not heard, and each effect placed
     on its event's word; any source updated or withdrawn; the weakest shot and
     what you would change).

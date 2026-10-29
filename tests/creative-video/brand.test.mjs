@@ -545,6 +545,8 @@ test("an approval refuses a brand.json changed since the board showed it, and sa
     /brand\.json changed since board 1 showed it: build the board again/,
   );
   assert.ok(!fs.existsSync(store(fx, "itworx")));
+  // A refused approval is no approval for the render.
+  assert.ok(!fs.existsSync(path.join(fx.dir, "board", "answers-1.json")));
 });
 
 test("a board with no brand.json approves with no brand line", () => {
