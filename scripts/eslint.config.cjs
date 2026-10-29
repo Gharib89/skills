@@ -56,6 +56,7 @@ module.exports = [
       "skills/explainer-video/scripts/lib/backend/source.mjs",
       "skills/creative-video/scripts/lib/backend/source.mjs",
       "skills/creative-video/scripts/lib/backend/gates.mjs",
+      "skills/creative-video/scripts/lib/backend/joins.mjs",
     ],
     languageOptions: { globals: globals.browser },
   },

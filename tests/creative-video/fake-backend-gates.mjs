@@ -26,6 +26,16 @@
 //   <audio data-created="<t>">  a sound its script created at video seconds
 //                 <t>, its `id` if it has one
 //   either one's `src` is the file it plays
+// Reading direction: `dir="<d>"` on a text element is its direction; on an
+// element holding others it is the `dir` every text element sits in, whose
+// direction it is too (else ltr). A <bdi> is isolated; a style's
+// `unicode-bidi`, `white-space` and `line-height` are read as written. Every
+// text is drawn in Noto Naskh Arabic, whose letters' ink is 1.4 em.
+// The joins measure, at the times the probe is asked to shape:
+//   data-joins-broken="<word>"      the word breaks its joins in that face
+//   data-joins-unresolved="<word>"  the word's face resolves to no file
+//   data-joins-reversed="<run>"     a Latin or digit run split into boxes and
+//                                   read right to left
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -73,12 +83,21 @@ function texts(m, local) {
         left: 160,
       }));
   let row = 0;
-  return [...m.html.matchAll(/<(p|h1|span|div)\b([^>]*)>([^<]+)<\/\1>/g)]
+  const within = m.html.match(/<\w+\b[^>]*\bdir="(\w+)"[^>]*>\s*</)?.[1];
+  return [...m.html.matchAll(/<(p|h1|span|div|bdi)\b([^>]*)>([^<]+)<\/\1>/g)]
     .filter((e) => e[3].trim() && !e[2].includes("data-layout-ignore"))
     .map((e) => {
       const text = e[3].trim();
       const has = (w) => new RegExp(`\\b${w}\\b`).test(text);
+      const css = (p) => e[2].match(new RegExp(`${p}:\\s*([\\w.-]+)`))?.[1];
       return {
+        dir: e[2].match(/\bdir="(\w+)"/)?.[1] ?? within ?? "ltr",
+        within: within ?? null,
+        bidi: e[1] === "bdi" ? "isolate" : (css("unicode-bidi") ?? "normal"),
+        wrap: css("white-space") ?? "normal",
+        lineH: css("line-height") ? +css("line-height") : null,
+        face: "Noto Naskh Arabic",
+        ink: 1.4,
         text,
         top: has("in-band") ? 900 : 200 + 50 * row++,
         left: has("edge") ? 40 : 160,
@@ -193,8 +212,38 @@ function overPaints(dir, t) {
     .map(([, tag]) => `<${tag}>`);
 }
 
-export async function probe(dir, times) {
-  log({ call: "probe", times });
+// The joins measure's answer at `t`, as lib/backend/joins.mjs words it.
+function joinsAt(dir, t) {
+  const out = { checked: 0, broken: [], asks: [] };
+  for (const m of mounted(dir).filter((m) => m.id !== "captions"))
+    if (t >= m.start && t < m.end) {
+      out.checked += texts(m, t - m.start)
+        .map((e) => e.text)
+        .join(" ")
+        .split(/\s+/)
+        .filter((w) => /\p{Script=Arabic}/u.test(w)).length;
+      const marked = (k) =>
+        [...m.html.matchAll(new RegExp(`data-joins-${k}="([^"]+)"`, "g"))].map(
+          (x) => x[1],
+        );
+      for (const word of marked("broken"))
+        out.broken.push({ scene: m.id, word, face: "Noto Naskh Arabic" });
+      for (const word of marked("unresolved"))
+        out.asks.push({
+          scene: m.id,
+          what: `"${word}": its face (Noto Naskh Arabic) did not resolve to a file to shape it in`,
+        });
+      for (const run of marked("reversed"))
+        out.asks.push({
+          scene: m.id,
+          what: `"${run}": a Latin or digit run split into boxes, read right to left`,
+        });
+    }
+  return out;
+}
+
+export async function probe(dir, times, { joins = [] } = {}) {
+  log({ call: "probe", times, joins });
   const frames = times.map((t) => {
     const out = [];
     for (const m of mounted(dir))
@@ -207,8 +256,22 @@ export async function probe(dir, times) {
             rect: { left: e.left, top: e.top, right: 1760, bottom: e.top + 48 },
             fontPx: e.fontPx,
             opacity: e.opacity,
+            ...(m.id !== "captions" && {
+              dir: e.dir,
+              within: e.within,
+              bidi: e.bidi,
+              wrap: e.wrap,
+              lineH: e.lineH,
+              face: e.face,
+              ink: e.ink,
+            }),
           });
-    return { t, texts: out, over: overPaints(dir, t) };
+    return {
+      t,
+      texts: out,
+      over: overPaints(dir, t),
+      ...(joins.includes(t) && { joins: joinsAt(dir, t) }),
+    };
   });
   const events = {};
   for (const m of mounted(dir).filter((m) => m.id !== "captions")) {

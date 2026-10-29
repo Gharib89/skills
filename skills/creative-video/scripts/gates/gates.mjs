@@ -43,6 +43,7 @@ import path from "node:path";
 import { claimsKey } from "../lib/claims.mjs";
 import { maybeJson, readJson } from "../lib/json.mjs";
 import { soundKit, voicedCast } from "../lib/kit.mjs";
+import { rtlFindings } from "../lib/rtl.mjs";
 import { readTimeline, writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { hyperframesEnv, loadBackend } from "../lib/tools.mjs";
@@ -102,6 +103,7 @@ const plan = timeline.scenes.map((sc) => {
   return { sc, end, samples: uniq(Object.values(sampleTimes(sc))), grid };
 });
 const sampled = uniq(plan.flatMap((p) => p.samples));
+const arabic = script.language === "ar";
 const sceneAt = (t) =>
   (plan.find((p) => t >= p.sc.start - 1e-6 && t < p.end) ?? plan.at(-1)).sc.id;
 const sourceScene = (f) =>
@@ -117,6 +119,7 @@ for (const k of ["runtime", "layout", "contrast"])
 const { frames, events } = await orFail(() =>
   backend.probe(proj, uniq([...sampled, ...plan.flatMap((p) => p.grid)]), {
     env,
+    joins: arabic ? sampled : [],
   }),
 );
 // A scene's own text at a probe time: the captions are drawn over every scene.
@@ -218,7 +221,27 @@ for (const p of plan)
           p.sc.id,
           `${quote(e.text)} at y ${Math.round(top)}-${Math.round(bottom)}`,
         );
+      if (arabic)
+        rtlFindings(e, (what) =>
+          layout.add(t, p.sc.id, `${what} ${quote(e.text)}`),
+        );
     }
+
+// Joins, in an Arabic run: each word the joins measure shaped at a sample whose
+// split pieces differ from the word shaped whole. What shaping cannot judge
+// (a face with no file, a reversed Latin run) goes to the critic's rtl kind.
+const joins = collect();
+const asks = {};
+let shapedWords = 0;
+for (const p of plan)
+  for (const t of p.samples) {
+    const j = frames.find((f) => f.t === t).joins;
+    if (!j) continue;
+    shapedWords += j.checked;
+    for (const b of j.broken)
+      joins.add(t, p.sc.id, `"${b.word}" breaks its joins in ${b.face}`);
+    for (const a of j.asks) (asks[p.sc.id] ??= new Set()).add(a.what);
+  }
 
 // Contrast: HyperFrames grades a failure a warning, the gate fails on it.
 const contrast = collect();
@@ -402,6 +425,13 @@ const judged = {
     "every <audio> but the narration has a licence record in sound.json",
   ],
   "bed level": [bed.evidence, `${BED_LU} LU`, bed.measured],
+  ...(arabic && {
+    joins: [
+      joins.lines(),
+      "every Arabic word shaped as one in the face it is drawn in",
+      `${shapedWords} word(s) shaped`,
+    ],
+  }),
   "must and avoid": [
     coverage,
     "every must said or shown, no avoid said or shown",
@@ -436,6 +466,9 @@ gates.critic = criticGate({
   stills: new Map(a.map(([t, pixels, file]) => [t, { pixels, path: file }])),
   script,
   pack,
+  checks: Object.fromEntries(
+    Object.entries(asks).map(([id, whats]) => [id, [...whats]]),
+  ),
   prev: sameVoice ? prev.gates.critic : null,
   fail,
 });
