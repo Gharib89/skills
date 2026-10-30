@@ -214,7 +214,7 @@ pv=$(sed -n 's/^Done test: `\(.*prettier --version.*\)`$/\1/p' skills/setup-harn
 check "the GitHub Actions catalog entry gives Prettier a done test" 1 "$(printf '%s\n' "$pv" | grep -c .)"
 printf '#!/bin/sh\ncat "$LOG.pv"\n' > "$bin/prettier"; chmod +x "$bin/prettier"
 s=$(hook_script prettier "STEPS='prettier|$pv|echo 3.9.8 > \"\$LOG.pv\"; echo install >> \"\$LOG\"'")
-for old in 3.0.0 3.9.80 13.9.8 v3.9.7; do
+for old in 3.0.0 3.9.80 13.9.8 v3.9.7 3.9.8-rc.1; do
   echo "$old" > "$log.pv"
   : > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
   check "an install printing '$old' is replaced by the pinned 3.9.8" "harness cloud setup: ok
@@ -223,6 +223,20 @@ $(cat "$log")"
 done
 : > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
 check "and a second run, the picked version in place, is a no-op" "harness cloud setup: ok" "$out$(cat "$log")"
+
+# A Go pin carries the module's `v`, which golangci-lint's own version line drops.
+gv=$(sed -n 's/^Done test: `\(.*golangci-lint --version.*\)`$/\1/p' skills/setup-harness/catalog/go.md | sed 's/{version}/v2.1.6/g')
+printf '#!/bin/sh\necho "golangci-lint has version $(cat "$LOG.gv") built with go1.24.2 from (unknown) on (unknown)"\n' > "$bin/golangci-lint"; chmod +x "$bin/golangci-lint"
+s=$(hook_script golangci-lint "STEPS='golangci-lint|$gv|echo 2.1.6 > \"\$LOG.gv\"; echo install >> \"\$LOG\"'")
+for old in 2.1.5 2.1.60 2.1.6-rc.1; do
+  echo "$old" > "$log.gv"
+  : > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
+  check "golangci-lint printing '$old' is replaced by the pinned v2.1.6" "harness cloud setup: ok
+install" "$out
+$(cat "$log")"
+done
+: > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
+check "and golangci-lint printing 2.1.6 meets the v2.1.6 pin" "harness cloud setup: ok" "$out$(cat "$log")"
 
 # The template filled the way setup-harness fills it, STEPS carrying a `$` a
 # step's own bash -c expands, passes ShellCheck at its default severity, which
