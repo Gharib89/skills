@@ -85,4 +85,32 @@ else
   skipped "a read-only record root does not stop root"
 fi
 
+# With no worktree (an in-place run), the branch is found by isolate's
+# `<type>/<slug>-<issue>` shape. A branch that only shares a numeric tail is
+# another issue's, and a hand-made branch with no `<type>/` is not ship's.
+g branch fix/some-slug-42; g branch feat/x-142
+out=$(cd "$repo" && bash "$c" 42 2>/dev/null); rc=$?
+check_rc "cleanup with no worktree exits ok" 0 "$rc"
+check "the JSON names the branch it deleted" "fix/some-slug-42 true" \
+  "$(jq -r '[.branch, .branch_deleted] | join(" ")' <<<"$out")"
+check "the branch is gone" "" "$(g branch --list fix/some-slug-42)"
+check "a branch sharing only the numeric tail stays" "  feat/x-142" "$(g branch --list feat/x-142)"
+g branch my-notes-43
+out=$(cd "$repo" && bash "$c" 43 2>/dev/null)
+check "a hand-made branch with no <type>/ is not named" "null" "$(jq -r .branch <<<"$out")"
+check "and stays" "  my-notes-43" "$(g branch --list my-notes-43)"
+# `none` keeps its record, but its branch is torn down like any other.
+g branch fix/task-none
+out=$(cd "$repo" && bash "$c" none 2>/dev/null)
+check "the task-spec run's branch is found the same way" "fix/task-none true" \
+  "$(jq -r '[.branch, .branch_deleted] | join(" ")' <<<"$out")"
+check "and is gone" "" "$(g branch --list fix/task-none)"
+# The branch it finds is still refused while the main checkout has it out.
+g switch -q -c fix/y-77
+out=$(cd "$repo" && bash "$c" 77 2>"$tmp/err"); rc=$?
+g switch -q main
+check_rc "a branch checked out in the main checkout fails cleanup" 1 "$rc"
+check "and is named, not deleted" "fix/y-77 false" "$(jq -r '[.branch, .branch_deleted] | join(" ")' <<<"$out")"
+check "and the refusal says why" "branch fix/y-77 is checked out in the main checkout; switch off it first" "$(cat "$tmp/err")"
+
 finish

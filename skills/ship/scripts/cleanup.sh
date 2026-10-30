@@ -48,9 +48,12 @@ for d in "$container"/*-"$n"/; do
   git -C "$root" worktree remove --force "$d" >/dev/null 2>&1 || wt_removed=false
   break
 done
-# An in-place run has no worktree; its branch still matches the suffix.
+# An in-place run has no worktree; its branch still has isolate's
+# `<type>/<slug>-<n>` shape. Matched with grep, since a for-each-ref glob's `*`
+# stops at a `/`, and held to that shape because `branch -D` would also take a
+# hand-made branch that merely ends in `-<n>`.
 if [ "$branch" = null ]; then
-  branch=$(git -C "$root" for-each-ref --format='%(refname:short)' "refs/heads/*-$n" | head -1)
+  branch=$(git -C "$root" for-each-ref --format='%(refname:short)' refs/heads/ | grep -m1 -E "^[^/]+/.+-$n\$")
   [ -n "$branch" ] || branch=null
 fi
 if [ "$branch" != null ]; then
