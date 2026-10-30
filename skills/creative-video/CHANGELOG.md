@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.15.1 (2026-10-30)
+
+### Bug Fixes
+
+- **creative-video**: Mix sounds a kit script creates, and pass over mismatched clips
+  ([#1068](https://github.com/Gharib89/skills/pull/1068),
+  [`f1f57e2`](https://github.com/Gharib89/skills/commit/f1f57e29c139a7b154b494214c8c45d9e9747f5d))
+
+
 ## v0.15.0 (2026-10-29)
 
 ### Features
