@@ -9,8 +9,10 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-# Prints the count of stdin's sentences, lines joined, that name every <phrase>
-# and carry no negating word, so "never opens with one `diff` fence" reads 0.
+# Prints the count of stdin's sentences that name every <phrase> and carry no
+# negating word, so "never opens with one `diff` fence" reads 0. Lines are
+# joined and each run of spaces squeezed to one, so a phrase wrapped onto an
+# indented line still matches.
 affirms() {
   local s; s=$(tr -s '\n ' '  ' | sed 's/\. /.\n/g')
   for p in "$@"; do s=$(printf '%s\n' "$s" | grep -F "$p"); done
@@ -18,8 +20,8 @@ affirms() {
   printf '%s\n' "$s" | grep -cviwE "no|not|never|without|nor|none|nothing|neither|[a-z]+n't"
 }
 
-check "fixture: a sentence drawing the fence passes" 1 \
-  "$(printf 'The outline opens instead\nwith one `diff` fence. Then:\n' | affirms 'with one `diff` fence')"
+check "fixture: a sentence drawing the fence, wrapped onto an indented line, passes" 1 \
+  "$(printf 'The outline opens instead with one\n  `diff` fence. Then:\n' | affirms 'with one `diff` fence')"
 check "fixture: a negated sentence is caught" 0 \
   "$(printf 'The outline never opens\nwith one `diff` fence. Then:\n' | affirms 'with one `diff` fence')"
 check "fixture: a sentence lacking the phrase reads 0" 0 \
