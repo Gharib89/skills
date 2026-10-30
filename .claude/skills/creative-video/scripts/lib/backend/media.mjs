@@ -35,6 +35,10 @@ export async function concat(parts, output) {
   }
 }
 
+// The delivered audio's encoder settings: master encodes its trial with them,
+// so the trial measures what ships.
+const AAC = ["-c:a", "aac", "-b:a", "192k"];
+
 // `video` with `audio` encoded to AAC once and `chapters` (`{ start, end,
 // title }`, seconds) written as MP4 chapter marks; the video stream is copied.
 export async function mux({ video, audio, chapters, output }) {
@@ -56,8 +60,7 @@ export async function mux({ video, audio, chapters, output }) {
     ffmpeg([
       ...["-y", "-i", video, "-i", audio, "-i", meta],
       ...["-map", "0:v", "-map", "1:a", "-map_chapters", "2"],
-      ...["-c:v", "copy", "-c:a", "aac", "-b:a", "192k"],
-      ...["-movflags", "+faststart", output],
+      ...["-c:v", "copy", ...AAC, "-movflags", "+faststart", output],
     ]);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -109,47 +112,74 @@ export async function shortTerm(file, seconds) {
   );
 }
 
-// The loudnorm filter of `input`'s audio at `lufs` integrated and `peak` true
-// peak (LRA 11), pass 2 linear from pass 1's measurements so speech keeps its
-// dynamics.
-function twoPass(input, { lufs, peak }) {
-  const loud = `loudnorm=I=${lufs}:TP=${peak}:LRA=11`;
-  const err = ffmpeg([
-    ...["-i", input, "-vn", "-af", `${loud}:print_format=json`],
-    ...["-f", "null", "-"],
-  ]);
-  const m = err.match(/\{[^{}]*"input_i"[^{}]*\}/)?.[0];
-  if (!m)
-    throw new Error(`loudnorm pass 1 printed no measurements for ${input}`);
-  const j = JSON.parse(m);
-  const measured = `measured_I=${j.input_i}:measured_TP=${j.input_tp}:measured_LRA=${j.input_lra}:measured_thresh=${j.input_thresh}`;
-  return `${loud}:${measured}:offset=${j.target_offset}:linear=true`;
+// `input`'s audio mastered into the 48 kHz 16-bit WAV `wav` so that its AAC
+// encode measures `lufs` integrated, within 0.5 LU, and at most `peak` true
+// peak: a gain, then a limiter run at 192 kHz, where its sample peak follows
+// the true peak, measured on a trial encode, the gain and the limit corrected
+// after each, at most 5 tries; past that the last try stands and the render's
+// delivery checks judge it. A linear two-pass loudnorm missed both on a mix
+// with sharp transients (a kit's stamp effect): it gave up gain to hold the
+// peak, and the encode added 1 to 3 dB past it (ffmpeg 8.0.1). The limiter
+// leaves a mix with no peak over the limit unchanged, so its dynamics are kept.
+// `tailFilters` is appended to the filter chain, `outputArgs` are output flags
+// before the WAV.
+async function master(
+  input,
+  wav,
+  { lufs, peak },
+  tailFilters = "",
+  outputArgs = [],
+) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "creative-master-"));
+  try {
+    const trial = path.join(dir, "trial.m4a");
+    let gain = lufs - (await loudness(input)).lufs;
+    let limit = peak;
+    for (let i = 0; i < 5; i++) {
+      const limiter = `alimiter=limit=${10 ** (limit / 20)}:attack=1:release=50:level=false:latency=true`;
+      ffmpeg([
+        ...["-y", "-i", input, "-vn", "-af"],
+        `volume=${gain}dB,aresample=192000,${limiter},aresample=48000${tailFilters}`,
+        ...[...outputArgs, "-c:a", "pcm_s16le", wav],
+      ]);
+      ffmpeg(["-y", "-i", wav, ...AAC, trial]);
+      const got = await loudness(trial);
+      if (got.peak <= peak && Math.abs(got.lufs - lufs) <= 0.5) return;
+      if (got.peak > peak) limit -= got.peak - peak;
+      gain += lufs - got.lufs;
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 
-// The MP4 `input` with its audio normalised to `lufs` integrated and `peak`
-// true peak (LRA 11) into `output`: two-pass loudnorm. The video stream is
-// copied, the audio is AAC 192k at 48 kHz.
+// The MP4 `input` with its audio mastered to `lufs` integrated and at most
+// `peak` true peak into `output`. The video stream is copied, the audio is AAC
+// 192k at 48 kHz.
 export async function loudnorm(input, output, { lufs, peak }) {
-  ffmpeg([
-    ...["-y", "-i", input, "-map", "0:v", "-map", "0:a", "-c:v", "copy"],
-    ...["-af", twoPass(input, { lufs, peak })],
-    ...["-c:a", "aac", "-b:a", "192k", "-ar", "48000"],
-    ...["-movflags", "+faststart", output],
-  ]);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "creative-master-"));
+  try {
+    const wav = path.join(dir, "mix.wav");
+    await master(input, wav, { lufs, peak });
+    ffmpeg([
+      ...["-y", "-i", input, "-i", wav, "-map", "0:v", "-map", "1:a"],
+      ...["-c:v", "copy", ...AAC, "-movflags", "+faststart", output],
+    ]);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }
 
-// The audio of `input` normalised as loudnorm does into a 48 kHz 16-bit WAV
+// The audio of `input` mastered as loudnorm does into a 48 kHz 16-bit WAV
 // `wav` of exactly `seconds`, padded with silence or trimmed: a video in
 // chapters carries one mix for the whole, which mux encodes once. The pad is
 // endless and `-t` cuts it; the timestamps are counted again from the samples
-// after loudnorm, whose output timestamps lag its samples, so `-t` would cut
-// the tail early.
+// after the filters, whose output timestamps can lag their samples, so `-t`
+// would cut the tail early.
 export async function masterAudio(input, wav, { lufs, peak, seconds }) {
-  const fix = "aresample=48000,asetpts=N/SR/TB,apad";
-  ffmpeg([
-    ...["-y", "-i", input, "-vn"],
-    ...["-af", `${twoPass(input, { lufs, peak })},${fix}`],
-    ...["-t", String(seconds), "-c:a", "pcm_s16le", wav],
+  await master(input, wav, { lufs, peak }, ",asetpts=N/SR/TB,apad", [
+    "-t",
+    String(seconds),
   ]);
 }
 

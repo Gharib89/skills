@@ -8,7 +8,8 @@ const stand = (f) => JSON.parse(fs.readFileSync(f, "utf8"));
 
 // A `render` writes the JSON stand-in the fake ffprobe and loudness answer
 // from: the root's duration at 1920x1080, 30 fps, with audio when the project
-// holds an <audio>. Every other subcommand only logs.
+// holds an <audio>, or exits CREATIVE_VIDEO_FAKE_RENDER_EXIT when that is set.
+// Every other subcommand only logs.
 export async function hyperframes(args, { cwd, env, stdio }) {
   log({
     call: "hyperframes",
@@ -22,6 +23,8 @@ export async function hyperframes(args, { cwd, env, stdio }) {
       ]),
     ),
   });
+  if (args[0] === "render" && process.env.CREATIVE_VIDEO_FAKE_RENDER_EXIT)
+    return +process.env.CREATIVE_VIDEO_FAKE_RENDER_EXIT;
   if (args[0] === "render") {
     const html = fs.readFileSync(path.join(cwd, "index.html"), "utf8");
     const duration = +html.match(
@@ -53,8 +56,15 @@ export async function loudness(file) {
   return { lufs: v.lufs ?? -14.0, peak: v.peak ?? -1.6 };
 }
 
+// Throws as ffmpeg failing would when CREATIVE_VIDEO_FAKE_MASTER_FAIL is set.
+function masterFails() {
+  if (process.env.CREATIVE_VIDEO_FAKE_MASTER_FAIL)
+    throw new Error("ffmpeg exited 1");
+}
+
 export async function loudnorm(input, output, { lufs, peak }) {
   log({ call: "loudnorm", input, output, lufs, peak });
+  masterFails();
   fs.copyFileSync(input, output);
 }
 
@@ -62,6 +72,7 @@ export async function loudnorm(input, output, { lufs, peak }) {
 // written as a WAV's stand-in of `seconds`.
 export async function masterAudio(input, wav, { lufs, peak, seconds }) {
   log({ call: "masterAudio", input, wav, lufs, peak, seconds });
+  masterFails();
   fs.writeFileSync(wav, JSON.stringify({ ...stand(input), duration: seconds }));
 }
 

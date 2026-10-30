@@ -11,6 +11,7 @@ import {
   calls,
   exec,
   hf,
+  outFiles,
   project,
   read,
   readJson,
@@ -85,7 +86,10 @@ test("a render delivers the mastered MP4, the SRT and the poster, with every del
   assert.equal(rendered.env.HYPERFRAMES_NO_TELEMETRY, "1");
   const norm = log.find((c) => c.call === "loudnorm");
   assert.equal(norm.input, path.join(fx.dir, ".cache", "render", "raw.mp4"));
-  assert.equal(norm.output, path.join(fx.dir, "out", "demo.mp4"));
+  assert.equal(
+    norm.output,
+    path.join(fx.dir, ".cache", "render", "out", "demo.mp4"),
+  );
   assert.deepEqual([norm.lufs, norm.peak], [-14, -1.5]);
   const poster = log.find((c) => c.call === "poster");
   assert.equal(
@@ -94,7 +98,7 @@ test("a render delivers the mastered MP4, the SRT and the poster, with every del
   );
 });
 
-test("a true peak over -1.0 dBTP fails its check, empties out/ and exits 1, after every line is printed", () => {
+test("a true peak over -1.0 dBTP fails its check, delivers nothing and exits 1, after every line is printed", () => {
   const fx = ready();
   const r = exec(render, fx, [fx.dir], {
     CREATIVE_VIDEO_FAKE_PROBE: JSON.stringify({ peak: -0.5 }),
@@ -201,12 +205,34 @@ test("a scene file the agent has not written is refused by name before any rende
   assert.ok(!calls(fx).some((c) => c.call === "hyperframes"));
 });
 
-test("a stale out/ is cleared before the render", () => {
+test("a render that fails after a passing delivery leaves out/ byte-identical: a HyperFrames exit, a mastering error, a failed check", () => {
+  const fx = ready();
+  assert.equal(exec(render, fx).code, 0);
+  fs.writeFileSync(path.join(fx.dir, "out", "demo.mp4"), "the last delivery");
+  const before = outFiles(fx);
+  for (const env of [
+    { CREATIVE_VIDEO_FAKE_RENDER_EXIT: "3" },
+    { CREATIVE_VIDEO_FAKE_MASTER_FAIL: "1" },
+    { CREATIVE_VIDEO_FAKE_PROBE: JSON.stringify({ peak: -0.5 }) },
+  ]) {
+    const r = exec(render, fx, [fx.dir], env);
+    assert.equal(r.code, 1, JSON.stringify(env));
+    assert.deepEqual(outFiles(fx), before, JSON.stringify(env));
+  }
+});
+
+test("a passing render replaces out/ with only the new delivery's files", () => {
   const fx = ready();
   fs.mkdirSync(path.join(fx.dir, "out"));
   fs.writeFileSync(path.join(fx.dir, "out", "old.mp4"), "old");
+  fs.writeFileSync(path.join(fx.dir, "out", "demo.mp4"), "old");
   assert.equal(exec(render, fx).code, 0);
-  assert.ok(!fs.existsSync(path.join(fx.dir, "out", "old.mp4")));
+  assert.deepEqual(Object.keys(outFiles(fx)).sort(), [
+    "demo.mp4",
+    "demo.srt",
+    "poster.png",
+  ]);
+  assert.notEqual(read(path.join(fx.dir, "out", "demo.mp4")), "old");
 });
 
 test("hf runs the HyperFrames CLI in the project with the output inherited", () => {

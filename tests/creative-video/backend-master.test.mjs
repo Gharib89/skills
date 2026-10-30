@@ -13,10 +13,73 @@ import {
   loudness,
   loudnorm,
   masterAudio,
+  mux,
   poster,
 } from "../../skills/creative-video/scripts/lib/backend/media.mjs";
 
 const has = spawnSync("ffmpeg", ["-version"]).status === 0;
+
+// 20 s of a quiet pink-noise bed with a 10 ms square burst at about 0 dBFS
+// every 2 s, the shape of a kit's stamp effect: two-pass loudnorm delivered
+// it over the -1 dBTP ceiling and 5 LU under the target (ffmpeg 8.0.1).
+function transientClip(dir) {
+  const src = path.join(dir, "transient.mkv");
+  const made = spawnSync("ffmpeg", [
+    ...["-v", "error", "-y", "-f", "lavfi", "-i", "color=c=red:s=64x64:r=30"],
+    ...[
+      "-f",
+      "lavfi",
+      "-i",
+      "anoisesrc=color=pink:amplitude=0.1:seed=1:r=48000",
+    ],
+    ...["-f", "lavfi", "-i"],
+    "aevalsrc='0.99*if(lt(sin(2*PI*1000*t),0),-1,1)*lt(mod(t,2),0.01)':s=48000",
+    ...["-filter_complex", "[1:a][2:a]amix=inputs=2:normalize=0[a]"],
+    ...["-map", "0:v", "-map", "[a]", "-t", "20"],
+    ...["-c:v", "libx264", "-c:a", "pcm_f32le", src],
+  ]);
+  assert.equal(made.status, 0, made.stderr?.toString());
+  return src;
+}
+
+// The delivery contract the render checks on the encoded file.
+async function delivers(file) {
+  const { lufs, peak } = await loudness(file);
+  assert.ok(Math.abs(lufs + 14) <= 1, `${lufs} LUFS`);
+  assert.ok(peak <= -1.0, `${peak} dBTP`);
+}
+
+test(
+  "loudnorm holds a mix with sharp transients under the true-peak ceiling and on the loudness target after the AAC encode",
+  { skip: !has && "ffmpeg is not on PATH" },
+  async (t) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "creative-master-"));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const out = path.join(dir, "out.mp4");
+    await loudnorm(transientClip(dir), out, { lufs: -14, peak: -1.5 });
+    await delivers(out);
+  },
+);
+
+test(
+  "masterAudio's mix of a sharp-transient clip, muxed as the join does, stays under the ceiling and on the target",
+  { skip: !has && "ffmpeg is not on PATH" },
+  async (t) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "creative-master-"));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const src = transientClip(dir);
+    const wav = path.join(dir, "mix.wav");
+    await masterAudio(src, wav, { lufs: -14, peak: -1.5, seconds: 20 });
+    const out = path.join(dir, "out.mp4");
+    await mux({
+      video: src,
+      audio: wav,
+      chapters: [{ start: 0, end: 20, title: "All" }],
+      output: out,
+    });
+    await delivers(out);
+  },
+);
 
 test(
   "loudnorm brings a quiet clip to the target and copies its video; poster takes one frame",

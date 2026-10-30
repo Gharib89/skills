@@ -266,9 +266,11 @@ It refuses unless the storyboard approved the look
 `render: unattended run, no approval: direction <id>` for an unattended run,
 and `render: changed after board <n>'s approval: <what>` (its scenes, then
 `the kit`, `over.html` and `assets/<file>`) when something the approved board
-showed changed since. It renders the project, normalises the mix to -14 LUFS
-with a true peak ceiling of -1.5 dBTP, and writes `out/<slug>.mp4` (captions
-drawn in), `out/<slug>.srt` and `out/poster.png`.
+showed changed since. It renders the project and masters the mix to -14 LUFS
+with a true peak of at most -1.5 dBTP, measured on the AAC encode it delivers:
+a limiter holds a sharp effect's transients, so a kit need not turn its
+effects down to pass. It writes `out/<slug>.mp4` (captions drawn in),
+`out/<slug>.srt` and `out/poster.png`.
 It prints one `delivery <check>: pass` or
 `delivery <check>: fail: <measured> vs <wanted>` line per check
 (`resolution`, `frame rate`, `aspect`, `duration`, `audio`, `captions` (the
@@ -293,7 +295,9 @@ renders it prints `render: <k> of <n> chapter(s) to render, estimate <m:ss>,
 budget <m:ss>`, the estimate from `render-rates.json`, the budget 5 minutes a
 video minute; `--estimate` prints that line and renders nothing.
 
-On exit 1 nothing new is
-delivered: a `render: <why>` refusal (a missing scene file, a timing older
-than the voice: run timing again) leaves `out/` as it was, and a failed
-render or `delivery` check empties it.
+Exit 1 (a `render: <why>` refusal such as a missing scene file or a timing
+older than the voice, which running timing again fixes; a failed render; a
+failed `delivery` check) delivers nothing new. The new files are made and
+checked in `.cache/render/out/` and replace `out/` only once every check
+passes, so `out/` keeps the last passing delivery, and the files of a render
+or check that failed stay in `.cache/render/out/` to inspect.

@@ -19,6 +19,7 @@ import { runGates, supported } from "./gates-lib.mjs";
 import {
   calls,
   exec,
+  outFiles,
   project,
   read,
   readJson,
@@ -95,7 +96,7 @@ test("each chapter renders alone, in order, from its own folder, then the whole 
   );
   const mux = log.find((c) => c.call === "mux");
   assert.equal(mux.audio, rel(fx, "audio.wav"));
-  assert.equal(mux.output, path.join(fx.dir, "out", "demo.mp4"));
+  assert.equal(mux.output, rel(fx, "out", "demo.mp4"));
   assert.deepEqual(
     mux.chapters,
     tl.chapters.map(({ start, end, title }) => ({ start, end, title })),
@@ -368,7 +369,7 @@ test("--estimate on a video that is not in chapters is refused", () => {
   assert.match(r.err, /^render: --estimate is for a video in chapters/);
 });
 
-test("chapter marks the file does not carry fail the chapters check, empty out/ and exit 1", () => {
+test("chapter marks the file does not carry fail the chapters check, deliver nothing and exit 1", () => {
   const fx = ready();
   const r = exec(render, fx, [fx.dir], {
     CREATIVE_VIDEO_FAKE_PROBE: JSON.stringify({
@@ -381,6 +382,19 @@ test("chapter marks the file does not carry fail the chapters check, empty out/ 
     /^delivery chapters: fail: 1 chapters \(0\.00 s Wrong\) vs 2 \(/m,
   );
   assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
+});
+
+test("a mix that fails to master after a passing delivery leaves out/ as it was", () => {
+  const fx = ready();
+  assert.equal(exec(render, fx).code, 0);
+  fs.writeFileSync(path.join(fx.dir, "out", "demo.mp4"), "the last delivery");
+  const before = outFiles(fx);
+  const r = exec(render, fx, [fx.dir], {
+    CREATIVE_VIDEO_FAKE_MASTER_FAIL: "1",
+  });
+  assert.equal(r.code, 1);
+  assert.ok(calls(fx).some((c) => c.call === "masterAudio"));
+  assert.deepEqual(outFiles(fx), before);
 });
 
 test("a stray argument is usage", () => {
