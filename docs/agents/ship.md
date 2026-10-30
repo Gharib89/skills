@@ -128,7 +128,7 @@ Paths: skills/explainer-video/scripts/render/**, skills/explainer-video/scripts/
 
 ### creative-real-render
 
-Proves: on real HyperFrames, via creative-video's stages: the MP4 has the grid's frame count, three renders match frame for frame, joined chapters sum their frames, a mark each, and the gates (determinism, layout, caption band, anchors, script errors, must and avoid, joins, sounds) fail a bad fixture, pass its twin, and a sound a scene script or a kit script loaded by `src` creates is in the mix at its `data-start`.
+Proves: on real HyperFrames, via creative-video's stages: the MP4 has the grid's frame count, three renders match frame for frame, joined chapters sum their frames, a mark each, and the gates (determinism, layout, caption band, anchors, script errors, must and avoid, joins, sounds) fail a bad fixture, pass its twin, and a sound created by a scene script, or by a kit script loaded by `src`, is in the mix at its `data-start`.
 Applies when: the change touches a file in `Paths:`.
 Run: `node skills/creative-video/maintainer/real-render.mjs` after `node skills/creative-video/scripts/setup.mjs install` has installed the worktree's lock (a new pin is a new cache). Outside `tests/run.sh` (it needs real Chrome). Exit 0 is `pass`, 1 `fail`, 2 a missing tool row.
 Needs: the `npm-packages` and `chrome` rows installed, and `ffmpeg`.

@@ -9,8 +9,9 @@
 // the out sample only, script errors beside a timeline no element carries,
 // must and avoid on a word a module script writes, sounds on a start a script
 // moves, its passing twin a sound the script creates, which renders where the
-// gates placed it, as does one a kit script loaded by src creates, joins on an Arabic word split into a box per letter in IBM
-// Plex Sans Arabic. A digit run split the same way on a right-to-left line
+// gates placed it, as does one a kit script loaded by src creates, joins on an
+// Arabic word split into a box per letter in IBM Plex Sans Arabic. A digit run
+// split the same way on a right-to-left line
 // reaches the critic's checks. Contrast and reading have no real-render
 // fixture.
 //
@@ -468,8 +469,6 @@ function onset(run) {
     { encoding: "utf8" },
   ).stderr.match(/silence_end: ([\d.]+)/)?.[1];
 }
-const heard = onset(created);
-const kitHeard = onset(kitted);
 const placed =
   JSON.parse(fs.readFileSync(path.join(created, "timeline.json"))).scenes[1]
     .start + 1;
@@ -489,14 +488,15 @@ check(
     ),
   reused.measured,
 );
-check(
-  "sound onset",
-  heard !== undefined && Math.abs(+heard - placed) <= 1 / FPS,
-  `the created beep starts at ${heard ?? "no"} s in the MP4 vs ${placed} s placed`,
-);
-check(
-  "kit sound onset",
-  kitHeard !== undefined && Math.abs(+kitHeard - placed) <= 1 / FPS,
-  `the beep a kit script created starts at ${kitHeard ?? "no"} s in the MP4 vs ${placed} s placed`,
-);
+for (const [name, run, beep] of [
+  ["sound onset", created, "the created beep"],
+  ["kit sound onset", kitted, "the beep a kit script created"],
+]) {
+  const heard = onset(run);
+  check(
+    name,
+    heard !== undefined && Math.abs(+heard - placed) <= 1 / FPS,
+    `${beep} starts at ${heard ?? "no"} s in the MP4 vs ${placed} s placed`,
+  );
+}
 process.exit(failed ? 1 : 0);

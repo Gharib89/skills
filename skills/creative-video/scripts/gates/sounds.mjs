@@ -47,7 +47,7 @@ export function soundFindings(plan, events, html) {
       if (authored === null) {
         if (!mixed)
           return [
-            `${audio} is created by a script, but no inline <script> in the html the render compiles creates media, so the render never mixes it: the root (render/root.mjs) must carry its createElement("audio") line`,
+            `${audio} is created by a script, but no inline <script> in the html the render compiles creates media, so the render never mixes it: create it in a scene file's inline <script>, or report that render/root.mjs lost its createElement("audio") line`,
           ];
         if (carried.get(id) > 1)
           return [

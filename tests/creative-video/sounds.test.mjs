@@ -206,7 +206,7 @@ const RECORDED = {
   ],
 };
 
-test("a result that is speech, or whose title and tags miss a query word, is passed over for the next; with none left the sound takes today's fallback", () => {
+test("a result that is speech, or whose title and tags miss a query word, is passed over for the next; with none left the sound falls back to Kenney, then is dropped", () => {
   const fx = fixture();
   kit(fx, {
     palette: ["rubber stamp", "radio squelch", "pencil scratch"].map(
@@ -226,11 +226,28 @@ test("a result that is speech, or whose title and tags miss a query word, is pas
     `sound scratch: dropped: ${why}`,
     `warn dropped sound: scratch: ${why}`,
   ]);
-  // A Lingua Libre title marks a word said aloud with no category too.
-  const [said] = RECORDED["rubber stamp"];
-  kit(fx, { palette: [{ event: "stamp", query: "stamp" }] });
-  const titled = fetch(fx, { stamp: [[{ ...said, category: null }]] });
-  assert.match(titled.out, /^sound stamp: dropped: /m);
+});
+
+test("each mark of speech alone passes a result over: a speech category, a Lingua Libre title, a title naming a pronunciation", () => {
+  const stamp = hit("stamp-1", "Rubber stamp");
+  for (const [query, result] of [
+    ["rubber stamp", { ...stamp, category: "pronunciation" }],
+    ["rubber stamp", { ...stamp, category: "podcast" }],
+    ["rubber stamp", { ...stamp, category: "audiobook" }],
+    ["rubber stamp", { ...stamp, title: "LL-Q1860 (eng)-Flame-rubber stamp" }],
+    ["rubber stamp", { ...stamp, title: "Rubber stamp pronunciation" }],
+  ]) {
+    const fx = fixture();
+    kit(fx, { palette: [{ event: "stamp", query }] });
+    const r = fetch(fx, { [query]: [[result]] });
+    assert.equal(r.code, 0, r.out + r.err);
+    assert.match(r.out, /^sound stamp: dropped: /m, JSON.stringify(result));
+  }
+  // The same result, unmarked, is taken.
+  const fx = fixture();
+  kit(fx, { palette: [{ event: "stamp", query: "rubber stamp" }] });
+  const r = fetch(fx, { "rubber stamp": [[stamp]] });
+  assert.equal(r.out.trim(), "sound stamp: openverse stamp-1");
 });
 
 // The Kenney packs installed in the store, each holding the named files.

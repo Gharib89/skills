@@ -72,12 +72,13 @@ function readRecords() {
 }
 // Formats the render plays.
 const PLAYS = ["mp3", "ogg", "wav", "flac"];
-// Openverse's categories of speech, and Lingua Libre's title of a word said
-// aloud, which Openverse often leaves with no category.
+// Openverse's categories of speech, and a title marking a word said aloud
+// (Lingua Libre's, or one naming a pronunciation), which Openverse often
+// leaves with no category.
 const SPEECH = ["pronunciation", "podcast", "audiobook"];
-const SAID = /^LL-Q\d+ \(/;
+const SAID = /^LL-Q\d+ \(|\bpronunciation\b/i;
 
-const wordsOf = (s) => s.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+const wordsOf = (s) => s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
 // Whether `words` hold the word `w`, a plural counting.
 const holds = (words, w) =>
   words.some((t) => t === w || t === `${w}s` || w === `${t}s`);
