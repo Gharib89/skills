@@ -299,5 +299,5 @@ Exit 1 (a `render: <why>` refusal such as a missing scene file or a timing
 older than the voice, which running timing again fixes; a failed render; a
 failed `delivery` check) delivers nothing new. The new files are made and
 checked in `.cache/render/out/` and replace `out/` only once every check
-passes, so `out/` keeps the last passing delivery, and a failed run's files
-stay in `.cache/render/out/` to inspect.
+passes, so `out/` keeps the last passing delivery, and the files of a render
+or check that failed stay in `.cache/render/out/` to inspect.

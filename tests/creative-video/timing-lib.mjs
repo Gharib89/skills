@@ -84,6 +84,16 @@ export const project = (fx, ...p) => path.join(fx.dir, "project", ...p);
 export const read = (f) => fs.readFileSync(f, "utf8");
 export const readJson = (f) => JSON.parse(read(f));
 
+// Each file in the run's out/ by name, its bytes as base64.
+export function outFiles(fx) {
+  const out = path.join(fx.dir, "out");
+  return Object.fromEntries(
+    fs
+      .readdirSync(out)
+      .map((f) => [f, fs.readFileSync(path.join(out, f)).toString("base64")]),
+  );
+}
+
 // Writes `compositions/<id>.html` for each scene id, as the agent would.
 export function author(fx, ids) {
   fs.mkdirSync(project(fx, "compositions"), { recursive: true });

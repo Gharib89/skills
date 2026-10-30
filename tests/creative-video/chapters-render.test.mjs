@@ -19,6 +19,7 @@ import { runGates, supported } from "./gates-lib.mjs";
 import {
   calls,
   exec,
+  outFiles,
   project,
   read,
   readJson,
@@ -387,12 +388,13 @@ test("a mix that fails to master after a passing delivery leaves out/ as it was"
   const fx = ready();
   assert.equal(exec(render, fx).code, 0);
   fs.writeFileSync(path.join(fx.dir, "out", "demo.mp4"), "the last delivery");
+  const before = outFiles(fx);
   const r = exec(render, fx, [fx.dir], {
     CREATIVE_VIDEO_FAKE_MASTER_FAIL: "1",
   });
   assert.equal(r.code, 1);
   assert.ok(calls(fx).some((c) => c.call === "masterAudio"));
-  assert.equal(read(path.join(fx.dir, "out", "demo.mp4")), "the last delivery");
+  assert.deepEqual(outFiles(fx), before);
 });
 
 test("a stray argument is usage", () => {

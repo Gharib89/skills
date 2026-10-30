@@ -119,8 +119,8 @@ export async function shortTerm(file, seconds) {
 // after each, at most 5 tries; past that the last try stands and the render's
 // delivery checks judge it. A linear two-pass loudnorm missed both on a mix
 // with sharp transients (a kit's stamp effect): it gave up gain to hold the
-// peak, and the encode added 1 to 3 dB past it (ffmpeg 8.0.1). A mix with no
-// peak over the limit is not limited, so its dynamics are kept.
+// peak, and the encode added 1 to 3 dB past it (ffmpeg 8.0.1). The limiter
+// leaves a mix with no peak over the limit unchanged, so its dynamics are kept.
 // `tailFilters` is appended to the filter chain, `outputArgs` are output flags
 // before the WAV.
 async function master(

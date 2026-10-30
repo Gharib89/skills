@@ -11,6 +11,7 @@ import {
   calls,
   exec,
   hf,
+  outFiles,
   project,
   read,
   readJson,
@@ -203,16 +204,6 @@ test("a scene file the agent has not written is refused by name before any rende
   );
   assert.ok(!calls(fx).some((c) => c.call === "hyperframes"));
 });
-
-// Each file in out/ by name, its bytes as base64.
-function outFiles(fx) {
-  const out = path.join(fx.dir, "out");
-  return Object.fromEntries(
-    fs
-      .readdirSync(out)
-      .map((f) => [f, fs.readFileSync(path.join(out, f)).toString("base64")]),
-  );
-}
 
 test("a render that fails after a passing delivery leaves out/ byte-identical: a HyperFrames exit, a mastering error, a failed check", () => {
   const fx = ready();
