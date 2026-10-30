@@ -12,8 +12,9 @@ source tests/lib.sh
 # Prints the count of stdin's sentences, lines joined, that name every <phrase>
 # and carry no negating word, so "never opens with one `diff` fence" reads 0.
 affirms() {
-  local s; s=$(tr '\n' ' ' | sed 's/\. /.\n/g')
+  local s; s=$(tr -s '\n ' '  ' | sed 's/\. /.\n/g')
   for p in "$@"; do s=$(printf '%s\n' "$s" | grep -F "$p"); done
+  [ -n "$s" ] || { echo 0; return; }
   printf '%s\n' "$s" | grep -cviwE "no|not|never|without|nor|none|nothing|neither|[a-z]+n't"
 }
 
@@ -21,6 +22,8 @@ check "fixture: a sentence drawing the fence passes" 1 \
   "$(printf 'The outline opens instead\nwith one `diff` fence. Then:\n' | affirms 'with one `diff` fence')"
 check "fixture: a negated sentence is caught" 0 \
   "$(printf 'The outline never opens\nwith one `diff` fence. Then:\n' | affirms 'with one `diff` fence')"
+check "fixture: a sentence lacking the phrase reads 0" 0 \
+  "$(printf 'The outline opens with a Shape line. Then:\n' | affirms 'with one `diff` fence')"
 check "fixture: a contracted negation is caught" 0 \
   "$(printf "The outline doesn't open\nwith one \`diff\` fence. Then:\n" | affirms 'with one `diff` fence')"
 
