@@ -42,8 +42,8 @@ if [ "$rung" = edit ]; then
   [ -n "$file" ] || exit 0
   # The repo that owns the edited file, wherever the shell's cwd has moved.
   root=$(git -C "$(dirname "$file")" rev-parse --show-toplevel 2>/dev/null) || exit 0
-  # Only the session's own repo or one of its worktrees, which share its
-  # object store: another checkout's check.sh, installs and all, never runs.
+  # Only the session's own repo or one of its worktrees (the same git common
+  # dir): another checkout's check.sh would run its own installs.
   [ "$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)" = \
     "$(git -C "${CLAUDE_PROJECT_DIR:-.}" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ] || exit 0
   set -- "$file"

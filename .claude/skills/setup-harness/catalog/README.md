@@ -39,7 +39,7 @@ Run: `<command>`
 Hook: local | <vendor hook repo URL> | None.
 Pin: <pin kind> <registry> [<repository URL>] <name>
 Route: `<install command>`; Blocked: <routes that 403> | None.
-Done test: `<passes only on the pinned install>`  (only when Route: carries {version})
+Done test: `<passes only on the pinned install>`  (only when Route: carries {version}, a `docker pull` route excepted)
 Constraints: <needs / breaks with> | None.
 Unavailable: <reason>                  (only when it applies)
 Local-only: <reason>                   (only when it applies)

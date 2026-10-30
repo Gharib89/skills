@@ -48,4 +48,4 @@ Pin: package npm prettier
 Route: `npm install -g prettier@{version}`; Blocked: None.
 Done test: `[[ " $(prettier --version 2>&1) " == *[!0-9.]{version}[!0-9.]* ]]`
 Constraints: None.
-Traps: yamllint is not a default: its stock config fights workflow files (35 findings on one real workflow, mostly `line-length`, `truthy` on `on:` and `document-start`). The image ships an unpinned global `prettier`, which `Done test:` replaces with the pin.
+Traps: yamllint is not a default: its stock config fights workflow files (35 findings on one real workflow, mostly `line-length`, `truthy` on `on:` and `document-start`). The image ships an unpinned global `prettier`, which `command -v` would accept; `Done test:` fails on it, so the route installs the pin.
