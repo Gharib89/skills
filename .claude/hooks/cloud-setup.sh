@@ -4,11 +4,15 @@
 # Claude Code on the web session, on start and on resume, so every tool
 # scripts/check.sh runs is installed before the session's first edit.
 #
+#   .claude/hooks/cloud-setup.sh [--local]
+#   --local runs the same steps outside a cloud session: the local install
+#   check.sh names when a check's tool is missing on this machine.
+#
 # stdout: one line, `harness cloud setup: ok` or `harness cloud setup: FAILED
 #         <step>`, because a failed or timed-out SessionStart never stops the
 #         session and this line is the session's only sign of it
 # stderr: each step's own output
-# exit:   0 ok, or not a cloud session · 1 a step failed
+# exit:   0 ok, or not a cloud session and no --local · 1 a step failed
 #
 # Idempotent: a resumed session keeps its disk and runs this again, so a step
 # whose done test passes is skipped and the second run is a fast no-op. Only
@@ -16,7 +20,7 @@
 # registries), or a host the environment's Custom allowlist admits (the harness
 # profile's `Allowlist:`).
 set -uo pipefail
-[ "${CLAUDE_CODE_REMOTE:-}" = true ] || exit 0
+[ "${1:-}" = --local ] || [ "${CLAUDE_CODE_REMOTE:-}" = true ] || exit 0
 
 # >>> setup-harness configuration
 # One step per line, run in order from the repo root:

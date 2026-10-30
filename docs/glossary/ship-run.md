@@ -25,7 +25,7 @@ A host read or write that no phase, stop, merge or release depends on, made by t
 _Avoid_: informational read, side call, ad-hoc call
 
 **Cloud bootstrap**:
-Ship's sandbox preparation for one repo, run before any claim in every cloud run and every unattended run. With a harness it is the cloud setup run again, so a broken sandbox stops before the claim, then only the steps that need something only Ship has, such as the local gate's secrets scanner and a live end-to-end check's credentials; anything the check entry point needs belongs to the cloud setup instead. Without one, it is whatever the repo's own script installs. Setup-skills drafts it.
+Ship's sandbox preparation for one repo, run before any claim in every cloud run and every unattended run. With a harness it is the cloud setup run again, so a broken sandbox stops before the claim, then only the steps that need something only Ship has, such as the local gate's secrets scanner and a live end-to-end check's credentials; anything the check entry point needs belongs to the cloud setup instead. Without one, it is whatever the repo's own script installs. With `--local` it installs the cloud setup's tools and the secrets scanner on a developer's machine, skipping the Ship-only steps; the local gate names it when the scanner is missing. Setup-skills drafts it.
 _Avoid_: cloud setup, setup script, cloud-ship bootstrap
 
 **Sibling skill**:

@@ -18,8 +18,8 @@ bash_bin=$(command -v bash)
 d=$fixture/repo bin=$fixture/bin; mkdir -p "$d/scripts" "$d/docs/agents" "$bin"
 sed "s|__SCANNER__|fakescan|; s|__SCANNER_INSTALL__|apt_install fakescan|" \
   skills/setup-skills/cloud-ship-bootstrap.sh > "$d/scripts/cloud-ship-bootstrap.sh"
-# The stub cloud setup logs its call and exits $SETUP_RC.
-printf '#!%s\necho setup >> "$CALLS"\nexit "${SETUP_RC:-0}"\n' "$bash_bin" > "$d/scripts/cloud-setup.sh"
+# The stub cloud setup logs its call, with its arguments, and exits $SETUP_RC.
+printf '#!%s\necho setup "$@" >> "$CALLS"\nexit "${SETUP_RC:-0}"\n' "$bash_bin" > "$d/scripts/cloud-setup.sh"
 git -C "$d" init -q
 # apt-get: logs its arguments; an install fails until an `update` has run, as on
 # a fresh image with no package lists, then creates each package as a tool,
@@ -90,6 +90,21 @@ boot APT_BROKEN=1
 check "an apt whose update fails too fails the bootstrap" nonzero "$([ "$rc" -ne 0 ] && echo nonzero)"
 check "an apt whose update fails too: no second install" "apt-get install -y fakescan
 apt-get update" "$calls"
+
+# --local is the local install the local gate names for a missing scanner: the
+# cloud setup's own --local run and the scanner, never the Ship-only steps,
+# which are the cloud run's.
+profile scripts/cloud-setup.sh
+echo 'echo shiponly >> "$CALLS"' >> "$d/scripts/cloud-ship-bootstrap.sh"
+boot
+check "in a cloud session the Ship-only steps run last" "shiponly" "${calls##*$'\n'}"
+rm -f "$bin/fakescan"; : > "$fixture/calls"; rm -f "$fixture/updated"
+(cd "$d" && env PATH="$bin:$PATH" CALLS="$fixture/calls" CLAUDE_CODE_REMOTE= "$bash_bin" scripts/cloud-ship-bootstrap.sh --local >/dev/null 2>&1); rc=$?
+check_rc "--local runs outside a cloud session: exit 0" 0 "$rc"
+check "--local passes --local to the cloud setup, then installs the scanner, not the Ship-only steps" "setup --local
+apt-get install -y fakescan
+apt-get update
+apt-get install -y fakescan" "$(cat "$fixture/calls")"
 
 unconfigured() {
   sed -e '/^# >>> setup-skills configuration$/,/^# <<< setup-skills configuration$/d' \
