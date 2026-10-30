@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.54.1 (2026-10-30)
+
+### Bug Fixes
+
+- **ship**: A wrong reply is corrected by a new one, never edited by hand
+  ([#1064](https://github.com/Gharib89/skills/pull/1064),
+  [`1a60742`](https://github.com/Gharib89/skills/commit/1a60742df527dc0b25949fd1a1d30558e1029d9a))
+
+
 ## v0.54.0 (2026-10-29)
 
 ### Features
