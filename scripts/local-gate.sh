@@ -9,7 +9,9 @@
 #
 # Contract (ship's local-gate contract, the same in every repo):
 #   stdout: one JSON object, {"verdict","base","lane","gates":{<name>:<status>}}
-#   stderr: a failing gate's last 40 log lines; this repo's gates slot adds
+#   stderr: a failing gate's last 40 log lines, and with no scanner on PATH
+#           one line naming `scripts/cloud-ship-bootstrap.sh --local`; this
+#           repo's gates slot adds
 #           scripts/glossary-warn.sh's `glossary:` lines and
 #           scripts/context-report.sh's size lines on every run, uncapped,
 #           which set no gate status

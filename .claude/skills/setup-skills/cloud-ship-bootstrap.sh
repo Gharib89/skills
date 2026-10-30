@@ -17,8 +17,8 @@
 # Ship-only steps below. A step belongs to the harness cloud setup unless it
 # needs something only Ship has. Bash 3.2.
 set -euo pipefail
-here=; [ "${1:-}" != --local ] || here=--local
-[ -n "$here" ] || [ "${CLAUDE_CODE_REMOTE:-}" = true ] || exit 0
+local_flag=; [ "${1:-}" != --local ] || local_flag=--local
+[ -n "$local_flag" ] || [ "${CLAUDE_CODE_REMOTE:-}" = true ] || exit 0
 cd "$(git rev-parse --show-toplevel)"
 
 # >>> setup-skills configuration
@@ -41,10 +41,10 @@ apt_install() {
 # rather than copied so a re-run of setup-harness that moves it moves this too.
 setup=$(awk '{ sub(/\r$/, "") } /^## / { c = ($0 == "## Cloud"); next } c && sub(/^Setup: /, "") { print; exit }' docs/agents/harness.md)
 [ -n "$setup" ] || { echo "cloud-ship-bootstrap: no Setup: line under ## Cloud in docs/agents/harness.md" >&2; exit 1; }
-[ "$setup" = None. ] || bash "$setup" ${here:+"$here"}
+[ "$setup" = None. ] || bash "$setup" ${local_flag:+"$local_flag"}
 
 command -v "$SCANNER" >/dev/null || { eval "$SCANNER_INSTALL"; command -v "$SCANNER" >/dev/null; }
-[ -z "$here" ] || exit 0
+[ -z "$local_flag" ] || exit 0
 
 # The repo's Ship-only steps go here, each failing the bootstrap on non-zero:
 # what needs something only Ship has, such as live-e2e credentials or profiles.

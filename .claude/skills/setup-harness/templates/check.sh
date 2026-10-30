@@ -13,7 +13,9 @@
 #
 # stdout: one JSON line {"rung","verdict","checks":{<name>:<status>}}, status
 #         pass | fail | unavailable | skipped | over-budget
-# stderr: each failing check's last 40 lines
+# stderr: each failing check's last 40 lines, and under a check whose tool is
+#         missing, where the harness profile names a cloud setup, one line
+#         `a missing tool installs with: <Setup: path> --local`
 # exit:   0 pass · 1 fail · 2 unavailable or tooling · 3 over budget
 #
 # `full` runs the runner first, then every TURN_ROWS row and every FULL_ROWS row
@@ -132,18 +134,19 @@ check() {
   if [ -n "$expired" ]; then record "$name" over-budget; return; fi
   case $rc in
     0) record "$name" pass ;;
-    127) record "$name" unavailable; { printf -- '--- %s: unavailable ---\n' "$name"; tail -n 40 "$log"; install_route; } >&2 ;;
-    # A runner hook whose tool is missing fails rather than exiting 127.
+    127) record "$name" unavailable; { printf -- '--- %s: unavailable ---\n' "$name"; tail -n 40 "$log"; install_hint; } >&2 ;;
+    # A runner hook whose tool is missing fails rather than exiting 127; the
+    # match is a hint, kept to the runner so a test's own message cannot fire it.
     *) record "$name" fail
        { printf -- '--- %s ---\n' "$name"; tail -n 40 "$log"
-         ! grep -qiE 'not found|no such file or directory' "$log" || install_route; } >&2 ;;
+         [ "$name" != runner ] || ! grep -qiE 'not found|no such file or directory' "$log" || install_hint; } >&2 ;;
   esac
 }
 
-# The line naming what installs a missing tool: the cloud setup's local mode,
+# The line naming what installs a missing tool: the cloud setup's `--local` run,
 # from the harness profile's `Setup:` under `## Cloud`. A local-only repo
-# (`Setup: None.`) has no such route and gets no line.
-install_route() {
+# (`Setup: None.`) has no cloud setup and gets no line.
+install_hint() {
   local setup
   setup=$(awk '{ sub(/\r$/, "") } /^## / { c = ($0 == "## Cloud"); next } c && sub(/^Setup: /, "") { print; exit }' docs/agents/harness.md 2>/dev/null)
   case $setup in '' | None.) ;; *) printf 'a missing tool installs with: %s --local\n' "$setup" ;; esac

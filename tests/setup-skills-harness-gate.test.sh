@@ -93,8 +93,8 @@ check "a check named like a Ship gate: the worse of the two stands" '{"deps":"fa
 gate '{"rung":"full","verdict":"pass","checks":{"lint":"over-budget"}}' 0 ''
 check "a status outside the contract reads as unavailable" '{"deps":"pass","lint":"unavailable"}' "$(gates)"
 
-# No scanner on PATH: `secrets` is unavailable and stderr names the install
-# route, the cloud bootstrap's local mode. The PATH holds only what the gate
+# No scanner on PATH: `secrets` is unavailable and stderr names the local
+# install, the cloud bootstrap run with --local. The PATH holds only what the gate
 # and the stubs call, so a gitleaks on this machine cannot reach it.
 nb=$fixture/noscan; mkdir -p "$nb"
 for t in bash env git jq mktemp rm tail cat; do ln -s "$(command -v "$t")" "$nb/$t"; done
@@ -103,7 +103,7 @@ out=$(cd "$d" && PATH=$nb CALLS="$fixture/calls" STUB_OUT='{"checks":{"lint":"pa
   bash scripts/local-gate.sh --base base 2>"$fixture/err"); rc=$?
 check_rc "no scanner: exit 2" 2 "$rc"
 check "no scanner: secrets is unavailable" unavailable "$(jq -r .gates.secrets <<<"$out")"
-check "no scanner: stderr names the install route" \
+check "no scanner: stderr names the local install" \
   "secrets: gitleaks not on PATH; scripts/cloud-ship-bootstrap.sh --local installs it" "$(cat "$fixture/err")"
 
 gate '' 0 '' --small tests/test_one.py

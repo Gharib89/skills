@@ -118,7 +118,7 @@
     "setup-harness": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "9750487b58101974fc3efc604f0ca33ff760f92246a068021d30f2aaa447b8e6"
+      "computedHash": "acd7cd1f4380c218613dc374425a7fa56a6a2104215a0cab41ed64f671cd373a"
     },
     "setup-matt-pocock-skills": {
       "source": "mattpocock/skills",
@@ -135,7 +135,7 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "b7dd337e547bd80f135fd72125c1250bb1f14e0f19a8fc1a1ea854a6435863f7"
+      "computedHash": "e23b33e1a1c8acd21d2903a1f7c204acf197206cb36fd33999918b3945d8807a"
     },
     "ship": {
       "source": ".",

@@ -91,7 +91,7 @@ check "an apt whose update fails too fails the bootstrap" nonzero "$([ "$rc" -ne
 check "an apt whose update fails too: no second install" "apt-get install -y fakescan
 apt-get update" "$calls"
 
-# --local is the install route the local gate names for a missing scanner: the
+# --local is the local install the local gate names for a missing scanner: the
 # cloud setup's own local mode and the scanner, never the Ship-only steps,
 # which are the cloud run's.
 profile scripts/cloud-setup.sh
@@ -101,7 +101,7 @@ check "in a cloud session the Ship-only steps run last" "shiponly" "${calls##*$'
 rm -f "$bin/fakescan"; : > "$fixture/calls"; rm -f "$fixture/updated"
 (cd "$d" && env PATH="$bin:$PATH" CALLS="$fixture/calls" CLAUDE_CODE_REMOTE= "$bash_bin" scripts/cloud-ship-bootstrap.sh --local >/dev/null 2>&1); rc=$?
 check_rc "--local runs outside a cloud session: exit 0" 0 "$rc"
-check "--local runs the cloud setup's local mode and the scanner install, not the Ship-only steps" "setup --local
+check "--local passes --local to the cloud setup, then installs the scanner, not the Ship-only steps" "setup --local
 apt-get install -y fakescan
 apt-get update
 apt-get install -y fakescan" "$(cat "$fixture/calls")"

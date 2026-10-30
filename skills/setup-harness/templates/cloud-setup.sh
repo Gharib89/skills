@@ -5,7 +5,7 @@
 # scripts/check.sh runs is installed before the session's first edit.
 #
 #   .claude/hooks/cloud-setup.sh [--local]
-#   --local runs the same steps outside a cloud session: the install route
+#   --local runs the same steps outside a cloud session: the local install
 #   check.sh names when a check's tool is missing on this machine.
 #
 # stdout: one line, `harness cloud setup: ok` or `harness cloud setup: FAILED
