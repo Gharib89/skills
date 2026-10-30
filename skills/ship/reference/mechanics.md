@@ -46,6 +46,9 @@ lists it), is raised as a Ship note: it may earn a mechanic. Verification
 scaffolding sits outside the rule: a scratch issue or scratch review thread a
 `Run:` line sets up by hand, or a throwaway probe PR an acceptance criterion
 asks for, with its pushes and CI cancels, closed unmerged before the merge gate.
+Editing or deleting a comment the run posted is never a direct call: a wrong one
+is corrected by a new one, per
+[review-loop.md](review-loop.md#triage-fix-reply).
 
 ## Which mechanic each phase runs
 
