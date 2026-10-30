@@ -15,7 +15,7 @@ Host: github
 Carry: None.
 Bootstrap: None.
 
-Nothing here is gitignored. The mechanics are bash; the gate needs `gitleaks` on PATH for its `secrets` gate, and the hooks need every tool `scripts/check.sh` runs (`shellcheck`, `actionlint`, `zizmor`, Prettier, `prek`), which the harness cloud setup, `.claude/hooks/cloud-setup.sh`, installs in a cloud session.
+Nothing here is gitignored. The mechanics are bash; the gate needs `gitleaks` on PATH for its `secrets` gate, and the hooks need every tool `scripts/check.sh` runs (`shellcheck`, `actionlint`, `zizmor`, Prettier, `prek`), which the harness cloud setup, `.claude/hooks/cloud-setup.sh`, installs in a cloud session; on this machine `scripts/cloud-ship-bootstrap.sh --local` installs them all, gitleaks included.
 
 ## Local gate
 
