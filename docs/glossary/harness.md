@@ -69,7 +69,7 @@ A cloud session a human starts from a local clone, which uploads that clone inst
 _Avoid_: bundle upload, local cloud session
 
 **Cloud setup**:
-The harness's step that makes the whole harness available in a cloud session: run at the start of every cloud session, safe to rerun, knowing nothing of Ship. It installs every runtime, dependency and tool the check entry point runs. A failed cloud setup never stops the session, so whatever must not proceed on a broken sandbox runs it again and stops on its failure.
+The harness's step that makes the whole harness available in a cloud session: run at the start of every cloud session, safe to rerun, knowing nothing of Ship. It installs every runtime, dependency and tool the check entry point runs. A failed cloud setup never stops the session, so whatever must not proceed on a broken sandbox runs it again and stops on its failure. With `--local` it runs the same steps on a developer's machine, which the check entry point names under a check whose tool is missing.
 _Avoid_: setup script (the cloud environment's own slot, which the harness does not use), cloud bootstrap, provisioning
 
 **Trust tier**:

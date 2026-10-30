@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.27.0 (2026-10-30)
+
+### Features
+
+- **setup-harness**: A local session gets the gate tools' local install
+  ([#1063](https://github.com/Gharib89/skills/pull/1063),
+  [`36b7fc1`](https://github.com/Gharib89/skills/commit/36b7fc1df30af474fb8e9a9e53207946562088e2))
+
+
 ## v0.26.0 (2026-10-29)
 
 ### Features

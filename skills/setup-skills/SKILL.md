@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 0.26.0
+  version: 0.27.0
   composes: mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60:triage
 ---
 
@@ -115,7 +115,7 @@ Then: `Self-review cap:` is a whole number of 1 or more; every `Also proven by C
 
 **Local gate over the harness**, when step 3's probe conformed. `check.sh full` supplies every gate it runs, one per check under the check's own name; the local gate adds only what Ship needs.
 
-- Absent: write `scripts/local-gate.sh` from [local-gate-harness.sh](./local-gate-harness.sh): `__CHECK__` the harness profile's `Location:` path, `__DEPS__` and `__RUNNER__` from step 3's Local gate row, `secrets` wired as the self-contained item below wires it, and the marked slot holding the Ship-only gates: the checks relative to the base, and a `mark <leg> deferred-to-ci` for each CI leg only CI can prove. Gates here carry check names rather than leg names, so the self-contained item's one-gate-per-leg rule does not apply; each `deferred-to-ci` mark still names its leg as `## CI` names it.
+- Absent: write `scripts/local-gate.sh` from [local-gate-harness.sh](./local-gate-harness.sh): `__CHECK__` the harness profile's `Location:` path, `__DEPS__` and `__RUNNER__` from step 3's Local gate row, `secrets` wired as the self-contained item below wires it, its missing-scanner line naming the wired scanner, and the marked slot holding the Ship-only gates: the checks relative to the base, and a `mark <leg> deferred-to-ci` for each CI leg only CI can prove. Gates here carry check names rather than leg names, so the self-contained item's one-gate-per-leg rule does not apply; each `deferred-to-ci` mark still names its leg as `## CI` names it.
 - Present: propose a rewrite onto that template. Drop each gate `check.sh full` already runs, matched by the command it runs rather than by its name; the template's own `secrets`, `deps` and small-lane `tests` replace the old gate's. Keep each gate that needs Ship (one relative to the base, a `deferred-to-ci` mark) in the Ship-only slot, and list for the human each one that neither matches a check nor needs Ship, and keep or drop each on their answer. Show the diff, write on confirm.
 
 **Self-contained local gate**, without a harness:
