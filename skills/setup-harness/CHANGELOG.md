@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.13.1 (2026-10-30)
+
+### Bug Fixes
+
+- **setup-harness**: The edit hook stays in the session's repo, and pinned cloud done tests match
+  the pin ([#1061](https://github.com/Gharib89/skills/pull/1061),
+  [`f943f0b`](https://github.com/Gharib89/skills/commit/f943f0b7a4789251ff8d9887bd60f13fa5b71cde))
+
+
 ## v0.13.0 (2026-10-20)
 
 ### Features
