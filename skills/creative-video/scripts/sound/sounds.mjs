@@ -9,7 +9,8 @@
 // result a query of that kind chose before, on any run) is copied again. Else
 // Openverse is searched for CC0 audio (the bed for medium-length clips), a
 // search failing after 30 s tried once more, and the first result in a format
-// the render plays is downloaded into the store (a failed download counts as
+// the render plays that names the sound (not speech, its title and tags holding
+// every query word) is downloaded into the store (a failed download counts as
 // no result). Else the Kenney packs setup installed are searched by each
 // file's name words plus its word-index words (kenney.mjs), a bed only among
 // stems marked `loop`. Else the sound is dropped from the kit into its
@@ -71,6 +72,26 @@ function readRecords() {
 }
 // Formats the render plays.
 const PLAYS = ["mp3", "ogg", "wav", "flac"];
+// Openverse's categories of speech, and Lingua Libre's title of a word said
+// aloud, which Openverse often leaves with no category.
+const SPEECH = ["pronunciation", "podcast", "audiobook"];
+const SAID = /^LL-Q\d+ \(/;
+
+const wordsOf = (s) => s.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+// Whether `words` hold the word `w`, a plural counting.
+const holds = (words, w) =>
+  words.some((t) => t === w || t === `${w}s` || w === `${t}s`);
+
+// Whether a result is the sound its query names: not speech, its title and
+// tags holding every query word, so a clip of something else ranked first
+// ("Zombie Eat", tagged squelch, for "radio squelch") is passed over.
+function names(r, query) {
+  if (SPEECH.includes(r.category) || SAID.test(r.title ?? "")) return false;
+  const words = wordsOf(
+    [r.title ?? "", ...(r.tags ?? []).map((t) => t.name)].join(" "),
+  );
+  return wordsOf(query).every((w) => holds(words, w));
+}
 
 // A sound's file in the store, from its source and its project file's name.
 const stored = ({ source, file }) =>
@@ -78,8 +99,8 @@ const stored = ({ source, file }) =>
     ? path.join(KENNEY, source.slice(7))
     : path.join(store, "openverse", path.basename(file));
 
-// The first usable CC0 result for `query`, downloaded into the store, or why
-// there is none.
+// The first usable CC0 result for `query` that names its sound, downloaded
+// into the store, or why there is none.
 async function fromOpenverse(query, medium) {
   let results;
   for (let tries = 1; !results; tries++) {
@@ -92,7 +113,8 @@ async function fromOpenverse(query, medium) {
   const ext = (r) =>
     (r.filetype || path.extname(r.url ?? "").slice(1)).toLowerCase();
   const r = results.find(
-    (r) => r.license === "cc0" && r.url && PLAYS.includes(ext(r)),
+    (r) =>
+      r.license === "cc0" && r.url && PLAYS.includes(ext(r)) && names(r, query),
   );
   if (!r) return "openverse found no usable CC0 result";
   const name = `${r.id}.${ext(r)}`;
@@ -121,7 +143,7 @@ async function fromOpenverse(query, medium) {
 function fromKenney(query, bed) {
   if (!fs.existsSync(path.join(KENNEY, ".stamp")))
     return "the Kenney packs are not installed (run /creative-video setup)";
-  const words = query.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+  const words = wordsOf(query);
   let best = { score: 0 };
   for (const pack of fs.readdirSync(KENNEY).sort()) {
     if (!fs.statSync(path.join(KENNEY, pack)).isDirectory()) continue;
@@ -129,9 +151,7 @@ function fromKenney(query, bed) {
       if (!AUDIO.test(file)) continue;
       const entry = entryOf(pack, file);
       if (!entry || (bed && !entry.loop)) continue;
-      const score = words.filter((w) =>
-        entry.words.some((t) => t === w || t === `${w}s` || w === `${t}s`),
-      ).length;
+      const score = words.filter((w) => holds(entry.words, w)).length;
       if (score > best.score) best = { score, pack, file };
     }
   }

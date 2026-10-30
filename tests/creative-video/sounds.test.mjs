@@ -31,9 +31,10 @@ const KIT = {
   bed: { world: "a kitchen", query: "kitchen ambience", level: -28 },
   palette: [{ event: "ticket", query: "paper tear" }],
 };
-const hit = (id, filetype = "mp3") => ({
+// A result titled with its query's words.
+const hit = (id, title, filetype = "mp3") => ({
   id,
-  title: `sound ${id}`,
+  title,
   url: `https://cdn.example/${id}.${filetype}`,
   filetype,
   duration: 60000,
@@ -44,8 +45,13 @@ const hit = (id, filetype = "mp3") => ({
   attribution: `"sound ${id}" by someone is marked with CC0 1.0.`,
 });
 const OPENVERSE = {
-  "kitchen ambience": [[hit("bed-1")]],
-  "paper tear": [[{ ...hit("vid", "mp4") }, hit("tear-1", "ogg")]],
+  "kitchen ambience": [[hit("bed-1", "Kitchen Ambience")]],
+  "paper tear": [
+    [
+      { ...hit("vid", "Paper tear", "mp4") },
+      hit("tear-1", "Paper Tear 2", "ogg"),
+    ],
+  ],
 };
 
 function kit(fx, k = KIT) {
@@ -131,10 +137,100 @@ test("a re-run, or another run folder asking the same queries, fetches nothing",
 test("a search that times out is tried once more", () => {
   const fx = fixture();
   kit(fx, { palette: KIT.palette });
-  const r = fetch(fx, { "paper tear": ["timeout", [hit("tear-1")]] });
+  const r = fetch(fx, {
+    "paper tear": ["timeout", [hit("tear-1", "paper tears")]],
+  });
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(r.out.trim(), "sound ticket: openverse tear-1");
   assert.equal(asked(fx, "openverse").length, 2);
+});
+
+// Openverse's first two results for two queries of the pstack run (recorded
+// 2026-10-30, trimmed to the fields the pick reads), and the page flip it took
+// for "pencil scratch", which Openverse answered 504 when recorded.
+const RECORDED = {
+  "rubber stamp": [
+    {
+      id: "622292b5-764e-4fc5-a99c-6781b20e7007",
+      title: "LL-Q1860 (eng)-Flame, not lame-rubber stamp",
+      url: "https://upload.wikimedia.org/wikipedia/commons/9/94/LL-Q1860_%28eng%29-Flame%2C_not_lame-rubber_stamp.wav",
+      filetype: "wav",
+      license: "cc0",
+      category: "pronunciation",
+      tags: [],
+    },
+    {
+      id: "c154424d-43c2-455c-a232-e5b2c2cfa45f",
+      title: "es-stamp.wav",
+      url: "https://cdn.freesound.org/previews/448/448474_9090982-hq.mp3",
+      filetype: "mp3",
+      license: "cc0",
+      category: null,
+      tags: ["datestamp", "paper", "rubber", "signature", "stamp"].map(
+        (name) => ({ name }),
+      ),
+    },
+  ],
+  "radio squelch": [
+    {
+      id: "6cc51e37-8a0e-4d9d-8462-5002f249d13f",
+      title: "Zombie Eat",
+      url: "https://cdn.freesound.org/previews/264/264280_1733081-hq.mp3",
+      filetype: "mp3",
+      license: "cc0",
+      category: null,
+      tags: ["brains", "flesh", "gore", "squelch", "zombie"].map((name) => ({
+        name,
+      })),
+    },
+    {
+      id: "9b484e81-a91b-4255-9b2a-041e17bb8229",
+      title: "Radio Buzz / Squelch 1",
+      url: "https://cdn.freesound.org/previews/522/522164_11537497-hq.mp3",
+      filetype: "mp3",
+      license: "cc0",
+      category: null,
+      tags: ["buzz", "noise", "radio", "squlech"].map((name) => ({ name })),
+    },
+  ],
+  "pencil scratch": [
+    {
+      id: "page-flip",
+      title: "Page Flip",
+      url: "https://cdn.example/page-flip.mp3",
+      filetype: "mp3",
+      license: "cc0",
+      category: "sound_effect",
+      tags: [{ name: "book" }, { name: "paper" }],
+    },
+  ],
+};
+
+test("a result that is speech, or whose title and tags miss a query word, is passed over for the next; with none left the sound takes today's fallback", () => {
+  const fx = fixture();
+  kit(fx, {
+    palette: ["rubber stamp", "radio squelch", "pencil scratch"].map(
+      (query) => ({ event: query.split(" ")[1], query }),
+    ),
+  });
+  const r = fetch(
+    fx,
+    Object.fromEntries(Object.entries(RECORDED).map(([q, rs]) => [q, [rs]])),
+  );
+  assert.equal(r.code, 0, r.out + r.err);
+  const why =
+    "openverse found no usable CC0 result; the Kenney packs are not installed (run /creative-video setup)";
+  assert.deepEqual(r.out.trim().split("\n"), [
+    "sound stamp: openverse c154424d-43c2-455c-a232-e5b2c2cfa45f",
+    "sound squelch: openverse 9b484e81-a91b-4255-9b2a-041e17bb8229",
+    `sound scratch: dropped: ${why}`,
+    `warn dropped sound: scratch: ${why}`,
+  ]);
+  // A Lingua Libre title marks a word said aloud with no category too.
+  const [said] = RECORDED["rubber stamp"];
+  kit(fx, { palette: [{ event: "stamp", query: "stamp" }] });
+  const titled = fetch(fx, { stamp: [[{ ...said, category: null }]] });
+  assert.match(titled.out, /^sound stamp: dropped: /m);
 });
 
 // The Kenney packs installed in the store, each holding the named files.
@@ -251,7 +347,10 @@ test("a bed comes only from a stem the index marks loopable", () => {
 test("a failed download is dropped like a failed search, and falls back to Kenney once installed", () => {
   const fx = fixture();
   kit(fx, { palette: [{ event: "ticket", query: "page turn" }] });
-  const dead = { ...hit("page-1"), url: "https://cdn.example/dead/page-1.mp3" };
+  const dead = {
+    ...hit("page-1", "Page turn"),
+    url: "https://cdn.example/dead/page-1.mp3",
+  };
   const r = fetch(fx, { "page turn": [[dead]] });
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(
@@ -271,7 +370,9 @@ test("a failed download is dropped like a failed search, and falls back to Kenne
 test("a sound found nowhere is dropped from the kit with why, and warned", () => {
   const fx = fixture();
   kit(fx);
-  const r = fetch(fx, { "kitchen ambience": [[hit("bed-1")]] });
+  const r = fetch(fx, {
+    "kitchen ambience": [[hit("bed-1", "Kitchen Ambience")]],
+  });
   assert.equal(r.code, 0, r.out + r.err);
   const why =
     "openverse found no usable CC0 result; the Kenney packs are not installed (run /creative-video setup)";
@@ -292,7 +393,10 @@ test("a sound whose query was edited is searched again, not kept on its old file
   const k = kitOf(fx);
   k.palette[0].query = "glass break";
   kit(fx, k);
-  const r = fetch(fx, { ...OPENVERSE, "glass break": [[hit("glass-1")]] });
+  const r = fetch(fx, {
+    ...OPENVERSE,
+    "glass break": [[hit("glass-1", "Glass Break")]],
+  });
   assert.equal(r.code, 0, r.out + r.err);
   assert.deepEqual(r.out.trim().split("\n"), [
     "sound bed: cached",
@@ -328,7 +432,7 @@ test("a dropped sound put back with its query replaces its earlier drop, and lea
   ]);
   // Found: it leaves the list and no longer warns.
   retry();
-  const r = fetch(fx, { "paper rip": [[hit("rip-1")]] });
+  const r = fetch(fx, { "paper rip": [[hit("rip-1", "Paper rip")]] });
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(r.out.trim(), "sound ticket: openverse rip-1");
   assert.deepEqual(kitOf(fx).dropped, [door]);

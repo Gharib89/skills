@@ -4,6 +4,10 @@
 // fake-backend-gates.mjs).
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import os from "node:os";
+import path from "node:path";
+import { soundFindings } from "../../skills/creative-video/scripts/gates/sounds.mjs";
+import { rootHtml } from "../../skills/creative-video/scripts/render/root.mjs";
 import {
   compose,
   gateLine,
@@ -163,4 +167,25 @@ test("a created <audio> reusing a written one's id in the same scene, or the roo
       ),
     );
   }
+});
+
+test("a created <audio> fails sounds when no inline script in the html the render compiles creates media, as with a kit's src script alone; the root's own line passes it", () => {
+  const plan = [{ sc: { id: "two", start: 1.5, duration: 3 } }];
+  const events = {
+    two: { sounds: [{ id: "ding", start: 2.5, authored: null }] },
+  };
+  const kitOnly = `<script src="kit/20-kit.js"></script>
+<script>window.beep("two", "ding", 2.5);</script>`;
+  assert.deepEqual(soundFindings(plan, events, kitOnly), [
+    'two: <audio id="ding"> is created by a script, but no inline <script> in the html the render compiles creates media, so the render never mixes it: the root (render/root.mjs) must carry its createElement("audio") line',
+  ]);
+  const root = rootHtml({
+    proj: path.join(os.tmpdir(), "no-such-project"),
+    title: "t",
+    language: "en",
+    total: 4.5,
+    hosts: [],
+    narration: true,
+  });
+  assert.deepEqual(soundFindings(plan, events, root), []);
 });
