@@ -44,7 +44,10 @@ failing one indented under it. Each is a hard fail:
   starts inside its scene in seconds of the whole video. Every one needs an id
   (the render refuses a written one without, never plays a created one
   without), and a created one an id no other `<audio>` has (the render never
-  plays it otherwise).
+  plays it otherwise). A created one also needs an inline script in the html
+  the render compiles (the root and every scene file) that creates media,
+  since the render never reads a script loaded by `src` and mixes no created
+  sound without one; the root carries that line.
   See [Scenes on word times](authoring.md#scenes-on-word-times).
 - `licence`: every `<audio>` but the narration, in a scene, `over.html` or the
   root, plays a `file` that `sound.json` gives a licence

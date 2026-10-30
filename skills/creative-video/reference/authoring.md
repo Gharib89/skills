@@ -167,7 +167,9 @@ word's time; one outside its scene is refused. Give each sound an id no other
 or a taken id, and refuses a written one with no id. An `<audio>`
 written in the HTML keeps the `data-start` written there, in scene seconds,
 whatever the script sets later, so the `sounds` gate refuses a script that
-moves one.
+moves one. The code that creates an `<audio>` may live anywhere the project
+loads it, the scene's own script or a kit `*.js` helper the scene calls: the
+root carries the line the render needs to mix a sound any script creates.
 
 Readable text stays out of the caption band, the bottom 220 px: paint behind
 it, never write in it.
@@ -200,8 +202,11 @@ for, `level` its gain in dB, `out` the ids of the scenes it drops out for. Each
 node <skill>/scripts/sound/sounds.mjs <run>
 ```
 
-For each sound it searches Openverse for CC0 audio (a search that fails after
-30 s is tried once more, a failed download counts as no result), then the
+For each sound it searches Openverse for CC0 audio and takes the first result
+that names the sound: never speech (a pronunciation, a podcast, an
+audiobook), its title and tags holding every word of the query, so word the
+query as the sound's name (a search that fails after 30 s is tried once more,
+a failed download counts as no result), then the
 Kenney packs setup installs (`sounds:kenney`): it picks the file whose name and
 word-index words hold the most of the query's words. The packs hold UI, casino,
 RPG, sci-fi and synth effects and short music stings; a bed comes only from the

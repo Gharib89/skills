@@ -73,6 +73,10 @@ ${[...head, "  </head>"].join("\n")}
 ${hosts.join("\n")}${clip}${bedClip}
     </div>
     <script>
+      // HyperFrames (0.8.216) mixes an <audio> a script creates only when an
+      // inline <script> in the html it compiles creates media: it never reads
+      // a script loaded by src, a kit's. This line lets any script create one.
+      document.createElement("audio");
       window.__timelines["main"] = gsap.timeline({ paused: true });
     </script>
   </body>
