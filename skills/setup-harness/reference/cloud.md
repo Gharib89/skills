@@ -27,7 +27,7 @@ Propose local-only only on **evidence in the repo** (a file, a build target, a h
 
 **Azure DevOps is not a reason**: its cloud route is a bundle session (below). Evidence of a need that blocks only some part (a live end-to-end suite against a VPN host) leaves the repo cloud-first: that part is recorded `Local-only: <part>: <reason>`, `<part>` its `FULL_ROWS` row's name, which goes on `LOCAL_ONLY` ([check-ladder.md](check-ladder.md)), so the other checks still run in the cloud. A part with no `FULL_ROWS` row of its own (a member's `TURN_ROWS` tests, a check target that runs other checks too) cannot be skipped alone: it is a local-only verdict question, with its evidence.
 
-Present the verdict with its evidence paths, and the finding for each need that has none, so the human can check the reasoning. The human may also choose local-only with no evidence: record `Verdict: local-only: operator's choice: <why>`. A local-only verdict's reason names the file, target or host. A local-only repo gets no cloud setup and no `SessionStart` entry: `Setup: None.`, `Proof: unproven`, and the report says `cloud: n/a (local-only: <reason>)`.
+Present the verdict with its evidence paths, and the finding for each need that has none, so the human can check the reasoning. The human may also choose local-only with no evidence: record `Verdict: local-only: operator's choice: <why>`. A local-only verdict's reason names the file, target or host. A local-only repo gets no cloud setup on `Setup:` and no `SessionStart` entry: `Setup: None.`, `Proof: unproven`, and the report says `cloud: n/a (local-only: <reason>)`. It still gets `.claude/hooks/cloud-setup.sh`, for its `--local` run alone (below).
 
 ## Rung labels
 
@@ -60,6 +60,8 @@ The exception is Ship's cloud bootstrap, the script the `Bootstrap:` line under 
 Otherwise, or with no such entry, copy [templates/cloud-setup.sh](../templates/cloud-setup.sh) to `.claude/hooks/cloud-setup.sh`, executable, fill its `STEPS` block, and merge [templates/settings-cloud.json](../templates/settings-cloud.json) into `.claude/settings.json` beside the repo's own hooks, with `timeout` the `Cloud setup:` budget plus max(10 s, budget / 4): 375 at the default 300 s, the template's value, recomputed on an override. The entry is synchronous (no `async`) so the tools exist before the first edit, and its guard exits 0 outside a cloud session, so a local session shows no hook error.
 
 The cloud setup, copied or extended, takes `--local`: it runs every row on the developer's machine, global installs and the runner's hook install included, so a repo with an apt route or a browsers row (`--with-deps` runs apt) assumes an apt-based host with sudo. `check.sh` names `<Setup: path> --local` under a check whose tool is missing, and Ship's cloud bootstrap passes its own `--local` on. Extending an existing script adds the template's `--local` test before its `CLAUDE_CODE_REMOTE` test.
+
+A **local-only** repo gets the template's copy too, `STEPS` filled as below, so its missing tools have that `--local` install: `check.sh` names `.claude/hooks/cloud-setup.sh --local` when `Setup:` is `None.` and the file exists. Merge no `SessionStart` entry, keep `Setup: None.`, and skip the static host check and the proof, which are the cloud's.
 
 `STEPS`, one `<name>|<done test>|<command>` row each, in this order:
 
