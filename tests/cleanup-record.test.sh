@@ -95,5 +95,14 @@ check "the JSON names the branch it deleted" "fix/some-slug-42 true" \
   "$(jq -r '[.branch, .branch_deleted] | join(" ")' <<<"$out")"
 check "the branch is gone" "" "$(g branch --list fix/some-slug-42)"
 check "a branch sharing only the numeric tail stays" "  feat/x-142" "$(g branch --list feat/x-142)"
+g branch fix/task-none
+( cd "$repo" && bash "$c" none >/dev/null 2>&1 )
+check "the task-spec run's branch is found the same way" "" "$(g branch --list fix/task-none)"
+# The branch it finds is still refused while the main checkout has it out.
+g switch -q -c fix/y-77
+out=$(cd "$repo" && bash "$c" 77 2>/dev/null); rc=$?
+g switch -q main
+check_rc "a branch checked out in the main checkout fails cleanup" 1 "$rc"
+check "and is named, not deleted" "fix/y-77 false" "$(jq -r '[.branch, .branch_deleted] | join(" ")' <<<"$out")"
 
 finish
