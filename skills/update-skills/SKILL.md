@@ -32,7 +32,9 @@ From the main checkout, `$S/isolate.sh none chore update-skills-<YYYYMMDD>`,
 the run's date as `date +%Y%m%d` prints it, then work from the path it prints.
 A second run the same day is refused by isolation, and nothing is deleted to
 make room. Note `git rev-parse HEAD` there as `<old>`: the tree
-before the refresh, which the plan reads as the old side.
+before the refresh, which the plan reads as the old side. Note isolate's
+`worktree` and `branch` too, for step 8's cleanup line: the ship copy present
+after the merge may keep its worktrees elsewhere than this one did.
 
 ### 2. Refresh the source-repo skills
 
@@ -194,7 +196,12 @@ the profile's `## Local gate` `Location:` from the worktree and keep its
 section carries the content below either way:
 
 - `## Why the change`: one sentence naming the refresh.
-- `## Change outline`: `Shape: none, mechanical (skills refresh).`, then:
+- `## Change outline`: `Shape: none, mechanical (skills refresh).` while item 3
+  below lists no file a run executes. When it lists one (a workflow, a script,
+  a hook, such as a file the setup-skills re-run edited), the outline opens
+  instead with one `diff` fence in the form `.claude/skills/show-me/SKILL.md`
+  gives, each such file's path a root over the steps it changed, then
+  `Shape: mechanical for the skill copies (skills refresh).`. Then:
   1. One version table, `| Skills | Move |`. A `source_skills` entry whose
      version moved reads `<old_version> → <new_version>`, a null `old_version`
      `new at <new_version>`. A `composed` entry whose `old_ref` differs from its
@@ -256,9 +263,18 @@ on.
 Open it with `$S/open-pr.sh none --title "<subject>" --body-file <body>`, a
 Conventional-Commit subject honouring the profile's `Subject constraints:`
 (`chore(skills): refresh derived skills` where it has none), then
-`$S/read-pr.sh <pr>`. Hand the owner the link, and
-`.claude/skills/ship/scripts/cleanup.sh none` to run from the main checkout
-after the merge, and stop: the PR merges the way the repo merges anything.
+`$S/read-pr.sh <pr>`. Hand the owner the link and this line, with the
+`<worktree>` and `<branch>` step 1 noted, to run from the main checkout after
+the merge. It removes the refresh's worktree, local branch and remote branch:
+the repo's own merge may leave the remote one, and `cleanup.sh` deletes none
+and finds only worktrees in its own container.
+
+```sh
+git worktree remove --force <worktree>; git branch -D <branch>; git push origin --delete <branch>
+```
+
+A `remote ref does not exist` from the last command means the host deleted the
+branch on merge. Then stop: the PR merges the way the repo merges anything.
 
 ### 9. Source-repo mode
 
