@@ -9,10 +9,10 @@
 // the out sample only, script errors beside a timeline no element carries,
 // must and avoid on a word a module script writes, sounds on a start a script
 // moves, its passing twin a sound the script creates, which renders where the
-// gates placed it, joins on an Arabic word split into a box per letter in IBM
-// Plex Sans Arabic. A digit run split the same way on a right-to-left line
-// reaches the critic's checks. Contrast and reading have no real-render
-// fixture.
+// gates placed it, as does one a kit script loaded by src creates, joins on an
+// Arabic word split into a box per letter in IBM Plex Sans Arabic. A digit run
+// split the same way on a right-to-left line reaches the critic's checks.
+// Contrast and reading have no real-render fixture.
 //
 //   node maintainer/real-render.mjs
 //
@@ -363,8 +363,9 @@ check(
 // 0.3 s that the script moves to 1 s fails it, since the render plays 0.3 s;
 // the beep the script creates at the scene's start plus 1 s passes every gate
 // and renders there, its onset read from the MP4 above 1.5 kHz, where the
-// 220 Hz narration is silent.
-function sounded(name, body, js) {
+// 220 Hz narration is silent. So does the same beep created by a kit script
+// the root loads by src, `kit` its text, which HyperFrames never scans (#1067).
+function sounded(name, body, js, kit) {
   const run = runFolder(work, name, [
     { id: "lead", frames: 45 },
     {
@@ -398,6 +399,8 @@ function sounded(name, body, js) {
       ],
     }),
   );
+  if (kit)
+    fs.writeFileSync(path.join(run, "project", "kit", "20-beep.js"), kit);
   runStage("render/timing.mjs", run);
   return run;
 }
@@ -433,18 +436,38 @@ const created = sounded(
     ding.dataset.duration = 0.3;
     document.querySelector('[data-composition-id="two"]').append(ding);`,
 );
-gatesPass(created);
-// Two high-passes bring the 220 Hz narration under -40 dB, one does not, so
-// the first sound left is the 2 kHz beep.
-const heard = spawnSync(
-  "ffmpeg",
-  [
-    ...["-hide_banner", "-i", runStage("render/render.mjs", created)],
-    ...["-af", "highpass=f=1500,highpass=f=1500,silencedetect=n=-40dB:d=0.05"],
-    ...["-f", "null", "-"],
-  ],
-  { encoding: "utf8" },
-).stderr.match(/silence_end: ([\d.]+)/)?.[1];
+const kitted = sounded(
+  "sounds-kit",
+  "",
+  'window.beep("two", "ding", window.TIMING.scenes.two.start + 1);',
+  `window.beep = (scene, id, start) => {
+  const ding = document.createElement("audio");
+  ding.id = id;
+  ding.src = "assets/beep.wav";
+  ding.dataset.start = start;
+  ding.dataset.duration = 0.3;
+  document.querySelector(\`[data-composition-id="\${scene}"]\`).append(ding);
+};
+`,
+);
+// The beep's onset in a run's MP4, once every gate passed. Two high-passes
+// bring the 220 Hz narration under -40 dB, one does not, so the first sound
+// left is the 2 kHz beep.
+function onset(run) {
+  gatesPass(run);
+  return spawnSync(
+    "ffmpeg",
+    [
+      ...["-hide_banner", "-i", runStage("render/render.mjs", run)],
+      ...[
+        "-af",
+        "highpass=f=1500,highpass=f=1500,silencedetect=n=-40dB:d=0.05",
+      ],
+      ...["-f", "null", "-"],
+    ],
+    { encoding: "utf8" },
+  ).stderr.match(/silence_end: ([\d.]+)/)?.[1];
+}
 const placed =
   JSON.parse(fs.readFileSync(path.join(created, "timeline.json"))).scenes[1]
     .start + 1;
@@ -464,9 +487,15 @@ check(
     ),
   reused.measured,
 );
-check(
-  "sound onset",
-  heard !== undefined && Math.abs(+heard - placed) <= 1 / FPS,
-  `the created beep starts at ${heard ?? "no"} s in the MP4 vs ${placed} s placed`,
-);
+for (const [name, run, beep] of [
+  ["sound onset", created, "the created beep"],
+  ["kit sound onset", kitted, "the beep a kit script created"],
+]) {
+  const heard = onset(run);
+  check(
+    name,
+    heard !== undefined && Math.abs(+heard - placed) <= 1 / FPS,
+    `${beep} starts at ${heard ?? "no"} s in the MP4 vs ${placed} s placed`,
+  );
+}
 process.exit(failed ? 1 : 0);

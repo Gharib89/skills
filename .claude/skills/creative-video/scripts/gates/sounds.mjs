@@ -6,15 +6,30 @@
 // whatever a script sets later, and a created one at its live start in video
 // seconds. It refuses a static one with no id (a --strict lint error), and
 // never plays a created one with no id or with an id another <audio> carries
-// (measured, #1028).
+// (measured, #1028). HyperFrames 0.8.216 mixes a created one only when an
+// inline <script>'s text in the HTML it compiles (the root, each composition
+// inlined) matches its runtime-media scan (`hasRuntimeMediaChanges`); it never
+// reads a script loaded by src, so a kit's created sounds rest on the root's
+// own line (render/root.mjs, #1067).
+const SCAN = [
+  /\bcreateElement\s*\(\s*["'`](?:video|audio)["'`]\s*\)/i,
+  /\bnew\s+(?:Audio|Video)\s*\(/i,
+  /<(?:video|audio)\b[^>]*>/i,
+];
+const collects = (html) =>
+  [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].some(([, body]) =>
+    SCAN.some((re) => re.test(body)),
+  );
 
 // A sound's start in its scene's seconds.
 export const sceneSeconds = (sc, s) =>
   s.authored === null ? s.start - sc.start : s.start;
 
-// One finding per sound the render plays elsewhere than the gates judge it,
-// over.html's judged as a scene across the whole video.
-export function soundFindings(plan, events) {
+// One finding per sound the render plays elsewhere than the gates judge it, or
+// never mixes, over.html's judged as a scene across the whole video; `html` is
+// what the render compiles, the root and every composition file.
+export function soundFindings(plan, events, html) {
+  const mixed = collects(html);
   // The root's own <audio> (render/root.mjs), which no scene's events hold.
   const carried = new Map([["narration", 1]]);
   for (const { sounds } of Object.values(events))
@@ -30,6 +45,10 @@ export function soundFindings(plan, events) {
           `${sc.id}: an <audio> with no id: the render refuses one written in the scene file and never plays one a script created, so give it an id`,
         ];
       if (authored === null) {
+        if (!mixed)
+          return [
+            `${audio} is created by a script, but no inline <script> in the HTML the render compiles creates media, so the render never mixes it: create it in a scene file's inline <script>, or report that render/root.mjs lost its createElement("audio") line`,
+          ];
         if (carried.get(id) > 1)
           return [
             `${audio} is created by its script with an id another <audio> carries: the render never plays it, so give it an id no other <audio> has`,

@@ -405,6 +405,16 @@ const summary = (ev) =>
   `${ev.length} finding(s)${ev.length ? `, first: ${ev[0]}` : ""}`;
 const kit = soundKit(run);
 const bed = await orFail(() => bedLevel({ proj, timeline, kit, backend }));
+const root = fs.readFileSync(path.join(proj, "index.html"), "utf8");
+const compositions = path.join(proj, "compositions");
+// What the render compiles: the root with every composition inlined.
+const compiled = [
+  root,
+  ...fs
+    .readdirSync(compositions)
+    .filter((f) => f.endsWith(".html"))
+    .map((f) => fs.readFileSync(path.join(compositions, f), "utf8")),
+].join("\n");
 // Each gate's findings and floor, and what a pass measured where it says more
 // than its count of findings.
 const judged = {
@@ -422,15 +432,11 @@ const judged = {
   ],
   "script errors": [scriptErrors, "every scene's script runs"],
   sounds: [
-    soundFindings(plan, events),
+    soundFindings(plan, events, compiled),
     "every <audio> has an id and plays at its live data-start, in its scene",
   ],
   licence: [
-    licenceFindings(
-      events,
-      fs.readFileSync(path.join(proj, "index.html"), "utf8"),
-      kit,
-    ),
+    licenceFindings(events, root, kit),
     "every <audio> but the narration has a licence record in sound.json",
   ],
   "bed level": [bed.evidence, `${BED_LU} LU`, bed.measured],

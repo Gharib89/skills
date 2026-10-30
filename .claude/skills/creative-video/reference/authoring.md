@@ -167,7 +167,8 @@ word's time; one outside its scene is refused. Give each sound an id no other
 or a taken id, and refuses a written one with no id. An `<audio>`
 written in the HTML keeps the `data-start` written there, in scene seconds,
 whatever the script sets later, so the `sounds` gate refuses a script that
-moves one.
+moves one. Create an `<audio>` in the scene's own script or in a kit `*.js`
+device the scene calls: the render mixes a sound either one creates.
 
 Readable text stays out of the caption band, the bottom 220 px: paint behind
 it, never write in it.
@@ -201,22 +202,26 @@ node <skill>/scripts/sound/sounds.mjs <run>
 ```
 
 For each sound it searches Openverse for CC0 audio (a search that fails after
-30 s is tried once more, a failed download counts as no result), then the
-Kenney packs setup installs (`sounds:kenney`): it picks the file whose name and
-word-index words hold the most of the query's words. The packs hold UI, casino,
-RPG, sci-fi and synth effects and short music stings; a bed comes only from the
-one stem whose loop seam measures clean, the sci-fi large space engine, so a bed
-query needs engine, space or spaceship. It copies what it finds into
-`project/assets/sounds/` and writes the sound's `file`, `source`, `licence`,
-`creator`, `url` and `attribution` into `sound.json`. A sound its query found
-before, on any run, is copied again with no search. It prints `sound <event>:
-openverse <id> | kenney <pack>/<file> | cached | dropped: <why>` per sound. A
-sound found nowhere moves to `sound.json`'s `dropped` list with its reason, and
-prints `warn dropped sound: <event>: <why>`. To swap a found sound, change its
-`query` and run again. To retry a dropped one, put it back under `bed` or
-`palette` with its `query`, or a new one, and run again: this run's outcome
-replaces its `dropped` entry. Or stage the moment without it. Never edit the
-fields it writes.
+30 s is tried once more, a failed download counts as no result) and takes the
+first result that is not speech (a pronunciation, a podcast, an audiobook) and
+whose title and tags hold every word of the query, then the Kenney packs setup
+installs (`sounds:kenney`): it picks the file whose name and word-index words
+hold the most of the query's words. Word each query as the sound's own name,
+the two or three words a clip's title or tags carry (`bell ding`, `radio
+squelch`): the stage passes over every Openverse result that lacks any one
+word. The packs hold UI, casino, RPG, sci-fi and synth effects and short music
+stings; a bed comes only from the one stem whose loop seam measures clean, the
+sci-fi large space engine, so a bed query needs engine, space or spaceship. It
+copies what it finds into `project/assets/sounds/` and writes the sound's
+`file`, `source`, `licence`, `creator`, `url` and `attribution` into
+`sound.json`. A sound its query found before, on any run, is copied again with
+no search. It prints `sound <event>: openverse <id> | kenney <pack>/<file> |
+cached | dropped: <why>` per sound. A sound found nowhere moves to
+`sound.json`'s `dropped` list with its reason, and prints `warn dropped sound:
+<event>: <why>`. To swap a found sound, change its `query` and run again. To
+retry a dropped one, put it back under `bed` or `palette` with its `query`, or
+a new one, and run again: this run's outcome replaces its `dropped` entry. Or
+stage the moment without it. Never edit the fields it writes.
 
 The root plays the bed: every stage that writes `index.html` adds it after the
 narration as `<audio id="bed">`, looped over the whole video at its `level`,
