@@ -61,7 +61,7 @@ Otherwise, or with no such entry, copy [templates/cloud-setup.sh](../templates/c
 
 The cloud setup, copied or extended, takes `--local`: it runs every row on the developer's machine, global installs and the runner's hook install included, so a repo with an apt route or a browsers row (`--with-deps` runs apt) assumes an apt-based host with sudo. `check.sh` names `<Setup: path> --local` under a check whose tool is missing, and Ship's cloud bootstrap passes its own `--local` on. Extending an existing script adds the template's `--local` test before its `CLAUDE_CODE_REMOTE` test.
 
-A **local-only** repo gets the template's copy too, so its missing tools have that `--local` install: `check.sh` names `.claude/hooks/cloud-setup.sh --local` when `Setup:` is `None.` and the file exists. Its `STEPS` are steps 1 to 4 below, a runtime row only where a catalog tool's `Route:` installs it and no `tags` row; the `dockerd` and browser rows are the cloud image's. Merge no `SessionStart` entry, keep `Setup: None.`, and skip the static host check and the proof, which are the cloud's.
+A **local-only** repo gets the template's copy too, so its missing tools have that `--local` install: `check.sh` names `.claude/hooks/cloud-setup.sh --local` when `Setup:` is `None.` and the file exists. Its `STEPS` are steps 1 to 4 below, a runtime row only where a catalog tool's `Route:` installs it and no `tags` row; the `dockerd`, image-pull and browser rows are the cloud image's, since a local `docker` pulls an image on first use. Merge no `SessionStart` entry, keep `Setup: None.`, and skip the static host check and the proof, which are the cloud's.
 
 `STEPS`, one `<name>|<done test>|<command>` row each, in this order:
 
