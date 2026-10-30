@@ -39,7 +39,7 @@ outline=$(printf '%s\n' "$step8" | awk '/^- `## Change outline`:/ { f = 1; print
 
 check "step 1 notes isolate's worktree and branch" 1 "$(printf '%s\n' "$step1" | affirms '`worktree` and `branch`')"
 check "the closing hands the owner no cleanup.sh none" 0 "$(printf '%s\n' "$closing" | grep -cF 'cleanup.sh none')"
-for c in 'git worktree remove --force <worktree>' 'git branch -D <branch>' 'git push origin --delete <branch>' \
+for c in 'git worktree remove --force "<worktree>"' 'git branch -D <branch>' 'git push origin --delete <branch>' \
   'git fetch --prune origin'; do
   check "the handed line runs: $c" 1 "$(printf '%s\n' "$line" | grep -cF "$c")"
 done
