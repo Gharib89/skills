@@ -85,4 +85,15 @@ else
   skipped "a read-only record root does not stop root"
 fi
 
+# With no worktree (an in-place run), the branch is found by its `-<issue>`
+# suffix across the `<type>/` segment isolate names it with, and a branch that
+# only shares a numeric tail is another issue's.
+g branch fix/some-slug-42; g branch feat/x-142
+out=$(cd "$repo" && bash "$c" 42 2>/dev/null); rc=$?
+check_rc "cleanup with no worktree exits ok" 0 "$rc"
+check "the JSON names the branch it deleted" "fix/some-slug-42 true" \
+  "$(jq -r '[.branch, .branch_deleted] | join(" ")' <<<"$out")"
+check "the branch is gone" "" "$(g branch --list fix/some-slug-42)"
+check "a branch sharing only the numeric tail stays" "  feat/x-142" "$(g branch --list feat/x-142)"
+
 finish
