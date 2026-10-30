@@ -199,8 +199,9 @@ section carries the content below either way:
 - `## Change outline`: `Shape: none, mechanical (skills refresh).` while item 3
   below lists no file a run executes. When it lists one (a workflow, a script,
   a hook, such as a file the setup-skills re-run edited), the outline opens
-  instead with one `diff` fence in the form `.claude/skills/show-me/SKILL.md`
-  gives, each such file's path a root over the steps it changed, then
+  instead with one `diff` fence of 15 lines or fewer, in the form
+  `.claude/skills/show-me/SKILL.md` gives, each such file's path a root over
+  the steps it changed, then
   `Shape: mechanical for the skill copies (skills refresh).`. Then:
   1. One version table, `| Skills | Move |`. A `source_skills` entry whose
      version moved reads `<old_version> → <new_version>`, a null `old_version`
@@ -266,15 +267,16 @@ Conventional-Commit subject honouring the profile's `Subject constraints:`
 `$S/read-pr.sh <pr>`. Hand the owner the link and this line, with the
 `<worktree>` and `<branch>` step 1 noted, to run from the main checkout after
 the merge. It removes the refresh's worktree, local branch and remote branch:
-the repo's own merge may leave the remote one, and `cleanup.sh` deletes none
-and finds only worktrees in its own container.
+the repo's own merge may leave the remote one, and `cleanup.sh` deletes no
+remote branch and finds only worktrees in its own container.
 
 ```sh
 git worktree remove --force <worktree>; git branch -D <branch>; git push origin --delete <branch>
 ```
 
 A `remote ref does not exist` from the last command means the host deleted the
-branch on merge. Then stop: the PR merges the way the repo merges anything.
+branch on merge; `git fetch --prune origin` then drops its stale tracking ref.
+Then stop: the PR merges the way the repo merges anything.
 
 ### 9. Source-repo mode
 
