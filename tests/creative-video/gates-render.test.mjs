@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { calls, project, read, render, exec } from "./timing-lib.mjs";
+import { calls, outFiles, project, read, render, exec } from "./timing-lib.mjs";
 import { compose, runGates, timed } from "./gates-lib.mjs";
 
 const REFUSED =
@@ -102,13 +102,14 @@ test("a file reached through a symlink, to a file, a folder or a folder that lin
   }
 });
 
-test("a render after the gates passed delivers, and its captions check names its findings against the composition's cues", () => {
+test("a render after the gates passed delivers, and its captions check names its findings against the composition's cues, keeping the delivery before it", () => {
   const fx = timed();
   assert.equal(runGates(fx).code, 0);
   const ok = exec(render, fx);
   assert.equal(ok.code, 0, ok.out + ok.err);
   assert.ok(ok.out.includes("delivery captions: pass\n"));
   assert.ok(!ok.out.includes("delivery srt"));
+  const delivered = outFiles(fx);
 
   // a cue the composition draws that the timeline does not hold
   const file = project(fx, "compositions", "captions.html");
@@ -120,5 +121,5 @@ test("a render after the gates passed delivers, and its captions check names its
     bad.out,
     /^delivery captions: fail: 1 finding\(s\), first: SRT cue 1 reads "Ship drives .*", the composition "Shop drives .*" vs none$/m,
   );
-  assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
+  assert.deepEqual(outFiles(fx), delivered);
 });
