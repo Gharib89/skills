@@ -9,14 +9,20 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-# Prints the count of stdin's sentences, lines joined, that name <phrase> with no
-# negation in them, so a reworded "with no `diff` fence" reads 0.
-affirms() { tr '\n' ' ' | sed 's/\. /.\n/g' | grep -F "$1" | grep -cviwE 'no|not|never|without|nor'; }
+# Prints the count of stdin's sentences, lines joined, that name every <phrase>
+# and carry no negating word, so "never opens with one `diff` fence" reads 0.
+affirms() {
+  local s; s=$(tr '\n' ' ' | sed 's/\. /.\n/g')
+  for p in "$@"; do s=$(printf '%s\n' "$s" | grep -F "$p"); done
+  printf '%s\n' "$s" | grep -cviwE "no|not|never|without|nor|none|nothing|neither|[a-z]+n't"
+}
 
 check "fixture: a sentence drawing the fence passes" 1 \
   "$(printf 'The outline opens instead\nwith one `diff` fence. Then:\n' | affirms 'with one `diff` fence')"
 check "fixture: a negated sentence is caught" 0 \
-  "$(printf 'The outline opens instead\nwith one `diff` fence never. Then:\n' | affirms 'with one `diff` fence')"
+  "$(printf 'The outline never opens\nwith one `diff` fence. Then:\n' | affirms 'with one `diff` fence')"
+check "fixture: a contracted negation is caught" 0 \
+  "$(printf "The outline doesn't open\nwith one \`diff\` fence. Then:\n" | affirms 'with one `diff` fence')"
 
 skill=skills/update-skills/SKILL.md
 step() { awk -v h="### $1." 'index($0, h) == 1 { f = 1; next } f && /^#{2,3} / { exit } f' "$skill"; }
@@ -32,8 +38,8 @@ for c in 'git worktree remove --force <worktree>' 'git branch -D <branch>' 'git 
   'git fetch --prune origin'; do
   check "the handed line runs: $c" 1 "$(printf '%s\n' "$line" | grep -cF "$c")"
 done
-check "the outline draws a diff fence for a file a run executes" 1 \
-  "$(printf '%s\n' "$outline" | affirms 'with one `diff` fence')"
+check "the outline draws a diff fence for a workflow, a script or a hook" 1 \
+  "$(printf '%s\n' "$outline" | affirms 'a workflow, a script, a hook' 'with one `diff` fence')"
 check "the mechanical Shape stays for the skill copies" 1 \
   "$(printf '%s\n' "$outline" | grep -cF 'Shape: mechanical for the skill copies (skills refresh).')"
 
