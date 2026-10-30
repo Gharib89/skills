@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.15.2 (2026-10-30)
+
+### Bug Fixes
+
+- **creative-video**: Master on the AAC encode with a true-peak limiter, keep the last delivery
+  ([#1070](https://github.com/Gharib89/skills/pull/1070),
+  [`36f3b96`](https://github.com/Gharib89/skills/commit/36f3b96cae6a4aa00d8de14002569630be7da100))
+
+
 ## v0.15.1 (2026-10-30)
 
 ### Bug Fixes
