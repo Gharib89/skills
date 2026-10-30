@@ -19,7 +19,8 @@
 # whose done test passes is skipped and the second run is a fast no-op. Only
 # routes the cloud sandbox's network passes belong here (apt, the package
 # registries), or a host the environment's Custom allowlist admits (the harness
-# profile's `Allowlist:`). A local-only repo's copy runs only with --local.
+# profile's `Allowlist:`). A local-only repo's copy has no `SessionStart` entry,
+# so only a --local run starts it.
 set -uo pipefail
 [ "${1:-}" = --local ] || [ "${CLAUDE_CODE_REMOTE:-}" = true ] || exit 0
 
