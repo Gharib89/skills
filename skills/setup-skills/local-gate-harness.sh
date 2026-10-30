@@ -59,6 +59,7 @@ if command -v gitleaks >/dev/null; then
   run secrets gitleaks detect --no-banner --redact --log-opts="$base..HEAD"
 else
   mark secrets unavailable
+  echo 'secrets: gitleaks not on PATH; scripts/cloud-ship-bootstrap.sh --local installs it' >&2
 fi
 
 run deps  __DEPS__                       # every lane: a fresh worktree has no dependencies yet

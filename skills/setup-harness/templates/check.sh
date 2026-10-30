@@ -132,9 +132,21 @@ check() {
   if [ -n "$expired" ]; then record "$name" over-budget; return; fi
   case $rc in
     0) record "$name" pass ;;
-    127) record "$name" unavailable; { printf -- '--- %s: unavailable ---\n' "$name"; tail -n 40 "$log"; } >&2 ;;
-    *) record "$name" fail; { printf -- '--- %s ---\n' "$name"; tail -n 40 "$log"; } >&2 ;;
+    127) record "$name" unavailable; { printf -- '--- %s: unavailable ---\n' "$name"; tail -n 40 "$log"; install_route; } >&2 ;;
+    # A runner hook whose tool is missing fails rather than exiting 127.
+    *) record "$name" fail
+       { printf -- '--- %s ---\n' "$name"; tail -n 40 "$log"
+         ! grep -qiE 'not found|no such file or directory' "$log" || install_route; } >&2 ;;
   esac
+}
+
+# The line naming what installs a missing tool: the cloud setup's local mode,
+# from the harness profile's `Setup:` under `## Cloud`. A local-only repo
+# (`Setup: None.`) has no such route and gets no line.
+install_route() {
+  local setup
+  setup=$(awk '{ sub(/\r$/, "") } /^## / { c = ($0 == "## Cloud"); next } c && sub(/^Setup: /, "") { print; exit }' docs/agents/harness.md 2>/dev/null)
+  case $setup in '' | None.) ;; *) printf 'a missing tool installs with: %s --local\n' "$setup" ;; esac
 }
 
 # The files, shell-quoted and space-joined, for a {files} placeholder; a name

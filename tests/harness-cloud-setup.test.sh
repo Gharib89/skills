@@ -40,6 +40,13 @@ check "and runs no step or prints anything" "" "$out$(cat "$log")"
 run '' "$s"
 check "an unset CLAUDE_CODE_REMOTE is not a cloud session" "" "$out$(cat "$log")"
 
+# --local is the install route a local session's missing tool names.
+out=$(cd "$fixture" && CLAUDE_CODE_REMOTE='' LOG=$log "$s" --local 2>/dev/null); rc=$?
+check_rc "--local runs outside a cloud session" 0 "$rc"
+check "and prints the ok line" "harness cloud setup: ok" "$out"
+check "having run each step" "tool
+deps" "$(cat "$log")"
+
 rm -f "$log.tool"
 run true "$s"
 check_rc "in a cloud session every step passing exits 0" 0 "$rc"

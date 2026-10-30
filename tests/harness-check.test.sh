@@ -112,6 +112,38 @@ echo 'x = 1' > "$r/a.py"
 run "$r" edit a.py
 check "a missing tool is unavailable" '{"rung":"edit","verdict":"unavailable","checks":{"runner":"unavailable"}}' "$out"
 check_rc "an unavailable check exits 2" 2 "$rc"
+check "with no harness profile it names no install route" "" "$(grep 'installs with' <<<"$err")"
+
+# A missing tool names the cloud setup's local mode, read from the harness
+# profile's `Setup:`, since it installs every tool check.sh runs.
+mkdir -p "$r/docs/agents"
+printf '# Harness profile\n\n## Cloud\n\nVerdict: cloud-first\nSetup: .claude/hooks/cloud-setup.sh\n\n## Budgets\n\nSetup: not this one\n' > "$r/docs/agents/harness.md"
+run "$r" edit a.py
+check "an unavailable check names the install route last" \
+  'a missing tool installs with: .claude/hooks/cloud-setup.sh --local' "$(tail -n 1 <<<"$err")"
+sed -i 's/^Setup: \.claude.*/Setup: None./' "$r/docs/agents/harness.md"
+run "$r" edit a.py
+check "a local-only profile (Setup: None.) names none" "" "$(grep 'installs with' <<<"$err")"
+
+# A runner hook whose tool is missing fails rather than exiting 127, so a
+# failure whose output says a command was not found names the route too.
+stub hookrun 'echo "Failed to run hook: No such file or directory (os error 2)"; exit 1'
+r=$(repo hook "EDIT_GLOBS='*.py'
+EDIT_RUN='hookrun {files}'")
+mkdir -p "$r/docs/agents"
+printf '## Cloud\n\nSetup: .claude/hooks/cloud-setup.sh\n' > "$r/docs/agents/harness.md"
+echo 'x = 1' > "$r/a.py"
+run "$r" edit a.py
+check "a hook whose tool is missing fails" '{"rung":"edit","verdict":"fail","checks":{"runner":"fail"}}' "$out"
+check "and names the install route" \
+  'a missing tool installs with: .claude/hooks/cloud-setup.sh --local' "$(tail -n 1 <<<"$err")"
+r=$(repo lintfail "EDIT_GLOBS='*.py'
+EDIT_RUN='lint {files}'")
+mkdir -p "$r/docs/agents"
+printf '## Cloud\n\nSetup: .claude/hooks/cloud-setup.sh\n' > "$r/docs/agents/harness.md"
+echo 'x = BAD' > "$r/a.py"
+run "$r" edit a.py
+check "a plain finding names no install route" "" "$(grep 'installs with' <<<"$err")"
 
 # Two members of one stack and a root-level file kind no row claims. Commands
 # run in the member's directory and log where they ran.
