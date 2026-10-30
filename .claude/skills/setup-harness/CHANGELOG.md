@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.15.0 (2026-10-30)
+
+### Features
+
+- **setup-harness**: A local-only harness and a no-harness gate name an install for a missing tool
+  ([#1065](https://github.com/Gharib89/skills/pull/1065),
+  [`fb0f990`](https://github.com/Gharib89/skills/commit/fb0f9903207c2b80a1eb09bac439933ea40d3efb))
+
+
 ## v0.14.0 (2026-10-30)
 
 ### Features
