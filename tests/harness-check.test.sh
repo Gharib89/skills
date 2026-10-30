@@ -124,6 +124,12 @@ check "an unavailable check names the local install last" \
 sed -i 's/^Setup: \.claude.*/Setup: None./' "$r/docs/agents/harness.md"
 run "$r" edit a.py
 check "a local-only profile (Setup: None.) names none" "" "$(grep 'installs with' <<<"$err")"
+# A local-only repo setup-harness set up holds the setup script for `--local`
+# alone, with no SessionStart entry; its missing tool names that script.
+mkdir -p "$r/.claude/hooks"; : > "$r/.claude/hooks/cloud-setup.sh"
+run "$r" edit a.py
+check "a local-only profile with the setup script names its local install" \
+  'a missing tool installs with: .claude/hooks/cloud-setup.sh --local' "$(tail -n 1 <<<"$err")"
 
 # A runner hook whose tool is missing fails rather than exiting 127, so a
 # failure whose output says a command was not found names the route too.
