@@ -124,6 +124,20 @@ out=$(cd "$d" && bash local-gate.sh --base base 2>/dev/null); rc=$?
 check_rc "template, a real base: exit 0" 0 "$rc"
 check "template, a real base: secrets passes" "pass" "$(jq -r '.gates.secrets' <<<"$out")"
 
+# With no harness there is no bootstrap to name, so a missing scanner names the
+# install command setup-skills filled. The PATH holds only what the gate calls,
+# so a gitleaks on this machine cannot reach it.
+nb=$fixture/noscan; mkdir -p "$nb"
+for t in bash git jq mktemp rm tail; do ln -s "$(command -v "$t")" "$nb/$t"; done
+sed 's/__DEPS__/true/; s/__RUNNER__/true/; s/__SCANNER_INSTALL__/sudo apt-get install -y gitleaks/' \
+  skills/setup-skills/local-gate.sh > "$d/local-gate.sh"
+out=$(cd "$d" && PATH=$nb bash local-gate.sh --base base 2>"$fixture/err"); rc=$?
+check_rc "template, no scanner: exit 2" 2 "$rc"
+check "template, no scanner: secrets is unavailable, the rest as before" \
+  '{"verdict":"unavailable","base":"base","lane":"full","gates":{"secrets":"unavailable","deps":"pass","tests":"pass"}}' "$out"
+check "template, no scanner: stderr names the filled install" \
+  "secrets: gitleaks not on PATH; sudo apt-get install -y gitleaks installs it" "$(cat "$fixture/err")"
+
 # The template grades its own gates: a failing gate is exit 1, an unavailable one
 # exit 2, and fail wins over unavailable. Each case fills the gates block the way
 # a consumer might: a placeholder with a failing command, or a `mark`. A gate

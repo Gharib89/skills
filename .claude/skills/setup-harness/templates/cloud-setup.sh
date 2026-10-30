@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # .claude/hooks/cloud-setup.sh: this repo's cloud setup, written by
-# setup-harness. A `SessionStart` hook in .claude/settings.json runs it in every
-# Claude Code on the web session, on start and on resume, so every tool
-# scripts/check.sh runs is installed before the session's first edit.
+# setup-harness. On a cloud-first repo, a `SessionStart` hook in
+# .claude/settings.json runs it in every Claude Code on the web session, on
+# start and on resume, so every tool scripts/check.sh runs is installed before
+# the session's first edit.
 #
 #   .claude/hooks/cloud-setup.sh [--local]
 #   --local runs the same steps outside a cloud session: the local install
@@ -18,7 +19,8 @@
 # whose done test passes is skipped and the second run is a fast no-op. Only
 # routes the cloud sandbox's network passes belong here (apt, the package
 # registries), or a host the environment's Custom allowlist admits (the harness
-# profile's `Allowlist:`).
+# profile's `Allowlist:`). A local-only repo's copy has no `SessionStart` entry,
+# so only a --local run starts it.
 set -uo pipefail
 [ "${1:-}" = --local ] || [ "${CLAUDE_CODE_REMOTE:-}" = true ] || exit 0
 

@@ -3,7 +3,7 @@ name: setup-skills
 description: "Configure this repo for the Gharib89/skills engineering skills: draft its ship profile, local gate, PR template, coding-standards doc and reviewer scaffolding, and check the host tooling. Run once after /setup-matt-pocock-skills, before the first /ship."
 disable-model-invocation: true
 metadata:
-  version: 0.27.0
+  version: 0.28.0
   composes: mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60:triage
 ---
 
@@ -120,7 +120,7 @@ Then: `Self-review cap:` is a whole number of 1 or more; every `Also proven by C
 
 **Self-contained local gate**, without a harness:
 
-- Absent: write `scripts/local-gate.sh` from [local-gate.sh](./local-gate.sh), one gate per CI leg named as the leg is named in `## CI`, run locally where the runner is obvious and `deferred-to-ci` where it is not; `secrets` wired to a detected scanner (`gitleaks`, `ggshield`, `detect-secrets`, `trufflehog`), else left `unavailable` with a comment naming what to add.
+- Absent: write `scripts/local-gate.sh` from [local-gate.sh](./local-gate.sh), one gate per CI leg named as the leg is named in `## CI`, run locally where the runner is obvious and `deferred-to-ci` where it is not; `secrets` wired to a detected scanner (`gitleaks`, `ggshield`, `detect-secrets`, `trufflehog`) and `__SCANNER_INSTALL__` filled, as the template's `secrets` comment says.
 - Present and conforming (JSON verdict with `verdict`, `gates`, a `secrets` gate, `--small` and `--base` flags): keep it; `Location:` records where it is.
 - Present but non-conforming (prints text, positional `--small`, no `unavailable` status): propose a rewrite to the contract that keeps every check the old gate ran, show the diff, write on confirm. `Location:` moves to `scripts/local-gate.sh` only if the human agrees.
 
