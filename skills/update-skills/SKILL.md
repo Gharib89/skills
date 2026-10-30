@@ -271,12 +271,12 @@ the repo's own merge may leave the remote one, and `cleanup.sh` deletes no
 remote branch and finds only worktrees in its own container.
 
 ```sh
-git worktree remove --force <worktree>; git branch -D <branch>; git push origin --delete <branch>
+git worktree remove --force <worktree>; git branch -D <branch>; git push origin --delete <branch>; git fetch --prune origin
 ```
 
-A `remote ref does not exist` from the last command means the host deleted the
-branch on merge; `git fetch --prune origin` then drops its stale tracking ref.
-Then stop: the PR merges the way the repo merges anything.
+A `remote ref does not exist` from the push means the host deleted the branch
+on merge; the prune then drops its stale tracking ref. Then stop: the PR merges
+the way the repo merges anything.
 
 ### 9. Source-repo mode
 
