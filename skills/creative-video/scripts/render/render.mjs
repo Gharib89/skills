@@ -11,11 +11,13 @@
 // asking for a direction or a look) or <run>/unattended.json records an
 // unattended run's direction, and unless <run>/gates.json (gates/gates.mjs)
 // passed for this very project; a refusal leaves out/ as it was. Renders the
-// project with HyperFrames to <run>/.cache/render/raw.mp4, normalises its
-// audio to -14 LUFS with a true peak of -1.5 dBTP into out/<slug>.mp4, writes
-// out/<slug>.srt from the timeline's cues and out/poster.png from the middle of
-// the first scene, and checks the MP4 against the delivery contract. A failed
-// check empties out/ and delivers nothing.
+// project with HyperFrames to <run>/.cache/render/raw.mp4, masters its audio
+// to -14 LUFS with a true peak of at most -1.5 dBTP as its AAC encode measures
+// (a limiter holds sharp transients) into <slug>.mp4, writes <slug>.srt from
+// the timeline's cues and poster.png from the middle of the first scene, all
+// three in <run>/.cache/render/out/, and checks the MP4 against the delivery
+// contract. Only a delivery that passes every check replaces out/, so a failed
+// render or check keeps the last passing delivery there.
 // A timeline with `chapters` renders in chapters instead (render/chapter-
 // project.mjs): each chapter, one at a time, from its own folder
 // <run>/.cache/render/chapter-<n>/ to the chapter render
@@ -25,7 +27,7 @@
 // 1 fps, draft quality (its audio is the 30 fps render's, bit for bit, measured
 // on HyperFrames 0.8.206) to audio.mp4, its audio mastered to the targets above
 // into audio.wav the length of the timeline, and the chapter renders and that
-// mix join into out/<slug>.mp4 with a chapter mark each (render/chapters.mjs). The checks add
+// mix join into <slug>.mp4 with a chapter mark each (render/chapters.mjs). The checks add
 // `chapters`. Before any chapter renders it prints its estimate from
 // render-rates.json; `--estimate` prints that line and exits 0, rendering
 // nothing, touching nothing in out/ and not asking for passed gates.
@@ -40,8 +42,8 @@
 //         true peak`, `delivered: <path>`, then `render: <slug>.mp4 <seconds> s,
 //         <n> scene(s)`
 // writes: <run>/.cache/render/raw.mp4 (chapter-<n>/, chapter-<n>-<key>.mp4,
-//         audio.mp4, audio.wav in chapters), out/<slug>.mp4|.srt, out/poster.png,
-//         manifest.json
+//         audio.mp4, audio.wav in chapters), <run>/.cache/render/out/, then on
+//         a pass out/<slug>.mp4|.srt, out/poster.png and manifest.json
 // exit:   0 delivered · 1 refused or failed, `render: <why>` on stderr, or a
 //         delivery check failed · 2 usage
 import fs from "node:fs";
@@ -165,11 +167,13 @@ else {
       `render: changed after board ${approved.n}'s approval: ${changed.join(", ")}`,
     );
 }
+// The delivery is made and checked in `staged`, and replaces out/ only once
+// every check passed, so out/ keeps the last passing delivery.
 const out = path.join(run, "out");
-fs.rmSync(out, { recursive: true, force: true });
-fs.mkdirSync(out);
+const staged = path.join(cache, "out");
+fs.rmSync(staged, { recursive: true, force: true });
+fs.mkdirSync(staged, { recursive: true });
 const raw = path.join(cache, "raw.mp4");
-fs.mkdirSync(cache, { recursive: true });
 // HyperFrames in `cwd` to `file`: video at `fps`, `more` its further flags.
 async function renderTo(cwd, file, fps, more = [], what = "") {
   const code = await backend.hyperframes(
@@ -210,8 +214,8 @@ if (parts) {
   );
 } else await renderTo(project, raw, FPS);
 
-const mp4 = path.join(out, `${slug}.mp4`);
-const srt = path.join(out, `${slug}.srt`);
+const mp4 = path.join(staged, `${slug}.mp4`);
+const srt = path.join(staged, `${slug}.srt`);
 const first = timeline.scenes[0];
 let probe;
 let loud;
@@ -234,12 +238,11 @@ try {
   await backend.poster(
     mp4,
     +(first.start + first.duration / 2).toFixed(3),
-    path.join(out, "poster.png"),
+    path.join(staged, "poster.png"),
   );
   probe = await backend.ffprobe(mp4);
   loud = await backend.loudness(mp4);
 } catch (e) {
-  fs.rmSync(out, { recursive: true, force: true });
   fail(e.message);
 }
 
@@ -302,18 +305,17 @@ for (const [name, got, want, ok = got === want] of checks) {
 console.log(
   `measured loudness: ${loud.lufs} LUFS integrated, ${loud.peak} dBTP true peak`,
 );
-if (failed) {
-  fs.rmSync(out, { recursive: true, force: true });
-  process.exit(1);
-}
+if (failed) process.exit(1);
 
+fs.rmSync(out, { recursive: true, force: true });
+fs.renameSync(staged, out);
 writeManifest(run, {
   lock: lockHash,
   narrator: voice.narrator,
   lufs: LUFS,
   peak: PEAK,
 });
-console.log(`delivered: ${mp4}`);
+console.log(`delivered: ${path.join(out, `${slug}.mp4`)}`);
 console.log(
   `render: ${slug}.mp4 ${seconds.toFixed(2)} s, ${timeline.scenes.length} scene(s)`,
 );
