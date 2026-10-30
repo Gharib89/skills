@@ -177,7 +177,15 @@ with `not_reviewed` null, which says nothing about the reviewer: resolve it
   every thread carries a reply, run the block's `Resolve:` per thread; `Resolve:
   None.` means the findings are answered with `comment-pr`, which also answers a
   body finding with no thread. A finding about the PR body is fixed through the
-  writes [pr-body.md](pr-body.md) names.
+  writes [pr-body.md](pr-body.md) names. A reply or comment the run posted that
+  proves wrong is corrected by a new `reply-thread` reply in the same thread, or
+  a new `comment-pr` comment, opening `Correction:` and naming what the earlier
+  one got wrong. No mechanic edits or deletes a posted comment, and the run
+  never edits one by hand (a direct REST or `gh api` PATCH), even when asked to
+  fix it in place: the appended correction answers that ask, and keeps the
+  record of what the run first claimed. A `## Review` line or Run file Evidence
+  line repeating the wrong claim is fixed in the same round, through
+  `update-pr-body` and `run-file note`.
 - **A finding outside the PR's scope that merits an issue is filed by a real
   `file-issue` call in this round**, `--outside-scope "<reason>"` when it cites
   a path the PR changes, per [phase 2's adjacent
