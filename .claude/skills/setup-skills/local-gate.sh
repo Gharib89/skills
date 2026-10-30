@@ -57,7 +57,8 @@ mark() { put "$1" "$2"; }   # mark <name> deferred-to-ci|unavailable
 # `unavailable` here stops the first attended run and names what to add. Its
 # missing-scanner line names that scanner and a command installing it on a
 # developer machine, plain shell with no `'` (`sudo apt-get install -y gitleaks`,
-# `pipx install detect-secrets`); gitleaks' when setup-skills detected none.
+# `pipx install detect-secrets`); gitleaks and its install when setup-skills
+# detected none.
 if command -v gitleaks >/dev/null; then
   run secrets gitleaks detect --no-banner --redact --log-opts="$base..HEAD"
 else
