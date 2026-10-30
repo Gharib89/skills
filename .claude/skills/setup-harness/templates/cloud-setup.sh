@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # .claude/hooks/cloud-setup.sh: this repo's cloud setup, written by
-# setup-harness. A `SessionStart` hook in .claude/settings.json runs it in every
-# Claude Code on the web session, on start and on resume, so every tool
-# scripts/check.sh runs is installed before the session's first edit.
+# setup-harness. On a cloud-first repo, a `SessionStart` hook in
+# .claude/settings.json runs it in every Claude Code on the web session, on
+# start and on resume, so every tool scripts/check.sh runs is installed before
+# the session's first edit.
 #
 #   .claude/hooks/cloud-setup.sh [--local]
 #   --local runs the same steps outside a cloud session: the local install
