@@ -7,7 +7,8 @@
 #                        not changed since the last check
 #
 # The edit rung checks in the edited file's repo, the turn rung in the cwd's;
-# a repo with no $CHECK is skipped in silence.
+# a repo with no $CHECK, or an edited file outside the session's repo and its
+# worktrees, is skipped in silence.
 #
 # Claude Code sees only exit 2, so a failing check (check.sh exit 1) becomes
 # exit 2 with its output on stderr, capped under the 10k-character limit past
@@ -41,6 +42,10 @@ if [ "$rung" = edit ]; then
   [ -n "$file" ] || exit 0
   # The repo that owns the edited file, wherever the shell's cwd has moved.
   root=$(git -C "$(dirname "$file")" rev-parse --show-toplevel 2>/dev/null) || exit 0
+  # Only the session's own repo or one of its worktrees, which share its
+  # object store: another checkout's check.sh, installs and all, never runs.
+  [ "$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)" = \
+    "$(git -C "${CLAUDE_PROJECT_DIR:-.}" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ] || exit 0
   set -- "$file"
 else
   # The cwd's repo, so a session in a worktree checks the worktree.

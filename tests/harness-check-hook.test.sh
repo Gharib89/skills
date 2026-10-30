@@ -24,6 +24,8 @@ exit "${STUB_RC:-0}"
 STUB
 chmod +x "$r/scripts/check.sh"
 export STUB_LOG=$fixture/log
+# Claude Code sets this for every hook: the session's own repo.
+export CLAUDE_PROJECT_DIR=$r
 mkdir -p "$fixture/bin"; printf '#!/bin/sh\necho 1000000000\n' > "$fixture/bin/date"; chmod +x "$fixture/bin/date"
 
 # <rung> <stdin>: run the hook in the repo, or in `cwd` when set; leaves stdout
@@ -132,5 +134,25 @@ hook edit "$edit_in"
 check "a check.sh that cannot run is still reported" \
   '{"systemMessage":"harness: edit rung unavailable: check.sh exited 126"}' "$out"
 chmod +x "$r/scripts/check.sh"
+
+# A file in another checkout (a cloned repo, an extracted archive) is not the
+# session's to check: its own check.sh, installs and all, must never run.
+foreign=$fixture/foreign
+mkdir -p "$foreign/scripts"
+git -C "$foreign" init -q
+printf '#!/bin/sh\ntouch "%s"\n' "$fixture/foreign-ran" > "$foreign/scripts/check.sh"
+chmod +x "$foreign/scripts/check.sh"
+hook edit '{"hook_event_name":"PostToolUse","tool_name":"Write","tool_input":{"file_path":"'"$foreign"'/a.md"}}'
+check_rc "an edit in a foreign checkout exits 0" 0 "$rc"
+check "an edit in a foreign checkout says nothing" "" "$out"
+check "an edit in a foreign checkout never runs its check.sh" no "$([ -e "$fixture/foreign-ran" ] && echo yes || echo no)"
+
+# A worktree of the session's repo shares its object store, so it is checked.
+git -C "$r" add scripts/check.sh
+git -C "$r" -c user.name=t -c user.email=t@example.invalid -c commit.gpgSign=false commit -qm seed
+git -C "$r" worktree add -q "$fixture/wt"
+: > "$STUB_LOG"
+hook edit '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"'"$fixture"'/wt/c.py"}}'
+check "an edit in a worktree of the session's repo is checked" "edit $fixture/wt/c.py" "$(sed 's/ deadline=.*//' "$STUB_LOG")"
 
 finish
