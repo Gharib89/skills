@@ -7,7 +7,7 @@
 // seconds. It refuses a static one with no id (a --strict lint error), and
 // never plays a created one with no id or with an id another <audio> carries
 // (measured, #1028). HyperFrames 0.8.216 mixes a created one only when an
-// inline <script>'s text in the html it compiles (the root, each composition
+// inline <script>'s text in the HTML it compiles (the root, each composition
 // inlined) matches its runtime-media scan (`hasRuntimeMediaChanges`); it never
 // reads a script loaded by src, so a kit's created sounds rest on the root's
 // own line (render/root.mjs, #1067).

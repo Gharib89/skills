@@ -169,7 +169,7 @@ test("a created <audio> reusing a written one's id in the same scene, or the roo
   }
 });
 
-test("a created <audio> fails sounds when no inline script in the html the render compiles creates media, as with a kit's src script alone; the root's own line passes it", () => {
+test("a created <audio> fails sounds when no inline script in the HTML the render compiles creates media, as with a kit's src script alone; the root's own line passes it", () => {
   const plan = [{ sc: { id: "two", start: 1.5, duration: 3 } }];
   const events = {
     two: { sounds: [{ id: "ding", start: 2.5, authored: null }] },
