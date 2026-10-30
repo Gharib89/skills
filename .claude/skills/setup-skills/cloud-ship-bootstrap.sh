@@ -6,7 +6,7 @@
 #
 #   scripts/cloud-ship-bootstrap.sh [--local]
 #   --local installs on this machine, outside a cloud session: the cloud
-#   setup's own local mode and the scanner, not the Ship-only steps. The local
+#   setup's own `--local` run and the scanner, not the Ship-only steps. The local
 #   gate names it when the scanner is missing.
 #
 # exit: 0 done, or not a cloud session and no --local · non-zero a step failed,

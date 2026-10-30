@@ -59,7 +59,7 @@ The exception is Ship's cloud bootstrap, the script the `Bootstrap:` line under 
 
 Otherwise, or with no such entry, copy [templates/cloud-setup.sh](../templates/cloud-setup.sh) to `.claude/hooks/cloud-setup.sh`, executable, fill its `STEPS` block, and merge [templates/settings-cloud.json](../templates/settings-cloud.json) into `.claude/settings.json` beside the repo's own hooks, with `timeout` the `Cloud setup:` budget plus max(10 s, budget / 4): 375 at the default 300 s, the template's value, recomputed on an override. The entry is synchronous (no `async`) so the tools exist before the first edit, and its guard exits 0 outside a cloud session, so a local session shows no hook error.
 
-The cloud setup, copied or extended, takes `--local`: it runs every row on the developer's machine, global installs, `sudo apt-get` and the runner's hook install included, so it assumes an apt-based host with sudo. `check.sh` names `<Setup: path> --local` under a check whose tool is missing, and Ship's cloud bootstrap passes its own `--local` on. Extending an existing script adds the template's `--local` test before its `CLAUDE_CODE_REMOTE` test.
+The cloud setup, copied or extended, takes `--local`: it runs every row on the developer's machine, global installs and the runner's hook install included, so a repo with an apt row assumes an apt-based host with sudo. `check.sh` names `<Setup: path> --local` under a check whose tool is missing, and Ship's cloud bootstrap passes its own `--local` on. Extending an existing script adds the template's `--local` test before its `CLAUDE_CODE_REMOTE` test.
 
 `STEPS`, one `<name>|<done test>|<command>` row each, in this order:
 

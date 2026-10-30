@@ -144,11 +144,11 @@ printf '## Cloud\n\nSetup: .claude/hooks/cloud-setup.sh\n' > "$r/docs/agents/har
 echo 'x = BAD' > "$r/a.py"
 run "$r" edit a.py
 check "a plain finding names no local install" "" "$(grep 'installs with' <<<"$err")"
-r=$(repo testfail "FULL_ROWS='tests|hookrun'")
+r=$(repo hookfail "FULL_ROWS='tests|hookrun'")
 mkdir -p "$r/docs/agents"
 printf '## Cloud\n\nSetup: .claude/hooks/cloud-setup.sh\n' > "$r/docs/agents/harness.md"
 run "$r" full
-check "a test failing with a not-found message is a plain failure" '{"rung":"full","verdict":"fail","checks":{"tests":"fail"}}' "$out"
+check "a test failing with a missing-file message is a plain failure" '{"rung":"full","verdict":"fail","checks":{"tests":"fail"}}' "$out"
 check "and names no local install, the match being the runner's alone" "" "$(grep 'installs with' <<<"$err")"
 
 # Two members of one stack and a root-level file kind no row claims. Commands

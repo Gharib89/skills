@@ -92,7 +92,7 @@ check "an apt whose update fails too: no second install" "apt-get install -y fak
 apt-get update" "$calls"
 
 # --local is the local install the local gate names for a missing scanner: the
-# cloud setup's own local mode and the scanner, never the Ship-only steps,
+# cloud setup's own --local run and the scanner, never the Ship-only steps,
 # which are the cloud run's.
 profile scripts/cloud-setup.sh
 echo 'echo shiponly >> "$CALLS"' >> "$d/scripts/cloud-ship-bootstrap.sh"
