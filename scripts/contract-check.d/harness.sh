@@ -6,7 +6,10 @@
 # `###` tool block carrying every required label. Detection reads only the
 # Signals blocks and a run reads the rest by label, so an entry missing one is
 # a stack the skill silently half-knows. A `Route:` carries its `Blocked:`
-# clause, so a run can tell "nothing is blocked" from "nobody looked". A file
+# clause, so a run can tell "nothing is blocked" from "nobody looked". A
+# `Route:` pinned by `{version}` carries a `Done test:` with no `|` or `'`, the
+# cloud setup row's separator and quote, so a re-run moves an old install to the
+# pin; a `docker pull` route's test is the cloud setup's dockerd step's. A file
 # kind takes no turn rung (it has no project to typecheck or test), and only a
 # file kind is claimed by Names: or Paths:, and only a stack carries Library:.
 # A tool's Files: is a subset of the entry's Extensions:, since it narrows the
@@ -24,7 +27,8 @@ if [ -d "$harness/catalog" ]; then
       if (tool == "") return
       for (i = 1; i <= nt; i++) if (!(tl[i] in got)) bad("### " tool ": missing " tl[i] ":")
       if (role == "language server" && !("Local-only" in got)) bad("### " tool ": a language server is Local-only:")
-      tool = ""; delete got
+      if (route ~ /\{version\}/ && route !~ /^`docker pull / && !("Done test" in got)) bad("### " tool ": a Route: carrying {version} wants a Done test:")
+      tool = ""; route = ""; delete got
     }
     function close_signals(  i, n, want) {
       if (!signals) return
@@ -55,6 +59,8 @@ if [ -d "$harness/catalog" ]; then
       if (tool == "") next
       got[label] = 1
       if (label == "Route" && v != "None." && v !~ /^`[^`]+`; Blocked: /) bad("### " tool ": Route: want `<install>`; Blocked: <routes> | None., or None.")
+      if (label == "Route") route = v
+      if (label == "Done test" && v !~ /^`[^`|\047]+`$/) bad("### " tool ": Done test: want one backticked command with no | or \047")
       if (label == "Hook" && role == "language server" && v != "None.") bad("### " tool ": a language server takes Hook: None.")
       if (label == "Hook" && role != "language server" && v == "None.") bad("### " tool ": Hook: None. is for a language server only")
       if (label == "Local-only" && v == "") bad("### " tool ": Local-only: wants its reason")

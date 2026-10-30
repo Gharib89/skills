@@ -128,6 +128,32 @@ echo BAD > "$seed/bad/shadow/b.toy"
 out=$(cd "$root" && PATH="$root/bin:$PATH" bash scripts/catalog-trial.sh local 2>/dev/null)
 check "a Route: installed into the tree wins over a same-named command on PATH" "local shadow: pass" "$out"
 
+# A Done test: runs after the install with the picked version, the way the
+# cloud setup re-runs it after a step, so a test the installed tool's output
+# cannot pass fails the trial.
+printf '#!/bin/sh\necho 1.2.3\n' > "$root/skills/setup-harness/scripts/pick-version.sh"
+mkdir -p "$root/dist"
+printf '#!/bin/sh\n[ "$1" = --version ] && echo "good v1.2.3 (core 9.9)"; exit 0\n' > "$root/dist/good"
+printf '#!/bin/sh\n[ "$1" = --version ] && echo "stale 1.2.30"; exit 0\n' > "$root/dist/stale"
+chmod +x "$root/dist/"*
+pinned() { # <tool>
+  tool "$1" 'lint {files}' "mkdir -p node_modules/.bin && cp $root/dist/$1 node_modules/.bin/" \
+    | sed "s/^Pin: apt $1\$/Pin: package npm $1/"
+  printf 'Done test: `[[ " $(%s --version 2>&1) " == *[!0-9.]{version}[!0-9.]* ]]`\n\n' "$1"
+}
+{ printf '# Pinned\n\n## Signals\nKind: file kind\nNames: None.\nExtensions: .toy\nShebangs: None.\n\n## lint\n'
+  pinned good
+  pinned stale
+} > "$root/skills/setup-harness/catalog/pinned.md"
+seed=$root/tests/fixtures/catalog/pinned
+mkdir -p "$seed/clean" "$seed/bad/good" "$seed/bad/stale"
+echo fine > "$seed/clean/a.toy"
+echo BAD > "$seed/bad/good/b.toy"
+echo BAD > "$seed/bad/stale/b.toy"
+out=$(cd "$root" && PATH="$root/bin:$PATH" bash scripts/catalog-trial.sh pinned 2>/dev/null)
+check "a Done test: passing on the installed version passes, one matching only a longer version fails" "pinned good: pass
+pinned stale: fail (done test)" "$out"
+
 out=$(cd "$root" && bash scripts/catalog-trial.sh nope 2>/dev/null); rc=$?
 check_rc "an entry that does not exist is a usage error" 2 "$rc"
 

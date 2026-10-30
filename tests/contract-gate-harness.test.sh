@@ -92,6 +92,20 @@ sed -i.bak 's/; Blocked: None\.$//' "$d/setup-harness/catalog/py.md"
 run "$inert" "$d"
 check "a Route line without its Blocked: clause is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### ruff: Route: want \`<install>\`; Blocked: <routes> | None., or None.")"
 
+d=$(harness_tree catalog-done-test)
+sed -i.bak 's/^Route: `apt-get install t`/Route: `npm install -g t@{version}`/' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a pinned Route with no Done test: is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### ruff: a Route: carrying {version} wants a Done test:")"
+sed -i.bak '/^Route: /a Done test: `[ "$(t --version)" = {version} ] || false`' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check "a Done test: carrying a pipe is named" 0 "$(named "catalog $d/setup-harness/catalog/py.md: ### ruff: Done test: want one backticked command with no | or '")"
+sed -i.bak 's/^Done test: .*/Done test: `[[ " $(t --version 2>\&1) " == *[!0-9.]{version}[!0-9.]* ]]`/' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check_rc "a pinned Route with a well-formed Done test: passes" 0 "$rc"
+sed -i.bak 's/^Route: `npm install -g t@{version}`/Route: `docker pull t:{version}`/; /^Done test: /d' "$d/setup-harness/catalog/py.md"
+run "$inert" "$d"
+check_rc "a docker pull Route needs no Done test:, the cloud setup's dockerd step owns it" 0 "$rc"
+
 d=$(harness_tree catalog-role)
 { printf '## typecheck\n'; tool_block shx edit; } >> "$d/setup-harness/catalog/sh.md"
 run "$inert" "$d"

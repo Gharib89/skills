@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The entry trial for setup-harness's catalog: proves an entry's install and run
 # lines against real tools. Per `###` tool: pick the version by the install
-# check's version choice (packages only), install by `Route:`, run `Run:` on a
+# check's version choice (packages only), install by `Route:`, then its `Done
+# test:`, which must pass, run `Run:` on a
 # copy of tests/fixtures/catalog/<entry>/clean/, which must pass without
 # changing a seed file, then lay bad/<tool>/ over that copy and run it on the
 # planted files, which must fail or change one. A tool marked `Unavailable:` or
@@ -78,10 +79,10 @@ signal() { sed -n "s/^$2: //p" "$catalog/$1.md" | head -n 1 | sed 's/^None\.$//'
 # git for the clean copy's baseline, deaf to the host's hooks, signing and identity.
 g() { git -c core.hooksPath=/dev/null -c commit.gpgSign=false -c tag.gpgSign=false -c user.name=trial -c user.email=trial@example.invalid "$@"; }
 
-# <entry> <tool> <pin> <route> <run> <skip> <only>: a non-empty <skip> is the
+# <entry> <tool> <pin> <route> <run> <skip> <only> <done>: a non-empty <skip> is the
 # verdict of a tool that is not tried; a non-empty <only> is its Files:.
 trial() {
-  local entry=$1 tool=$2 pin=$3 route=$4 run=$5 skip=$6 only=$7 s version='' before files
+  local entry=$1 tool=$2 pin=$3 route=$4 run=$5 skip=$6 only=$7 done=$8 s version='' before files
   local e=$exts n=$names p=$paths
   [ -n "$only" ] && e=$only n='' p=''
   s=$(slug "$tool")
@@ -104,6 +105,9 @@ trial() {
     || { echo "$entry $s: fail (git baseline)"; rm -rf "$work"; return 1; }
   (cd "$work" && bash -c "${route//\{version\}/$version}") >&2 \
     || { echo "$entry $s: fail (install)"; rm -rf "$work"; return 1; }
+  if [ -n "$done" ] && ! (cd "$work" && PATH=$work/node_modules/.bin:$PATH bash -c "${done//\{version\}/$version}") >/dev/null 2>&1; then
+    echo "$entry $s: fail (done test)"; rm -rf "$work"; return 1
+  fi
   files=$(files_in "$work" "$e" "$n" "$p")
   before=$(snapshot "$work" "$seeds/$entry/clean")
   run=${run//\{member\}/.}
@@ -134,16 +138,17 @@ trap 'rm -rf "$work"' EXIT
 rc=0
 for entry in $entries; do
   exts=$(signal "$entry" Extensions) names=$(signal "$entry" Names) paths=$(signal "$entry" Paths)
-  tool='' pin='' route='' run='' skip='' only=''
+  tool='' pin='' route='' run='' skip='' only='' done=''
   while IFS= read -r line; do
     case $line in
       '### '* | '## '* | __END__)
-        [ -n "$tool" ] && { trial "$entry" "$tool" "$pin" "$route" "$run" "$skip" "$only" < /dev/null || rc=1; }
-        tool='' pin='' route='' run='' skip='' only=''
+        [ -n "$tool" ] && { trial "$entry" "$tool" "$pin" "$route" "$run" "$skip" "$only" "$done" < /dev/null || rc=1; }
+        tool='' pin='' route='' run='' skip='' only='' done=''
         case $line in '### '*) tool=${line#\#\#\# } ;; esac ;;
       'Pin: '*) pin=${line#Pin: } ;;
       'Files: '*) only=${line#Files: } ;;
       'Route: '*) route=$(cmd "$line") ;;
+      'Done test: '*) done=$(cmd "$line") ;;
       'Run: '*) run=$(cmd "$line") ;;
       'Unavailable: '*) skip="unavailable (${line#Unavailable: })" ;;
       'Local-only: '*) skip="local-only (${line#Local-only: })" ;;

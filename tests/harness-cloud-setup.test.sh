@@ -206,20 +206,21 @@ rm cid" "$out
 $(cat "$log")"
 rm -f "$pw.cp-fail"
 
-# The done test cloud.md gives a tool the image ships its own unpinned copy of,
-# as written there: the row splits on `|`, so that test carries none, and a
-# second run finds the picked version and skips the install.
-pv_of() { sed -n 's/.*(`\([^`]*prettier --version[^`]*\)`.*/\1/p; s/.*: `\([^`]*prettier --version[^`]*\)`.*/\1/p' "$1" | sed 's/<v>/3.9.8/'; }
-pv=$(pv_of skills/setup-harness/reference/cloud.md)
-check "cloud.md gives the version done test" 1 "$(printf '%s\n' "$pv" | grep -c .)"
-check "and the GitHub Actions catalog entry gives the same" "$pv" "$(pv_of skills/setup-harness/catalog/github-actions.md)"
+# A pinned tool's done test, the catalog's `Done test:` with the pin filled in,
+# parses inside the single-quoted STEPS and its `|`-split row: an older install,
+# the image's own unpinned copy, or one whose version only contains the pin
+# re-runs the step, and the pinned one skips it.
+pv=$(sed -n 's/^Done test: `\(.*prettier --version.*\)`$/\1/p' skills/setup-harness/catalog/github-actions.md | sed 's/{version}/3.9.8/g')
+check "the GitHub Actions catalog entry gives Prettier a done test" 1 "$(printf '%s\n' "$pv" | grep -c .)"
 printf '#!/bin/sh\ncat "$LOG.pv"\n' > "$bin/prettier"; chmod +x "$bin/prettier"
 s=$(hook_script prettier "STEPS='prettier|$pv|echo 3.9.8 > \"\$LOG.pv\"; echo install >> \"\$LOG\"'")
-echo 3.0.0 > "$log.pv"
-: > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
-check "an image's own older copy is replaced by the picked version" "harness cloud setup: ok
+for old in 3.0.0 3.9.80 13.9.8 v3.9.7; do
+  echo "$old" > "$log.pv"
+  : > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
+  check "an install printing '$old' is replaced by the pinned 3.9.8" "harness cloud setup: ok
 install" "$out
 $(cat "$log")"
+done
 : > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null)
 check "and a second run, the picked version in place, is a no-op" "harness cloud setup: ok" "$out$(cat "$log")"
 
@@ -247,5 +248,21 @@ chmod -x "$s"
 out=$(cd "$r" && CLAUDE_PROJECT_DIR=$r CLAUDE_CODE_REMOTE='' bash -c "$hook" 2>&1); rc=$?
 check_rc "outside a cloud session it never starts the script" 0 "$rc"
 check "synchronous, with an explicit timeout" "null 375" "$(jq -r '.hooks.SessionStart[0].hooks[0] | "\(.async) \(.timeout)"' "$entry")"
+
+# A pinned tool's done test, the catalog's `Done test:` with the pin filled in,
+# parses inside the single-quoted STEPS and its `|`-split row: an older install
+# (or one whose version only starts with the pin) re-runs the step, the pinned
+# one skips it. `pt` prints whatever the last install wrote.
+pbin=$fixture/pbin; mkdir -p "$pbin"
+printf '#!/bin/sh\ncat "$LOG.ver"\n' > "$pbin/pt"; chmod +x "$pbin/pt"
+s=$(hook_script pinned "STEPS='pt|[[ \" \$(pt --version 2>&1) \" == *[!0-9.]1.2.3[!0-9.]* ]]|echo install >> \"\$LOG\"; echo \"pt v1.2.3 (core 9)\" > \"\$LOG.ver\"'")
+pinned_run() { : > "$log"; out=$(cd "$fixture" && PATH="$pbin:$PATH" CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>/dev/null); }
+for old in 'pt 1.2.2' 'pt 1.2.30' 'pt 11.2.3'; do
+  echo "$old" > "$log.ver"
+  pinned_run
+  check "an install printing '$old' re-runs a step pinned to 1.2.3" "install harness cloud setup: ok" "$(cat "$log") $out"
+done
+pinned_run
+check "the pinned install skips the step" "" "$(cat "$log")"
 
 finish
