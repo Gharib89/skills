@@ -12,8 +12,8 @@
 // unattended run's direction, and unless <run>/gates.json (gates/gates.mjs)
 // passed for this very project; a refusal leaves out/ as it was. Renders the
 // project with HyperFrames to <run>/.cache/render/raw.mp4, masters its audio
-// to -14 LUFS with a true peak of at most -1.5 dBTP as its AAC encode measures
-// (a limiter holds sharp transients) into <slug>.mp4, writes <slug>.srt from
+// into <slug>.mp4 at -14 LUFS and at most -1.5 dBTP true peak, measured on the
+// AAC encode it delivers (a limiter holds sharp transients), writes <slug>.srt from
 // the timeline's cues and poster.png from the middle of the first scene, all
 // three in <run>/.cache/render/out/, and checks the MP4 against the delivery
 // contract. Only a delivery that passes every check replaces out/, so a failed

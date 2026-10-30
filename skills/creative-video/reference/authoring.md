@@ -295,9 +295,9 @@ renders it prints `render: <k> of <n> chapter(s) to render, estimate <m:ss>,
 budget <m:ss>`, the estimate from `render-rates.json`, the budget 5 minutes a
 video minute; `--estimate` prints that line and renders nothing.
 
-On exit 1 nothing new is
-delivered and `out/` is left as it was: a `render: <why>` refusal (a missing
-scene file, a timing older than the voice: run timing again), a failed render
-or a failed `delivery` check. The new files are made and checked in
-`.cache/render/out/` and replace `out/` only once every check passes, so a
-failed re-render keeps the last passing delivery.
+Exit 1 (a `render: <why>` refusal such as a missing scene file or a timing
+older than the voice, which running timing again fixes; a failed render; a
+failed `delivery` check) delivers nothing new. The new files are made and
+checked in `.cache/render/out/` and replace `out/` only once every check
+passes, so `out/` keeps the last passing delivery, and a failed run's files
+stay in `.cache/render/out/` to inspect.

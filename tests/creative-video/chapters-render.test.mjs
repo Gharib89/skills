@@ -383,6 +383,18 @@ test("chapter marks the file does not carry fail the chapters check, deliver not
   assert.ok(!fs.existsSync(path.join(fx.dir, "out")));
 });
 
+test("a mix that fails to master after a passing delivery leaves out/ as it was", () => {
+  const fx = ready();
+  assert.equal(exec(render, fx).code, 0);
+  fs.writeFileSync(path.join(fx.dir, "out", "demo.mp4"), "the last delivery");
+  const r = exec(render, fx, [fx.dir], {
+    CREATIVE_VIDEO_FAKE_MASTER_FAIL: "1",
+  });
+  assert.equal(r.code, 1);
+  assert.ok(calls(fx).some((c) => c.call === "masterAudio"));
+  assert.equal(read(path.join(fx.dir, "out", "demo.mp4")), "the last delivery");
+});
+
 test("a stray argument is usage", () => {
   const fx = ready();
   assert.equal(exec(render, fx, [fx.dir, "--nope"]).code, 2);

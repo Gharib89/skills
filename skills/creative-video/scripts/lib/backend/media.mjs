@@ -35,7 +35,8 @@ export async function concat(parts, output) {
   }
 }
 
-// The delivered audio's encoder, which the master measures its trial with.
+// The delivered audio's encoder settings: master encodes its trial with them,
+// so the trial measures what ships.
 const AAC = ["-c:a", "aac", "-b:a", "192k"];
 
 // `video` with `audio` encoded to AAC once and `chapters` (`{ start, end,
@@ -114,12 +115,21 @@ export async function shortTerm(file, seconds) {
 // `input`'s audio mastered into the 48 kHz 16-bit WAV `wav` so that its AAC
 // encode measures `lufs` integrated, within 0.5 LU, and at most `peak` true
 // peak: a gain, then a limiter run at 192 kHz, where its sample peak follows
-// the true peak, measured on a trial encode and both corrected, at most 5
-// tries. A linear two-pass loudnorm missed both on a mix with sharp transients
-// (a kit's stamp effect): it gave up gain to hold the peak, and the encode
-// added 1 to 3 dB past it (ffmpeg 8.0.1). A mix with no peak over the limit
-// takes the gain alone. `fix` ends the filter chain, `more` precedes the WAV.
-async function master(input, wav, { lufs, peak }, fix = "", more = []) {
+// the true peak, measured on a trial encode, the gain and the limit corrected
+// after each, at most 5 tries; past that the last try stands and the render's
+// delivery checks judge it. A linear two-pass loudnorm missed both on a mix
+// with sharp transients (a kit's stamp effect): it gave up gain to hold the
+// peak, and the encode added 1 to 3 dB past it (ffmpeg 8.0.1). A mix with no
+// peak over the limit is not limited, so its dynamics are kept.
+// `tailFilters` is appended to the filter chain, `outputArgs` are output flags
+// before the WAV.
+async function master(
+  input,
+  wav,
+  { lufs, peak },
+  tailFilters = "",
+  outputArgs = [],
+) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "creative-master-"));
   try {
     const trial = path.join(dir, "trial.m4a");
@@ -129,8 +139,8 @@ async function master(input, wav, { lufs, peak }, fix = "", more = []) {
       const limiter = `alimiter=limit=${10 ** (limit / 20)}:attack=1:release=50:level=false:latency=true`;
       ffmpeg([
         ...["-y", "-i", input, "-vn", "-af"],
-        `volume=${gain}dB,aresample=192000,${limiter},aresample=48000${fix}`,
-        ...[...more, "-c:a", "pcm_s16le", wav],
+        `volume=${gain}dB,aresample=192000,${limiter},aresample=48000${tailFilters}`,
+        ...[...outputArgs, "-c:a", "pcm_s16le", wav],
       ]);
       ffmpeg(["-y", "-i", wav, ...AAC, trial]);
       const got = await loudness(trial);
