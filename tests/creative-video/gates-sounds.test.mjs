@@ -177,7 +177,7 @@ test("a created <audio> fails sounds when no inline script in the html the rende
   const kitOnly = `<script src="kit/20-kit.js"></script>
 <script>window.beep("two", "ding", 2.5);</script>`;
   assert.deepEqual(soundFindings(plan, events, kitOnly), [
-    `two: <audio id="ding"> is created by a script, but no inline <script> in the html the render compiles creates media, so the render never mixes it: create it in a scene file's inline <script>, or report that render/root.mjs lost its createElement("audio") line`,
+    `two: <audio id="ding"> is created by a script, but no inline <script> in the HTML the render compiles creates media, so the render never mixes it: create it in a scene file's inline <script>, or report that render/root.mjs lost its createElement("audio") line`,
   ]);
   const root = rootHtml({
     proj: path.join(os.tmpdir(), "no-such-project"),

@@ -11,9 +11,8 @@
 // moves, its passing twin a sound the script creates, which renders where the
 // gates placed it, as does one a kit script loaded by src creates, joins on an
 // Arabic word split into a box per letter in IBM Plex Sans Arabic. A digit run
-// split the same way on a right-to-left line
-// reaches the critic's checks. Contrast and reading have no real-render
-// fixture.
+// split the same way on a right-to-left line reaches the critic's checks.
+// Contrast and reading have no real-render fixture.
 //
 //   node maintainer/real-render.mjs
 //

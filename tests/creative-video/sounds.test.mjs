@@ -230,12 +230,13 @@ test("a result that is speech, or whose title and tags miss a query word, is pas
 
 test("each mark of speech alone passes a result over: a speech category, a Lingua Libre title, a title naming a pronunciation", () => {
   const stamp = hit("stamp-1", "Rubber stamp");
-  for (const [query, result] of [
-    ["rubber stamp", { ...stamp, category: "pronunciation" }],
-    ["rubber stamp", { ...stamp, category: "podcast" }],
-    ["rubber stamp", { ...stamp, category: "audiobook" }],
-    ["rubber stamp", { ...stamp, title: "LL-Q1860 (eng)-Flame-rubber stamp" }],
-    ["rubber stamp", { ...stamp, title: "Rubber stamp pronunciation" }],
+  const query = "rubber stamp";
+  for (const result of [
+    { ...stamp, category: "pronunciation" },
+    { ...stamp, category: "podcast" },
+    { ...stamp, category: "audiobook" },
+    { ...stamp, title: "LL-Q1860 (eng)-Flame-rubber stamp" },
+    { ...stamp, title: "Rubber stamp pronunciation" },
   ]) {
     const fx = fixture();
     kit(fx, { palette: [{ event: "stamp", query }] });
@@ -245,9 +246,18 @@ test("each mark of speech alone passes a result over: a speech category, a Lingu
   }
   // The same result, unmarked, is taken.
   const fx = fixture();
-  kit(fx, { palette: [{ event: "stamp", query: "rubber stamp" }] });
-  const r = fetch(fx, { "rubber stamp": [[stamp]] });
+  kit(fx, { palette: [{ event: "stamp", query }] });
+  const r = fetch(fx, { [query]: [[stamp]] });
   assert.equal(r.out.trim(), "sound stamp: openverse stamp-1");
+});
+
+test("a query in Arabic is matched word for word too: a result missing its words is passed over", () => {
+  const fx = fixture();
+  kit(fx, { palette: [{ event: "bell", query: "جرس باب" }] });
+  const r = fetch(fx, {
+    "جرس باب": [[hit("rain-1", "صوت مطر"), hit("bell-1", "جرس باب قديم")]],
+  });
+  assert.equal(r.out.trim(), "sound bell: openverse bell-1");
 });
 
 // The Kenney packs installed in the store, each holding the named files.

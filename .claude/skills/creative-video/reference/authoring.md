@@ -208,20 +208,20 @@ whose title and tags hold every word of the query, then the Kenney packs setup
 installs (`sounds:kenney`): it picks the file whose name and word-index words
 hold the most of the query's words. Word each query as the sound's own name,
 the two or three words a clip's title or tags carry (`bell ding`, `radio
-squelch`): Openverse passes over every result that lacks any one word. The
-packs hold UI, casino, RPG, sci-fi and synth effects and short music stings; a
-bed comes only from the one stem whose loop seam measures clean, the sci-fi
-large space engine, so a bed query needs engine, space or spaceship. It copies
-what it finds into `project/assets/sounds/` and writes the sound's `file`,
-`source`, `licence`, `creator`, `url` and `attribution` into `sound.json`. A
-sound its query found before, on any run, is copied again with no search. It
-prints `sound <event>: openverse <id> | kenney <pack>/<file> | cached |
-dropped: <why>` per sound. A sound found nowhere moves to `sound.json`'s
-`dropped` list with its reason, and prints `warn dropped sound: <event>:
-<why>`. To swap a found sound, change its `query` and run again. To retry a
-dropped one, put it back under `bed` or `palette` with its `query`, or a new
-one, and run again: this run's outcome replaces its `dropped` entry. Or stage
-the moment without it. Never edit the fields it writes.
+squelch`): the stage passes over every Openverse result that lacks any one
+word. The packs hold UI, casino, RPG, sci-fi and synth effects and short music
+stings; a bed comes only from the one stem whose loop seam measures clean, the
+sci-fi large space engine, so a bed query needs engine, space or spaceship. It
+copies what it finds into `project/assets/sounds/` and writes the sound's
+`file`, `source`, `licence`, `creator`, `url` and `attribution` into
+`sound.json`. A sound its query found before, on any run, is copied again with
+no search. It prints `sound <event>: openverse <id> | kenney <pack>/<file> |
+cached | dropped: <why>` per sound. A sound found nowhere moves to
+`sound.json`'s `dropped` list with its reason, and prints `warn dropped sound:
+<event>: <why>`. To swap a found sound, change its `query` and run again. To
+retry a dropped one, put it back under `bed` or `palette` with its `query`, or
+a new one, and run again: this run's outcome replaces its `dropped` entry. Or
+stage the moment without it. Never edit the fields it writes.
 
 The root plays the bed: every stage that writes `index.html` adds it after the
 narration as `<audio id="bed">`, looped over the whole video at its `level`,
