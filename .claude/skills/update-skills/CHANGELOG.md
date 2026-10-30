@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.2 (2026-10-30)
+
+### Bug Fixes
+
+- **update-skills**: A behavioural Shape for re-run edits, and a cleanup line that removes the
+  refresh ([#1059](https://github.com/Gharib89/skills/pull/1059),
+  [`81a5b88`](https://github.com/Gharib89/skills/commit/81a5b88a6dcb6c4c5a7e89666fbaa291fbf269fe))
+
+
 ## v0.10.1 (2026-10-20)
 
 ### Performance Improvements
