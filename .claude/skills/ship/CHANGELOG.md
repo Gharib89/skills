@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.54.2 (2026-10-30)
+
+### Bug Fixes
+
+- **ship**: Cleanup finds a <type>/<slug>-<n> branch with no worktree
+  ([#1066](https://github.com/Gharib89/skills/pull/1066),
+  [`171ec3d`](https://github.com/Gharib89/skills/commit/171ec3dc94d9afad1d5036316951e571dc291535))
+
+
 ## v0.54.1 (2026-10-30)
 
 ### Bug Fixes
