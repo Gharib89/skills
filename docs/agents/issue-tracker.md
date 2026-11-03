@@ -14,6 +14,8 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+**Public text carries no local identifiers.** Gharib89/skills is public. Issue, comment, PR, commit and pushed-branch text names a file by its repo-relative path and a local project by description. It never names an absolute `/home/...` path, a client or employer folder, or a session id, a `Claude-Session:` commit trailer included. The auto-mode classifier refused posts that carried one (#961, #980).
+
 An acceptance criterion asks for a comment on the issue, which `comment-issue` posts, rather than an edit to its body: the one body edit a run makes, `update-issue-body` on a tracker issue named on the ship profile's docs-sync `Targets:` line, waits for the merge, after every criterion is checked.
 
 ## Pull requests as a triage surface
