@@ -78,7 +78,7 @@ and refuses by naming the file and the field. On #759 setup crashed that way.
 
 **A skill never depends on Herdr or a second session.** When a run needs a
 skill the Skill tool refuses, or one whose installed copy is stale, it reads
-that skill's `SKILL.md` from disk and follows it in the main session (#432).
+that skill's `SKILL.md` from disk and follows it in this session (#432).
 `drive-session` is the exception, since Herdr is its subject.
 
 **What the rules cover.** These are the scope facts reviewers most often got
