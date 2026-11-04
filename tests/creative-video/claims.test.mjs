@@ -28,7 +28,8 @@ test("a script whose every sentence is supported or connective passes, and claim
   assert.equal(r.code, 0, r.out + r.err);
   assert.equal(gate(r, "cites"), "pass");
   assert.equal(gate(r, "support"), "pass");
-  assert.match(r.out, /^claims: 2 pass, 0 fail, 0 warn$/m);
+  assert.equal(gate(r, "pronouns"), "pass");
+  assert.match(r.out, /^claims: 3 pass, 0 fail, 0 warn$/m);
   assert.match(record(fx).passed, /^[0-9a-f]{16}$/);
 });
 
@@ -62,7 +63,7 @@ test("a cited sentence its excerpts do not support, or an uncited one stating a 
     assert.equal(gate(r, "support"), `fail: ${at} ${verdict}: fixture`);
     assert.match(
       r.out,
-      /^claims: 1 pass, 1 fail, 0 warn; next: fix attempt 1 of 2$/m,
+      /^claims: 2 pass, 1 fail, 0 warn; next: fix attempt 1 of 2$/m,
     );
   }
 });
@@ -146,7 +147,22 @@ test("an unchanged sentence judged again keeps its first verdict, and a differen
     gate(r, "support"),
     "warn: hook 1 drift: judged unsupported on unchanged words, kept supported",
   );
-  assert.match(r.out, /^claims: 1 pass, 0 fail, 1 warn$/m);
+  assert.match(r.out, /^claims: 2 pass, 0 fail, 1 warn$/m);
+});
+
+test("a narration sentence with a gendered pronoun warns pronouns, naming its scene and sentence, and still passes", () => {
+  const scenes = cited(SCENES, CITES);
+  scenes[1].narration[1] = "Then She claims the issue, and his run takes it.";
+  const fx = run(scenes);
+  const r = runCheck(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(
+    gate(r, "pronouns"),
+    'warn: context 2: "She", "his": name the person, say "the author" or they/them, unless a source in the pack states the pronouns',
+  );
+  assert.match(r.out, /^claims: 2 pass, 0 fail, 1 warn$/m);
+  assert.equal(record(fx).checks.pronouns.status, "warn");
+  assert.match(record(fx).passed, /^[0-9a-f]{16}$/);
 });
 
 test("a claims.json whose fix attempts are not a number is refused by name", () => {
