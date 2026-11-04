@@ -11,10 +11,11 @@
 // A verdict on another wording or other cites, or one older than
 // excerpts.json, judges nothing; `verdict` is supported or connective (a
 // pass), unsupported or unmarked (an uncited sentence that states a fact).
-// stdout: `claims <check>: pass|fail: <findings>|warn: <findings>` for cites
-//         and support, then `claims: <p> pass, <f> fail, <w> warn`, ending on
-//         a red support verdict in `; next: fix attempt <a> of 2` or `; stop:
-//         unsupported claims after two fix attempts`
+// stdout: `claims <check>: pass|fail: <findings>|warn: <findings>` for
+//         cites, support and pronouns (a warn only), then `claims: <p> pass,
+//         <f> fail, <w> warn`, ending on a red support verdict in `; next:
+//         fix attempt <a> of 2` or `; stop: unsupported claims after two fix
+//         attempts`
 // writes: <run>/claims.json: each check, the support attempts, each sentence's
 //         kept verdict, and `passed`, the claims key (lib/claims.mjs) of a
 //         script that passed, which the gates' support gate reads
@@ -157,8 +158,24 @@ const drift = [];
   checks.support = f;
 }
 
+// pronouns: a gendered English pronoun in narration, a warn only. A research
+// file's pronouns for a real person are a guess no excerpt states. It never
+// fails, since a source in the pack may state them.
+checks.pronouns = [];
+const PRONOUN = /\b(he|him|his|himself|she|her|hers|herself)\b/gi;
+const gendered = scenes.flatMap((s) =>
+  s.narration.flatMap((text, i) => {
+    const words = text.match(PRONOUN);
+    return words
+      ? [
+          `${s.id} ${i + 1}: ${words.map((w) => `"${w}"`).join(", ")}: name the person, say "the author" or they/them, unless a source in the pack states the pronouns`,
+        ]
+      : [];
+  }),
+);
+
 // A check's warnings print after its failures, and warn it only when none fails.
-const warned = { support: drift };
+const warned = { support: drift, pronouns: gendered };
 const out = {};
 for (const [name, f] of Object.entries(checks)) {
   const findings = [...f, ...(warned[name] ?? [])];

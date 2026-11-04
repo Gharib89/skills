@@ -110,6 +110,17 @@ second round's verdict (`carried: no third round`). An `invented` finding is
 fixed in the visual: take the fact off screen, or show one the narration
 states.
 
+An `unreadable` finding is fixed for the whole scene, not the one item it
+names: the second round is final and judges every still again, so a sibling
+item left as it was, or a fault the fix made, ends the video. Fix every item in
+that scene that could fail the same way (each heading over a busy shape, each
+label over a pattern, each pile that can overlap), look at the fix at all three
+still times (0.3 s in, the middle, the last frame) before the next round, and
+check the contrast of text moved onto a new background against that
+background. One run fixed a heading over bars and labels behind window bars,
+then lost round 2 on a strip pile at another still and on dark digits the move
+had put on a dark background.
+
 ## Fix attempts and refusals
 
 The last line is `gates: <p> pass, <f> fail`, with `, 1 pending` while the
