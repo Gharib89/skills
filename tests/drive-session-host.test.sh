@@ -66,10 +66,11 @@ tab create --workspace w1 --label s4 --cwd $tmp/proj --no-focus" "$(calls | grep
 
 # A workspace list it cannot read is a refusal, never "no such workspace": no
 # list at all, or the repo's label with no string id.
-for bad in '{}' '[{"label":"proj","workspace_id":7}]' '[{"label":"proj"}]'; do
-  printf '%s\n' "$bad" > "$HERDR_FAKE/workspaces"
+for case in 'no-list={}' 'numeric-id=[{"label":"proj","workspace_id":7}]' 'missing-id=[{"label":"proj"}]'; do
+  bad=${case%%=*}
+  printf '%s\n' "${case#*=}" > "$HERDR_FAKE/workspaces"
   out=$(bash "$s/spawn.sh" s5 --roster "$tmp/s5.json" --cwd "$tmp/proj" --prompt x 2>/dev/null); rc=$?
-  check_rc "spawn on the workspace list $bad exits 2" 2 "$rc"
+  check_rc "spawn on a $bad workspace list exits 2" 2 "$rc"
   check "it says the list is unreadable ($bad)" "workspace list: unreadable answer from herdr" "$(jq -r .error <<<"$out")"
   check "and creates no workspace and no tab ($bad)" "" "$(calls | grep -E '^(workspace create|tab create)')"
 done

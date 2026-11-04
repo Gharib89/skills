@@ -19,7 +19,7 @@ npx skills add mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60 --skil
 ```
 
 This skill replaces only two things in them: how a
-**grilling round** is shown (a round document on the page, never the terminal
+**grilling round** is shown (a round document on the page, never the chat
 format `grilling` gives) and how the answers come back (a Submit on the page).
 
 The page is [page.html](page.html) with its style and script siblings, fixed
@@ -38,7 +38,7 @@ the chat.`, and run the rest of the session as `grilling` and
 `domain-modeling` describe. Skip the rest of this file.
 
 **Done when:** the session is on the page, or the one line is printed and the
-terminal format runs.
+chat format runs.
 
 ## 2 · Publish the page
 
