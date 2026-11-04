@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.16.0 (2026-11-04)
+
+### Features
+
+- **creative-video**: Warn on gendered pronouns in narration, fix a critic finding for the whole
+  scene ([#1075](https://github.com/Gharib89/skills/pull/1075),
+  [`74ec5b8`](https://github.com/Gharib89/skills/commit/74ec5b80811f1063bf3a8824f987237b283e9f7c))
+
+
 ## v0.15.2 (2026-10-30)
 
 ### Bug Fixes
