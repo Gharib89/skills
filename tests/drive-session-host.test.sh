@@ -53,9 +53,10 @@ check "a worktree's repo name is its main checkout's, not the worktree folder's"
 printf 'idle 3\n' > "$HERDR_FAKE/s3.states"
 bash "$s/spawn.sh" s3 --roster "$tmp/s3.json" --cwd "$tmp/plain" --prompt x >/dev/null; rc=$?
 check_rc "spawn with no workspace for the repo exits 0" 0 "$rc"
-check "spawn creates the repo's workspace, unfocused, then opens the tab in it" \
+check "spawn creates the repo's workspace, unfocused, and names its first tab, opening no second" \
   "workspace create --cwd $tmp/plain --label plain --no-focus
-tab create --workspace w-plain --label s3 --cwd $tmp/plain --no-focus" "$(calls | grep -E '^(workspace create|tab create)')"
+tab rename w-plain:t1 s3" "$(calls | grep -E '^(workspace create|tab create|tab rename)')"
+check "the roster records the workspace's first tab" "w-plain:t1" "$(jq -r '.sessions[0].tab' "$tmp/s3.json")"
 
 # HERDR_WORKSPACE_ID still wins: only the guard's own question, no lookup.
 printf 'idle 3\n' > "$HERDR_FAKE/s4.states"

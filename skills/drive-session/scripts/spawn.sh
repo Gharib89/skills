@@ -62,8 +62,9 @@ ds_in_herdr
 
 # The workspace: this pane's own, or, from outside Herdr, the one labelled with
 # the repo's name (the main checkout's folder, so every worktree shares it),
-# created when none is.
-ws=${HERDR_WORKSPACE_ID:-}
+# created when none is. A created workspace comes with a first tab, which
+# becomes the session's tab, so no stray shell tab stays beside it.
+ws=${HERDR_WORKSPACE_ID:-} created=
 if [ -z "$ws" ]; then
   common=$(git -C "$cwd" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
     && repo=$(basename "$(dirname "$common")") || repo=$(basename "$(cd "$cwd" && pwd)")
@@ -75,6 +76,7 @@ if [ -z "$ws" ]; then
     ds_herdr workspace create --cwd "$cwd" --label "$repo" --no-focus || ds_fail "workspace create: $ds_msg" "$ds_code"
     ws=$(jq -er '.result.workspace.workspace_id | strings' <<<"$ds_out") \
       || ds_tooling "workspace create: unreadable answer from herdr"
+    created=$ds_out
   fi
 fi
 
@@ -87,10 +89,16 @@ else
   ds_write "$roster" .
 fi
 
-ds_herdr tab create --workspace "$ws" --label "$name" --cwd "$cwd" --no-focus \
-  || ds_fail "tab create: $ds_msg" "$ds_code"
-ids=$(jq -er '"\(.result.tab.tab_id | strings) \(.result.root_pane.pane_id | strings)"' <<<"$ds_out" 2>/dev/null) \
-  || ds_tooling "tab create: unreadable answer from herdr"
+if [ -n "$created" ]; then
+  ids=$(jq -er '"\(.result.tab.tab_id | strings) \(.result.root_pane.pane_id | strings)"' <<<"$created" 2>/dev/null) \
+    || ds_tooling "workspace create: unreadable answer from herdr"
+  ds_herdr tab rename "${ids% *}" "$name" || ds_fail "tab rename: $ds_msg" "$ds_code"
+else
+  ds_herdr tab create --workspace "$ws" --label "$name" --cwd "$cwd" --no-focus \
+    || ds_fail "tab create: $ds_msg" "$ds_code"
+  ids=$(jq -er '"\(.result.tab.tab_id | strings) \(.result.root_pane.pane_id | strings)"' <<<"$ds_out" 2>/dev/null) \
+    || ds_tooling "tab create: unreadable answer from herdr"
+fi
 tab=${ids% *} pane=${ids#* }
 
 # A new tab's shell can still be starting: `agent start` answers
