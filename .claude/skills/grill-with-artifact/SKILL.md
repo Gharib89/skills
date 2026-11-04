@@ -34,7 +34,7 @@ table and its figure style contract.
 The page needs the `Artifact`, `ArtifactData` and `ArtifactComments` tools.
 With any of them missing, or when the human says the page cannot reach its
 database, print one line, `No artifact surface here, so this session runs in
-the terminal.`, and run the rest of the session as `grilling` and
+the chat.`, and run the rest of the session as `grilling` and
 `domain-modeling` describe. Skip the rest of this file.
 
 **Done when:** the session is on the page, or the one line is printed and the
@@ -98,9 +98,9 @@ A `submitted` typed in the chat rings the same bell.
 
 1. Read `answers/round-<n>` with `ArtifactData` `get`. With no such document,
    take the answers from the comment's text, whose lines round-data.md's
-   **Answers text** lists; a pasted answers text in the terminal is the same
+   **Answers text** lists; a pasted answers text in the chat is the same
    text. A comment carrying no answers
-   is the human talking: answer it in the terminal, resolve its thread, and end
+   is the human talking: answer it in the chat, resolve its thread, and end
    the turn.
 2. Apply each answer as `grilling` and `domain-modeling` say, writing any term
    or ADR it settles now, in the repo.

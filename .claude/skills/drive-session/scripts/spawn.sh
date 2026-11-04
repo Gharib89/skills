@@ -68,8 +68,8 @@ if [ -z "$ws" ]; then
   common=$(git -C "$cwd" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
     && repo=$(basename "$(dirname "$common")") || repo=$(basename "$(cd "$cwd" && pwd)")
   ds_herdr workspace list || ds_fail "workspace list: $ds_msg" "$ds_code"
-  ws=$(jq -er --arg l "$repo" '.result.workspaces | arrays
-    | first(.[] | select(.label == $l) | .workspace_id | strings) // ""' <<<"$ds_out" 2>/dev/null) \
+  ws=$(jq -er --arg l "$repo" '.result.workspaces | arrays | map(select(.label == $l))
+    | if . == [] then "" else .[0].workspace_id | strings end' <<<"$ds_out" 2>/dev/null) \
     || ds_tooling "workspace list: unreadable answer from herdr"
   if [ -z "$ws" ]; then
     ds_herdr workspace create --cwd "$cwd" --label "$repo" --no-focus || ds_fail "workspace create: $ds_msg" "$ds_code"

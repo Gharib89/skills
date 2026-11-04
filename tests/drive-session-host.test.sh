@@ -64,11 +64,14 @@ check "HERDR_WORKSPACE_ID names the workspace when set" \
   "workspace list
 tab create --workspace w1 --label s4 --cwd $tmp/proj --no-focus" "$(calls | grep -E '^(workspace|tab create)')"
 
-# A workspace list it cannot read is a refusal, never "no such workspace".
-printf '{}\n' > "$HERDR_FAKE/workspaces"
-out=$(bash "$s/spawn.sh" s5 --roster "$tmp/s5.json" --cwd "$tmp/proj" --prompt x 2>/dev/null); rc=$?
-check_rc "spawn on an unreadable workspace list exits 2" 2 "$rc"
-check "it says so" "workspace list: unreadable answer from herdr" "$(jq -r .error <<<"$out")"
-check "and creates no workspace and no tab" "" "$(calls | grep -E '^(workspace create|tab create)')"
+# A workspace list it cannot read is a refusal, never "no such workspace": no
+# list at all, or the repo's label with no string id.
+for bad in '{}' '[{"label":"proj","workspace_id":7}]' '[{"label":"proj"}]'; do
+  printf '%s\n' "$bad" > "$HERDR_FAKE/workspaces"
+  out=$(bash "$s/spawn.sh" s5 --roster "$tmp/s5.json" --cwd "$tmp/proj" --prompt x 2>/dev/null); rc=$?
+  check_rc "spawn on the workspace list $bad exits 2" 2 "$rc"
+  check "it says the list is unreadable ($bad)" "workspace list: unreadable answer from herdr" "$(jq -r .error <<<"$out")"
+  check "and creates no workspace and no tab ($bad)" "" "$(calls | grep -E '^(workspace create|tab create)')"
+done
 
 finish

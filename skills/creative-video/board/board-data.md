@@ -136,7 +136,7 @@ document is read from the database instead.
   resolves) it writes the answers document, wakes the session with a comment
   that carries the answers text, and reads the `answers` collection to show a
   chapter approved. Opened as a file, it shows the answers text for the person
-  to paste into the terminal.
+  to paste into the chat.
 - `apply` reads the answers document or text and, once it accepts them (an
   approval's brand check included), writes `answers-<n>.json`; the
   builds until the next answers read it to guard the scenes and mark what
