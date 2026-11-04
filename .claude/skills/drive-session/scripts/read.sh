@@ -18,8 +18,8 @@
 #         40), or the visible screen when blocked, whatever --lines says;
 #         status `gone` with seq and output null; `rest` true after --rest
 # exit: 0 read · 1 the name is not in the roster, the roster cannot be written
-#       or locked, or herdr refused (its code in `code`) · 2 usage, outside
-#       Herdr, an unreadable roster, or an answer from herdr it cannot read
+#       or locked, or herdr refused (its code in `code`) · 2 usage, no
+#       Herdr answering, an unreadable roster, or an answer from herdr it cannot read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 

@@ -32,6 +32,14 @@
 # `agent_blocked`, and `agent read` refuses it any source but `visible` with
 # `agent_not_idle`, as herdr 0.9.3 does past the viewport. Every call is a line
 # of `$HERDR_FAKE/calls`.
+# `$HERDR_FAKE/workspaces` is the server's workspace list, a JSON array of
+# `{label, workspace_id}`: with no such file the server does not answer, and
+# `workspace list` fails as the real CLI does with no server on its socket.
+# `workspace create` appends `{label, workspace_id: "w-<label>"}` to it and,
+# as herdr documents from 0.9.3 (agent-automation.mdx) and 0.9.5 was measured
+# doing, answers with the workspace's first tab and root pane
+# (none with a `create-no-tab` file). A `rename-error` file holding a code makes
+# `tab rename` refuse with it.
 herdr_fake_install() { # <dir>
   cat > "$1/herdr" <<'FAKE'
 #!/usr/bin/env bash
@@ -44,6 +52,20 @@ known() { # <name>: agent_not_found unless the agent has a states file
   [ -f "$HERDR_FAKE/$1.states" ] || err agent_not_found "agent target $1 not found"
 }
 case "$1 $2" in
+  "workspace list")
+    [ -f "$HERDR_FAKE/workspaces" ] || err server_unavailable "cannot connect to the herdr socket"
+    jq -c '{result: {type: "workspace_list", workspaces: .}}' "$HERDR_FAKE/workspaces" ;;
+  "workspace create")
+    [ -f "$HERDR_FAKE/workspaces" ] || err server_unavailable "cannot connect to the herdr socket"
+    label=x; while [ $# -gt 0 ]; do [ "$1" = --label ] && label=$2; shift; done
+    jq -c --arg l "$label" '. + [{label: $l, workspace_id: "w-\($l)"}]' "$HERDR_FAKE/workspaces" > "$HERDR_FAKE/workspaces.t"
+    mv "$HERDR_FAKE/workspaces.t" "$HERDR_FAKE/workspaces"
+    jq -cn --arg l "$label" --arg bare "$([ -f "$HERDR_FAKE/create-no-tab" ] && echo 1)" \
+      '{result: ({type: "workspace_created", workspace: {label: $l, workspace_id: "w-\($l)"}}
+        + if $bare == "" then {tab: {tab_id: "w-\($l):t1"}, root_pane: {pane_id: "w-\($l):p1"}} else {} end)}' ;;
+  "tab rename")
+    [ -f "$HERDR_FAKE/rename-error" ] && err "$(cat "$HERDR_FAKE/rename-error")" "rename failed"
+    printf '{"result":{"type":"tab_renamed"}}\n' ;;
   "tab create")
     label=x; while [ $# -gt 0 ]; do [ "$1" = --label ] && label=$2; shift; done
     printf '{"result":{"root_pane":{"pane_id":"w1:p-%s"},"tab":{"tab_id":"w1:t-%s"},"type":"tab_created"}}\n' "$label" "$label" ;;

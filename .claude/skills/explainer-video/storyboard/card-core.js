@@ -223,7 +223,7 @@ function view(S) {
   if (S.mode === "nodb")
     return shell(
       S,
-      "This page cannot reach its database here, so no card can load. Say so in the terminal, and the session carries on there.",
+      "This page cannot reach its database here, so no card can load. Say so in the chat, and the session carries on there.",
     );
   if (!c)
     return shell(
@@ -329,7 +329,7 @@ function bar(S, c) {
     <div>${act}</div>${S.local ? localNote(S) : status(S)}</div></div>`;
 }
 function localNote(S) {
-  return `<div class="st"><span>Copy the answers, paste them into the terminal, and Claude reads them.</span>
+  return `<div class="st"><span>Copy the answers, paste them into the chat, and Claude reads them.</span>
     <pre id="fallback-text">${esc(answersText(S))}</pre><span class="label" id="copied" role="status"></span></div>`;
 }
 function status(S) {
@@ -338,16 +338,16 @@ function status(S) {
     case "sending":
       return '<div class="st" role="status">Saving your answers and waking Claude.</div>';
     case "sent":
-      return '<div class="st st-ok" role="status"><span><b>Sent to Claude.</b> An edit or revision brings the next card to this page; Save and Use once carry on in the terminal. If nothing happens, type <code>submitted</code> in the terminal.</span></div>';
+      return '<div class="st st-ok" role="status"><span><b>Sent to Claude.</b> An edit or revision brings the next card to this page; Save and Use once carry on in the chat. If nothing happens, type <code>submitted</code> in the chat.</span></div>';
     case "saved":
-      return `<div class="st st-warn" role="alert"><span><b>Saved, but Claude was not woken.</b> Type <code>submitted</code> in the terminal and the session reads your saved answers.</span>
+      return `<div class="st st-warn" role="alert"><span><b>Saved, but Claude was not woken.</b> Type <code>submitted</code> in the chat and the session reads your saved answers.</span>
       <div class="st-row"><button class="btn btn-sm" data-act="wake">Try waking it again</button></div></div>`;
     case "neither":
-      return `<div class="st st-bad" role="alert"><span><b>Your answers were not saved.</b> Copy them and paste them into the terminal.</span>
+      return `<div class="st st-bad" role="alert"><span><b>Your answers were not saved.</b> Copy them and paste them into the chat.</span>
       <pre id="fallback-text">${esc(answersText(S))}</pre>
       <div class="st-row"><button class="btn btn-sm accent" data-act="copy">Copy answers</button><button class="btn btn-sm" data-act="submit">Try again</button><span class="label" id="copied" role="status"></span></div></div>`;
   }
   if (S.submitted[n])
-    return `<div class="st st-ok" role="status"><span><b>Submitted.</b> If no new card appears and the terminal shows nothing, type <code>submitted</code> there.</span></div>`;
+    return `<div class="st st-ok" role="status"><span><b>Submitted.</b> If no new card appears and the chat shows nothing, type <code>submitted</code> there.</span></div>`;
   return "";
 }

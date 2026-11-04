@@ -29,12 +29,14 @@ ds_help() {
 ds_flag_value() { case $2 in -*|'') ds_tooling "$1" ;; esac; }
 
 # ds_in_herdr: the guard every roster script runs once its call is well formed
-# (`frontier` reads GitHub alone and skips it). A supervisor outside Herdr has
-# no tab beside it, and its `herdr` would reach whichever session the socket
-# names.
+# (`frontier` reads GitHub alone and skips it). A supervisor inside a Herdr pane
+# has HERDR_ENV=1. One outside it (a T3 Code thread, which has no TTY) is
+# admitted when a Herdr server answers `workspace list`, so its tabs land in a
+# workspace `spawn` picks by the repo's name.
 ds_in_herdr() {
-  [ "${HERDR_ENV:-}" = 1 ] || ds_tooling "drive-session runs inside Herdr only: HERDR_ENV=1 is not set"
   command -v herdr >/dev/null || ds_tooling "herdr not installed"
+  [ "${HERDR_ENV:-}" = 1 ] || ds_herdr workspace list \
+    || ds_tooling "drive-session needs Herdr: HERDR_ENV=1 is not set and herdr workspace list does not answer"
 }
 
 # ds_herdr <arg>...: runs herdr with no stdin, its stdout in $ds_out. On failure

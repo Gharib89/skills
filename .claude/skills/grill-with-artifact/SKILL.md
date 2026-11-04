@@ -19,7 +19,7 @@ npx skills add mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60 --skil
 ```
 
 This skill replaces only two things in them: how a
-**grilling round** is shown (a round document on the page, never the terminal
+**grilling round** is shown (a round document on the page, never the chat
 format `grilling` gives) and how the answers come back (a Submit on the page).
 
 The page is [page.html](page.html) with its style and script siblings, fixed
@@ -34,11 +34,11 @@ table and its figure style contract.
 The page needs the `Artifact`, `ArtifactData` and `ArtifactComments` tools.
 With any of them missing, or when the human says the page cannot reach its
 database, print one line, `No artifact surface here, so this session runs in
-the terminal.`, and run the rest of the session as `grilling` and
+the chat.`, and run the rest of the session as `grilling` and
 `domain-modeling` describe. Skip the rest of this file.
 
 **Done when:** the session is on the page, or the one line is printed and the
-terminal format runs.
+chat format runs.
 
 ## 2 · Publish the page
 
@@ -53,12 +53,15 @@ terminal format runs.
    and a one sentence `description` naming what is being grilled. Each session
    gets its own artifact. Refused: print step 1's line and fall back.
 4. Read the publish result's subscription line. The Submit wake reaches you
-   only while the artifact's watch shows auto-replies armed; when the line
-   leaves that in doubt, check with `ArtifactComments` `watch` and no `url`.
-5. Print the page link, and whether the wake is armed. Unarmed, add that the
-   human types `submitted` in the terminal after each Submit.
+   only while the artifact's watch shows auto-replies armed. A line saying
+   there is no live subscription, or a session with `T3CODE_THREAD_ID` set
+   (T3 Code's messages carry no human origin, so nothing arms), is unarmed from
+   the first publish. When the line leaves it in doubt, check with
+   `ArtifactComments` `watch` and no `url`.
+5. Print the page link, and whether the wake is armed. Unarmed, say in the same
+   reply that the human types `submitted` in this chat after each Submit.
 
-**Done when:** the link is printed, and the terminal says whether Submit wakes
+**Done when:** the link is printed, and the reply says whether Submit wakes
 the session.
 
 ## 3 · Post a grilling round
@@ -91,13 +94,13 @@ and the status line is the turn's only text.
 
 The Submit comment is a **doorbell**: the one page action that starts a turn in
 this session. It arrives as a comment on the watched artifact, sent to Claude.
-A `submitted` typed in the terminal rings the same bell.
+A `submitted` typed in the chat rings the same bell.
 
 1. Read `answers/round-<n>` with `ArtifactData` `get`. With no such document,
    take the answers from the comment's text, whose lines round-data.md's
-   **Answers text** lists; a pasted answers text in the terminal is the same
+   **Answers text** lists; a pasted answers text in the chat is the same
    text. A comment carrying no answers
-   is the human talking: answer it in the terminal, resolve its thread, and end
+   is the human talking: answer it in the chat, resolve its thread, and end
    the turn.
 2. Apply each answer as `grilling` and `domain-modeling` say, writing any term
    or ADR it settles now, in the repo.
