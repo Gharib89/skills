@@ -13,8 +13,9 @@
 // pass), unsupported or unmarked (an uncited sentence that states a fact).
 // stdout: `claims <check>: pass|fail: <findings>|warn: <findings>` for
 //         cites, support and pronouns (a warn only), then `claims: <p> pass,
-//         <f> fail, <w> warn`, ending on a red support verdict in `; next: fix attempt <a> of 2` or `; stop:
-//         unsupported claims after two fix attempts`
+//         <f> fail, <w> warn`, ending on a red support verdict in `; next:
+//         fix attempt <a> of 2` or `; stop: unsupported claims after two fix
+//         attempts`
 // writes: <run>/claims.json: each check, the support attempts, each sentence's
 //         kept verdict, and `passed`, the claims key (lib/claims.mjs) of a
 //         script that passed, which the gates' support gate reads
