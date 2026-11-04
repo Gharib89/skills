@@ -24,8 +24,8 @@
 #         at-rest row
 # exit: 0 an event or the timeout · 1 no live session in the roster (every row
 #       gone or at rest), or herdr
-#       refused (its code in `code`) · 2 usage, outside Herdr, an unreadable
-#       roster, or an answer from herdr it cannot read
+#       refused (its code in `code`) · 2 usage, no Herdr answering, an
+#       unreadable roster, or an answer from herdr it cannot read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 

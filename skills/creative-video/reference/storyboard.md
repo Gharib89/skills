@@ -64,10 +64,12 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
    {}}`, `icon` `video` and a one-sentence `description`. On later boards
    publish the same `file_path` with that board's `files` map (its stills are
    new files), and no `capabilities` or `icon`, which keeps the URL. A Submit
-   wakes this session only while the artifact's watch shows auto-replies armed;
-   when the publish result's subscription line leaves that in doubt, check
-   with `ArtifactComments` `watch` and no `url`, and unarmed, tell the person
-   to type `submitted` here after each Submit. A refused publish makes the
+   wakes this session only while the artifact's watch shows auto-replies armed.
+   A subscription line saying there is no live subscription, or a session with
+   `T3CODE_THREAD_ID` set, is unarmed from the first board; when the line
+   leaves it in doubt, check with `ArtifactComments` `watch` and no `url`.
+   Unarmed, tell the person with the first board's link to type `submitted` in
+   this chat after each Submit. A refused publish makes the
    board local. Local: say the board is `<run>/board/storyboard.html`, opened
    in a browser, and that its Submit shows an answers text to paste back here.
    Then print the link or the path and `Board <n> posted.`, and end the turn.

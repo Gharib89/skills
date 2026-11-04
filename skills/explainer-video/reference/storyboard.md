@@ -72,10 +72,12 @@ delivery it reports Render's last line and the videos-folder path.
    one-sentence `description`. Refused: the board is local (step 2).
    Never publish it again: every later change is a board version. Record its
    URL with `board page <url>`, which keeps it in `manifest.json`. A Submit
-   wakes this session only while the artifact's watch shows auto-replies armed;
-   when the publish result's subscription line leaves that in doubt, check with
-   `ArtifactComments` `watch` and no `url`. Unarmed, tell the user to type
-   `submitted` here after each Submit.
+   wakes this session only while the artifact's watch shows auto-replies armed.
+   A subscription line saying there is no live subscription, or a session with
+   `T3CODE_THREAD_ID` set, is unarmed from this publish; when the line leaves
+   it in doubt, check with `ArtifactComments` `watch` and no `url`. Unarmed,
+   tell the user in the same reply to type `submitted` in this chat after each
+   Submit.
 4. **Build.** `board build`, or `board build --local` on a local board (a
    page recorded earlier would otherwise ask for uploads). For each card that
    carries a finding (a red the sampling pass left, or one a gate stop reopened)

@@ -19,8 +19,8 @@
 #       roster cannot be written or locked, the text started no turn (`code`
 #       `agent_prompt_stalled` or `timeout`), or herdr refused (its code in
 #       `code`) · 2
-#       usage, text to a blocked session, outside Herdr, an unreadable roster,
-#       or an answer from herdr it cannot read
+#       usage, text to a blocked session, no Herdr answering, an unreadable
+#       roster, or an answer from herdr it cannot read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 

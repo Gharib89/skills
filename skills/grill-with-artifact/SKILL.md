@@ -53,12 +53,15 @@ terminal format runs.
    and a one sentence `description` naming what is being grilled. Each session
    gets its own artifact. Refused: print step 1's line and fall back.
 4. Read the publish result's subscription line. The Submit wake reaches you
-   only while the artifact's watch shows auto-replies armed; when the line
-   leaves that in doubt, check with `ArtifactComments` `watch` and no `url`.
-5. Print the page link, and whether the wake is armed. Unarmed, add that the
-   human types `submitted` in the terminal after each Submit.
+   only while the artifact's watch shows auto-replies armed. A line saying
+   there is no live subscription, or a session with `T3CODE_THREAD_ID` set
+   (T3 Code's messages carry no human origin, so nothing arms), is unarmed from
+   the first publish. When the line leaves it in doubt, check with
+   `ArtifactComments` `watch` and no `url`.
+5. Print the page link, and whether the wake is armed. Unarmed, say in the same
+   reply that the human types `submitted` in this chat after each Submit.
 
-**Done when:** the link is printed, and the terminal says whether Submit wakes
+**Done when:** the link is printed, and the reply says whether Submit wakes
 the session.
 
 ## 3 · Post a grilling round
@@ -91,7 +94,7 @@ and the status line is the turn's only text.
 
 The Submit comment is a **doorbell**: the one page action that starts a turn in
 this session. It arrives as a comment on the watched artifact, sent to Claude.
-A `submitted` typed in the terminal rings the same bell.
+A `submitted` typed in the chat rings the same bell.
 
 1. Read `answers/round-<n>` with `ArtifactData` `get`. With no such document,
    take the answers from the comment's text, whose lines round-data.md's

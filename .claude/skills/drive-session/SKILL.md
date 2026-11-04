@@ -3,7 +3,8 @@ name: drive-session
 description: >-
   Supervise Claude sessions in Herdr tabs and answer what they ask. Use when
   the user wants sessions driven in Herdr: a batch of `/ship` runs, or a skill
-  smoke test in another checkout. Needs HERDR_ENV=1.
+  smoke test in another checkout. Needs a Herdr pane (HERDR_ENV=1) or a Herdr
+  server that answers `herdr workspace list`.
 metadata:
   version: 0.8.0
 ---
@@ -14,7 +15,11 @@ You are the **supervisor**: the main agent driving the run. Each **supervised
 session** is one claude agent in a Herdr tab you created, beside your own tab
 in your workspace. The **roster** is the file listing them.
 
-Herdr is this skill's subject: the skill needs herdr 0.9.3 or newer.
+Herdr is this skill's subject: the skill needs herdr 0.9.3 or newer. A
+supervisor outside Herdr (a T3 Code thread) runs the same scripts while a Herdr
+server answers `herdr workspace list`: with no tab of its own, `spawn` opens
+each tab in the workspace labelled with the repo's name, creating it when none
+is.
 
 ## The scripts
 

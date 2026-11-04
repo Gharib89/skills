@@ -29,16 +29,18 @@ for m in spawn watch read answer frontier; do
   check "$m: a bare call answers its usage line" "$(sed -n 1p <<<"$(bash "$s/$m.sh" --help)")" "$(jq -r .error <<<"$out")"
   check_rc "$m: a bare call exits 2" 2 "$rc"
 done
-# Outside Herdr every roster script refuses before it touches anything.
+# Outside Herdr, with no Herdr server answering, every roster script refuses
+# after that one question (tests/drive-session-host.test.sh has one answering).
 out=$(HERDR_ENV='' bash "$s/spawn.sh" s1 --roster "$roster" --cwd "$tmp/cwd" --prompt hi 2>/dev/null); rc=$?
 check_rc "spawn outside Herdr exits 2" 2 "$rc"
-check "spawn outside Herdr says why" "drive-session runs inside Herdr only: HERDR_ENV=1 is not set" "$(jq -r .error <<<"$out")"
+check "spawn outside Herdr says why" "drive-session needs Herdr: HERDR_ENV=1 is not set and herdr workspace list does not answer" "$(jq -r .error <<<"$out")"
 for call in "watch.sh --roster $roster" "read.sh s1 --roster $roster" "answer.sh s1 --roster $roster --keys Enter"; do
   # shellcheck disable=SC2086  # the call's words are split on purpose
   HERDR_ENV='' bash $s/$call >/dev/null 2>&1; rc=$?
   check_rc "${call%% *} outside Herdr exits 2" 2 "$rc"
 done
-check "no script reached herdr outside Herdr" "" "$(calls)"
+check "outside Herdr each script asked only whether a server answers" \
+  "$(printf 'workspace list\n%.0s' 1 2 3 4)" "$(calls)"
 
 # --- spawn ---------------------------------------------------------------------
 printf 'idle 10\n' > "$HERDR_FAKE/s1.states"

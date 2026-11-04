@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Start one supervised session: a Herdr tab beside the supervisor's, in its
-# workspace and without focus, a claude agent in the tab's root pane, the task
-# sent as its first prompt, and a roster row recording it.
+# workspace (from outside Herdr, the repo's workspace) and without focus, a
+# claude agent in the tab's root pane, the task sent as its first prompt, and a
+# roster row recording it.
 #
 #   spawn <name> --roster <file> --cwd <dir> --prompt <text> [--model <m>]
 #         [-- <agent-arg>...]
@@ -31,8 +32,9 @@
 #       already in the roster, no such --cwd, the roster cannot be created,
 #       written or locked, the prompt started no turn (`code`
 #       `agent_prompt_stalled` or `timeout`; the row stays), or herdr refused
-#       (its code in `code`; the error names a tab left open) · 2 usage, outside
-#       Herdr, an unreadable roster, or an answer from herdr it cannot read
+#       (its code in `code`; the error names a tab left open) · 2 usage, no
+#       Herdr answering, an unreadable roster, or an answer from herdr it
+#       cannot read
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -56,8 +58,23 @@ done
 [ -n "$roster" ] && [ -n "$cwd" ] && [ -n "$prompt" ] || ds_tooling "$usage"
 [[ $name =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || ds_tooling "spawn: $name is no Herdr agent name; use [a-z][a-z0-9_-]{0,31}"
 ds_in_herdr
-[ -n "${HERDR_WORKSPACE_ID:-}" ] || ds_tooling "HERDR_WORKSPACE_ID is not set"
 [ -d "$cwd" ] || ds_fail "no such directory: $cwd"
+
+# The workspace: this pane's own, or, from outside Herdr, the one labelled with
+# the repo's name (the main checkout's folder, so every worktree shares it),
+# created when none is.
+ws=${HERDR_WORKSPACE_ID:-}
+if [ -z "$ws" ]; then
+  common=$(git -C "$cwd" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
+    && repo=$(basename "$(dirname "$common")") || repo=$(basename "$(cd "$cwd" && pwd)")
+  ds_herdr workspace list || ds_fail "workspace list: $ds_msg" "$ds_code"
+  ws=$(jq -r --arg l "$repo" 'first(.result.workspaces[] | select(.label == $l) | .workspace_id) // empty' <<<"$ds_out")
+  if [ -z "$ws" ]; then
+    ds_herdr workspace create --cwd "$cwd" --label "$repo" --no-focus || ds_fail "workspace create: $ds_msg" "$ds_code"
+    ws=$(jq -er '.result.workspace.workspace_id | strings' <<<"$ds_out") \
+      || ds_tooling "workspace create: unreadable answer from herdr"
+  fi
+fi
 
 if [ -f "$roster" ]; then
   ds_readable "$roster"
@@ -68,7 +85,7 @@ else
   ds_write "$roster" .
 fi
 
-ds_herdr tab create --workspace "$HERDR_WORKSPACE_ID" --label "$name" --cwd "$cwd" --no-focus \
+ds_herdr tab create --workspace "$ws" --label "$name" --cwd "$cwd" --no-focus \
   || ds_fail "tab create: $ds_msg" "$ds_code"
 ids=$(jq -er '"\(.result.tab.tab_id | strings) \(.result.root_pane.pane_id | strings)"' <<<"$ds_out" 2>/dev/null) \
   || ds_tooling "tab create: unreadable answer from herdr"
