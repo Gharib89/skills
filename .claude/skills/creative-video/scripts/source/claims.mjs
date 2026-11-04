@@ -11,9 +11,9 @@
 // A verdict on another wording or other cites, or one older than
 // excerpts.json, judges nothing; `verdict` is supported or connective (a
 // pass), unsupported or unmarked (an uncited sentence that states a fact).
-// stdout: `claims <check>: pass|fail: <findings>|warn: <findings>` for cites,
-//         support and pronouns (a warn only), then `claims: <p> pass, <f> fail, <w> warn`, ending on
-//         a red support verdict in `; next: fix attempt <a> of 2` or `; stop:
+// stdout: `claims <check>: pass|fail: <findings>|warn: <findings>` for
+//         cites, support and pronouns (a warn only), then `claims: <p> pass,
+//         <f> fail, <w> warn`, ending on a red support verdict in `; next: fix attempt <a> of 2` or `; stop:
 //         unsupported claims after two fix attempts`
 // writes: <run>/claims.json: each check, the support attempts, each sentence's
 //         kept verdict, and `passed`, the claims key (lib/claims.mjs) of a
@@ -158,8 +158,8 @@ const drift = [];
 }
 
 // pronouns: a gendered English pronoun in narration, a warn only. A research
-// file's pronouns for a real person are a guess no excerpt states; a source in
-// the pack that does state them makes the warn one to read past.
+// file's pronouns for a real person are a guess no excerpt states. It never
+// fails, since a source in the pack may state them.
 checks.pronouns = [];
 const PRONOUN = /\b(he|him|his|himself|she|her|hers|herself)\b/gi;
 const gendered = scenes.flatMap((s) =>

@@ -39,14 +39,16 @@ work. A concept with no source is a topic.
    locator and note. Every factual sentence of the script comes from an
    excerpt you can name, and cites its id in the scene's `cites`
    ([voice.md](voice.md)).
-   Narration about a real person uses their name, "the author" or they/them:
-   take no pronouns from a research file or your own guess, only from a
-   source in the pack in the person's own words (their profile, their post)
-   that states them. Where the cited excerpts say "the author", say "the
-   author": the support checker fails "<Name> reports ..." when no excerpt
-   names the person. The claims check warns `claims pronouns:` on each
-   sentence holding he, him, his, she, her or hers; settle each before the
-   support check, since a fix after it costs a re-check and a re-voice.
+   Narration about a real person uses their name, "the author" or they/them,
+   and uses gendered pronouns only where a source in the pack, in the
+   person's own words (their profile, their post), states them; a research
+   file's pronouns are a guess. Where the cited excerpts say "the author",
+   say "the author": the support checker fails "<Name> reports ..." when no
+   excerpt names the person. The claims check warns `claims pronouns:` on
+   each sentence holding a gendered English pronoun: before the support
+   check, rewrite each one it names, or keep it and name in `DELIVERY.md`
+   the pack source that states the pronouns, since a fix after the support
+   check costs a re-check and a re-voice.
 6. **Still standing.** For each source a factual sentence leans on (a study, a
    benchmark, a release note), search for a later update, erratum,
    retraction or newer version by its authors. A source that was updated or
