@@ -12,7 +12,7 @@ source tests/herdr-fake.sh
 s=skills/drive-session/scripts
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/bin" "$tmp/fake" "$tmp/plain"
+mkdir -p "$tmp/bin" "$tmp/fake" "$tmp/plain" "$tmp/fresh"
 herdr_fake_install "$tmp/bin"
 export PATH="$tmp/bin:$PATH" HERDR_FAKE=$tmp/fake
 unset HERDR_ENV HERDR_WORKSPACE_ID
@@ -57,6 +57,11 @@ check "spawn creates the repo's workspace, unfocused, and names its first tab, o
   "workspace create --cwd $tmp/plain --label plain --no-focus
 tab rename w-plain:t1 s3" "$(calls | grep -E '^(workspace create|tab create|tab rename)')"
 check "the roster records the workspace's first tab" "w-plain:t1" "$(jq -r '.sessions[0].tab' "$tmp/s3.json")"
+
+# A name the roster already holds is refused before any workspace is made.
+bash "$s/spawn.sh" s3 --roster "$tmp/s3.json" --cwd "$tmp/fresh" --prompt x >/dev/null 2>&1; rc=$?
+check_rc "spawn of a name already in the roster exits 1" 1 "$rc"
+check "and creates no workspace for it" "" "$(calls | grep '^workspace create')"
 
 # HERDR_WORKSPACE_ID still wins: only the guard's own question, no lookup.
 printf 'idle 3\n' > "$HERDR_FAKE/s4.states"

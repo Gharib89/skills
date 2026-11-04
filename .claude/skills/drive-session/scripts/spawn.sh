@@ -60,6 +60,15 @@ done
 ds_in_herdr
 [ -d "$cwd" ] || ds_fail "no such directory: $cwd"
 
+if [ -f "$roster" ]; then
+  ds_readable "$roster"
+  jq -e --arg n "$name" 'any(.sessions[]; .name == $n)' "$roster" >/dev/null \
+    && ds_fail "$name is already in the roster $roster"
+else
+  mkdir -p "$(dirname "$roster")" || ds_fail "cannot create the roster $roster"
+  ds_write "$roster" .
+fi
+
 # The workspace: this pane's own, or, from outside Herdr, the one labelled with
 # the repo's name (the main checkout's folder, so every worktree shares it),
 # created when none is. A created workspace comes with a first tab, which
@@ -78,15 +87,6 @@ if [ -z "$ws" ]; then
       || ds_tooling "workspace create: unreadable answer from herdr"
     created=$ds_out
   fi
-fi
-
-if [ -f "$roster" ]; then
-  ds_readable "$roster"
-  jq -e --arg n "$name" 'any(.sessions[]; .name == $n)' "$roster" >/dev/null \
-    && ds_fail "$name is already in the roster $roster"
-else
-  mkdir -p "$(dirname "$roster")" || ds_fail "cannot create the roster $roster"
-  ds_write "$roster" .
 fi
 
 if [ -n "$created" ]; then
