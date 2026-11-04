@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.54.0 (2026-11-04)
+
+### Features
+
+- **drive-session**: Run where a Herdr server answers, and point page fallbacks at the chat
+  ([#1077](https://github.com/Gharib89/skills/pull/1077),
+  [`0ed0300`](https://github.com/Gharib89/skills/commit/0ed0300a081a2e279ed7c820a64edc08baa3328c))
+
+
 ## v0.53.4 (2026-10-27)
 
 ### Bug Fixes
