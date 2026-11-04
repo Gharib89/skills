@@ -5,7 +5,7 @@ The main agent in a `drive-session` run: it spawns supervised sessions, waits on
 _Avoid_: orchestrator, driver, parent session, main session
 
 **Supervised session**:
-One Claude agent in a Herdr tab the supervisor created, beside its own tab, recorded as a row of the roster. The supervisor touches no session the roster does not hold.
+One Claude agent in a Herdr tab the supervisor created, beside its own tab (for a supervisor outside Herdr, in the workspace named after the repo), recorded as a row of the roster. The supervisor touches no session the roster does not hold.
 _Avoid_: child session, worker, sub-session, spawned agent
 
 **Roster**:
