@@ -184,7 +184,7 @@ function view(S) {
   if (S.mode === "nodb")
     return shell(
       S,
-      "This page cannot reach its database here, so no round can load. Say so in the terminal, and the session carries on there.",
+      "This page cannot reach its database here, so no round can load. Say so in the chat, and the session carries on there.",
     );
   if (!r)
     return shell(
@@ -318,16 +318,16 @@ function status(S) {
     case "sending":
       return '<div class="st st-sending" role="status"><span class="spin"></span>Saving your answers and waking Claude.</div>';
     case "sent":
-      return `<div class="st st-ok" role="status"><span><b>${confirmed ? "Confirmed." : "Sent to Claude."}</b> ${confirmed ? "Claude is wrapping up the session." : `Claude is writing round ${n + 1}. It appears on this page; if it does not, type <code>submitted</code> in the terminal.`}</span></div>`;
+      return `<div class="st st-ok" role="status"><span><b>${confirmed ? "Confirmed." : "Sent to Claude."}</b> ${confirmed ? "Claude is wrapping up the session." : `Claude is writing round ${n + 1}. It appears on this page; if it does not, type <code>submitted</code> in the chat.`}</span></div>`;
     case "saved":
-      return `<div class="st st-warn" role="alert"><span><b>Saved, but Claude was not woken.</b> Type <code>submitted</code> in the terminal and the session reads your saved answers.</span>
+      return `<div class="st st-warn" role="alert"><span><b>Saved, but Claude was not woken.</b> Type <code>submitted</code> in the chat and the session reads your saved answers.</span>
       <div class="st-row"><button class="btn btn-sm" data-act="wake">Try waking it again</button></div></div>`;
     case "neither":
-      return `<div class="st st-bad" role="alert"><span><b>Not saved and not sent.</b> Copy your answers and paste them into the terminal.</span>
+      return `<div class="st st-bad" role="alert"><span><b>Not saved and not sent.</b> Copy your answers and paste them into the chat.</span>
       <pre id="fallback-text">${esc(answersText(S))}</pre>
       <div class="st-row"><button class="btn btn-sm accent" data-act="copy">Copy answers</button><button class="btn btn-sm" data-act="submit">Try again</button><span class="label" id="copied" role="status"></span></div></div>`;
   }
   if (S.submitted[n])
-    return `<div class="st st-ok" role="status"><span><b>Submitted.</b> ${confirmed ? "The session is closing." : `Waiting for round ${n + 1}. If it does not appear, type <code>submitted</code> in the terminal.`}</span></div>`;
+    return `<div class="st st-ok" role="status"><span><b>Submitted.</b> ${confirmed ? "The session is closing." : `Waiting for round ${n + 1}. If it does not appear, type <code>submitted</code> in the chat.`}</span></div>`;
   return "";
 }

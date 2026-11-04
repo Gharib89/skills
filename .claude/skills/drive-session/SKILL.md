@@ -3,8 +3,8 @@ name: drive-session
 description: >-
   Supervise Claude sessions in Herdr tabs and answer what they ask. Use when
   the user wants sessions driven in Herdr: a batch of `/ship` runs, or a skill
-  smoke test in another checkout. Needs a Herdr pane (HERDR_ENV=1) or a Herdr
-  server that answers `herdr workspace list`.
+  smoke test in another checkout. Needs Herdr: a pane, or a server answering
+  `herdr workspace list`.
 metadata:
   version: 0.8.0
 ---

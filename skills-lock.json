@@ -23,7 +23,7 @@
     "creative-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "5dccd417878b2ec3e9b7333fa473e87d88f8025acce6906a865d9dfe5d86a5fe"
+      "computedHash": "48578b67263cedb94ca27daf45b3a8cc4c714c3ed0a7697acac9471b6f9a7a9f"
     },
     "domain-modeling": {
       "source": "mattpocock/skills",
@@ -35,12 +35,12 @@
     "drive-session": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "642619e02e2ab61fa11f3a88f33f0a93956f990730b594cc2a0a018c15807375"
+      "computedHash": "64713adf47d2a51173e68c4bf04e150f555b3469a753252554d40ac1f262c5b9"
     },
     "explainer-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "48bc4f4f553fad59bb3c9dfd5c896f65f7d58c4d58b9c86f796295175a122440"
+      "computedHash": "4f7deb2d3747b3f85c5486f0c00852fd920a0f225d7860f32caad6449d1eb997"
     },
     "find-docs": {
       "source": "upstash/context7",
@@ -52,7 +52,7 @@
     "grill-with-artifact": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "43a7962b7ff62d9aadd4742c085bf909fdbb142b6c27a0bf8d7d90b1f0f37f61"
+      "computedHash": "eef55d405d1202f03a5eb2060f6da7b8c378eaaaeee120581a949d8be5c10cb7"
     },
     "grill-with-docs": {
       "source": "mattpocock/skills",

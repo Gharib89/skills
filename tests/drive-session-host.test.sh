@@ -17,9 +17,9 @@ herdr_fake_install "$tmp/bin"
 export PATH="$tmp/bin:$PATH" HERDR_FAKE=$tmp/fake
 unset HERDR_ENV HERDR_WORKSPACE_ID
 calls() { cat "$HERDR_FAKE/calls" 2>/dev/null; : > "$HERDR_FAKE/calls"; }
-g() { git -c user.name=t -c user.email=t@t -c init.defaultBranch=main "$@" >/dev/null 2>&1; }
-g init "$tmp/proj"; g -C "$tmp/proj" commit --allow-empty -m x
-g -C "$tmp/proj" worktree add "$tmp/wt" -b side
+quiet_git() { git -c user.name=t -c user.email=t@t -c init.defaultBranch=main "$@" >/dev/null 2>&1; }
+quiet_git init "$tmp/proj"; quiet_git -C "$tmp/proj" commit --allow-empty -m x
+quiet_git -C "$tmp/proj" worktree add "$tmp/wt" -b side
 
 # --- the guard ---------------------------------------------------------------
 # No server answers: every roster script still refuses, after asking once.
@@ -57,10 +57,18 @@ check "spawn creates the repo's workspace, unfocused, then opens the tab in it" 
   "workspace create --cwd $tmp/plain --label plain --no-focus
 tab create --workspace w-plain --label s3 --cwd $tmp/plain --no-focus" "$(calls | grep -E '^(workspace create|tab create)')"
 
-# HERDR_WORKSPACE_ID still wins, with no lookup.
+# HERDR_WORKSPACE_ID still wins: only the guard's own question, no lookup.
 printf 'idle 3\n' > "$HERDR_FAKE/s4.states"
 HERDR_WORKSPACE_ID=w1 bash "$s/spawn.sh" s4 --roster "$tmp/s4.json" --cwd "$tmp/proj" --prompt x >/dev/null
 check "HERDR_WORKSPACE_ID names the workspace when set" \
-  "tab create --workspace w1 --label s4 --cwd $tmp/proj --no-focus" "$(calls | grep -E '^(workspace|tab create)' | grep -v '^workspace list$')"
+  "workspace list
+tab create --workspace w1 --label s4 --cwd $tmp/proj --no-focus" "$(calls | grep -E '^(workspace|tab create)')"
+
+# A workspace list it cannot read is a refusal, never "no such workspace".
+printf '{}\n' > "$HERDR_FAKE/workspaces"
+out=$(bash "$s/spawn.sh" s5 --roster "$tmp/s5.json" --cwd "$tmp/proj" --prompt x 2>/dev/null); rc=$?
+check_rc "spawn on an unreadable workspace list exits 2" 2 "$rc"
+check "it says so" "workspace list: unreadable answer from herdr" "$(jq -r .error <<<"$out")"
+check "and creates no workspace and no tab" "" "$(calls | grep -E '^(workspace create|tab create)')"
 
 finish
