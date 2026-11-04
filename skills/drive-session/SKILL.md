@@ -6,7 +6,7 @@ description: >-
   smoke test in another checkout. Needs Herdr: a pane, or a server answering
   `herdr workspace list`.
 metadata:
-  version: 0.8.0
+  version: 0.9.0
 ---
 
 # drive-session
