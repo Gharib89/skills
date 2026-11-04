@@ -52,7 +52,7 @@
     "grill-with-artifact": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "070513264a237735daea261502c62e774bd794fe4c6251751f44d49f1066a31d"
+      "computedHash": "ca6a0ae75c286532060f0dcdfc6fdc5f5f67e1a5d320ab6feefef161bba1f203"
     },
     "grill-with-docs": {
       "source": "mattpocock/skills",
