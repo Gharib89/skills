@@ -75,8 +75,14 @@ fi
 # becomes the session's tab, so no stray shell tab stays beside it.
 ws=${HERDR_WORKSPACE_ID:-} created=
 if [ -z "$ws" ]; then
-  common=$(git -C "$cwd" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
-    && repo=$(basename "$(dirname "$common")") || repo=$(basename "$(cd "$cwd" && pwd)")
+  # A submodule's common dir is <parent>/.git/modules/<name>, so only one that
+  # ends in .git names the repo by its parent; any other, by the checkout root.
+  common=$(git -C "$cwd" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+  case $common in
+    */.git) repo=$(basename "$(dirname "$common")") ;;
+    ?*) repo=$(basename "$(git -C "$cwd" rev-parse --show-toplevel)") ;;
+    *) repo=$(basename "$(cd "$cwd" && pwd)") ;;
+  esac
   ds_herdr workspace list || ds_fail "workspace list: $ds_msg" "$ds_code"
   ws=$(jq -er --arg l "$repo" '.result.workspaces | arrays | map(select(.label == $l))
     | if . == [] then "" else .[0].workspace_id | strings end' <<<"$ds_out" 2>/dev/null) \

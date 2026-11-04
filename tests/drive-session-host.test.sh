@@ -20,6 +20,8 @@ calls() { cat "$HERDR_FAKE/calls" 2>/dev/null; : > "$HERDR_FAKE/calls"; }
 quiet_git() { git -c user.name=t -c user.email=t@t -c init.defaultBranch=main "$@" >/dev/null 2>&1; }
 quiet_git init "$tmp/proj"; quiet_git -C "$tmp/proj" commit --allow-empty -m x
 quiet_git -C "$tmp/proj" worktree add "$tmp/wt" -b side
+quiet_git init "$tmp/widget"; quiet_git -C "$tmp/widget" commit --allow-empty -m x
+quiet_git -C "$tmp/proj" -c protocol.file.allow=always submodule add "$tmp/widget" widget
 
 # --- the guard ---------------------------------------------------------------
 # No server answers: every roster script still refuses, after asking once.
@@ -30,7 +32,7 @@ check "the refusal says what it looked for" \
 check "the guard asked the server once and went no further" "workspace list" "$(calls)"
 
 # A server answers: the guard admits the host.
-printf '[{"label":"other","workspace_id":"w9"},{"label":"proj","workspace_id":"w7"}]\n' > "$HERDR_FAKE/workspaces"
+printf '[{"label":"other","workspace_id":"w9"},{"label":"proj","workspace_id":"w7"},{"label":"widget","workspace_id":"w8"}]\n' > "$HERDR_FAKE/workspaces"
 printf '{"sessions":[]}\n' > "$tmp/r.json"
 out=$(bash "$s/watch.sh" --roster "$tmp/r.json" 2>/dev/null); rc=$?
 check_rc "with a herdr server answering, watch passes the guard (no live session: exit 1)" 1 "$rc"
@@ -49,6 +51,12 @@ bash "$s/spawn.sh" s2 --roster "$tmp/s2.json" --cwd "$tmp/wt" --prompt x >/dev/n
 check_rc "spawn from a worktree exits 0" 0 "$rc"
 check "a worktree's repo name is its main checkout's, not the worktree folder's" \
   "tab create --workspace w7 --label s2 --cwd $tmp/wt --no-focus" "$(calls | grep '^tab create')"
+
+printf 'idle 3\n' > "$HERDR_FAKE/s6.states"
+bash "$s/spawn.sh" s6 --roster "$tmp/s6.json" --cwd "$tmp/proj/widget" --prompt x >/dev/null; rc=$?
+check_rc "spawn from a submodule exits 0" 0 "$rc"
+check "a submodule's repo name is its own folder's, not its gitdir's parent (modules)" \
+  "tab create --workspace w8 --label s6 --cwd $tmp/proj/widget --no-focus" "$(calls | grep '^tab create')"
 
 printf 'idle 3\n' > "$HERDR_FAKE/s3.states"
 bash "$s/spawn.sh" s3 --roster "$tmp/s3.json" --cwd "$tmp/plain" --prompt x >/dev/null; rc=$?
