@@ -22,6 +22,7 @@ quiet_git init "$tmp/proj"; quiet_git -C "$tmp/proj" commit --allow-empty -m x
 quiet_git -C "$tmp/proj" worktree add "$tmp/wt" -b side
 quiet_git init "$tmp/widget"; quiet_git -C "$tmp/widget" commit --allow-empty -m x
 quiet_git -C "$tmp/proj" -c protocol.file.allow=always submodule add "$tmp/widget" widget
+quiet_git -C "$tmp/proj/widget" worktree add "$tmp/widget-wt" -b side
 
 # --- the guard ---------------------------------------------------------------
 # No server answers: every roster script still refuses, after asking once.
@@ -57,6 +58,12 @@ bash "$s/spawn.sh" s6 --roster "$tmp/s6.json" --cwd "$tmp/proj/widget" --prompt 
 check_rc "spawn from a submodule exits 0" 0 "$rc"
 check "a submodule's repo name is its own folder's, not its gitdir's parent (modules)" \
   "tab create --workspace w8 --label s6 --cwd $tmp/proj/widget --no-focus" "$(calls | grep '^tab create')"
+
+printf 'idle 3\n' > "$HERDR_FAKE/s7.states"
+bash "$s/spawn.sh" s7 --roster "$tmp/s7.json" --cwd "$tmp/widget-wt" --prompt x >/dev/null; rc=$?
+check_rc "spawn from a submodule's worktree exits 0" 0 "$rc"
+check "a submodule's worktree shares the submodule's workspace" \
+  "tab create --workspace w8 --label s7 --cwd $tmp/widget-wt --no-focus" "$(calls | grep '^tab create')"
 
 printf 'idle 3\n' > "$HERDR_FAKE/s3.states"
 bash "$s/spawn.sh" s3 --roster "$tmp/s3.json" --cwd "$tmp/plain" --prompt x >/dev/null; rc=$?

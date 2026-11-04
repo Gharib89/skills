@@ -73,14 +73,14 @@ fi
 # the repo's name (the main checkout's folder, so every worktree shares it),
 # created when none is. A created workspace comes with a first tab, which
 # becomes the session's tab, so no stray shell tab stays beside it.
-ws=${HERDR_WORKSPACE_ID:-} created=
+ws=${HERDR_WORKSPACE_ID:-} ws_answer=
 if [ -z "$ws" ]; then
-  # A submodule's common dir is <parent>/.git/modules/<name>, so only one that
-  # ends in .git names the repo by its parent; any other, by the checkout root.
+  # A checkout's common dir is <repo>/.git; a submodule's, and its worktrees',
+  # is <parent>/.git/modules/<name>. Outside git, the folder names itself.
   common=$(git -C "$cwd" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
   case $common in
     */.git) repo=$(basename "$(dirname "$common")") ;;
-    ?*) repo=$(basename "$(git -C "$cwd" rev-parse --show-toplevel)") ;;
+    */.git/modules/*) repo=$(basename "$common") ;;
     *) repo=$(basename "$(cd "$cwd" && pwd)") ;;
   esac
   ds_herdr workspace list || ds_fail "workspace list: $ds_msg" "$ds_code"
@@ -91,21 +91,23 @@ if [ -z "$ws" ]; then
     ds_herdr workspace create --cwd "$cwd" --label "$repo" --no-focus || ds_fail "workspace create: $ds_msg" "$ds_code"
     ws=$(jq -er '.result.workspace.workspace_id | strings' <<<"$ds_out") \
       || ds_tooling "workspace create: unreadable answer from herdr"
-    created=$ds_out
+    ws_answer=$ds_out
   fi
 fi
 
-if [ -n "$created" ]; then
-  ids=$(jq -er '"\(.result.tab.tab_id | strings) \(.result.root_pane.pane_id | strings)"' <<<"$created" 2>/dev/null) \
-    || ds_tooling "workspace create: unreadable answer from herdr"
-  ds_herdr tab rename "${ids% *}" "$name" || ds_fail "tab rename: $ds_msg" "$ds_code"
-else
+# The session's tab: the new workspace's first, or a new one.
+answer=$ws_answer
+if [ -z "$answer" ]; then
   ds_herdr tab create --workspace "$ws" --label "$name" --cwd "$cwd" --no-focus \
     || ds_fail "tab create: $ds_msg" "$ds_code"
-  ids=$(jq -er '"\(.result.tab.tab_id | strings) \(.result.root_pane.pane_id | strings)"' <<<"$ds_out" 2>/dev/null) \
-    || ds_tooling "tab create: unreadable answer from herdr"
+  answer=$ds_out
 fi
+ids=$(jq -er '"\(.result.tab.tab_id | strings) \(.result.root_pane.pane_id | strings)"' <<<"$answer" 2>/dev/null) \
+  || ds_tooling "tab create: unreadable answer from herdr; workspace $ws may hold a tab left open"
 tab=${ids% *} pane=${ids#* }
+if [ -n "$ws_answer" ]; then
+  ds_herdr tab rename "$tab" "$name" || ds_fail "tab rename: $ds_msg; workspace $ws and tab $tab left open" "$ds_code"
+fi
 
 # A new tab's shell can still be starting: `agent start` answers
 # `agent_pane_busy` until it is up (measured on herdr 0.9.3), so wait it out.
