@@ -90,6 +90,16 @@ check "it blames workspace create and names the workspace left open" \
   "workspace create: unreadable answer from herdr; workspace w-notab left open" "$(jq -r .error <<<"$out")"
 calls >/dev/null
 
+# A git that fails inside a checkout is a refusal, never "not a repo": the
+# folder's own name would make a duplicate workspace.
+mkdir -p "$tmp/oldgit"
+printf '#!/bin/sh\ncase " $* " in *" --path-format="*) exit 129 ;; esac\nexec %s "$@"\n' "$(command -v git)" > "$tmp/oldgit/git"
+chmod +x "$tmp/oldgit/git"
+out=$(PATH="$tmp/oldgit:$PATH" bash "$s/spawn.sh" s10 --roster "$tmp/s10.json" --cwd "$tmp/wt" --prompt x 2>/dev/null); rc=$?
+check_rc "spawn whose git cannot answer inside a checkout exits 2" 2 "$rc"
+check "it says it cannot name the repo" "spawn: cannot read the git common dir of $tmp/wt" "$(jq -r .error <<<"$out")"
+check "and creates no workspace and no tab" "" "$(calls | grep -E '^(workspace create|tab create)')"
+
 # A name the roster already holds is refused before any workspace is made.
 bash "$s/spawn.sh" s3 --roster "$tmp/s3.json" --cwd "$tmp/fresh" --prompt x >/dev/null 2>&1; rc=$?
 check_rc "spawn of a name already in the roster exits 1" 1 "$rc"

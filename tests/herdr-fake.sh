@@ -36,7 +36,8 @@
 # `{label, workspace_id}`: with no such file the server does not answer, and
 # `workspace list` fails as the real CLI does with no server on its socket.
 # `workspace create` appends `{label, workspace_id: "w-<label>"}` to it and,
-# as herdr 0.9.5 does, answers with the workspace's first tab and root pane
+# as herdr documents from 0.9.3 (agent-automation.mdx) and 0.9.5 was measured
+# doing, answers with the workspace's first tab and root pane
 # (none with a `create-no-tab` file). A `rename-error` file holding a code makes
 # `tab rename` refuse with it.
 herdr_fake_install() { # <dir>

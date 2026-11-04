@@ -33,8 +33,8 @@
 #       written or locked, the prompt started no turn (`code`
 #       `agent_prompt_stalled` or `timeout`; the row stays), or herdr refused
 #       (its code in `code`; the error names a tab left open) · 2 usage, no
-#       Herdr answering, an unreadable roster, or an answer from herdr it
-#       cannot read
+#       Herdr answering, an unreadable roster, an answer from herdr it
+#       cannot read, or a git that fails inside a checkout
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -71,19 +71,25 @@ fi
 
 # The workspace: this pane's own, or, from outside Herdr, the one labelled with
 # the repo's name (the main checkout's folder, or a submodule's name, so every
-# worktree shares it),
-# created when none is. A created workspace comes with a first tab, which
-# becomes the session's tab, so no stray shell tab stays beside it.
+# worktree shares it), created when none is. A created workspace comes with a
+# first tab, which becomes the session's tab, so no stray shell tab stays
+# beside it.
 ws=${HERDR_WORKSPACE_ID:-} ws_answer=
 if [ -z "$ws" ]; then
   # A checkout's common dir is <repo>/.git; a submodule's, and its worktrees',
-  # is <parent>/.git/modules/<name>. Outside git, the folder names itself.
-  common=$(git -C "$cwd" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
-  case $common in
-    */.git) repo=$(basename "$(dirname "$common")") ;;
-    */.git/modules/*) repo=$(basename "$common") ;;
-    *) repo=$(basename "$(cd "$cwd" && pwd)") ;;
-  esac
+  # is <parent>/.git/modules/<name>. Only a folder git says is outside any
+  # repo names itself: a git that fails inside one would split its workspace.
+  if common=$(git -C "$cwd" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+    case $common in
+      */.git) repo=$(basename "$(dirname "$common")") ;;
+      */.git/modules/*) repo=$(basename "$common") ;;
+      *) repo=$(basename "$(cd "$cwd" && pwd)") ;;
+    esac
+  elif git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1; then
+    ds_tooling "spawn: cannot read the git common dir of $cwd"
+  else
+    repo=$(basename "$(cd "$cwd" && pwd)")
+  fi
   ds_herdr workspace list || ds_fail "workspace list: $ds_msg" "$ds_code"
   ws=$(jq -er --arg l "$repo" '.result.workspaces | arrays | map(select(.label == $l))
     | if . == [] then "" else .[0].workspace_id | strings end' <<<"$ds_out" 2>/dev/null) \
