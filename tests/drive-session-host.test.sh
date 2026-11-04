@@ -56,7 +56,7 @@ check "a worktree's repo name is its main checkout's, not the worktree folder's"
 printf 'idle 3\n' > "$HERDR_FAKE/s6.states"
 bash "$s/spawn.sh" s6 --roster "$tmp/s6.json" --cwd "$tmp/proj/widget" --prompt x >/dev/null; rc=$?
 check_rc "spawn from a submodule exits 0" 0 "$rc"
-check "a submodule's repo name is its own folder's, not its gitdir's parent (modules)" \
+check "a submodule's repo name is its own name, not its gitdir's parent (modules)" \
   "tab create --workspace w8 --label s6 --cwd $tmp/proj/widget --no-focus" "$(calls | grep '^tab create')"
 
 printf 'idle 3\n' > "$HERDR_FAKE/s7.states"
@@ -72,6 +72,23 @@ check "spawn creates the repo's workspace, unfocused, and names its first tab, o
   "workspace create --cwd $tmp/plain --label plain --no-focus
 tab rename w-plain:t1 s3" "$(calls | grep -E '^(workspace create|tab create|tab rename)')"
 check "the roster records the workspace's first tab" "w-plain:t1" "$(jq -r '.sessions[0].tab' "$tmp/s3.json")"
+
+# A new workspace's first tab that cannot be read or renamed is refused, the
+# error naming what is left open.
+mkdir -p "$tmp/norename" "$tmp/notab"
+printf 'tab_not_found\n' > "$HERDR_FAKE/rename-error"
+out=$(bash "$s/spawn.sh" s8 --roster "$tmp/s8.json" --cwd "$tmp/norename" --prompt x 2>/dev/null); rc=$?
+rm "$HERDR_FAKE/rename-error"
+check_rc "spawn whose tab rename herdr refuses exits 1" 1 "$rc"
+check "it names the workspace and tab left open" \
+  "tab rename: rename failed; workspace w-norename and tab w-norename:t1 left open" "$(jq -r .error <<<"$out")"
+: > "$HERDR_FAKE/create-no-tab"
+out=$(bash "$s/spawn.sh" s9 --roster "$tmp/s9.json" --cwd "$tmp/notab" --prompt x 2>/dev/null); rc=$?
+rm "$HERDR_FAKE/create-no-tab"
+check_rc "spawn on a workspace create answer with no tab exits 2" 2 "$rc"
+check "it blames workspace create and names the workspace left open" \
+  "workspace create: unreadable answer from herdr; workspace w-notab left open" "$(jq -r .error <<<"$out")"
+calls >/dev/null
 
 # A name the roster already holds is refused before any workspace is made.
 bash "$s/spawn.sh" s3 --roster "$tmp/s3.json" --cwd "$tmp/fresh" --prompt x >/dev/null 2>&1; rc=$?

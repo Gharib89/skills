@@ -70,7 +70,8 @@ else
 fi
 
 # The workspace: this pane's own, or, from outside Herdr, the one labelled with
-# the repo's name (the main checkout's folder, so every worktree shares it),
+# the repo's name (the main checkout's folder, or a submodule's name, so every
+# worktree shares it),
 # created when none is. A created workspace comes with a first tab, which
 # becomes the session's tab, so no stray shell tab stays beside it.
 ws=${HERDR_WORKSPACE_ID:-} ws_answer=
@@ -96,14 +97,14 @@ if [ -z "$ws" ]; then
 fi
 
 # The session's tab: the new workspace's first, or a new one.
-answer=$ws_answer
+answer=$ws_answer unreadable="workspace create: unreadable answer from herdr; workspace $ws left open"
 if [ -z "$answer" ]; then
   ds_herdr tab create --workspace "$ws" --label "$name" --cwd "$cwd" --no-focus \
     || ds_fail "tab create: $ds_msg" "$ds_code"
-  answer=$ds_out
+  answer=$ds_out unreadable="tab create: unreadable answer from herdr"
 fi
 ids=$(jq -er '"\(.result.tab.tab_id | strings) \(.result.root_pane.pane_id | strings)"' <<<"$answer" 2>/dev/null) \
-  || ds_tooling "tab create: unreadable answer from herdr; workspace $ws may hold a tab left open"
+  || ds_tooling "$unreadable"
 tab=${ids% *} pane=${ids#* }
 if [ -n "$ws_answer" ]; then
   ds_herdr tab rename "$tab" "$name" || ds_fail "tab rename: $ds_msg; workspace $ws and tab $tab left open" "$ds_code"
