@@ -122,7 +122,9 @@ case $play in
 esac
 # STUB_USAGE=1: the usage fields a real result carries, two models (a parent
 # and a child agent's); unset, a result without them.
-if [ -n "${STUB_USAGE:-}" ]; then
+# USAGE_ONCE=1: only the first run reports it.
+if [ -n "${STUB_USAGE:-}" ] && { [ -z "${USAGE_ONCE:-}" ] || [ ! -e "$S/usage-given" ]; }; then
+  touch "$S/usage-given"
   jq -cn --arg r "$reply" '{subtype: "success", result: $r, total_cost_usd: 1, session_id: "s", num_turns: 3,
     subagent_stats: {spawned: 1},
     modelUsage: {a: {inputTokens: 10, outputTokens: 20, cacheReadInputTokens: 30, cacheCreationInputTokens: 40},
@@ -227,6 +229,10 @@ check "each run records its usage, a retried first attempt's included" "$usage_r
 check "per_path sums every attempt's cost and tokens, failed ones included" \
   '[{"path":"ambiguous","passed":true,"attempts":1,"cost_usd":1,"input_tokens":11,"output_tokens":22,"cache_read_tokens":33,"cache_write_tokens":40,"turns":3,"subagents":1},{"path":"happy","passed":true,"attempts":2,"cost_usd":2,"input_tokens":22,"output_tokens":44,"cache_read_tokens":66,"cache_write_tokens":80,"turns":6,"subagents":2}]' \
   "$(STUB_USAGE=1 DRIVE_KEEP=.per_path drive happy-skips-gate happy ambiguous | head -n 1)"
+# `usage-first-only`: only the first claude run reports usage; per_path must not pass a partial sum off as the total.
+check "per_path is null where any attempt lacked the field" '[null,2]' \
+  "$(DRIVE_KEEP='[.per_path[] | select(.path == "happy") | (.input_tokens, .attempts)]' \
+    USAGE_ONCE=1 STUB_USAGE=1 drive happy-skips-gate happy ambiguous | head -n 1)"
 check "a result without usage records null, never a guess" \
   '[{"input_tokens":null,"output_tokens":null,"cache_read_tokens":null,"cache_write_tokens":null,"turns":null,"subagents":null}]' \
   "$(DRIVE_KEEP='[.runs[0] | {input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, turns, subagents}]' drive happy ambiguous | head -n 1)"
