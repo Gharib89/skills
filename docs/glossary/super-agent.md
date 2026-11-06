@@ -23,3 +23,11 @@ _Avoid_: hang, idle (idle is a thread state, not a judgement), crash
 **Standing waiver**:
 A merge-gate hold the launch template waives in advance, with its condition written out, so a run that meets it merges without a round trip to the owner. Any hold outside the listed waivers is still an escalation.
 _Avoid_: auto-merge, merge allowance (that is the launch permission to merge at all), exception
+
+**Fleet file**:
+The owner's user-scope file, written by the super agent's setup step and carried to every machine, that lists what the super agent may use: each linked machine with its capabilities and slot count, each subscription with its quota read, the GitHub accounts, the active repos and the default standing waivers. The skill itself names none of these, so it stays the same for every owner.
+_Avoid_: config, inventory, profile (a ship profile is per repo)
+
+**Slot**:
+One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling; a launch still checks the machine's free memory and load before it takes a slot.
+_Avoid_: worker, lane, seat
