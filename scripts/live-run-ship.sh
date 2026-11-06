@@ -33,8 +33,18 @@
 #
 # stdout: one JSON line {result: pass|fail, failed[], retried[], runs[]}, each
 #         failure `<path>: <check>: <what failed>`, each run {path, attempt,
-#         issue, pr, failed[], cost_usd, wall_s, session};
+#         issue, pr, failed[], cost_usd, wall_s, session, input_tokens,
+#         output_tokens, cache_read_tokens, cache_write_tokens, turns,
+#         subagents}, and per_path[] {path, passed, attempts, cost_usd, and the
+#         same token fields summed over every attempt, failed ones included};
 #         or {result: unavailable, reason}
+#         The usage fields come from the claude JSON result: the four token
+#         counts sum its `modelUsage` over every model (parent and child
+#         agents), `turns` is `num_turns`, `subagents` is
+#         `subagent_stats.spawned`. The JSON carries no tool-call count, so
+#         none is recorded. A field the result omits is null, never a guess.
+#         Three repetitions per scenario are an engineering screen, not a
+#         statistical comparison.
 # exit:   0 pass · 1 a check failed · 2 unavailable, or a usage error or no jq,
 #         which print on stderr only
 set -uo pipefail
@@ -289,8 +299,12 @@ attempt() { # <happy|ambiguous> <attempt>
 
   jq -cn --arg path "$1" --argjson attempt "$2" --rawfile f "$failed" --argjson issue "$issue" \
     --argjson pr "${pr:-null}" --argjson wall "$wall" --slurpfile c <(jq -c . "$co.json" 2>/dev/null || echo '{}') \
-    '{path: $path, attempt: $attempt, issue: $issue, pr: $pr, failed: ($f | split("\n") | map(select(. != ""))),
-      cost_usd: ($c[0].total_cost_usd // null), wall_s: $wall, session: ($c[0].session_id // null)}' >> "$tmp/runs"
+    'def tok(k): if ($c[0].modelUsage | type) != "object" then null else [$c[0].modelUsage[] | .[k] // 0] | add end;
+     {path: $path, attempt: $attempt, issue: $issue, pr: $pr, failed: ($f | split("\n") | map(select(. != ""))),
+      cost_usd: ($c[0].total_cost_usd // null), wall_s: $wall, session: ($c[0].session_id // null),
+      input_tokens: tok("inputTokens"), output_tokens: tok("outputTokens"),
+      cache_read_tokens: tok("cacheReadInputTokens"), cache_write_tokens: tok("cacheCreationInputTokens"),
+      turns: ($c[0].num_turns // null), subagents: ($c[0].subagent_stats.spawned // null)}' >> "$tmp/runs"
   issue="" mark="" run_heads=""
   [ ! -s "$failed" ]
 }
@@ -302,11 +316,16 @@ done
 # A first attempt that failed is the one retried; every other run is its path's
 # final word. A retried run's cleanup failure stays a failure: its leftovers are
 # still on the fixture whatever the retry did.
-out=$(jq -cs 'def lines(f): .path as $p | .failed[] | select(f) | "\($p): \(.)";
+out=$(jq -cs 'def tot($k): [.[] | .[$k]] | if all(. == null) then null else map(. // 0) | add end;
+  def lines(f): .path as $p | .failed[] | select(f) | "\($p): \(.)";
   ([.[] | select(.attempt == 1 and .failed != [])]) as $retried
   | ([.[] | select(.attempt == 2 or .failed == [])]) as $final
   | ([$final[] | lines(true)] + [$retried[] | lines(startswith("cleanup: "))]) as $failed
   | {result: (if $failed == [] then "pass" else "fail" end),
-     failed: $failed, retried: [$retried[] | lines(true)], runs: .}' "$tmp/runs")
+     failed: $failed, retried: [$retried[] | lines(true)], runs: .,
+     per_path: (group_by(.path) | map({path: .[0].path, passed: any(.[]; .failed == []), attempts: length,
+       cost_usd: tot("cost_usd"), input_tokens: tot("input_tokens"), output_tokens: tot("output_tokens"),
+       cache_read_tokens: tot("cache_read_tokens"), cache_write_tokens: tot("cache_write_tokens"),
+       turns: tot("turns"), subagents: tot("subagents")}))}' "$tmp/runs")
 printf '%s\n' "$out"
 [ "$(jq -r .result <<<"$out")" = pass ]
