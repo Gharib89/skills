@@ -12,7 +12,9 @@
 #   required_reviews: a count, or `unknown`. bypass: yes | no | n/a | unknown.
 #   A read the host refused (403, missing scope) is `unknown`, never none.
 #   line: the summary line, verbatim.
-# exit: 0 · 2 the PR could not be read
+# exit: 0 · 2 usage or tooling: the PR could not be read, the adapter gave no
+#       answer, or a flag is unknown (an unreadable protection is exit 0 with
+#       `unknown` fields, never a failure)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 usage='usage: protections <pr>'

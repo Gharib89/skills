@@ -63,7 +63,7 @@ references call each item, not a layout:
   admin bypass), read-only. Its reader is the human who answers the merge word,
   as evidence beside Ship's own gate: no script reads it, so `unknown` or `no`
   adds no stop and no prompt, and a repo that opts into unattended merge has
-  already chosen its policy ([ADR 0011][adr]).
+  already chosen its policy (ADR 0011).
 - **Clean gate held by**: `gate summary`'s `clean_gate_held_by_line`, `none`
   on a clean gate.
 
@@ -308,5 +308,3 @@ filed from here, and the comment drops the "file defects" line: it carries each
 draft verbatim under the command a human runs from a file they save it to,
 `.claude/skills/ship/scripts/file-issue.sh --repo Gharib89/skills --title
 "<title>" --body-file <file> --label needs-triage`.
-
-[adr]: ../../../docs/adr/0011-ship-rules-guard-what-is-read-downstream.md

@@ -69,22 +69,28 @@ read_ado() { # <policy-list json | fail> -> compact answer
     SHIP_ORG_URL=https://dev.azure.com/o SHIP_PROJECT=p SHIP_REPO=r
     source skills/ship/scripts/_lib.sh; source skills/ship/scripts/host/ado.sh
     az() { case "$1 $2" in
-      "repos show") echo '{"id":"rid"}' ;;
+      "repos show") echo '{"id":"rid","defaultBranch":"refs/heads/main"}' ;;
       "repos policy") [ "$POLICIES" != fail ] && echo "$POLICIES" || return 1 ;; esac; }
     sleep() { :; }
     POLICIES=$1 host_branch_protections main | jq -c .
   )
 }
-pol='[{"isEnabled":true,"isBlocking":true,"type":{"id":"fa4e907d-c16b-4a4c-9dfa-4906e5d171dd"},"settings":{"minimumApproverCount":2}},
-{"isEnabled":true,"isBlocking":true,"type":{"id":"0609b952-1397-4640-95ec-e00a01b2c241"},"settings":{"displayName":"build"}},
-{"isEnabled":true,"isBlocking":false,"type":{"id":"cbdc66da-9728-4af8-aada-9a5a32e4a226"},"settings":{"statusName":"advisory"}},
-{"isEnabled":false,"isBlocking":true,"type":{"id":"fa4e907d-c16b-4a4c-9dfa-4906e5d171dd"},"settings":{"minimumApproverCount":9}}]'
+pol='[{"isEnabled":true,"isBlocking":true,"type":{"id":"fa4e907d-c16b-4a4c-9dfa-4906e5d171dd"},"settings":{"minimumApproverCount":2,"scope":[{"repositoryId":"rid","refName":"refs/heads/main","matchKind":"Exact"}]}},
+{"isEnabled":true,"isBlocking":true,"type":{"id":"0609b952-1397-4640-95ec-e00a01b2c241"},"settings":{"displayName":"build","scope":[{"repositoryId":"rid","refName":"refs/heads/main","matchKind":"Exact"}]}},
+{"isEnabled":true,"isBlocking":false,"type":{"id":"cbdc66da-9728-4af8-aada-9a5a32e4a226"},"settings":{"statusName":"advisory","scope":[{"repositoryId":"rid","refName":"refs/heads/main","matchKind":"Exact"}]}},
+{"isEnabled":false,"isBlocking":true,"type":{"id":"fa4e907d-c16b-4a4c-9dfa-4906e5d171dd"},"settings":{"minimumApproverCount":9,"scope":[{"repositoryId":"rid","refName":"refs/heads/main","matchKind":"Exact"}]}}]'
 check "an empty policy list is unprotected" \
   '{"branch":"main","protected":"no","required_checks":[],"required_reviews":0,"bypass":"n/a"}' "$(read_ado '[]')"
 check "enabled blocking policies are reported, the others ignored" \
   '{"branch":"main","protected":"yes","required_checks":["build"],"required_reviews":2,"bypass":"unknown"}' "$(read_ado "$pol")"
 check "a build policy with no display name adds no null" '[]' \
-  "$(read_ado '[{"isEnabled":true,"isBlocking":true,"type":{"id":"0609b952-1397-4640-95ec-e00a01b2c241"},"settings":{}}]' | jq -c .required_checks)"
+  "$(read_ado '[{"isEnabled":true,"isBlocking":true,"type":{"id":"0609b952-1397-4640-95ec-e00a01b2c241"},"settings":{"scope":[{"repositoryId":"rid","refName":"refs/heads/main","matchKind":"Exact"}]}}]' | jq -c .required_checks)"
+rv='"type":{"id":"fa4e907d-c16b-4a4c-9dfa-4906e5d171dd"},"isEnabled":true,"isBlocking":true'
+check "a prefix scope and a default-branch scope apply, another branch's scope does not" '3' \
+  "$(read_ado "[{$rv,\"settings\":{\"minimumApproverCount\":3,\"scope\":[{\"repositoryId\":null,\"refName\":\"refs/heads/ma\",\"matchKind\":\"Prefix\"}]}},
+  {$rv,\"settings\":{\"minimumApproverCount\":2,\"scope\":[{\"repositoryId\":\"rid\",\"matchKind\":\"DefaultBranch\"}]}},
+  {$rv,\"settings\":{\"minimumApproverCount\":9,\"scope\":[{\"repositoryId\":\"rid\",\"refName\":\"refs/heads/other\",\"matchKind\":\"Exact\"}]}},
+  {$rv,\"settings\":{\"minimumApproverCount\":8,\"scope\":[{\"repositoryId\":\"elsewhere\",\"refName\":\"refs/heads/main\",\"matchKind\":\"Exact\"}]}}]" | jq -c .required_reviews)"
 check "a refused policy read is unknown, never none" \
   '{"branch":"main","protected":"unknown","required_checks":"unknown","required_reviews":"unknown","bypass":"unknown"}' "$(read_ado fail)"
 
