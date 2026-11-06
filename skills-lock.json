@@ -130,7 +130,7 @@
     "setup-project": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "64a700f0deb55f429eda630816bdfcaae6f32f6d96b22649d91b730cc80e2f5b"
+      "computedHash": "0c02bb414320e5987b5efe21f8bd39d974b8568ad108a32d82a507e445d4e21b"
     },
     "setup-skills": {
       "source": ".",
@@ -140,7 +140,7 @@
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "44a5eb68a7545bdbe228a40e4d5dfe4ef521e6d7fa2cd0bd933b2c8eadd59376"
+      "computedHash": "30ad82cc81a673b90a252808d52c55c4d5d31e4011a8fad91ddc665b336fe61f"
     },
     "show-me": {
       "source": "humanlayer/skills",
