@@ -7,6 +7,14 @@ released version. See
 
 <!-- version list -->
 
+## v0.6.0 (2026-11-06)
+
+### Features
+
+- **super-agent**: Claims and intake ([#1094](https://github.com/Gharib89/skills/pull/1094),
+  [`6e38bf5`](https://github.com/Gharib89/skills/commit/6e38bf54c5fbc653894cc4391e318a9cfc8deddd))
+
+
 ## v0.5.0 (2026-11-06)
 
 ### Features
