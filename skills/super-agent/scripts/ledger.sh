@@ -10,7 +10,8 @@
 #   ledger --ledger <file> list [--open]
 #   ledger --ledger <file> set <key> <field> <json>
 #   ledger --ledger <file> rethread <key> --thread <id> --worktree <path>
-#          --branch <name> [--environment <id>] [--model <id>] [--effort <level>]
+#          --branch <name> [--kind ship|triage] [--environment <id>] [--model <id>]
+#          [--effort <level>] [--area <path>]...
 #   ledger --ledger <file> ruling <text> [--allow <call>]...
 #   ledger --ledger <file> allowed
 #   ledger --ledger <file> wait <key> --reason <text>
@@ -19,12 +20,16 @@
 # A key is `<owner/name>#<number>`. `--ledger` comes first and names the file,
 # which a first `add` creates. `add` starts an entry at stage `launched`, stalls
 # 0, observed null: `reconcile` fills `observed`, the baseline `watch` compares
-# against, and `error`, the fault kind it last failed to read. `set` takes any
+# against, and `error`, the fault kind it last failed to read. `add` over an
+# entry whose stage is `settled` or `closed` (a triaged ticket that now ships)
+# replaces it; over any other entry it refuses. `set` takes any
 # field but the entry's identity (key, repo, number); `stage` must be one of
 # launched, running, at-rest, merged, settled, closed. `rethread` points a
 # ticket's entry at a fresh thread and starts its tracking over (stage
 # launched, stalls 0, no observed state), so the key stays one entry; `--environment` names the new thread's linked
-# machine, and without it the entry is this machine's again. A write is
+# machine, and without it the entry is this machine's again. `--kind` and
+# `--area` replace the stored value when given and leave it when omitted; use
+# `add` over a finished triage entry, `rethread` for a thread that failed. A write is
 # a temp file beside the ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
 # `--allow` is a call the answer lets a supervised thread make without a hold,
 # and `allowed` lists them as the lines the launch brief carries. `--machine`
@@ -51,7 +56,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>] [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--environment <id>] [--model <id>] [--effort <level>] | ruling <text> [--allow <call>]... | allowed | wait <key> --reason <text> | unwait <key>'
+usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>] [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... | allowed | wait <key> --reason <text> | unwait <key>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -81,7 +86,7 @@ case $cmd in
     [ -n "$repo" ] && [ -n "$thread" ] && [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage"
     key="$repo#$number"
     sa_read "$ledger"
-    jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null && sa_fail "$key is already in the ledger"
+    jq -e --arg k "$key" '.entries[$k] and (.entries[$k].stage | IN("settled", "closed") | not)' <<<"$doc" >/dev/null && sa_fail "$key is already in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "$number" --arg t "$thread" \
       --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg env "$environment" --arg model "$model" \
@@ -121,9 +126,11 @@ case $cmd in
     jq -cn --arg k "$key" --arg f "$field" --argjson v "$value" '{key: $k, field: $f, value: $v}' ;;
   rethread)
     [ $# -ge 1 ] || sa_tooling "$usage"
-    key=$1; shift; thread='' worktree='' branch='' environment='' model='' effort=''
+    key=$1; shift; thread='' worktree='' branch='' environment='' model='' effort='' kind='' areas=''
     while [ $# -gt 0 ]; do
       case $1 in
+        --area) sa_flag_value "$usage" "${2:-}"; areas=$(jq -c --arg a "$2" '(. // []) + [$a]' <<<"${areas:-null}") ;;
+        --kind) sa_flag_value "$usage" "${2:-}"; case $2 in ship|triage) kind=$2 ;; *) sa_tooling "$usage" ;; esac ;;
         --thread) sa_flag_value "$usage" "${2:-}"; thread=$2 ;;
         --worktree) sa_flag_value "$usage" "${2:-}"; worktree=$2 ;;
         --branch) sa_flag_value "$usage" "${2:-}"; branch=$2 ;;
@@ -139,11 +146,13 @@ case $cmd in
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$key is not in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     doc=$(jq -c --arg k "$key" --arg t "$thread" --arg w "$worktree" --arg b "$branch" --arg m "$model" \
-      --arg e "$effort" --arg env "$environment" --arg now "$now" '.entries[$k] |= (.thread = $t | .worktree = $w | .branch = $b
+      --arg e "$effort" --arg env "$environment" --arg now "$now" --arg kind "$kind" --argjson areas "${areas:-null}" \
+      '.entries[$k] |= (.thread = $t | .worktree = $w | .branch = $b
         | .environment_id = (if $env == "" then null else $env end)
         | .model = (if $m == "" then null else $m end) | .effort = (if $e == "" then null else $e end)
         | .stage = "launched" | .stalls = 0 | .observed = null | .error = null | .rest_since = null
-        | .judged_run = 0 | .launched_at = $now | .updated_at = $now)' <<<"$doc")
+        | .judged_run = 0 | .kind = (if $kind == "" then .kind else $kind end) | .areas = ($areas // .areas)
+        | .launched_at = $now | .updated_at = $now)' <<<"$doc")
     sa_write "$ledger" "$doc"
     jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$(jq -c --arg k "$key" '.entries[$k]' <<<"$doc")" \
       '{ledger: $l, key: $k, entry: $e}' ;;
@@ -169,7 +178,7 @@ case $cmd in
     case $key in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
     case ${key##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
     sa_read "$ledger"
-    jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
+    jq -e --arg k "$key" '.entries[$k] | . != null and (.stage != "settled" and .stage != "closed")' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
     # A repeat keeps the first `since`: how long it has waited is the report's point.
     row=$(jq -cn --arg k "$key" --arg r "${key%#*}" --argjson n "${key##*#}" --arg why "$reason" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
       --argjson old "$(jq -c --arg k "$key" '(.waiting // []) | map(select(.key == $k)) | first // null' <<<"$doc")" \

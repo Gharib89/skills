@@ -82,11 +82,10 @@ directory.
 
 The **fleet file** is `super-agent/fleet.json` under `$XDG_CONFIG_HOME`
 (`~/.config` when unset). The machines and their slots, the GitHub accounts,
-the active repos, the standing waivers and the provider quota commands come
-from the fleet file, never from this text. The launch brief takes its standing
-waivers from it, and any step that needs a machine, account, repo or quota
-command reads it from the file. Setup runs on Linux only (it uses GNU `nproc`,
-`free` and `timeout`).
+the active repos, the work week, the standing waivers and the provider quota
+commands come from the fleet file, never from this text: any step that needs a
+machine, account, repo or quota command reads it from the file. Setup runs on
+Linux only (it uses GNU `nproc`, `free` and `timeout`).
 
 When the fleet file is missing, or the owner asks for `/super-agent setup`,
 follow [reference/setup.md](reference/setup.md).
@@ -209,11 +208,12 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
    the tier launched, `--machine` the fleet
    key place printed (never `local` for a remote), `--environment
    <placed.environment_id>` on a remote launch, and each `--area` passed to
-   place, then run
+   place (a triaged ticket now shipping takes `add`, never `rethread`, which
+   is rung 3's), then run
    `scripts/reconcile.sh --ledger <ledger>` once and ignore its summary: it
    gives the entry the baseline `watch.sh` compares against, and a thread that
    has not started yet reads as at rest. A running watcher picks the entry up
-   from there, after an `add` or a `rethread` alike. On the first wake, compare
+   from there. On the first wake, compare
    `.thread.branch` from `t3 thread show` with the entry's branch: the PR is
    found by branch, so when they differ, `ledger.sh set <key> branch <json>`.
 3. **Watch.** Start `scripts/watch.sh --ledger <ledger> --timeout 7000`

@@ -77,6 +77,24 @@ check "each weekly on Friday at 09:00 in the repo's project" 'repo-project 5 09:
   "$(jq -r '.retro[0] | "\(.bind) \(.schedule.weekdays[0]) \(.schedule.timeOfDay) \(.prompt)"' <<<"$out")"
 out=$(S --morning 07:30 --retro-day 1)
 check "the time and day are flags" '07:30 1' "$(jq -r '"\(.morning.schedule.timeOfDay) \(.retro[0].schedule.weekdays[0])"' <<<"$out")"
+# --- the work week comes from the fleet file ------------------------------------
+jq '.work_week = [0,1,2,3,4]' "$fleet" > "$tmp/sun.json"
+out=$(bash "$s/schedules.sh" --fleet "$tmp/sun.json")
+check "a Sunday-to-Thursday fleet runs the morning report on those days" '[0,1,2,3,4]' "$(jq -c .morning.schedule.weekdays <<<"$out")"
+check "and the retro defaults to its last day, Thursday" 4 "$(jq -r '.retro[0].schedule.weekdays[0]' <<<"$out")"
+out=$(bash "$s/schedules.sh" --fleet "$tmp/sun.json" --retro-day 2)
+check "an explicit --retro-day still wins" 2 "$(jq -r '.retro[0].schedule.weekdays[0]' <<<"$out")"
+jq '.work_week = [3,1,2]' "$fleet" > "$tmp/mid.json"
+check "the last day is the last of the week's order, not the largest number" 2 \
+  "$(bash "$s/schedules.sh" --fleet "$tmp/mid.json" | jq -r '.retro[0].schedule.weekdays[0]')"
+for bad in '[]' '"x"' 'false' '[7]' '[1,1]'; do
+  jq --argjson w "$bad" '.work_week = $w' "$fleet" > "$tmp/bad.json"
+  check_rc "a work_week of $bad exits 2" 2 "$(bash "$s/schedules.sh" --fleet "$tmp/bad.json" >/dev/null 2>&1; echo $?)"
+done
+jq '.work_week = [6]' "$fleet" > "$tmp/sat.json"
+out=$(bash "$s/schedules.sh" --fleet "$tmp/sat.json")
+check "Saturday is accepted for morning and retro" '[[6],[6]]' "$(jq -c '[.morning.schedule.weekdays, .retro[0].schedule.weekdays]' <<<"$out")"
+
 jq '.active_repos = []' "$fleet" > "$tmp/none.json"
 check "no active repos proposes no retro-run" '[]' "$(bash "$s/schedules.sh" --fleet "$tmp/none.json" | jq -c .retro)"
 check "the proposal holds no path" 0 "$(S | grep -c '/home/\|/tmp/')"
