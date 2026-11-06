@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.55.0 (2026-11-06)
+
+### Features
+
+- **ship**: Merge gate reports the host's own protections, read-only
+  ([#1108](https://github.com/Gharib89/skills/pull/1108),
+  [`d7f542a`](https://github.com/Gharib89/skills/commit/d7f542abfbd01de281fddbd5a67def4133a05583))
+
+
 ## v0.54.3 (2026-11-06)
 
 ### Bug Fixes
