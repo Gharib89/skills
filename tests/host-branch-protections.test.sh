@@ -23,10 +23,11 @@ read_github() { # <classic: json | notprotected | 403 | hidden> <rules: json | f
           403) echo 'gh: Upgrade to GitHub Pro or make this repository public to enable this feature. (HTTP 403)' >&2; return 1 ;;
           hidden) echo 'gh: Not Found (HTTP 404)' >&2; return 1 ;;
           *) echo "$CLASSIC" ;; esac ;;
-        */rules/branches/*) [ "$RULES" != fail ] && echo "$RULES" || return 1 ;;
+        */rules/branches/*) [ "$RULES" != fail ] || return 1
+          printf '%s\n' "$*" > "$LOG"; jq -c '.[]' <<<"$RULES" ;; # --paginate --jq '.[]': one rule per line
       esac
     }
-    CLASSIC=$1 RULES=$2 host_branch_protections main | jq -c .
+    LOG=$work/rules-call CLASSIC=$1 RULES=$2 host_branch_protections "${3:-main}" | jq -c .
   )
 }
 copilot='{"type":"copilot_code_review","parameters":{}}'
@@ -50,6 +51,11 @@ check "a refused classic read (403) is unknown, never none" \
 check "a bare 404 on a branch the token cannot administer is unknown too" '"unknown"' \
   "$(read_github hidden '[]' | jq -c .protected)"
 check "an unreadable rules read cannot say none" '"unknown"' "$(read_github notprotected fail | jq -c .protected)"
+read_github notprotected "[$copilot]" release/x >/dev/null
+check "a slash in the branch is encoded and the rules read is paged" \
+  'repos/o/r/rules/branches/release%2Fx --paginate --jq .[]' "$(cat "$work/rules-call")"
+check "a rule on a later page still protects" '"yes"' \
+  "$(read_github notprotected "[$copilot,{\"type\":\"pull_request\",\"parameters\":{\"required_approving_review_count\":1}}]" | jq -c .protected)"
 check "a ruleset still shows when the classic read is refused, its fields unknown" \
   '{"branch":"main","protected":"yes","required_checks":"unknown","required_reviews":"unknown","bypass":"unknown"}' \
   "$(read_github 403 "$rule")"

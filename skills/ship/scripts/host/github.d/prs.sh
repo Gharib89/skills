@@ -239,11 +239,15 @@ host_pr_reviewer_blocked() { # <pr> <login>
 # ruleset's bypass actors are not in the rules read, so a ruleset-only answer
 # leaves `bypass` unknown. `copilot_code_review` gates no merge.
 host_branch_protections() { # <branch>
-  local b=$1 cls rules err; err=$(mktemp); trap 'rm -f "$err"; trap - RETURN' RETURN
-  if cls=$(api "$R/branches/$b/protection" 2>"$err"); then :
+  local b=$1 cls rules err e; err=$(mktemp); trap 'rm -f "$err"; trap - RETURN' RETURN
+  # `@uri` and `--paginate`, as host_copilot_review_on_push reads the same rules:
+  # a slash in the name addresses another route, and a rule on page two read as
+  # absent would turn a protected branch into none.
+  e=$(jq -rn --arg b "$b" '$b | @uri') || return 1
+  if cls=$(api "$R/branches/$e/protection" 2>"$err"); then :
   elif grep -q 'Branch not protected' "$err"; then cls=null
   else cls=unknown; fi
-  rules=$(api "$R/rules/branches/$b" 2>/dev/null) || rules=unknown
+  if rules=$(api "$R/rules/branches/$e" --paginate --jq '.[]' 2>/dev/null); then rules=$(jq -s -c . <<<"$rules"); else rules=unknown; fi
   jq -n --arg b "$b" --arg c "$cls" --arg r "$rules" '
     def src: if . == "unknown" then "unknown" else fromjson end;
     ($c | src) as $cls | ($r | src) as $rules
