@@ -147,4 +147,38 @@ check_rc "rethread of a key the ledger lacks exits 1" 1 "$rc"
 out=$(LR rethread Gharib89/skills#8 --thread t-9 2>/dev/null); rc=$?
 check_rc "rethread without a worktree and branch exits 2" 2 "$rc"
 
+# --- areas: the paths a ticket's work touches, which placement reads ------------------
+rm -f "$led"
+out=$(L add --repo Gharib89/skills --number 20 --thread t-20 --worktree /wt/20 --branch b-20 --area skills/ship --area docs)
+check "add takes each --area, in order" '["skills/ship","docs"]' "$(jq -c .entry.areas <<<"$out")"
+check "an entry added with none holds an empty list" '[]' "$(add 21 t-21 | jq -c .entry.areas)"
+
+# --- waiting: a ticket nothing fits holds a row, never a thread --------------------------
+out=$(L wait Gharib89/skills#30 --reason "gpu: no reachable machine with a GPU"); rc=$?
+check_rc "wait exits 0" 0 "$rc"
+check "it answers the row" '{"key":"Gharib89/skills#30","repo":"Gharib89/skills","number":30,"reason":"gpu: no reachable machine with a GPU"}' \
+  "$(jq -c '.waiting | {key, repo, number, reason}' <<<"$out")"
+check "the row is dated" 1 "$(jq '.waiting.since | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T") | if . then 1 else 0 end' <<<"$out")"
+check "list reads it back beside the entries" '["Gharib89/skills#30"]' "$(L list | jq -c '[.waiting[].key]')"
+check "and no entry exists for it" 2 "$(L list | jq '.entries | length')"
+check "a waiting row is no open entry, so no watcher reads it" 2 "$(L list --open | jq '.entries | length')"
+since=$(L list | jq -r '.waiting[0].since'); sleep 1
+L wait Gharib89/skills#30 --reason "no machine fits now" >/dev/null
+check "a second wait replaces the reason and keeps the first since" "no machine fits now $since" \
+  "$(L list | jq -r '.waiting[0] | "\(.reason) \(.since)"')"
+check "there is still one row" 1 "$(L list | jq '.waiting | length')"
+out=$(L wait Gharib89/skills#20 --reason x 2>/dev/null); rc=$?
+check_rc "a ticket with a thread cannot wait" 1 "$rc"
+check "and says so" "Gharib89/skills#20 already has a thread in the ledger" "$(jq -r .error <<<"$out")"
+check_rc "a key that is no repo and number exits 2" 2 "$(L wait nope --reason x >/dev/null 2>&1; echo $?)"
+check_rc "a wait with no reason exits 2" 2 "$(L wait Gharib89/skills#31 >/dev/null 2>&1; echo $?)"
+L wait Gharib89/skills#32 --reason r >/dev/null
+out=$(L add --repo Gharib89/skills --number 32 --thread t-32 --worktree /wt/32 --branch b-32)
+check "launching a waiting ticket takes its row away" '["Gharib89/skills#30"]' "$(L list | jq -c '[.waiting[].key]')"
+out=$(L unwait Gharib89/skills#30)
+check "unwait removes a row and says it did" '{"key":"Gharib89/skills#30","removed":true}' "$(jq -c . <<<"$out")"
+check "and a second says it had none" false "$(L unwait Gharib89/skills#30 | jq .removed)"
+check "a ledger written before waiting existed lists none" '[]' \
+  "$(jq 'del(.waiting)' "$led" > "$tmp/old.json" && bash "$s/ledger.sh" --ledger "$tmp/old.json" list | jq -c .waiting)"
+
 finish
