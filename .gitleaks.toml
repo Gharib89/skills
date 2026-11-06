@@ -14,3 +14,9 @@ id = "generic-api-key"
     condition = "AND"
     paths = ['''(^|/)\.claude/skills/media-use/scripts/lib/telemetry\.mjs$''']
     regexes = ['''^phc_''']
+
+    [[rules.allowlists]]
+    description = "HyperFrames public OAuth client ID in the vendored media-use skill"
+    condition = "AND"
+    paths = ['''(^|/)\.claude/skills/media-use/audio/scripts/lib/heygen\.mjs$''']
+    regexes = ['''^Zg3LF4FCLoeJoGs2YqMtZ17g$''']
