@@ -39,7 +39,8 @@
 #         `pr-unreadable`; {key: null, thread: null, event: "timeout",
 #         watching, unobserved} once --timeout passes, `watching` the keys it
 #         polled and `unobserved` the open keys it skipped
-#         a watcher already running is {error, running: <pid>}
+#         a watcher already running is {error, running: <pid, or null when
+#         its lock reads empty>}
 # exit: 0 a change or the timeout · 1 no open entry, none `reconcile` has
 #       observed yet, or a watcher already running · 2 usage, an unreadable
 #       ledger, or a lock it cannot take
@@ -70,17 +71,17 @@ case $recheck in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
 # that reads empty is kept, since an unknown answer is no proof of a dead one.
 lock="$ledger.watch"
 mine=$(mktemp "$lock.XXXXXX") || sa_tooling "cannot take $lock"
+trap 'rm -f "$mine"' EXIT
 printf '%s\n' "$$" > "$mine"
 for try in 1 2; do
   if ln "$mine" "$lock" 2>/dev/null; then break; fi
   pid=$(cat "$lock" 2>/dev/null)
   if [ -z "$pid" ] || kill -0 "$pid" 2>/dev/null; then
-    rm -f "$mine"
     jq -cn --arg p "$pid" '{error: "a watcher already runs on this ledger", running: (if $p == "" then null else ($p | tonumber) end)}'
     printf 'a watcher already runs on this ledger (pid %s)\n' "${pid:-unknown}" >&2; exit 1
   fi
   rm -f "$lock"
-  [ "$try" -lt 2 ] || { rm -f "$mine"; sa_tooling "cannot take $lock"; }
+  [ "$try" -lt 2 ] || sa_tooling "cannot take $lock"
 done
 rm -f "$mine"
 trap '[ "$(cat "$lock" 2>/dev/null)" = "$$" ] && rm -f "$lock"' EXIT

@@ -22,9 +22,9 @@
 # against, and `error`, the fault kind it last failed to read. `set` takes any
 # field but the entry's identity (key, repo, number); `stage` must be one of
 # launched, running, at-rest, merged, settled, closed. `rethread` points a
-# ticket's entry at a fresh thread and starts its tracking over (stage launched, stalls 0, no
-# observed state), so the key stays one entry. A write is a temp file beside the
-# ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
+# ticket's entry at a fresh thread and starts its tracking over (stage
+# launched, stalls 0, no observed state), so the key stays one entry. A write is
+# a temp file beside the ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
 # `--allow` is a call the answer lets a supervised thread make without a hold,
 # and `allowed` lists them as the lines the launch brief carries. `--machine`
 # is the fleet file's key for the machine the thread runs on (`local` means the
