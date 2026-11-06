@@ -2,7 +2,7 @@
 # On a wake, compare the ledger with T3 and GitHub and report what changed, so
 # the super agent judges from one JSON answer and not from child transcripts.
 #
-#   reconcile [--ledger <file>]
+#   reconcile --ledger <file>
 #
 # Looks at every open entry's thread and PR (the same look `watch` takes),
 # writes it into the entry as `observed`, the baseline the next `watch`
@@ -26,7 +26,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: reconcile [--ledger <file>]'
+usage='usage: reconcile --ledger <file>'
 sa_help "$usage" "$@"
 ledger=''
 while [ $# -gt 0 ]; do
@@ -35,7 +35,7 @@ while [ $# -gt 0 ]; do
     *) sa_tooling "$usage" ;;
   esac
 done
-[ -n "$ledger" ] || ledger=$(sa_default_ledger)
+[ -n "$ledger" ] || sa_tooling "$usage"
 
 sa_read "$ledger"
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)

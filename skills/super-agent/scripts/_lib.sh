@@ -31,11 +31,6 @@ command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 # shellcheck disable=SC2034  # read by ledger.sh
 sa_stages='launched, running, at-rest, settled, closed'
 
-# sa_default_ledger: the ledger in the super agent's state directory.
-sa_default_ledger() {
-  printf '%s/ledger.json' "${SUPER_AGENT_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/super-agent}"
-}
-
 # sa_read <ledger>: the ledger's JSON in $doc, an empty one for a file not yet
 # written. A file that is not JSON or has the wrong shape is refused by name,
 # since valid JSON of the wrong shape fails at its first use, far from the file.

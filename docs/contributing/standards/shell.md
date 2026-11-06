@@ -51,6 +51,10 @@ exceptions bound these rules.
   reason: it composes no other skill, so no adapter is beside it. Each create
   posts once and is never retried; a later run's read of `retro` issues covers
   an issue create whose response was lost.
+  A ninth: `super-agent`'s `watch` and `reconcile` read a supervised ticket's
+  PR list and issue with `gh api`, and its thread with the `t3` CLI, for the
+  same reason: it composes no other skill, so no adapter is beside it; both
+  only read.
   A direct call made in two runs, where this run can see the other, is a
   candidate mechanic, raised as a Ship note.
 - **A host create posts once, through create-then-verify.** A 5xx can be the

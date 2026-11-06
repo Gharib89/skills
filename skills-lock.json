@@ -149,6 +149,11 @@
       "skillPath": "plugins/show-me/skills/show-me/SKILL.md",
       "computedHash": "43766f53afe7eb9feba0bb7716590c35cbb8d39d4a91eddef50e9566a6f6ae19"
     },
+    "super-agent": {
+      "source": ".",
+      "sourceType": "local",
+      "computedHash": "42cedaf30b6d4f69e16bad3a2fe47274ab194b8ae410e95bf818cecaa1e90e96"
+    },
     "tdd": {
       "source": "mattpocock/skills",
       "ref": "f3fc5632f401156837ee3872f14fe33ccf1024ea",

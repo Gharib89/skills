@@ -3,7 +3,7 @@
 # exit. Run it as a background command: it holds no tool call open, and its
 # exit is what wakes the super agent.
 #
-#   watch [--ledger <file>] [--interval <s>] [--timeout <s>]
+#   watch --ledger <file> [--interval <s>] [--timeout <s>]
 #
 # Polls every open ledger entry, in ledger order, each `--interval` seconds
 # (default 30). A change is a difference from the entry's `observed` baseline,
@@ -25,7 +25,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: watch [--ledger <file>] [--interval <s>] [--timeout <s>]'
+usage='usage: watch --ledger <file> [--interval <s>] [--timeout <s>]'
 sa_help "$usage" "$@"
 ledger='' interval=30 timeout=''
 while [ $# -gt 0 ]; do
@@ -38,7 +38,7 @@ while [ $# -gt 0 ]; do
 done
 case $interval in ''|0|*[!0-9]*) sa_tooling "$usage" ;; esac
 case $timeout in *[!0-9]*) sa_tooling "$usage" ;; esac
-[ -n "$ledger" ] || ledger=$(sa_default_ledger)
+[ -n "$ledger" ] || sa_tooling "$usage"
 
 sa_read "$ledger"
 open=$(jq -c '[.entries[] | select(.stage != "settled" and .stage != "closed")]' <<<"$doc")

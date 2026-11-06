@@ -100,9 +100,12 @@ printf 'not json' > "$bad"
 bash "$s/ledger.sh" --ledger "$bad" list >/dev/null 2>&1; rc=$?
 check_rc "a ledger that is not JSON exits 2" 2 "$rc"
 
-# --- the default path: the state directory ------------------------------------
-out=$(SUPER_AGENT_STATE_DIR="$tmp/own" bash "$s/ledger.sh" list); rc=$?
-check "the default ledger is ledger.json in SUPER_AGENT_STATE_DIR" '{"entries":[],"rulings":[]}' \
-  "$(jq -c '{entries, rulings}' <<<"$out")"
+# --- the ledger is named, never guessed -----------------------------------------
+out=$(bash "$s/ledger.sh" list 2>/dev/null); rc=$?
+check_rc "a call without --ledger exits 2" 2 "$rc"
+check "and answers the usage line" "$(sed -n 1p <<<"$(bash "$s/ledger.sh" --help)")" "$(jq -r .error <<<"$out")"
+out=$(bash "$s/ledger.sh" --ledger "$tmp/none/ledger.json" list)
+check "a ledger not yet written reads as empty" '{"entries":[],"rulings":[]}' "$(jq -c '{entries, rulings}' <<<"$out")"
+check "and reading creates nothing" "" "$(ls "$tmp/none" 2>/dev/null)"
 
 finish

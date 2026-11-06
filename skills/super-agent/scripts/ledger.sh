@@ -3,17 +3,16 @@
 # the owner's dated rulings. The ledger is what a compacted or restarted super
 # agent reads to know what it owns.
 #
-#   ledger [--ledger <file>] add --repo <owner/name> --number <n> --thread <id>
+#   ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id>
 #          --worktree <path> --branch <name> [--machine <name>] [--model <id>]
 #          [--effort <level>]
-#   ledger [--ledger <file>] get <key>
-#   ledger [--ledger <file>] list [--open]
-#   ledger [--ledger <file>] set <key> <field> <json>
-#   ledger [--ledger <file>] ruling <text>
+#   ledger --ledger <file> get <key>
+#   ledger --ledger <file> list [--open]
+#   ledger --ledger <file> set <key> <field> <json>
+#   ledger --ledger <file> ruling <text>
 #
-# A key is `<owner/name>#<number>`. The file defaults to `ledger.json` in
-# $SUPER_AGENT_STATE_DIR, else `super-agent/` under $XDG_STATE_HOME. `add`
-# starts an entry at stage `launched`, stalls 0, observed null: `reconcile`
+# A key is `<owner/name>#<number>`. `--ledger` comes first and names the file,
+# which a first `add` creates. `add` starts an entry at stage `launched`, stalls 0, observed null: `reconcile`
 # fills `observed`, the baseline `watch` compares against. `set` takes any field
 # but the entry's identity (key, repo, number); `stage` must be one of
 # launched, running, at-rest, settled, closed. A write is a temp file beside the
@@ -29,11 +28,10 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger [--ledger <file>] add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--machine <name>] [--model <id>] [--effort <level>] | get <key> | list [--open] | set <key> <field> <json> | ruling <text>'
+usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--machine <name>] [--model <id>] [--effort <level>] | get <key> | list [--open] | set <key> <field> <json> | ruling <text>'
 sa_help "$usage" "$@"
-ledger=''
-if [ "${1:-}" = --ledger ]; then sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2; fi
-[ -n "$ledger" ] || ledger=$(sa_default_ledger)
+[ "${1:-}" = --ledger ] || sa_tooling "$usage"
+sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
 cmd=${1:-}; [ $# -gt 0 ] && shift
 
 case $cmd in
