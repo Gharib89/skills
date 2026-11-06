@@ -45,7 +45,7 @@ refused "no repo" --task x
 refused "no task" --repo "$repo"
 refused "a missing repo" --repo "$tmp/none" --task x
 refused "a zero timeout" --repo "$repo" --task x --timeout 0
-for name in '*' 'git*' rm sudo curl 'a b'; do refused "--allow '$name'" --repo "$repo" --task x --allow "$name"; done
+for name in '*' 'git*' rm sudo curl bash env xargs python3 find 'a b'; do refused "--allow '$name'" --repo "$repo" --task x --allow "$name"; done
 check "a bad call answers the usage line" "$usage" "$(bash "$s/agy-job.sh" --bogus 2>/dev/null | jq -r .error)"
 check "and agy never ran" "" "$(cat "$SA_FAKE/calls" 2>/dev/null)"
 
@@ -60,8 +60,10 @@ check "the allow list is a session-only --settings JSON" 1 "$(call | grep -c -- 
 check "it never skips all permissions" 0 "$(grep -c -e '--dangerously-skip-permissions' "$SA_FAKE/calls")"
 check "it never allows every command" 0 "$(call | grep -c 'command(\*)')"
 check "the default list leans permissive: reads, searches and text tools" 1 \
-  "$(rules | jq '[.[] | select(. == "command(ls)" or . == "command(cat)" or . == "command(grep)" or . == "command(find)" or . == "command(jq)" or . == "command(diff)" or . == "command(wc)")] | length == 7' | grep -c true)"
+  "$(rules | jq '[.[] | select(. == "command(ls)" or . == "command(cat)" or . == "command(grep)" or . == "command(head)" or . == "command(jq)" or . == "command(diff)" or . == "command(wc)")] | length == 7' | grep -c true)"
 check "every rule names one binary, no wildcard or space" 0 "$(rules | jq -r '.[]' | grep -c -E '^command\([^)]*[ *][^)]*\)$')"
+check "no default rule allows a program-running or writing binary" 0 \
+  "$(rules | jq -r '.[]' | grep -c -E '^command\((find|rg|sort|uniq|tree|date|awk|sed)\)$')"
 check "no default rule allows a deleting, privileged or network command" 0 \
   "$(rules | jq -r '.[]' | grep -c -E '^command\((rm|sudo|su|curl|wget|ssh|scp|nc|dd|git|chmod|chown|kill)\)$')"
 cwd=$(cut -d"|" -f1 "$SA_FAKE/agy-cwd"); common=$(cut -d"|" -f2 "$SA_FAKE/agy-cwd")
@@ -73,8 +75,8 @@ check "the answer names what ran" "$(jq -c . <<<"$(rules)")" "$(jq -c .allow <<<
 
 # --- the job's own needs and flags ------------------------------------------------------------------
 reset
-J --repo "$repo" --task t --allow git --allow make >/dev/null
-check "--allow adds a binary name to the list" 2 "$(rules | jq '[.[] | select(. == "command(git)" or . == "command(make)")] | length')"
+J --repo "$repo" --task t --allow git --allow tree >/dev/null
+check "--allow adds a binary name to the list" 2 "$(rules | jq '[.[] | select(. == "command(git)" or . == "command(tree)")] | length')"
 reset
 J --repo "$repo" --task t --model claude-sonnet-4-6 --timeout 90 >/dev/null
 check "--model is passed on" 1 "$(call | grep -c -- '--model claude-sonnet-4-6')"
@@ -95,6 +97,12 @@ check "with no stderr there is no dangling colon" "agy exited 3 with no JSON ans
 reset; sa_provider agy 0 '{"status":"ERROR","response":"","error":"interrupted"}'
 out=$(J --repo "$repo" --task t 2>/dev/null); rc=$?
 check_rc "a status that is not SUCCESS exits 1" 1 "$rc"
+reset; sa_provider agy 3 "$ok"
+out=$(J --repo "$repo" --task t 2>/dev/null); rc=$?
+check_rc "an agy exit that is not 0 exits 1 even with an answer printed" 1 "$rc"
+check "and the answer says so" "agy exited 3" "$(jq -r .error <<<"$out")"
+reset; sa_provider agy 0 '{"status":"ERROR","response":"","error":"interrupted"}'
+out=$(J --repo "$repo" --task t 2>/dev/null)
 check "the answer carries agy's error" interrupted "$(jq -r .error <<<"$out")"
 check "the worktree is removed after a failure" 1 "$(git -C "$repo" worktree list | wc -l | tr -d ' ')"
 

@@ -11,11 +11,15 @@
 # A rule names a binary exactly: `command(ls)` allows `ls .`, while a prefix
 # form (`ls*`, `git *`) allowed nothing (measured). The default list is
 # permissive toward harmless commands: ls cat head tail wc grep rg find sort
-# uniq cut tr diff jq tree file stat pwd echo basename dirname date. `git` is
-# left out of it, since an allowed `git` could push: pass `--allow git` for a
-# job that reads history. --allow adds one binary name; a name with a wildcard,
-# a space or a parenthesis, or one that deletes, escalates or reaches the
-# network (rm sudo su curl wget ssh scp nc dd chmod chown kill), is refused.
+# cut tr diff jq file stat pwd echo basename dirname: binaries that read and
+# print, since a rule allows every argument of its binary. `find`, `rg`, `sort`,
+# `uniq`, `tree`, `date` and `git` are left out: each can run a program, write
+# a file or set the clock (`find -exec`, `rg --pre`, `sort -o`) or push. Pass
+# `--allow git` for a job that reads history. --allow adds one binary name; a
+# name with a wildcard, a space or a parenthesis, or a common escalator (a
+# shell, an interpreter, a command runner, or a command that deletes, changes
+# permissions or reaches the network), is refused: the list is the caller's
+# judgment past that.
 # --timeout (default 300 s) bounds the job, agy's own print time and a hard
 # limit just past it. The scratch worktree is a detached one of --repo's HEAD,
 # removed afterwards however the job ended.
@@ -34,7 +38,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 
 usage='usage: agy-job --repo <dir> --task <text> [--model <name>] [--allow <binary>]... [--timeout <s>]'
 sa_help "$usage" "$@"
-repo='' task='' model='' timeout_s=300 allow=(ls cat head tail wc grep rg find sort uniq cut tr diff jq tree file stat pwd echo basename dirname date)
+repo='' task='' model='' timeout_s=300 allow=(ls cat head tail wc grep cut tr diff jq file stat pwd echo basename dirname)
 while [ $# -gt 0 ]; do
   case $1 in
     --repo) sa_flag_value "$usage" "${2:-}"; repo=$2; shift 2 ;;
@@ -44,7 +48,7 @@ while [ $# -gt 0 ]; do
     --allow)
       sa_flag_value "$usage" "${2:-}"
       # c[u]rl: spelled as a glob so the contract check's curl rule does not read the list as a call
-      case $2 in *[!A-Za-z0-9._+-]*|rm|sudo|su|c[u]rl|wget|ssh|scp|nc|dd|chmod|chown|kill) sa_tooling "$usage" ;; esac
+      case $2 in *[!A-Za-z0-9._+-]*|rm|sudo|su|c[u]rl|wget|ssh|scp|nc|dd|chmod|chown|kill|bash|sh|zsh|dash|env|xargs|python|python3|perl|ruby|node|npx|find|awk|sed) sa_tooling "$usage" ;; esac
       allow+=("$2"); shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
@@ -73,6 +77,6 @@ jq -c --argjson a "$allow_json" --argjson rc "$rc" '
    duration_seconds: (.duration_seconds // null)}
   + (if (.error // null) != null then {error} else {} end)
   | . as $o
-  | if $rc != 0 and $o.response == "" then $o + {error: "agy exited \($rc)"} else $o end' <<<"$line" > "$scratch/answer"
+  | if $rc != 0 then $o + {error: "agy exited \($rc)"} else $o end' <<<"$line" > "$scratch/answer"
 cat "$scratch/answer"
 jq -e '.status == "SUCCESS" and (.denied | length) == 0 and (.error // null) == null' "$scratch/answer" >/dev/null
