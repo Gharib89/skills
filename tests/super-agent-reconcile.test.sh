@@ -16,8 +16,7 @@ export PATH="$tmp/bin:$PATH" SA_FAKE=$tmp/fake
 sa_fake_install "$tmp/bin"
 led=$tmp/ledger.json
 repo=Gharib89/skills
-# shellcheck disable=SC2120  # R takes extra flags, though no case passes one
-R() { bash "$s/reconcile.sh" --ledger "$led" "$@"; }
+R() { bash "$s/reconcile.sh" --ledger "$led"; }
 L() { bash "$s/ledger.sh" --ledger "$led" "$@"; }
 calls() { cat "$SA_FAKE/calls" 2>/dev/null; }
 stage() { jq -r --arg k "$repo#$1" '.entries[$k].stage' "$led"; }

@@ -40,7 +40,7 @@ done
 sa_read "$ledger"
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 checked=0 entries='[]' errors='[]'
-fail() { # <kind> <detail>: record the current entry's error
+fail() { # <kind> <detail>: record the error of the entry in $key
   errors=$(jq -c --arg k "$key" --arg kind "$1" --argjson d "$2" '. + [{key: $k, kind: $kind, detail: $d}]' <<<"$errors")
 }
 while IFS= read -r entry; do
@@ -53,7 +53,7 @@ while IFS= read -r entry; do
     closed) stage=closed reason=pr-closed ;;
     *)
       repo=$(jq -r .repo <<<"$entry") number=$(jq -r .number <<<"$entry")
-      issue=$(gh api "repos/$repo/issues/$number" 2>/dev/null </dev/null)
+      issue=$(gh api "repos/$repo/issues/$number" 2>/dev/null </dev/null) || issue=''
       if ! jq -e '.state' <<<"$issue" >/dev/null 2>&1; then
         fail issue-unreadable "$(jq -cn --arg r "$repo" --argjson n "$number" '{repo: $r, number: $n}')"; continue
       fi
@@ -65,7 +65,7 @@ while IFS= read -r entry; do
     '.entries[$k] |= (.stage = $s | .observed = $o | .updated_at = $now)' <<<"$doc")
   entries=$(jq -c --argjson e "$entry" --arg s "$stage" --arg r "$reason" --argjson o "$obs" \
     '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, from: $e.stage, stage: $s, reason: $r, observed: $o}]' <<<"$entries")
-done < <(jq -c '.entries[] | select(.stage != "settled" and .stage != "closed")' <<<"$doc")
+done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open)' <<<"$doc")
 [ "$checked" -eq 0 ] || sa_write "$ledger" "$doc"
 
 jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" '

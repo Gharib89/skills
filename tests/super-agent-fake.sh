@@ -9,10 +9,12 @@
 # `t3 thread show <id> --json` answers `{thread, messages}` from
 # `threads/<id>.json`, after the multi-line migration warning the real CLI
 # prints on STDOUT (measured on 2026-11-06, so a script has to pick out the
-# JSON line); no file is a thread the server does not know: exit 1. `gh api
+# JSON line); no file is a thread the server does not know: exit 1.
+# `SA_T3_RC` makes a found thread exit nonzero after its answer. `gh api
 # <endpoint>` answers from `gh/<endpoint with every character outside
-# [A-Za-z0-9._-] turned into _>`; no file is a 404, exit 1. `pgrep` and `ps`
-# record themselves in `proc-calls` and print nothing: a script that matches a
+# [A-Za-z0-9._-] turned into _>`; no file is a 404, exit 1 with the JSON body
+# on stdout like the real CLI (measured 2026-11-06). `pgrep` and `ps` record
+# themselves in `proc-calls` and print nothing: a script that matches a
 # process by name shows up there. Every t3 and gh call is a line of `calls`.
 
 sa_fake_install() { # <dir>
@@ -26,13 +28,14 @@ printf '%s\n' '[09:53:24.008] WARN (#20): Database migration history diverges fr
 f="$SA_FAKE/threads/$id.json"
 [ -f "$f" ] || { echo "thread $id not found" >&2; exit 1; }
 cat "$f"
+exit "${SA_T3_RC:-0}"
 FAKE
   cat > "$1/gh" <<'FAKE'
 #!/usr/bin/env bash
 printf 'gh %s\n' "$*" >> "$SA_FAKE/calls"
 [ "$1" = api ] || { echo "fake gh: unsupported: $*" >&2; exit 2; }
 f="$SA_FAKE/gh/$(printf '%s' "$2" | sed 's/[^A-Za-z0-9._-]/_/g')"
-[ -f "$f" ] || { echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
+[ -f "$f" ] || { printf '%s' '{"message":"Not Found","status":"404"}'; echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
 cat "$f"
 FAKE
   for p in pgrep ps; do
@@ -65,7 +68,7 @@ sa_pr() {
     closed) body='[{"number":7,"state":"closed","merged_at":null}]' ;;
     none) body='[]' ;;
   esac
-  sa_route "repos/$repo/pulls?head=${repo%%/*}:$branch&state=all&per_page=1" "$body"
+  sa_route "repos/$repo/pulls?head=${repo%%/*}:$(jq -rn --arg s "$branch" '$s | @uri')&state=all&sort=created&direction=desc&per_page=1" "$body"
 }
 
 sa_issue() { # <owner/name> <number> <open|closed>

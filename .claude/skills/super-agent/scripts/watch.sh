@@ -41,14 +41,14 @@ case $timeout in *[!0-9]*) sa_tooling "$usage" ;; esac
 [ -n "$ledger" ] || sa_tooling "$usage"
 
 sa_read "$ledger"
-open=$(jq -c '[.entries[] | select(.stage != "settled" and .stage != "closed")]' <<<"$doc")
+open=$(jq -c "$sa_jq_open"'[.entries[] | select(is_open)]' <<<"$doc")
 [ "$(jq length <<<"$open")" -gt 0 ] || sa_fail "no open entry in the ledger $ledger"
 unobserved=$(jq -r '[.[] | select(.observed == null) | .key] | first // empty' <<<"$open")
 [ -z "$unobserved" ] || sa_fail "$unobserved has no observed state: run reconcile first"
 
-# sa_event <observed> <snapshot>: the change from the baseline to the snapshot,
+# change_of <observed> <snapshot>: the change from the baseline to the snapshot,
 # the PR's end first since it outranks a run that finished with it.
-sa_event() {
+change_of() {
   jq -rn --argjson o "$1" --argjson n "$2" '
     if $n.pr.state == "merged" and $o.pr.state != "merged" then "pr-merged"
     elif $n.pr.state == "closed" and $o.pr.state != "closed" then "pr-closed"
@@ -63,7 +63,7 @@ while :; do
   while IFS= read -r entry; do
     key=$(jq -r .key <<<"$entry") thread=$(jq -r .thread <<<"$entry")
     if sa_observe "$entry"; then
-      event=$(sa_event "$(jq -c .observed <<<"$entry")" "$obs")
+      event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs")
       [ -z "$event" ] && continue
       jq -cn --arg k "$key" --arg t "$thread" --arg e "$event" --argjson o "$obs" \
         '{key: $k, thread: $t, event: $e, observed: $o}'

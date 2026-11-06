@@ -12,8 +12,9 @@
 #   ledger --ledger <file> ruling <text>
 #
 # A key is `<owner/name>#<number>`. `--ledger` comes first and names the file,
-# which a first `add` creates. `add` starts an entry at stage `launched`, stalls 0, observed null: `reconcile`
-# fills `observed`, the baseline `watch` compares against. `set` takes any field
+# which a first `add` creates. `add` starts an entry at stage `launched`, stalls
+# 0, observed null: `reconcile` fills `observed`, the baseline `watch` compares
+# against. `set` takes any field
 # but the entry's identity (key, repo, number); `stage` must be one of
 # launched, running, at-rest, settled, closed. A write is a temp file beside the
 # ledger, then a rename.
@@ -76,8 +77,7 @@ case $cmd in
     case ${1:-} in --open) open=true; shift ;; esac
     [ $# -eq 0 ] || sa_tooling "$usage"
     sa_read "$ledger"
-    jq -c --arg l "$ledger" --argjson open "$open" \
-      '{ledger: $l, entries: [.entries[] | select(($open | not) or (.stage != "settled" and .stage != "closed"))], rulings}' <<<"$doc" ;;
+    jq -c --arg l "$ledger" --argjson open "$open" "$sa_jq_open"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings}' <<<"$doc" ;;
   set)
     [ $# -eq 3 ] || sa_tooling "$usage"
     key=$1 field=$2

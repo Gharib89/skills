@@ -52,10 +52,19 @@ sa_write() {
   dir=$(dirname "$1")
   mkdir -p "$dir" || sa_tooling "cannot create $dir"
   tmp=$(mktemp "$dir/.ledger.XXXXXX") || sa_tooling "cannot write in $dir"
+  trap 'rm -f "$tmp"; trap - RETURN' RETURN
   if printf '%s\n' "$2" | jq . > "$tmp" && mv "$tmp" "$1"; then return 0; fi
   rm -f "$tmp"
   sa_tooling "cannot write $1"
 }
+
+# sa_uri <text>: URI-encoded, since a `/` in a branch name otherwise addresses
+# another resource.
+sa_uri() { jq -rn --arg s "$1" '$s | @uri'; }
+
+# The filter every script shares for an entry still being followed.
+# shellcheck disable=SC2034  # read by the scripts that source this file
+sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 
 # sa_observe <entry>: one look at an entry's thread (through the `t3` CLI) and
 # its PR (through `gh` REST) as a snapshot in $obs:
@@ -67,17 +76,19 @@ sa_write() {
 # so the answer is the one line that opens a JSON object.
 # shellcheck disable=SC2034  # obs, obs_kind and obs_detail are read by the callers
 sa_observe() {
-  local thread worktree repo branch line found list pr
+  local thread worktree repo branch raw line found list pr
   thread=$(jq -r .thread <<<"$1") worktree=$(jq -r .worktree <<<"$1")
   repo=$(jq -r .repo <<<"$1") branch=$(jq -r .branch <<<"$1")
   obs_detail=$(jq -cn --arg t "$thread" '{thread: $t}')
-  line=$(t3 thread show "$thread" --json --messages 0 2>/dev/null </dev/null | grep '^{"' | tail -1)
+  raw=$(t3 thread show "$thread" --json --messages 0 2>/dev/null </dev/null) || { obs_kind='thread-unreadable'; return 1; }
+  line=$(grep '^{"' <<<"$raw" | tail -1)
   if ! jq -e '.thread.threadId' <<<"$line" >/dev/null 2>&1; then obs_kind='thread-unreadable'; return 1; fi
   found=$(jq -c '{thread: .thread.threadId, worktree: .thread.worktreePath}' <<<"$line")
   if [ "$found" != "$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')" ]; then
     obs_kind='thread-mismatch' obs_detail=$found; return 1
   fi
-  list=$(gh api "repos/$repo/pulls?head=${repo%%/*}:$branch&state=all&per_page=1" 2>/dev/null </dev/null)
+  list=$(gh api "repos/$repo/pulls?head=${repo%%/*}:$(sa_uri "$branch")&state=all&sort=created&direction=desc&per_page=1" 2>/dev/null </dev/null) \
+    || list=''
   if ! jq -e 'type == "array"' <<<"$list" >/dev/null 2>&1; then
     obs_kind='pr-unreadable' obs_detail=$(jq -cn --arg r "$repo" --arg b "$branch" '{repo: $r, branch: $b}'); return 1
   fi
