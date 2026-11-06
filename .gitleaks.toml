@@ -1,6 +1,6 @@
 # The vendored media-use skill carries a public PostHog ingest key and OAuth
-# client ID. Each exception is limited to its rule, file and value, so other
-# secrets remain detectable.
+# client ID. Each exception is limited to its rule and file, with a key prefix
+# for PostHog and an exact value for the client ID.
 [extend]
 useDefault = true
 
