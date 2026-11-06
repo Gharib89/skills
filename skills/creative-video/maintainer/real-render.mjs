@@ -446,7 +446,7 @@ const kitted = sounded(
   ding.src = "assets/beep.wav";
   ding.dataset.start = start;
   ding.dataset.duration = 0.3;
-  document.querySelector(\`[data-composition-id="\${scene}"]\`).append(ding);
+  document.querySelector('[data-composition-id="' + scene + '"]').append(ding);
 };
 `,
 );
