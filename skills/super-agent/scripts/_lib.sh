@@ -61,3 +61,35 @@ sa_write() {
   rm -f "$tmp"
   sa_tooling "cannot write $1"
 }
+
+# sa_observe <entry>: one look at an entry's thread (through the `t3` CLI) and
+# its PR (through `gh` REST) as a snapshot in $obs:
+# {status, run_count, pending, pr: {number, state}}, `state` one of none, open,
+# merged, closed. A thread is found by the id and worktree path the entry holds,
+# never by a process name, which once matched the wrong process. On failure it
+# returns 1 with $obs_kind (thread-unreadable, thread-mismatch, pr-unreadable)
+# and $obs_detail, a JSON object. `t3` prints its migration warning on stdout,
+# so the answer is the one line that opens a JSON object.
+# shellcheck disable=SC2034  # obs, obs_kind and obs_detail are read by the callers
+sa_observe() {
+  local thread worktree repo branch line found list pr
+  thread=$(jq -r .thread <<<"$1") worktree=$(jq -r .worktree <<<"$1")
+  repo=$(jq -r .repo <<<"$1") branch=$(jq -r .branch <<<"$1")
+  obs_detail=$(jq -cn --arg t "$thread" '{thread: $t}')
+  line=$(t3 thread show "$thread" --json --messages 0 2>/dev/null </dev/null | grep '^{"' | tail -1)
+  if ! jq -e '.thread.threadId' <<<"$line" >/dev/null 2>&1; then obs_kind='thread-unreadable'; return 1; fi
+  found=$(jq -c '{thread: .thread.threadId, worktree: .thread.worktreePath}' <<<"$line")
+  if [ "$found" != "$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')" ]; then
+    obs_kind='thread-mismatch' obs_detail=$found; return 1
+  fi
+  list=$(gh api "repos/$repo/pulls?head=${repo%%/*}:$branch&state=all&per_page=1" 2>/dev/null </dev/null)
+  if ! jq -e 'type == "array"' <<<"$list" >/dev/null 2>&1; then
+    obs_kind='pr-unreadable' obs_detail=$(jq -cn --arg r "$repo" --arg b "$branch" '{repo: $r, branch: $b}'); return 1
+  fi
+  pr=$(jq -c '.[0] // null' <<<"$list")
+  obs=$(jq -c --argjson pr "$pr" '{status: .thread.status, run_count: .thread.runCount,
+    pending: .thread.pendingRequestCount,
+    pr: (if $pr == null then {number: null, state: "none"}
+         else {number: $pr.number, state: (if $pr.merged_at != null then "merged"
+           elif $pr.state == "closed" then "closed" else "open" end)} end)}' <<<"$line")
+}
