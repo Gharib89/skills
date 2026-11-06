@@ -299,7 +299,7 @@ attempt() { # <happy|ambiguous> <attempt>
 
   jq -cn --arg path "$1" --argjson attempt "$2" --rawfile f "$failed" --argjson issue "$issue" \
     --argjson pr "${pr:-null}" --argjson wall "$wall" --slurpfile c <(jq -c . "$co.json" 2>/dev/null || echo '{}') \
-    'def run_tokens(k): if ($c[0].modelUsage | type) != "object" then null else [$c[0].modelUsage[] | .[k] // 0] | add end;
+    'def run_tokens(k): if ($c[0].modelUsage | type) != "object" then null else ([$c[0].modelUsage[] | .[k]] | if any(. == null) then null else add end) end;
      {path: $path, attempt: $attempt, issue: $issue, pr: $pr, failed: ($f | split("\n") | map(select(. != ""))),
       cost_usd: ($c[0].total_cost_usd // null), wall_s: $wall, session: ($c[0].session_id // null),
       input_tokens: run_tokens("inputTokens"), output_tokens: run_tokens("outputTokens"),
