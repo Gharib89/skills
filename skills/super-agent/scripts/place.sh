@@ -91,7 +91,7 @@ while IFS= read -r m; do
     fi
   fi
   rc=0; res=$(bash "$here/launch-check.sh" --fleet "$fleet" --ledger "$ledger" --machine "$m" --own "$own" \
-    --load "$(jq -r .load1 <<<"$reading")" --free-gb "$(jq -r .free_gb <<<"$reading")" --repo "$repo" "${check_args[@]}" 2>/dev/null) || rc=$?
+    --load "$(jq -r .load1 <<<"$reading")" --free-gb "$(jq -r .free_gb <<<"$reading")" --repo "$repo" ${check_args[@]+"${check_args[@]}"} 2>/dev/null) || rc=$?
   case $rc in 0|1) ;; *) sa_tooling "launch-check failed for $m: $res" ;; esac
   if [ "$rc" = 0 ]; then
     placed=$(jq -cn --arg m "$m" --arg i "$id" --argjson l "$([ "$m" = "$own" ] && echo true || echo false)" \
@@ -102,7 +102,7 @@ while IFS= read -r m; do
   if jq -e '.refused | index("repo")' >/dev/null <<<"$res"; then
     wait_reason="same repo: $(jq -r '.repo.conflicts | join(", ")' <<<"$res") is open and blocks or overlaps this ticket"; break
   fi
-done < <(jq -r --arg own "$own" '.machines | keys | map(select(. != $own)) | ([$own] + .)[]' "$fleet")
+done < <(jq -r --arg own "$own" '.machines | keys as $k | ($k | map(select(. != $own))) as $rest | (if $k | index($own) then [$own] else [] end) + $rest | .[]' "$fleet")
 
 waiting=false
 if [ "$placed" = null ] && [ "$need" = null ]; then

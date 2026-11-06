@@ -134,6 +134,11 @@ check "a same-repo ticket with an overlapping area waits, whichever machine" tru
 check "with the ticket in the way named" 1 "$(P --area skills/ship --readings "$readings" | jq '.reason | test("skills#1") | if . then 1 else 0 end')"
 check "an apart area is placed beside it" home "$(P --area skills/drive-session --readings "$readings" | jq -r .placed.machine)"
 
+# --- a machine the fleet file lacks as this one is not a candidate -----------------------
+reset
+out=$(bash "$s/place.sh" --fleet "$fleet" --ledger "$led" --own elsewhere --repo Gharib89/skills --readings "$readings")
+check "an own key the fleet file does not hold is skipped, not refused" gpubox "$(jq -r .placed.machine <<<"$out")"
+
 # --- no machine is ever linked ---------------------------------------------------------------
 check "no call of any run above was a link, unlink or launch" 0 "$(grep -c '^t3 environment \(link\|unlink\)\|^t3 thread start' "$SA_FAKE/calls")"
 check "the fleet file the runs read holds no host, user or key" 0 \
