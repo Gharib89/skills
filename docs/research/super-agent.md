@@ -226,7 +226,10 @@ Other measured facts:
   supervisor.
 - `agy` CLI 1.4.12: `--mode auto` prints "the terminal sandbox is not available
   on this host" and falls back to a default mode that auto-denies
-  `RunCommand` in print mode.
+  `RunCommand` in print mode. Its log names the cause: "Terminal sandbox
+  unavailable: AppArmor restricts unprivileged user namespaces
+  (kernel.apparmor_restrict_unprivileged_userns = 1)". `bwrap` still runs here,
+  since Ubuntu ships it an AppArmor profile; agy has none (**inferred**).
 - A session-only allow rule works without `--dangerously-skip-permissions`:
   `agy -p "<task>" --settings '{"permissions":{"allow":["command(*)"]}}' --output-format json`
   ran the shell command, 12.4 s wall, 30.8k input tokens.
@@ -237,7 +240,22 @@ Other measured facts:
 - Models: `gemini-3.8-flash-{high,medium,low}`, `claude-sonnet-4-6`,
   `claude-opus-4-6-thinking`, `gpt-oss-120b-medium` (`agy models`).
 
-## 7. Inventory (measured 2026-11-06)
+## 7. Reading each quota from a script (measured)
+
+None of these spends a model turn except where noted.
+
+| Provider | Command | What it gives | Cost |
+|---|---|---|---|
+| Claude Code 2.1.319 | `claude -p "/usage" --output-format json` | `.result` text: `Current session: N% used · resets <local time>`, `Current week (all models): ...`, `Current week (Fable): ...` | $0, `num_turns: 0`, 6.9 s |
+| Codex 0.166.0 | JSON-RPC to `codex app-server` over stdio: `initialize`, `initialized`, then `account/rateLimits/read` | `.result.rateLimits.{primary,secondary}.{usedPercent,windowDurationMins,resetsAt}`, `planType` | no turn, under 4 s; the method is marked experimental |
+| Codex, offline | `rate_limits` in `~/.codex/sessions/**/*.jsonl` `token_count` events, `limit_id == "codex"` | the same fields as of the last Codex turn | free, can be stale |
+| Antigravity | `agy -p /usage --output-format json` | Gemini and Claude/GPT groups, weekly and 5 h `remaining_fraction`, `reset_time` | section 6 |
+
+`codex exec "/status"` is a paid model turn with no rate-limit fields; avoid it.
+Claude's statusline JSON carries `rate_limits` only inside a live interactive
+session. No Gemini or Google API key is set in the environment.
+
+## 8. Inventory (measured 2026-11-06)
 
 - **T3 providers** (`orchestrator_capabilities`): Claude (Opus 5.5, Sonnet 5.5,
   Fable 5.1, Haiku 5.5), Codex (`gpt-6.1-sol`, `gpt-6-astra`, `gpt-6.1-terra`,
@@ -258,7 +276,7 @@ Other measured facts:
   this project; Firecrawl needs authentication. The `ctx7` CLI covers library
   docs without the MCP.
 
-## 8. Implications for the design
+## 9. Implications for the design
 
 Each traces to a section above; the design proposal decides among them.
 
