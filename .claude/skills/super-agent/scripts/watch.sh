@@ -29,7 +29,7 @@
 # unreconciled change is reported again by the next watch.
 #
 # stdout: {key, thread, event, observed} for a change, `observed` the snapshot
-#         {status, run_count, pending, pr: {number, state}}; {key, thread,
+#         {status, run_count, pending, gate, pr: {number, state}}; {key, thread,
 #         event, detail} for `thread-mismatch`, `thread-unreadable` and
 #         `pr-unreadable`; {key: null, thread: null, event: "timeout",
 #         watching, unobserved} once --timeout passes, `watching` the keys it
@@ -41,7 +41,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 
 usage='usage: watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>] [--stall-window <s>]'
 sa_help "$usage" "$@"
-ledger='' interval=30 timeout='' recheck=90 window=900
+ledger='' interval=30 timeout='' recheck=90 window=$sa_stall_window
 while [ $# -gt 0 ]; do
   case $1 in
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
@@ -88,12 +88,17 @@ start=$SECONDS
 while :; do
   while IFS= read -r entry; do
     key=$(jq -r .key <<<"$entry") thread=$(jq -r .thread <<<"$entry")
+    read_ok=false event=''
     if sa_observe "$entry"; then
+      read_ok=true
       event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs")
       if [ "$event" = run-finished ] && [ "$recheck" -gt 0 ]; then
         sleep "$recheck"
-        if sa_observe "$entry"; then event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs"); fi
+        # a fault in the second look is the answer, not the stale first one
+        if sa_observe "$entry"; then event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs"); else read_ok=false; fi
       fi
+    fi
+    if $read_ok; then
       [ -z "$event" ] && event=$(stall_window_of "$entry" "$obs")
       [ -z "$event" ] && continue
       jq -cn --arg k "$key" --arg t "$thread" --arg e "$event" --argjson o "$obs" \

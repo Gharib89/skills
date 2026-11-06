@@ -158,6 +158,10 @@ check "the count floors at 0" 0 "$(stalls 5)"
 sa_thread t-5 idle 4 1 /wt/5 feat/x-5 "Stopped after the tests."
 out=$(R)
 check "a thread holding a permission request is no stall" "" "$(stalled "$out")"
+fixture
+R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "A relationship 1.2.3 of tickets, and I stopped."
+check "a message that only contains 'ship 1.2.3' inside another word is no gate summary" "$repo#5 1 run-completed" "$(stalled "$(R)")"
 sa_thread t-6 idle 0 0 /wt/6 feat/x-6
 R >/dev/null
 L set "$repo#6" rest_since "\"$old\"" >/dev/null

@@ -125,6 +125,12 @@ sa_thread t-5 idle 1 0 /wt/5 feat/x-5
 check "one still at rest after the recheck is run-finished" "$repo#5 run-finished" \
   "$(event "$(bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 1 --timeout 5)")"
 
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5
+printf 'rm -f "%s/threads/t-5.json"\n' "$SA_FAKE" > "$SA_FAKE/on-sleep"
+check "a fault in the recheck look is reported, not the stale run-finished" "$repo#5 thread-unreadable" \
+  "$(event "$(bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 1 --timeout 5)")"
+
 # --- the stall window: at rest, with no new run, for too long ------------------
 old=$(date -u -d '2 hours ago' +%Y-%m-%dT%H:%M:%SZ)
 fixture

@@ -62,6 +62,10 @@ sa_write() {
 # another resource.
 sa_uri() { jq -rn --arg s "$1" '$s | @uri'; }
 
+# Seconds a thread may rest with no new run before the rest is a stall.
+# shellcheck disable=SC2034  # read by watch.sh and reconcile.sh
+sa_stall_window=900
+
 # sa_window_flag <usage> <value>: --stall-window, seconds a thread may rest with
 # no new run before the rest is a stall; a positive integer.
 sa_window_flag() { case $2 in ''|0|*[!0-9]*) sa_tooling "$1" ;; esac; }
@@ -74,7 +78,7 @@ sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 # its PR (through `gh` REST) as a snapshot in $obs:
 # {status, run_count, pending, gate, pr: {number, state}}, `state` one of none,
 # open, merged, closed, and `gate` true when the thread's last assistant message
-# is a ship merge-gate summary, which opens with `ship <version>`. A thread is found by the id and worktree path the entry holds,
+# is a ship merge-gate summary, which carries `ship <version>` as a word of its own. A thread is found by the id and worktree path the entry holds,
 # never by a process name, which once matched the wrong process. On failure it
 # returns 1 with $obs_kind (thread-unreadable, thread-mismatch, pr-unreadable)
 # and $obs_detail, a JSON object. `t3` prints its migration warning on stdout,
@@ -102,7 +106,7 @@ sa_observe() {
   pr=$(jq -c '.[0] // null' <<<"$list")
   obs=$(jq -c --argjson pr "$pr" '{status: .thread.status, run_count: .thread.runCount,
     pending: .thread.pendingRequestCount,
-    gate: ([.messages[]? | select(.role == "assistant")] | last | (.text // "") | test("ship [0-9]+[.][0-9]+[.][0-9]+")),
+    gate: ([.messages[]? | select(.role == "assistant")] | last | (.text // "") | test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+")),
     pr: (if $pr == null then {number: null, state: "none"}
          else {number: $pr.number, state: (if $pr.merged_at != null then "merged"
            elif $pr.state == "closed" then "closed" else "open" end)} end)}' <<<"$line")

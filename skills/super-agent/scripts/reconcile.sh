@@ -38,7 +38,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 
 usage='usage: reconcile --ledger <file> [--stall-window <s>]'
 sa_help "$usage" "$@"
-ledger='' window=900
+ledger='' window=$sa_stall_window
 while [ $# -gt 0 ]; do
   case $1 in
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
