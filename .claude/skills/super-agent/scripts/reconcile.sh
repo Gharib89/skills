@@ -27,7 +27,7 @@
 # the last entry. An entry with an `environment_id` lives on a linked machine,
 # where `t3 thread show` cannot reach: it is read from `<dir>/<thread id>.json`
 # of the `--remote` for its environment, a file the super agent saved from
-# `t3_thread_read`, and matched by id and worktree path like a local one. A
+# `t3_thread_read`, and matched by id and worktree path like a local one. An
 # environment with no `--remote`, a missing file or one that is not the
 # thread's JSON is `thread-unreadable` for that environment's entries alone.
 #

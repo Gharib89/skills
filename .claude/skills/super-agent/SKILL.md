@@ -262,9 +262,9 @@ escalation (Escalation).
   issue's acceptance criteria. Met: settle the thread with
   `t3_thread_organize` action `settle` on its id (and `environmentId`).
   Unmet: escalate, naming the gap. Of kind `triage`: confirm the issue now
-  carries a ready label or the owner skill's other outcome, then settle the
-  thread; there is no PR. A settled entry is no longer watched, so a message
-  to its thread goes unseen.
+  carries a ready label or the owner skill's other outcome, then settle it
+  the same way; there is no PR. A settled entry is no longer watched, so a
+  message to its thread goes unseen.
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
 - `closed`: one chat line naming the ticket and the reason.
