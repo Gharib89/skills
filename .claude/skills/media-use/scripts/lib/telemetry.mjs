@@ -50,8 +50,13 @@ export function optedOut() {
 }
 
 // Read and write the shared config so media-use keeps one identity per install.
+// Until the CLI seeds HYPERFRAMES_CONFIG_DIR's copy, ~/.hyperframes' own still holds the opt-out.
 function sharedConfigPath() {
-  return join(homedir(), ".hyperframes", "config.json");
+  const home = join(homedir(), ".hyperframes", "config.json");
+  const dir = process.env.HYPERFRAMES_CONFIG_DIR;
+  if (!dir) return home;
+  const file = join(dir, "config.json");
+  return existsSync(file) || !existsSync(home) ? file : home;
 }
 
 function readSharedConfig() {
@@ -143,7 +148,8 @@ export function heygenUserId(username) {
 // casing never splits one person). `heygen_username` is the cross-project join
 // column for the Snowflake event table.
 function heygenAccount() {
-  const file = join(process.env.HEYGEN_CONFIG_DIR || join(homedir(), ".heygen"), "credentials");
+  const root = process.env.HYPERFRAMES_CONFIG_DIR || join(homedir(), ".hyperframes");
+  const file = join(root, ...(process.env.HYPERFRAMES_ENV === "dev" ? ["dev"] : []), "credentials");
   try {
     if (!existsSync(file)) return null;
     const raw = readFileSync(file, "utf8").trim();
