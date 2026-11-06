@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.8.1 (2026-11-06)
+
+### Bug Fixes
+
+- **super-agent**: Re-add a finished ticket, work week from the fleet file
+  ([#1109](https://github.com/Gharib89/skills/pull/1109),
+  [`80b49c7`](https://github.com/Gharib89/skills/commit/80b49c72fc6d7f75fcb0870a4ef620119c8894d7))
+
+
 ## v0.8.0 (2026-11-06)
 
 ### Features

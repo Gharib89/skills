@@ -75,6 +75,7 @@ if [ -f "$fleet_file" ]; then
     elif ([(.providers // {})[] | objects | .quota_command | select(. != null and type != "string")] | length) > 0 then "quota_command must be a string"
     elif ((.waivers // []) | type) != "array" then "waivers must be an array"
     elif ((.active_repos // []) | type) != "array" then "active_repos must be an array"
+    elif ((if .work_week == null then [1] else .work_week end) | type == "array" and length > 0 and length == (unique | length) and all(type == "number" and . >= 0 and . <= 6 and . == floor)) | not then "work_week must be a non-empty list of distinct weekday numbers 0 to 6"
     else empty end' "$fleet_file")
   [ -z "$bad" ] || sa_tooling "$fleet_file: $bad"
   existing=$(cat "$fleet_file")
@@ -100,7 +101,7 @@ local_m=$(jq -c "$machine_jq"' machine(.; $f; {reserve: 1})' --argjson f "$floor
 ! jq -e .gpu_failed >/dev/null <<<"$probe_out" || warn "nvidia-smi failed: gpu left as the file has it"
 facts=$(jq -cn --arg n "$name" --argjson m "$local_m" '{machines: {($n): $m.facts}}')
 proposed=$(jq -cn --arg n "$name" --argjson m "$local_m" --argjson f "$floor_gb" \
-  '{machines: {($n): $m.proposal}, thread_ram_floor_gb: $f, active_repos: [],
+  '{machines: {($n): $m.proposal}, thread_ram_floor_gb: $f, active_repos: [], work_week: [1,2,3,4,5],
     waivers: [
       {id: "codex-usage-limit", condition: "Codex answers a review request with a usage-limit notice: drive the fallback reviewer and record Codex as not landed; do not hold the merge gate for it."},
       {id: "offline-live-e2e", condition: "A live end-to-end proof needs a real T3 server or other machines: prove it through the scripts over fake CLIs and say so in the PR body."},

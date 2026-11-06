@@ -84,6 +84,7 @@ contract.
 | `reflect` | 6 |
 | `update-pr-title` | 6, 7, 9 |
 | `read-pr` | 6 and 7, reading a PR back after a title or body write; 9, the `head_sha` the gate reads; its `outline_missing` is 7's check on the Change outline |
+| `protections` | 9, the summary's `Host protections` line; read-only, never a stop |
 | `poll-pr` | 7, 8 |
 | `request-review` | 7 |
 | `comment-issue` | 2, 4, 7 |

@@ -130,7 +130,7 @@
     "setup-project": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "64a700f0deb55f429eda630816bdfcaae6f32f6d96b22649d91b730cc80e2f5b"
+      "computedHash": "4397daf9eb7f119c04ccd6093b77e2d49f7a31d851e3ac244e834dc88432604c"
     },
     "setup-skills": {
       "source": ".",
@@ -140,7 +140,7 @@
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "44a5eb68a7545bdbe228a40e4d5dfe4ef521e6d7fa2cd0bd933b2c8eadd59376"
+      "computedHash": "948aaef5fad7049257125de7f27c2b68e15b440979ce4984007801526be649c9"
     },
     "show-me": {
       "source": "humanlayer/skills",
@@ -152,7 +152,7 @@
     "super-agent": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "ba064883e9734eda46197ca74542d82e99dcda51d63cea128e53e06138f1a849"
+      "computedHash": "0e14dc9ee28673ed275e5ff0c8509d1d72844c03ed474d69653cb9733313dae6"
     },
     "tdd": {
       "source": "mattpocock/skills",

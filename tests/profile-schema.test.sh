@@ -37,6 +37,16 @@ check_rc "the current tree agrees" 0 "$(rc_of .)"
 check_rc "all three agree" 0 \
   "$(rc_of "$(tree agree "$(tmpl_file 2)" "$(ship_file 2)" "$(doc_file '## Schema 1' '## Schema 2')")")"
 
+# The Agent Skills spec wants string metadata values, so ship's SKILL.md quotes
+# the number; an installed older copy still carries it bare. Both read the same.
+check_rc "a quoted ship value agrees with the bare template" 0 \
+  "$(rc_of "$(tree quoted "$(tmpl_file 2)" "$(ship_file '"2"')" "$(doc_file '## Schema 1' '## Schema 2')")")"
+quoted_behind=$(tree quoted-behind "$(tmpl_file 1)" "$(ship_file '"2"')" "$(doc_file '## Schema 1' '## Schema 2')")
+check_rc "a quoted ship value ahead of the template is drift" 1 "$(rc_of "$quoted_behind")"
+check "the drift message prints the value unquoted" \
+  "profile schema drift: ship-profile.md declares Schema 1, ship reads profile-schema 2, profile-schema.md entry '## Schema 2' present" \
+  "$(out_of "$quoted_behind")"
+
 # The drift PR #165 shipped: ship moved and the template did not.
 behind=$(tree behind "$(tmpl_file 1)" "$(ship_file 2)" "$(doc_file '## Schema 1' '## Schema 2')")
 check_rc "the template behind ship is drift" 1 "$(rc_of "$behind")"

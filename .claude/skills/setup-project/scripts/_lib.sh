@@ -24,5 +24,5 @@ sp_help() {
   exit 0
 }
 
-# sp_front <file> <key>: a frontmatter `metadata` value, the indented `  <key>:`.
-sp_front() { awk -v k="  $2:" 'NR>1 && /^---$/{exit} index($0, k) == 1 {sub(/^[^:]*: */, ""); print; exit}' "$1"; }
+# sp_front <file> <key>: a frontmatter `metadata` value, the indented `  <key>:`, unquoted.
+sp_front() { awk -v k="  $2:" 'NR>1 && /^---$/{exit} index($0, k) == 1 {sub(/^[^:]*: */, ""); gsub(/^"|"$/, ""); print; exit}' "$1"; }

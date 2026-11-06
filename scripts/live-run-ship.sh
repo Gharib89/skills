@@ -33,8 +33,18 @@
 #
 # stdout: one JSON line {result: pass|fail, failed[], retried[], runs[]}, each
 #         failure `<path>: <check>: <what failed>`, each run {path, attempt,
-#         issue, pr, failed[], cost_usd, wall_s, session};
+#         issue, pr, failed[], cost_usd, wall_s, session, input_tokens,
+#         output_tokens, cache_read_tokens, cache_write_tokens, turns,
+#         subagents, tool_calls}, and per_path[] {path, passed, attempts, cost_usd, and the
+#         same token fields summed over every attempt, failed ones included};
 #         or {result: unavailable, reason}
+#         The usage fields come from the claude JSON result: the four token
+#         counts sum its `modelUsage` over every model (parent and child
+#         agents), `turns` is `num_turns`, `subagents` is
+#         `subagent_stats.spawned`. The JSON carries no tool-call count, so
+#         tool_calls is null. A field the result omits is null, never a guess; per_path is null for a field any attempt lacked.
+#         Three repetitions per scenario are an engineering screen, not a
+#         statistical comparison.
 # exit:   0 pass · 1 a check failed · 2 unavailable, or a usage error or no jq,
 #         which print on stderr only
 set -uo pipefail
@@ -289,8 +299,12 @@ attempt() { # <happy|ambiguous> <attempt>
 
   jq -cn --arg path "$1" --argjson attempt "$2" --rawfile f "$failed" --argjson issue "$issue" \
     --argjson pr "${pr:-null}" --argjson wall "$wall" --slurpfile c <(jq -c . "$co.json" 2>/dev/null || echo '{}') \
-    '{path: $path, attempt: $attempt, issue: $issue, pr: $pr, failed: ($f | split("\n") | map(select(. != ""))),
-      cost_usd: ($c[0].total_cost_usd // null), wall_s: $wall, session: ($c[0].session_id // null)}' >> "$tmp/runs"
+    'def run_tokens(k): if ($c[0].modelUsage | type) != "object" then null else ([$c[0].modelUsage[] | if type == "object" then .[k] else null end] | if any(type != "number") then null else add end) end;
+     {path: $path, attempt: $attempt, issue: $issue, pr: $pr, failed: ($f | split("\n") | map(select(. != ""))),
+      cost_usd: ($c[0].total_cost_usd // null), wall_s: $wall, session: ($c[0].session_id // null),
+      input_tokens: run_tokens("inputTokens"), output_tokens: run_tokens("outputTokens"),
+      cache_read_tokens: run_tokens("cacheReadInputTokens"), cache_write_tokens: run_tokens("cacheCreationInputTokens"),
+      turns: ($c[0].num_turns // null), subagents: ($c[0].subagent_stats.spawned // null), tool_calls: null}' >> "$tmp/runs"
   issue="" mark="" run_heads=""
   [ ! -s "$failed" ]
 }
@@ -302,11 +316,16 @@ done
 # A first attempt that failed is the one retried; every other run is its path's
 # final word. A retried run's cleanup failure stays a failure: its leftovers are
 # still on the fixture whatever the retry did.
-out=$(jq -cs 'def lines(f): .path as $p | .failed[] | select(f) | "\($p): \(.)";
+out=$(jq -cs 'def attempts_total($k): [.[] | .[$k]] | if any(. == null) then null else add end;
+  def lines(f): .path as $p | .failed[] | select(f) | "\($p): \(.)";
   ([.[] | select(.attempt == 1 and .failed != [])]) as $retried
   | ([.[] | select(.attempt == 2 or .failed == [])]) as $final
   | ([$final[] | lines(true)] + [$retried[] | lines(startswith("cleanup: "))]) as $failed
   | {result: (if $failed == [] then "pass" else "fail" end),
-     failed: $failed, retried: [$retried[] | lines(true)], runs: .}' "$tmp/runs")
+     failed: $failed, retried: [$retried[] | lines(true)], runs: .,
+     per_path: (group_by(.path) | map({path: .[0].path, passed: (any(.[]; .failed == []) and all(.[]; all(.failed[]; startswith("cleanup: ") | not))), attempts: length,
+       cost_usd: attempts_total("cost_usd"), input_tokens: attempts_total("input_tokens"), output_tokens: attempts_total("output_tokens"),
+       cache_read_tokens: attempts_total("cache_read_tokens"), cache_write_tokens: attempts_total("cache_write_tokens"),
+       turns: attempts_total("turns"), subagents: attempts_total("subagents")}))}' "$tmp/runs")
 printf '%s\n' "$out"
 [ "$(jq -r .result <<<"$out")" = pass ]
