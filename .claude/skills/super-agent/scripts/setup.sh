@@ -24,7 +24,10 @@
 #         fails is `unavailable` with a `reason` in `fleet.providers`, not a
 #         warning
 # exit: 0 a proposal or a write, failed probes included · 2 usage, a fleet file
-#       that is not JSON, or a write that failed
+#       that is not JSON or has a field of the wrong shape, a machine probe
+#       (hostname, nproc, free) that failed, or a write that failed
+#
+# Linux only: the machine probes are GNU `nproc`, `free` and `timeout`.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -45,7 +48,16 @@ done
 [ -n "$name" ] || name=$(hostname 2>/dev/null) || sa_tooling "cannot read this machine's name: pass --name"
 existing='{}'
 if [ -f "$fleet_file" ]; then
-  jq -e 'type == "object"' "$fleet_file" >/dev/null 2>&1 || sa_tooling "$fleet_file: not JSON"
+  jq -e . "$fleet_file" >/dev/null 2>&1 || sa_tooling "$fleet_file: not JSON"
+  # A wrong shape would be dropped silently by the merge below, so it is refused by name.
+  bad=$(jq -r 'if type != "object" then "the file must be an object"
+    elif ((.machines // {}) | type) != "object" then "machines must be an object"
+    elif ((.providers // {}) | type) != "object" then "providers must be an object"
+    elif ([(.providers // {})[] | objects | .quota_command | select(. != null and type != "string")] | length) > 0 then "quota_command must be a string"
+    elif ((.waivers // []) | type) != "array" then "waivers must be an array"
+    elif ((.active_repos // []) | type) != "array" then "active_repos must be an array"
+    else empty end' "$fleet_file")
+  [ -z "$bad" ] || sa_tooling "$fleet_file: $bad"
   existing=$(cat "$fleet_file")
 fi
 

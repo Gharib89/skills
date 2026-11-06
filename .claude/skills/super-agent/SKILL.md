@@ -45,9 +45,12 @@ directory.
 ## Setup
 
 The **fleet file** is `super-agent/fleet.json` under `$XDG_CONFIG_HOME`
-(`~/.config` when unset). A launch reads the machines and their slots, the
-GitHub accounts, the active repos, the standing waivers and the provider quota
-commands from the fleet file, never from this text.
+(`~/.config` when unset). The machines and their slots, the GitHub accounts,
+the active repos, the standing waivers and the provider quota commands come
+from the fleet file, never from this text. The launch brief takes its standing
+waivers from it, and any step that needs a machine, account, repo or quota
+command reads it from the file. Setup runs on Linux only (it uses GNU `nproc`,
+`free` and `timeout`).
 
 When the fleet file is missing, or the owner asks for `/super-agent setup`:
 

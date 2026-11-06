@@ -157,4 +157,14 @@ check_rc "a fleet file that is not JSON exits 2" 2 "$rc"
 check "and names it" "$fleet: not JSON" "$(jq -r .error <<<"$out")"
 check "and is left alone" "not json" "$(cat "$fleet")"
 
+for bad in '[]' '{"providers":[]}' '{"machines":"x"}' '{"waivers":{}}' '{"active_repos":"x"}' '{"providers":{"claude":{"quota_command":3}}}'; do
+  printf '%s\n' "$bad" > "$fleet"
+  out=$(S --name laptop --write 2>/dev/null); rc=$?
+  check_rc "a fleet file shaped $bad exits 2" 2 "$rc"
+  check "and is left alone: $bad" "$bad" "$(cat "$fleet")"
+done
+printf '{"providers":[]}\n' > "$fleet"
+check "the refusal names the file and the field" "$fleet: providers must be an object" \
+  "$(S --name laptop --write 2>/dev/null | jq -r .error)"
+
 finish
