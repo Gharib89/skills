@@ -3,12 +3,20 @@
 # exit. Run it as a background command: it holds no tool call open, and its
 # exit is what wakes the super agent.
 #
-#   watch --ledger <file> [--interval <s>] [--timeout <s>]
+#   watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>]
+#         [--stall-window <s>]
 #
 # Polls every open ledger entry, in ledger order, each `--interval` seconds
 # (default 30). A change is a difference from the entry's `observed` baseline,
 # which `reconcile` records: `pr-merged`, `pr-closed`, `pending-approval` (a
-# permission hold, which wakes nothing by itself), `run-finished`, `run-started`.
+# permission hold, which wakes nothing by itself), `run-finished`, and
+# `stall-window`. A run starting is no event. A run that finished is looked at
+# again `--recheck` seconds later (default 90) and reported only if the thread
+# is still at rest, since a run that waits on its own background subagent starts
+# again within about a minute (measured 2026-11-06). `stall-window` is an entry
+# at rest with no change for `--stall-window` seconds (default 900) since
+# `reconcile` stamped its `rest_since`; an entry already at 3 stalls is
+# escalated, so its window stays quiet.
 # A thread that answers with another id or worktree path than the entry holds
 # is `thread-mismatch`; a thread or PR it cannot read is `thread-unreadable` or
 # `pr-unreadable`: a watcher that went quiet on those would be a silent stall.
@@ -31,19 +39,22 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: watch --ledger <file> [--interval <s>] [--timeout <s>]'
+usage='usage: watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>] [--stall-window <s>]'
 sa_help "$usage" "$@"
-ledger='' interval=30 timeout=''
+ledger='' interval=30 timeout='' recheck=90 window=900
 while [ $# -gt 0 ]; do
   case $1 in
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
     --interval) sa_flag_value "$usage" "${2:-}"; interval=$2; shift 2 ;;
     --timeout) sa_flag_value "$usage" "${2:-}"; timeout=$2; shift 2 ;;
+    --recheck) sa_flag_value "$usage" "${2:-}"; recheck=$2; shift 2 ;;
+    --stall-window) sa_flag_value "$usage" "${2:-}"; sa_window_flag "$usage" "$2"; window=$2; shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
 done
 case $interval in ''|0|*[!0-9]*) sa_tooling "$usage" ;; esac
 case $timeout in *[!0-9]*) sa_tooling "$usage" ;; esac
+case $recheck in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
 [ -n "$ledger" ] || sa_tooling "$usage"
 
 sa_read "$ledger"
@@ -62,8 +73,15 @@ change_of() {
     elif $n.pr.state == "closed" and $o.pr.state != "closed" then "pr-closed"
     elif $n.pending > $o.pending then "pending-approval"
     elif $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
-    elif $n.status == "running" and ($n.run_count > $o.run_count or $o.status != "running") then "run-started"
     else empty end'
+}
+
+# stall_window_of <entry> <snapshot>: `stall-window` for an entry that has rested
+# past the window with nothing else to report.
+stall_window_of() {
+  jq -rn --argjson e "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(date -u +%s)" '
+    if $e.rest_since != null and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
+       and $now - ($e.rest_since | fromdateiso8601) >= $w then "stall-window" else empty end'
 }
 
 start=$SECONDS
@@ -72,6 +90,11 @@ while :; do
     key=$(jq -r .key <<<"$entry") thread=$(jq -r .thread <<<"$entry")
     if sa_observe "$entry"; then
       event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs")
+      if [ "$event" = run-finished ] && [ "$recheck" -gt 0 ]; then
+        sleep "$recheck"
+        if sa_observe "$entry"; then event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs"); fi
+      fi
+      [ -z "$event" ] && event=$(stall_window_of "$entry" "$obs")
       [ -z "$event" ] && continue
       jq -cn --arg k "$key" --arg t "$thread" --arg e "$event" --argjson o "$obs" \
         '{key: $k, thread: $t, event: $e, observed: $o}'

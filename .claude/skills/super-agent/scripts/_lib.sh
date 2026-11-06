@@ -62,14 +62,19 @@ sa_write() {
 # another resource.
 sa_uri() { jq -rn --arg s "$1" '$s | @uri'; }
 
+# sa_window_flag <usage> <value>: --stall-window, seconds a thread may rest with
+# no new run before the rest is a stall; a positive integer.
+sa_window_flag() { case $2 in ''|0|*[!0-9]*) sa_tooling "$1" ;; esac; }
+
 # The filter every script shares for an entry still being followed.
 # shellcheck disable=SC2034  # read by the scripts that source this file
 sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 
 # sa_observe <entry>: one look at an entry's thread (through the `t3` CLI) and
 # its PR (through `gh` REST) as a snapshot in $obs:
-# {status, run_count, pending, pr: {number, state}}, `state` one of none, open,
-# merged, closed. A thread is found by the id and worktree path the entry holds,
+# {status, run_count, pending, gate, pr: {number, state}}, `state` one of none,
+# open, merged, closed, and `gate` true when the thread's last assistant message
+# is a ship merge-gate summary, which opens with `ship <version>`. A thread is found by the id and worktree path the entry holds,
 # never by a process name, which once matched the wrong process. On failure it
 # returns 1 with $obs_kind (thread-unreadable, thread-mismatch, pr-unreadable)
 # and $obs_detail, a JSON object. `t3` prints its migration warning on stdout,
@@ -80,7 +85,7 @@ sa_observe() {
   thread=$(jq -r .thread <<<"$1") worktree=$(jq -r .worktree <<<"$1")
   repo=$(jq -r .repo <<<"$1") branch=$(jq -r .branch <<<"$1")
   obs_detail=$(jq -cn --arg t "$thread" '{thread: $t}')
-  raw=$(t3 thread show "$thread" --json --messages 0 2>/dev/null </dev/null) || { obs_kind='thread-unreadable'; return 1; }
+  raw=$(t3 thread show "$thread" --json --messages 1 2>/dev/null </dev/null) || { obs_kind='thread-unreadable'; return 1; }
   line=$(grep '^{"' <<<"$raw" | tail -1)
   if ! jq -e '.thread | (.threadId | type) == "string" and (.status | type) == "string"
       and (.runCount | type) == "number" and (.pendingRequestCount | type) == "number"' \
@@ -97,6 +102,7 @@ sa_observe() {
   pr=$(jq -c '.[0] // null' <<<"$list")
   obs=$(jq -c --argjson pr "$pr" '{status: .thread.status, run_count: .thread.runCount,
     pending: .thread.pendingRequestCount,
+    gate: ([.messages[]? | select(.role == "assistant")] | last | (.text // "") | test("ship [0-9]+[.][0-9]+[.][0-9]+")),
     pr: (if $pr == null then {number: null, state: "none"}
          else {number: $pr.number, state: (if $pr.merged_at != null then "merged"
            elif $pr.state == "closed" then "closed" else "open" end)} end)}' <<<"$line")
