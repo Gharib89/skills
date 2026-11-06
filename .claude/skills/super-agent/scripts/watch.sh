@@ -4,7 +4,7 @@
 # exit is what wakes the super agent.
 #
 #   watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>]
-#         [--stall-window <s>]
+#         [--stall-window <s>] [--remote <environment id>=<dir>]...
 #
 # Polls every open ledger entry, in ledger order, each `--interval` seconds
 # (default 30). A change is a difference from the entry's `observed` baseline,
@@ -31,7 +31,11 @@
 # its next poll on (once `reconcile` has observed it). Only one watcher runs per
 # ledger: its pid is held in `<ledger>.watch`, and a second start exits 1 naming
 # the running one, so a backstop wake can start it blindly. Watch writes nothing
-# else, so an unreconciled change is reported again by the next watch.
+# else, so an unreconciled change is reported again by the next watch. A remote
+# entry (an `environment_id`) is read as `reconcile` reads it, from its
+# `--remote` reply file, read again each poll: a file the super agent does not
+# refresh shows no new run, so a remote thread's own changes reach the watcher
+# only as fast as the files do, while its PR is read from GitHub each poll.
 #
 # stdout: {key, thread, event, observed} for a change, `observed` the snapshot
 #         {status, run_count, pending, gate, pr: {number, state}}; {key, thread,
@@ -47,11 +51,12 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>] [--stall-window <s>]'
+usage='usage: watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>] [--stall-window <s>] [--remote <environment id>=<dir>]...'
 sa_help "$usage" "$@"
 ledger='' interval=30 timeout='' recheck=90 window=$sa_stall_window
 while [ $# -gt 0 ]; do
   case $1 in
+    --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
     --interval) sa_flag_value "$usage" "${2:-}"; interval=$2; shift 2 ;;
     --timeout) sa_flag_value "$usage" "${2:-}"; timeout=$2; shift 2 ;;

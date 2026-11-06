@@ -2,7 +2,7 @@
 # On a wake, compare the ledger with T3 and GitHub and report what changed, so
 # the super agent judges from one JSON answer and not from child transcripts.
 #
-#   reconcile --ledger <file> [--stall-window <s>]
+#   reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]...
 #
 # Looks at every open entry's thread and PR (the same look `watch` takes),
 # writes it into the entry as `observed`, the baseline the next `watch`
@@ -24,7 +24,12 @@
 # `stall-window` event. A thread holding a permission request is neither. An entry whose thread, PR or issue cannot be read is reported in
 # `errors`, its `error` set to the kind (cleared by the next good read), and
 # left in its stage. The ledger is written once, atomically, after
-# the last entry.
+# the last entry. An entry with an `environment_id` lives on a linked machine,
+# where `t3 thread show` cannot reach: it is read from `<dir>/<thread id>.json`
+# of the `--remote` for its environment, a file the super agent saved from
+# `t3_thread_read`, and matched by id and worktree path like a local one. An
+# environment with no `--remote`, a missing file or one that is not the
+# thread's JSON is `thread-unreadable` for that environment's entries alone.
 #
 # stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, errors}:
 #         `entries` one {key, from, stage, stalls, observed} per open entry that
@@ -40,11 +45,12 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: reconcile --ledger <file> [--stall-window <s>]'
+usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]...'
 sa_help "$usage" "$@"
 ledger='' window=$sa_stall_window
 while [ $# -gt 0 ]; do
   case $1 in
+    --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
     --stall-window) sa_flag_value "$usage" "${2:-}"; sa_window_flag "$usage" "$2"; window=$2; shift 2 ;;
     *) sa_tooling "$usage" ;;
