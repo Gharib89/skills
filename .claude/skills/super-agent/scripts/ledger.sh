@@ -5,7 +5,7 @@
 #
 #   ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id>
 #          --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>]
-#          [--model <id>] [--effort <level>] [--area <path>]...
+#          [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]...
 #   ledger --ledger <file> get <key>
 #   ledger --ledger <file> list [--open]
 #   ledger --ledger <file> set <key> <field> <json>
@@ -28,7 +28,9 @@
 # `--allow` is a call the answer lets a supervised thread make without a hold,
 # and `allowed` lists them as the lines the launch brief carries. `--machine`
 # is the fleet file's key for the machine the thread runs on (`local` means the
-# machine the ledger is on), and each `--area` a path the ticket's work touches,
+# machine the ledger is on), `--environment` the T3 environment id `place`
+# returned for a linked machine (absent: this machine), which `reconcile` and
+# `watch` read the entry's thread through, and each `--area` a path the ticket's work touches,
 # which placement reads to run two tickets of one repo side by side. A ticket
 # that could not be placed is `wait`ed: a row in `waiting` (no thread, no
 # stage, never watched) that the morning report lists, and that `add` or
@@ -48,7 +50,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--model <id>] [--effort <level>] | ruling <text> [--allow <call>]... | allowed | wait <key> --reason <text> | unwait <key>'
+usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>] [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--model <id>] [--effort <level>] | ruling <text> [--allow <call>]... | allowed | wait <key> --reason <text> | unwait <key>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -56,7 +58,7 @@ cmd=${1:-}; [ $# -gt 0 ] && shift
 
 case $cmd in
   add)
-    repo='' number='' thread='' worktree='' branch='' machine=local model='' effort='' areas='[]' kind=ship
+    repo='' number='' thread='' worktree='' branch='' machine=local environment='' model='' effort='' areas='[]' kind=ship
     while [ $# -gt 0 ]; do
       case $1 in
         --area) sa_flag_value "$usage" "${2:-}"; areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas") ;;
@@ -66,6 +68,7 @@ case $cmd in
         --worktree) sa_flag_value "$usage" "${2:-}"; worktree=$2 ;;
         --branch) sa_flag_value "$usage" "${2:-}"; branch=$2 ;;
         --machine) sa_flag_value "$usage" "${2:-}"; machine=$2 ;;
+        --environment) sa_flag_value "$usage" "${2:-}"; environment=$2 ;;
         --kind) sa_flag_value "$usage" "${2:-}"; case $2 in ship|triage) kind=$2 ;; *) sa_tooling "$usage" ;; esac ;;
         --model) sa_flag_value "$usage" "${2:-}"; model=$2 ;;
         --effort) sa_flag_value "$usage" "${2:-}"; effort=$2 ;;
@@ -80,9 +83,10 @@ case $cmd in
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null && sa_fail "$key is already in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "$number" --arg t "$thread" \
-      --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg model "$model" \
+      --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg env "$environment" --arg model "$model" \
       --arg effort "$effort" --arg now "$now" --argjson areas "$areas" --arg kind "$kind" \
       '{key: $k, repo: $repo, number: $n, thread: $t, worktree: $w, branch: $b, machine: $m, areas: $areas, kind: $kind,
+        environment_id: (if $env == "" then null else $env end),
         model: (if $model == "" then null else $model end),
         effort: (if $effort == "" then null else $effort end),
         stage: "launched", stalls: 0, observed: null, launched_at: $now, updated_at: $now}')

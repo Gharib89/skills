@@ -207,7 +207,8 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
    --number <n> --thread <id> --worktree <path> --branch <branch>`, with
    `--kind triage` for a `needs-triage` ticket, `--model` and `--effort` set to
    the tier launched, `--machine` the fleet
-   key place printed (never `local` for a remote), and each `--area` passed to
+   key place printed (never `local` for a remote), `--environment
+   <placed.environment_id>` on a remote launch, and each `--area` passed to
    place, then run
    `scripts/reconcile.sh --ledger <ledger>` once and ignore its summary: it
    gives the entry the baseline `watch.sh` compares against, and a thread that
@@ -217,15 +218,14 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
    found by branch, so when they differ, `ledger.sh set <key> branch <json>`.
 3. **Watch.** Start `scripts/watch.sh --ledger <ledger> --timeout 7000`
    (seconds) with Bash `run_in_background: true` and `timeout: 7200000` (ms),
-   then end your turn. Start it blindly: exit 1 with `running` means one
-   already watches, so leave it and end the turn, and a backstop wake never
-   stacks a second. A background Bash stops at 2 h, so the watcher times out
-   first. Keep one backstop schedule per super agent thread, firing while the
-   watcher lives too: `list_scheduled_tasks` first, and only when none is bound
-   here, `schedule_task` on an interval of 900000 ms bound to this thread, its
-   prompt "Wake: reconcile the ledger and start the watcher". When
-   `ledger.sh list --open` is empty, `delete_scheduled_task` it: the loop is
-   done.
+   then end your turn. Start it blindly: on exit 1 `running`, one already
+   watches, so end the turn. A background Bash stops at 2 h, so the watcher
+   times out first. Keep one backstop schedule per super agent thread, firing
+   while the watcher lives too: `list_scheduled_tasks` first, and only when
+   none is bound here, `schedule_task` on an interval of 900000 ms bound to
+   this thread, its prompt "Wake: reconcile the ledger and start the
+   watcher". When `ledger.sh list --open` is empty, `delete_scheduled_task`
+   it: the loop is done.
 4. **Wake.** The watcher's exit or the schedule wakes you. Both run the same
    step.
 5. **Reconcile.** Run `scripts/reconcile.sh --ledger <ledger>`, read its
@@ -235,8 +235,11 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
 **No turn ends without a watcher running** while the ledger holds an open
 entry. A supervised thread finishing wakes nothing, and neither does its
 permission hold; a background shell's exit wakes you about 5 s later, and a
-bound schedule wakes you on time (all measured 2026-11-06). A turn that ends
-without a watcher leaves every ticket silent until the backstop fires.
+bound schedule wakes you on time (all measured 2026-11-06).
+
+**Remote entries** (an `environment_id`): before each reconcile and watcher
+start, save their `t3_thread_read` and pass `--remote`, per
+[reference/remote.md](reference/remote.md).
 
 Wait only through the watcher: a `sleep` or a poll in your own turn spends
 context on nothing. Read a thread's messages only in small slices
@@ -257,10 +260,11 @@ escalation (Escalation).
 
 - `settled` of kind `ship`: the PR merged. Check the merged PR against the
   issue's acceptance criteria. Met: settle the thread with
-  `t3_thread_organize` action `settle` on its id. Unmet: escalate, naming the
-  gap. Of kind `triage`: confirm the issue now carries a ready label or the
-  owner skill's other outcome, then settle the thread; there is no PR. A
-  settled entry is no longer watched, so a message to its thread goes unseen.
+  `t3_thread_organize` action `settle` on its id (and `environmentId`).
+  Unmet: escalate, naming the gap. Of kind `triage`: confirm the issue now
+  carries a ready label or the owner skill's other outcome, then settle the
+  thread; there is no PR. A settled entry is no longer watched, so a message
+  to its thread goes unseen.
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
 - `closed`: one chat line naming the ticket and the reason.
@@ -292,7 +296,8 @@ escalation (Escalation).
   thread, PR or issue unreadable, or a thread of another id or worktree
   path) gets no action from you: escalate it. Reconcile records the kind in
   the entry's `error`, and the watcher stays quiet about a recorded fault, so
-  start it again after escalating.
+  start it again after escalating. A `thread-unreadable` naming an
+  `environment_id` is a stale read: refresh it and rerun.
 
 ## Escalation
 

@@ -195,6 +195,18 @@ sa_thread() {
     > "$SA_FAKE/threads/$1.json"
 }
 
+# sa_remote_thread <environment id> <id> <status> <runCount> <pending> <worktree> <branch> [<last message>]:
+# the reply file the super agent saves after reading a thread on a linked machine
+# with `t3_thread_read`, `<dir>/<id>.json` under `remote/<environment id>`, the
+# shape of `sa_thread`'s answer without the CLI's warning. The fake `t3` does not
+# know the thread: a script that asks it has not taken the file route.
+sa_remote_thread() {
+  local env=$1; shift
+  mkdir -p "$SA_FAKE/remote/$env"
+  sa_thread "$@"
+  mv "$SA_FAKE/threads/$1.json" "$SA_FAKE/remote/$env/$1.json"
+}
+
 sa_route() { # <endpoint> <json>: what `gh api <endpoint>` answers
   printf '%s\n' "$2" > "$SA_FAKE/gh/$(printf '%s' "$1" | sed 's/[^A-Za-z0-9._-]/_/g')"
 }

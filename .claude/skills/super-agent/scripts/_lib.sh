@@ -75,7 +75,20 @@ sa_window_flag() { case $2 in ''|0|*[!0-9]*) sa_tooling "$1" ;; esac; }
 # shellcheck disable=SC2034  # read by the scripts that source this file
 sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 
-# sa_observe <entry>: one look at an entry's thread (through the `t3` CLI) and
+# `--remote <environment id>=<dir>`, repeatable: where the super agent saved its
+# reads of the threads on that linked machine, one `<thread id>.json` each. `t3
+# thread show` has no environment flag (measured 2026-11-06), so a remote entry
+# is read from these files, which the super agent writes with `t3_thread_read`.
+# shellcheck disable=SC2034  # read by sa_observe
+sa_remote_dirs='{}'
+# sa_remote_flag <usage> <value>: one `--remote` value into $sa_remote_dirs.
+sa_remote_flag() {
+  case $2 in ?*=?*) ;; *) sa_tooling "$1" ;; esac
+  sa_remote_dirs=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$sa_remote_dirs")
+}
+
+# sa_observe <entry>: one look at an entry's thread (through the `t3` CLI, or for
+# an entry with an `environment_id` through its reply file) and
 # its PR (through `gh` REST) as a snapshot in $obs:
 # {status, run_count, pending, gate, pr: {number, state}}, `state` one of none,
 # open, merged, closed, and `gate` true when the thread's last assistant message
@@ -87,12 +100,22 @@ sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 # so the answer is the one line that opens a JSON object.
 # shellcheck disable=SC2034  # obs, obs_kind and obs_detail are read by the callers
 sa_observe() {
-  local thread worktree repo branch raw line found list pr
+  local thread worktree repo branch raw line found list pr env dir
   thread=$(jq -r .thread <<<"$1") worktree=$(jq -r .worktree <<<"$1")
   repo=$(jq -r .repo <<<"$1") branch=$(jq -r .branch <<<"$1")
   obs_detail=$(jq -cn --arg t "$thread" '{thread: $t}')
-  raw=$(t3 thread show "$thread" --json --messages 1 2>/dev/null </dev/null) || { obs_kind='thread-unreadable'; return 1; }
-  line=$(grep '^{"' <<<"$raw" | tail -1)
+  env=$(jq -r '.environment_id // empty' <<<"$1")
+  if [ -n "$env" ]; then
+    obs_detail=$(jq -cn --arg t "$thread" --arg e "$env" '{thread: $t, environment_id: $e}')
+    dir=$(jq -r --arg e "$env" '.[$e] // empty' <<<"$sa_remote_dirs")
+    # a thread id with a `/` would name a file outside the reply directory
+    case $thread in */*) dir='' ;; esac
+    [ -n "$dir" ] || { obs_kind='thread-unreadable'; return 1; }
+    line=$(jq -c . "$dir/$thread.json" 2>/dev/null </dev/null | tail -1)
+  else
+    raw=$(t3 thread show "$thread" --json --messages 1 2>/dev/null </dev/null) || { obs_kind='thread-unreadable'; return 1; }
+    line=$(grep '^{"' <<<"$raw" | tail -1)
+  fi
   if ! jq -e '.thread | (.threadId | type) == "string" and (.status | type) == "string"
       and (.runCount | type) == "number" and (.pendingRequestCount | type) == "number"' \
       <<<"$line" >/dev/null 2>&1; then obs_kind='thread-unreadable'; return 1; fi
