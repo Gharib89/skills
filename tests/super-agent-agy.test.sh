@@ -45,7 +45,7 @@ refused "no repo" --task x
 refused "no task" --repo "$repo"
 refused "a missing repo" --repo "$tmp/none" --task x
 refused "a zero timeout" --repo "$repo" --task x --timeout 0
-for name in '*' 'git*' rm sudo curl bash env xargs python3 find 'a b'; do refused "--allow '$name'" --repo "$repo" --task x --allow "$name"; done
+for name in '*' 'git*' rm sudo curl bash env xargs python3 find timeout nohup ksh npm make rg sort mv truncate 'a b'; do refused "--allow '$name'" --repo "$repo" --task x --allow "$name"; done
 check "a bad call answers the usage line" "$usage" "$(bash "$s/agy-job.sh" --bogus 2>/dev/null | jq -r .error)"
 check "and agy never ran" "" "$(cat "$SA_FAKE/calls" 2>/dev/null)"
 
@@ -75,8 +75,8 @@ check "the answer names what ran" "$(jq -c . <<<"$(rules)")" "$(jq -c .allow <<<
 
 # --- the job's own needs and flags ------------------------------------------------------------------
 reset
-J --repo "$repo" --task t --allow git --allow tree >/dev/null
-check "--allow adds a binary name to the list" 2 "$(rules | jq '[.[] | select(. == "command(git)" or . == "command(tree)")] | length')"
+J --repo "$repo" --task t --allow git --allow readlink >/dev/null
+check "--allow adds a binary name to the list" 2 "$(rules | jq '[.[] | select(. == "command(git)" or . == "command(readlink)")] | length')"
 reset
 J --repo "$repo" --task t --model claude-sonnet-4-6 --timeout 90 >/dev/null
 check "--model is passed on" 1 "$(call | grep -c -- '--model claude-sonnet-4-6')"

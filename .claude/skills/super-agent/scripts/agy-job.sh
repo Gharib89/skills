@@ -10,16 +10,16 @@
 #
 # A rule names a binary exactly: `command(ls)` allows `ls .`, while a prefix
 # form (`ls*`, `git *`) allowed nothing (measured). The default list is
-# permissive toward harmless commands: ls cat head tail wc grep rg find sort
-# cut tr diff jq file stat pwd echo basename dirname: binaries that read and
+# permissive toward harmless commands: ls cat head tail wc grep cut tr diff jq file stat pwd echo basename dirname: binaries that read and
 # print, since a rule allows every argument of its binary. `find`, `rg`, `sort`,
 # `uniq`, `tree`, `date` and `git` are left out: each can run a program, write
 # a file or set the clock (`find -exec`, `rg --pre`, `sort -o`) or push. Pass
 # `--allow git` for a job that reads history. --allow adds one binary name; a
-# name with a wildcard, a space or a parenthesis, or a common escalator (a
-# shell, an interpreter, a command runner, or a command that deletes, changes
-# permissions or reaches the network), is refused: the list is the caller's
-# judgment past that.
+# name with a wildcard, a space or a parenthesis, or one of the common
+# escalators in the `case` below (shells, interpreters, command runners, and
+# commands that move or delete, change permissions or reach the network), is
+# refused. The refusal is a list, not a proof: what `--allow` adds past it is
+# the caller's judgment.
 # --timeout (default 300 s) bounds the job, agy's own print time and a hard
 # limit just past it. The scratch worktree is a detached one of --repo's HEAD,
 # removed afterwards however the job ended.
@@ -48,7 +48,7 @@ while [ $# -gt 0 ]; do
     --allow)
       sa_flag_value "$usage" "${2:-}"
       # c[u]rl: spelled as a glob so the contract check's curl rule does not read the list as a call
-      case $2 in *[!A-Za-z0-9._+-]*|rm|sudo|su|c[u]rl|wget|ssh|scp|nc|dd|chmod|chown|kill|bash|sh|zsh|dash|env|xargs|python|python3|perl|ruby|node|npx|find|awk|sed) sa_tooling "$usage" ;; esac
+      case $2 in *[!A-Za-z0-9._+-]*|rm|sudo|su|c[u]rl|wget|ssh|scp|nc|dd|chmod|chown|kill|bash|sh|zsh|dash|ksh|fish|csh|tcsh|env|xargs|timeout|nohup|nice|stdbuf|command|exec|python|python3|perl|ruby|php|lua|node|npx|npm|make|find|awk|sed|rg|sort|uniq|tree|date|mv|rmdir|unlink|shred|truncate) sa_tooling "$usage" ;; esac
       allow+=("$2"); shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
