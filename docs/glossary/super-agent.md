@@ -36,6 +36,18 @@ _Avoid_: worker, lane, seat
 Choosing the machine a launch runs on: the super agent's own machine first, a GPU machine for GPU work, the next reachable linked machine that fits when one is down, and a row in the ledger's waiting list when none does. A machine is reached only through its T3 environment id, and only if the owner already linked it.
 _Avoid_: scheduling, load balancing
 
+**Claim**:
+The mark a super agent puts on a ticket before it launches one: the ticket assigned to the owner's account and a comment, first line `<!-- super-agent-claim machine=<key> thread=<id> -->`, naming the machine and the claiming thread. The earliest claim comment on an issue holds it, so another super agent skips the ticket. A claim older than the stale window (3 days by default) is **stale**: it is offered back to the owner and never taken over.
+_Avoid_: lock, lease, reservation
+
+**Active repos**:
+The fleet file's list of repos the super agent scans for ready work, edited by the owner's "track <repo>" and "stop tracking <repo>". Only they feed the **daily offer**.
+_Avoid_: watchlist, subscriptions
+
+**Daily offer**:
+The list of open `ready-for-agent` issues in the active repos that no ledger entry or other machine's claim holds, which the super agent shows the owner once a day. It reads and writes nothing; a ticket launches only on the owner's go.
+_Avoid_: digest, auto-pickup, queue
+
 **Probe thread**:
 A scratch thread the super agent launches on a linked machine to run the fixed probe there (cores, RAM, GPU, provider CLIs, gh logins) and reply with one JSON line, which setup merges into the fleet file. It is settled once its reply is read and is no ledger entry.
 _Avoid_: health check, ping
