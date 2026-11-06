@@ -76,6 +76,30 @@ passes the parser and fails at the first use, far from the file, with an error
 that names no file (a Node `TypeError`). The loader checks the shape it needs
 and refuses by naming the file and the field. On #759 setup crashed that way.
 
+**A check or fingerprint reads the recorded state and names every input the
+output depends on.** A gate, guard or credit read judges what was voiced or
+approved, not the live source (`script.json`, the cast, `over.html`, assets,
+`excerpts.json`, symlinks), and its fingerprint covers every input the
+delivered output depends on, so an edit after the check cannot pass unseen. On
+#1025 the gate judged the live `script.json` narration, not the voiced text,
+and the fix cap was keyed on `script.json` instead of the voice hash; on #1029
+the render freshness hash missed `excerpts.json` and `claims.json` (also #1032,
+#1038).
+
+**Every read of external or user input has an empty-answer and a partial-input
+case that refuses.** A reader handed empty, partial or unrecognised input exits
+non-zero and says why; it never reports a clean result (criteria dropped, an
+empty window, an empty answer). This holds in every language, JS gates
+included; [shell.md](standards/shell.md)'s `A failed read is never a verdict`
+is the shell form of it. Evidence: #959, #981, #985.
+
+**A standard-library call is probed on the failing input before it is relied
+on.** Name the real contract, not the assumed one, with one run of the call on
+the input that would break it. `.map(path.basename)` passes the index as
+`suffix` and throws (#1024); `split(sep, limit)` drops the remainder instead
+of keeping it in the last element (#1040). The probe rule above binds a
+reviewer's findings; this one binds the author's code.
+
 **A skill never depends on Herdr or a second session.** When a run needs a
 skill the Skill tool refuses, or one whose installed copy is stale, it reads
 that skill's `SKILL.md` from disk and follows it in this session (#432).
