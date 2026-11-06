@@ -66,6 +66,12 @@ directory.
 - `agy-job.sh` runs one bounded text job on agy from a disposable scratch
   worktree of the repo, under a session-only allow list of harmless binaries,
   and prints its response as JSON.
+- `claim.sh` claims one ticket for this machine and prints its `status`
+  (`taken`, `own`, `claimed`, `stale`) and the holder's `claim` with `age_s`.
+- `track.sh --fleet <file> track|stop <owner/name>` edits the active repos and
+  prints the list as the file now holds it.
+- `intake.sh` builds the daily offer: `offer`, `held`, `claimed`, `stale` and
+  `errors` over the active repos. It writes nothing.
 
 ## Setup
 
@@ -77,40 +83,8 @@ waivers from it, and any step that needs a machine, account, repo or quota
 command reads it from the file. Setup runs on Linux only (it uses GNU `nproc`,
 `free` and `timeout`).
 
-When the fleet file is missing, or the owner asks for `/super-agent setup`:
-
-1. Run `scripts/setup.sh --propose`. Its `to_probe` lists each reachable
-   linked machine as `{machine, environment_id}`.
-2. Launch one **probe thread** per `to_probe` row, all at once, with
-   `t3_thread_launch`: `environmentId` set, `scratch: true`, no worktree, the
-   cheapest tier (`modelSelection` `{instanceId: <claude instance>, model:
-   <sonnet>, options: [{"id":"effort","value":"low"}]}`). Its message is one
-   line asking it to run the script below with `bash -s -- --json` and reply
-   with its one JSON line and nothing else, then the full text of
-   `scripts/probe.sh` in a code fence: that machine has no checkout of this
-   repo. `t3_thread_wait`
-   each, read its reply with `t3_thread_read` (`limit` 2), save it to a file,
-   and settle the thread (`t3_thread_organize` action `settle`) as soon as its
-   reply is read. A probe thread is no ledger entry and takes no slot. Measured
-   2026-11-06: one replied in 15 to 20 s.
-3. Run setup again with `--propose` and one `--probe <environment id>=<reply
-   file>` per machine, and show the owner its proposal: each machine's slots,
-   the thresholds, each provider marked `unavailable` with its `reason`, and
-   every line of `warnings` (a reply that is no probe lands there).
-4. Ask the owner to confirm or adjust it. After the yes, run it again with
-   `--write` and the same `--probe` flags, then apply the owner's adjustments
-   by editing the written file.
-5. Tell the owner to keep the fleet file in their dotfiles, so every machine a
-   super agent may start on has it.
-
-Setup runs only here, on the super agent's machine. The owner edits the file by
-hand for anything setup proposed (slots, thresholds, active repos, waivers); a
-re-run keeps those edits for a machine probed before and refreshes only the
-probed facts (`proposed_slots` shows what a fresh measure would set), while a
-machine never probed takes the computed slots. An unreachable machine keeps its
-previous facts and is probed on the next setup that finds it reachable. An
-`unavailable` provider is a fact to report, not an error: name it with its
-reason and carry on.
+When the fleet file is missing, or the owner asks for `/super-agent setup`,
+follow [reference/setup.md](reference/setup.md).
 
 ## Routing
 
@@ -148,8 +122,9 @@ Every launch runs where `place.sh` puts it:
      say), check that machine's `clis` in the fleet file first, and rerun with
      `--exclude <machine>` when it lacks one.
    - `need_reading`: the next candidate has no live reading. Run a probe thread
-     there (Setup step 2), save `{<machine>: {load1, free_gb}}` from its reply
-     to a file, and rerun with `--readings <file>`.
+     there ([setup](reference/setup.md#steps) step 2), save `{<machine>:
+     {load1, free_gb}}` from its reply to a file, and rerun with
+     `--readings <file>`.
    - `waiting`: nothing fits now, and the ledger's `waiting` list already holds
      the ticket. Say so in one chat line with its `reason`.
 
@@ -161,6 +136,35 @@ only with no blocking edge and no overlapping areas, so a ticket with no
 environment id, and only one the owner already linked: the fleet file holds no
 host, user or key, and you use no SSH.
 
+## Claims and intake
+
+A **claim** keeps two super agents off one ticket. Before every launch, run
+`scripts/claim.sh --repo <owner/name> --number <n> --machine <this machine's
+fleet key> --thread $T3CODE_THREAD_ID` (your own thread) and read `status`:
+
+- `taken` or `own`: launch.
+- `claimed`: skip the ticket, and say in one chat line which machine holds it
+  and its age.
+- `stale`: offer it back to the owner with the holder and age. Launch only on
+  the owner's explicit go, once the owner has removed the stale claim comment
+  or decided otherwise.
+
+A claim belongs to its holder: leave another machine's claim and its comment
+as they are. Exit 2 (the host refused a read or post) is an escalation.
+
+When the owner says "track <repo>" or "stop tracking <repo>", run
+`scripts/track.sh --fleet <fleet> track|stop <owner/name>` and say the
+resulting active repos in one line. Only this script edits the active repos.
+
+The **daily offer**: run `scripts/intake.sh --fleet <fleet> --ledger <ledger>
+--machine <key> --thread $T3CODE_THREAD_ID` at your first turn of each
+calendar day and whenever the owner asks what is ready. Show `offer` as a
+short list (key, title, the Size label from `labels`), give the `claimed` and
+`stale` counts with their holders, and report each `errors` row. An empty
+`repos` means no active repos: say so and suggest "track <repo>". The offer
+launches nothing: a ticket launches when the owner names it, through the loop
+(claim, route, place, launch).
+
 ## The loop
 
 Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
@@ -168,8 +172,9 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
 1. **Launch.** The owner names a ticket as `<owner/name>#<n>`. Read its labels
    with `gh issue view`, once for both reads: the owner-skill label and the
    Size label. `ready-for-agent` takes `/ship <n>`, `needs-triage` takes
-   `/triage <n>`, anything else is an escalation (below). Pick the tier under
-   Routing and the machine under Placement. Call
+   `/triage <n>`, anything else is an escalation (below). Claim it (Claims and
+   intake), then pick the tier under Routing and the machine under Placement.
+   Call
    `t3_thread_launch`, never `delegate_task`: `delegate_task` runs only in your
    own project and refuses another repo ("A local task runs in this thread's
    project", measured). Pass:
@@ -357,3 +362,5 @@ come back.
 - Route and verify; the supervised thread implements, and its owner skill
   merges.
 - Settle a finished thread; never archive one.
+- Launch only on a claim of your own and the owner's go: a claim is never
+  taken over, and the daily offer never launches.
