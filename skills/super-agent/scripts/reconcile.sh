@@ -13,7 +13,8 @@
 # archives. It keeps each entry's stall count: +1 for a stall (a run that
 # completed with no merged PR and no merge-gate summary, counted once per run,
 # or a thread at rest `--stall-window` seconds, default 900, with no new run,
-# counted again each window), -1 for a real step (a run that ended in a
+# counted again each window, neither once an entry is at 3, which is
+# escalated), -1 for a real step (a run that ended in a
 # merge-gate summary, or a PR opened since the last look), never below 0. The
 # entry holds `judged_run`, the last run counted, and `rest_since`, when its
 # rest began or its last stall was counted, which `watch` reads for its
@@ -85,6 +86,7 @@ while IFS= read -r entry; do
           | if $n.status == "running" or $n.pending > 0 then .rest_since = null
             elif $n.gate then
               (if $n.run_count > .judged_run then .stalls |= down | .judged_run = $n.run_count else . end) | .rest_since = null
+            elif .stalls >= 3 then .judged_run = $n.run_count
             elif $n.run_count > .judged_run then
               .stalls += 1 | .judged_run = $n.run_count | .rest_since = $now | .stall = "run-completed"
             elif .rest_since == null then .rest_since = $now

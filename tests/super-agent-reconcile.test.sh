@@ -160,6 +160,18 @@ out=$(R)
 check "a thread holding a permission request is no stall" "" "$(stalled "$out")"
 fixture
 R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "Stopped after the tests."
+L set "$repo#5" stalls 3 >/dev/null
+L set "$repo#5" rest_since "\"$old\"" >/dev/null
+out=$(R --stall-window 60)
+check "an entry already at 3 stalls is escalated: no stall past 3 for its window" "" "$(stalled "$out")"
+check "and its count stays 3" 3 "$(stalls 5)"
+sa_thread t-5 idle 2 0 /wt/5 feat/x-5 "Stopped again."
+check "nor for a new completed run" "" "$(stalled "$(R --stall-window 60)")"
+L set "$repo#5" stalls 0 >/dev/null
+check "after the owner's reset a thread still at rest past its window counts again" "$repo#5 1 stall-window" "$(stalled "$(R --stall-window 60)")"
+fixture
+R >/dev/null
 sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "A relationship 1.2.3 of tickets, and I stopped."
 check "a message that only contains 'ship 1.2.3' inside another word is no gate summary" "$repo#5 1 run-completed" "$(stalled "$(R)")"
 sa_thread t-6 idle 0 0 /wt/6 feat/x-6
