@@ -9,27 +9,35 @@
 #   ledger --ledger <file> get <key>
 #   ledger --ledger <file> list [--open]
 #   ledger --ledger <file> set <key> <field> <json>
-#   ledger --ledger <file> ruling <text>
+#   ledger --ledger <file> rethread <key> --thread <id> --worktree <path>
+#          --branch <name> [--model <id>] [--effort <level>]
+#   ledger --ledger <file> ruling <text> [--allow <call>]...
+#   ledger --ledger <file> allowed
 #
 # A key is `<owner/name>#<number>`. `--ledger` comes first and names the file,
 # which a first `add` creates. `add` starts an entry at stage `launched`, stalls
 # 0, observed null: `reconcile` fills `observed`, the baseline `watch` compares
 # against, and `error`, the fault kind it last failed to read. `set` takes any
 # field but the entry's identity (key, repo, number); `stage` must be one of
-# launched, running, at-rest, settled, closed. A write is a temp file beside the
-# ledger, then a rename.
+# launched, running, at-rest, settled, closed. `rethread` points a ticket's entry
+# at a fresh thread and starts its tracking over (stage launched, stalls 0, no
+# observed state), so the key stays one entry. A write is a temp file beside the
+# ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
+# `--allow` is a call the answer lets a supervised thread make without a hold,
+# and `allowed` lists them as the lines the launch brief carries.
 #
 # stdout: `add` {ledger, key, entry}; `get` the entry; `list` {ledger, entries,
 #         rulings}, `entries` an array of entries (`--open` leaves out settled
-#         and closed ones); `set` {key, field, value}; `ruling` {ruling:
-#         {date, text}}; any failure {error}
+#         and closed ones); `set` {key, field, value}; `rethread` {ledger, key, entry}; `ruling` {ruling:
+#         {date, text, allow}}; `allowed` {allowed: [{date, call, line}]}; any
+#         failure {error}
 # exit: 0 ok · 1 the key is already in, or not in, the ledger, a stage outside
 #       the list, or an identity field · 2 usage, a value that is not JSON, an
 #       unreadable or wrong-shaped ledger, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--machine <name>] [--model <id>] [--effort <level>] | get <key> | list [--open] | set <key> <field> <json> | ruling <text>'
+usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--machine <name>] [--model <id>] [--effort <level>] | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--model <id>] [--effort <level>] | ruling <text> [--allow <call>]... | allowed'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -93,11 +101,47 @@ case $cmd in
     sa_write "$ledger" "$(jq -c --arg k "$key" --arg f "$field" --argjson v "$value" --arg now "$now" \
       '.entries[$k][$f] = $v | .entries[$k].updated_at = $now' <<<"$doc")"
     jq -cn --arg k "$key" --arg f "$field" --argjson v "$value" '{key: $k, field: $f, value: $v}' ;;
-  ruling)
-    [ $# -eq 1 ] || sa_tooling "$usage"
+  rethread)
+    [ $# -ge 1 ] || sa_tooling "$usage"
+    key=$1; shift; thread='' worktree='' branch='' model='' effort=''
+    while [ $# -gt 0 ]; do
+      case $1 in
+        --thread) sa_flag_value "$usage" "${2:-}"; thread=$2 ;;
+        --worktree) sa_flag_value "$usage" "${2:-}"; worktree=$2 ;;
+        --branch) sa_flag_value "$usage" "${2:-}"; branch=$2 ;;
+        --model) sa_flag_value "$usage" "${2:-}"; model=$2 ;;
+        --effort) sa_flag_value "$usage" "${2:-}"; effort=$2 ;;
+        *) sa_tooling "$usage" ;;
+      esac
+      shift 2
+    done
+    [ -n "$thread" ] && [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage"
     sa_read "$ledger"
-    ruling=$(jq -cn --arg d "$(date -u +%F)" --arg t "$1" '{date: $d, text: $t}')
+    jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$key is not in the ledger"
+    now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    doc=$(jq -c --arg k "$key" --arg t "$thread" --arg w "$worktree" --arg b "$branch" --arg m "$model" \
+      --arg e "$effort" --arg now "$now" '.entries[$k] |= (.thread = $t | .worktree = $w | .branch = $b
+        | .model = (if $m == "" then null else $m end) | .effort = (if $e == "" then null else $e end)
+        | .stage = "launched" | .stalls = 0 | .observed = null | .error = null | .rest_since = null
+        | .judged_run = 0 | .launched_at = $now | .updated_at = $now)' <<<"$doc")
+    sa_write "$ledger" "$doc"
+    jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$(jq -c --arg k "$key" '.entries[$k]' <<<"$doc")" \
+      '{ledger: $l, key: $k, entry: $e}' ;;
+  ruling)
+    [ $# -ge 1 ] || sa_tooling "$usage"
+    text=$1; shift; allow='[]'
+    while [ $# -gt 0 ]; do
+      [ "$1" = --allow ] || sa_tooling "$usage"
+      sa_flag_value "$usage" "${2:-}"; allow=$(jq -c --arg c "$2" '. + [$c]' <<<"$allow"); shift 2
+    done
+    sa_read "$ledger"
+    ruling=$(jq -cn --arg d "$(date -u +%F)" --arg t "$text" --argjson a "$allow" '{date: $d, text: $t, allow: $a}')
     sa_write "$ledger" "$(jq -c --argjson r "$ruling" '.rulings += [$r]' <<<"$doc")"
     jq -cn --argjson r "$ruling" '{ruling: $r}' ;;
+  allowed)
+    [ $# -eq 0 ] || sa_tooling "$usage"
+    sa_read "$ledger"
+    jq -c '{allowed: [.rulings[] | .date as $d | (.allow // [])[] | {date: $d, call: .,
+      line: "Run `\(.)` without a hold: the owner allowed it on \($d)."}]}' <<<"$doc" ;;
   *) sa_tooling "$usage" ;;
 esac
