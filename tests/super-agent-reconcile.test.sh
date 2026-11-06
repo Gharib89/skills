@@ -176,6 +176,10 @@ sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "ship 0.54.2: preflight refused, the issue
 check "ship's first reply or an early stop carries the version but is no gate summary" "$repo#5 1 run-completed" "$(stalled "$(R)")"
 fixture
 R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "Unmet criteria: none, but I stopped before the gate."
+check "the Unmet criteria item without ship's version is no gate summary" "$repo#5 1 run-completed" "$(stalled "$(R)")"
+fixture
+R >/dev/null
 sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "A relationship 1.2.3 of tickets, and I stopped."
 check "a message that only contains 'ship 1.2.3' inside another word is no gate summary" "$repo#5 1 run-completed" "$(stalled "$(R)")"
 sa_thread t-6 idle 0 0 /wt/6 feat/x-6
