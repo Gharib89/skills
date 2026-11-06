@@ -97,8 +97,9 @@ is the shell form of it. Evidence: #959, #981, #985.
 on.** Name the real contract, not the assumed one, with one run of the call on
 the input that would break it. `.map(path.basename)` passes the index as
 `suffix` and throws (#1024); `split(sep, limit)` drops the remainder instead
-of keeping it in the last element (#1040). The probe rule above binds a
-reviewer's findings; this one binds the author's code.
+of keeping it in the last element (#1040). `A claim about external behaviour
+cites a probe or a doc` binds a reviewer's findings; this rule binds the
+author's code.
 
 **A skill never depends on Herdr or a second session.** When a run needs a
 skill the Skill tool refuses, or one whose installed copy is stale, it reads
