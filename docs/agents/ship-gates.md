@@ -11,7 +11,7 @@ What each gate in the ship profile's `## Local gate` runs and why. The profile (
 - the request a function sends, over a fake `gh` on PATH (`api-retry`);
 - a mechanic driven end to end over scratch directories (`run-file`, `update-skills-plan`);
 - a mechanic over the Host fake, `SHIP_HOST_ADAPTER` at `tests/host-fake.sh` (`reviewer-run`, `host-contract`);
-- a mechanic over the real GitHub adapter and a fake `gh` answering per endpoint (`request-review-readback`, `gh-threads-proxy`), or over a fake `herdr` (`drive-session`);
+- a mechanic over the real GitHub adapter and a fake `gh` answering per endpoint (`request-review-readback`, `gh-threads-proxy`), or over a fake `herdr` (`drive-session`), or over fake `t3` and `gh` (`super-agent`);
 - one adapter function, its transport redefined as fixtures (`ado-reviews-substantive`, `gh-run-denials`);
 - a shipped template or script over stub tools in a throwaway checkout (`harness-check`, `setup-skills-bootstrap`, `explainer-video`);
 - a shipped file's text, read as files (`template-pins`, `reviewer-refresh`);
