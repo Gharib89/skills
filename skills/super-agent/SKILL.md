@@ -44,9 +44,9 @@ directory.
   `closed`, `stalled`, `at_rest`, `errors`, `entries`. A stall (a completed
   run with no merged PR and no merge-gate summary, or a window passed with no
   new run) adds 1; a real step (a run ending in the merge-gate summary, or a
-  PR opened) takes 1 off, never below 0. `stalled` holds one
-  `{key, thread, stalls, reason}` per stall counted now. You never set
-  `stalls` by hand, except the reset below.
+  PR opened) takes 1 off, never below 0. An entry at 3 stalls gains none.
+  `stalled` holds one `{key, thread, stalls, reason}` per stall counted now.
+  You never set `stalls` by hand, except the reset below.
 - `setup.sh` probes this machine, its linked T3 environments, the GitHub
   accounts and each provider's quota command, and proposes the fleet file
   (below) with `--propose`; it takes `--fleet <file>` in place of

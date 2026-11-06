@@ -58,14 +58,15 @@ check "and names it" "Gharib89/skills#99 is not in the ledger" "$(jq -r .error <
 out=$(L allowed)
 check "with no allowing ruling, no call is allowed" "[]" "$(jq -c .allowed <<<"$out")"
 out=$(L ruling "approve the held pnpm install" --allow "pnpm install" --allow "pnpm run build")
+day=$(jq -r .ruling.date <<<"$out")
 check "a ruling records the calls it allows" '["pnpm install","pnpm run build"]' "$(jq -c .ruling.allow <<<"$out")"
-check "a ruling with no --allow still dates and stores its text" "waive a Codex usage limit" \
-  "$(jq -r '.rulings[0].text' <<<"$(L list)")"
+check "a ruling with no --allow is dated and allows nothing: the deny path" "waive a Codex usage limit [] 1" \
+  "$(jq -r '.rulings[0] | "\(.text) \(.allow) \(.date | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") | if . then 1 else 0 end)"' <<<"$(L list)" | sed 's/\[\]/[]/')"
 out=$(L allowed)
 check "allowed lists each call with its date" "pnpm install pnpm run build" "$(jq -r '[.allowed[].call] | join(" ")' <<<"$out")"
-check "dated by its ruling" "$(date -u +%F)" "$(jq -r '.allowed[0].date' <<<"$out")"
+check "dated by its ruling" "$day" "$(jq -r '.allowed[0].date' <<<"$out")"
 check "and written as the line the launch brief carries" \
-  "Run \`pnpm install\` without a hold: the owner allowed it on $(date -u +%F)." "$(jq -r '.allowed[0].line' <<<"$out")"
+  "Run \`pnpm install\` without a hold: the owner allowed it on $day." "$(jq -r '.allowed[0].line' <<<"$out")"
 out=$(L ruling "x" --allow 2>/dev/null); rc=$?
 check_rc "--allow with no call exits 2" 2 "$rc"
 

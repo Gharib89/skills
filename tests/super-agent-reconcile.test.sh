@@ -144,7 +144,7 @@ check "and the window starts over from that count" "" "$(stalled "$out")"
 sa_thread t-5 running 2 0 /wt/5 feat/x-5
 R >/dev/null
 check "a new run is no stall and no step" 2 "$(stalls 5)"
-sa_thread t-5 idle 2 0 /wt/5 feat/x-5 "ship 0.54.2: the merge gate is clean"
+sa_thread t-5 idle 2 0 /wt/5 feat/x-5 "ship 0.54.2: the merge gate is clean. Unmet criteria: none."
 out=$(R)
 check "a run that ends in the merge-gate summary is a real step: the count falls" 1 "$(stalls 5)"
 check "and is no stall" "" "$(stalled "$out")"
@@ -152,7 +152,7 @@ sa_thread t-5 running 3 0 /wt/5 feat/x-5
 sa_pr $repo feat/x-5 open
 R >/dev/null
 check "a PR opened since the last look is a real step too" 0 "$(stalls 5)"
-sa_thread t-5 idle 3 0 /wt/5 feat/x-5 "ship 0.54.2: the merge gate is clean"
+sa_thread t-5 idle 3 0 /wt/5 feat/x-5 "ship 0.54.2: the merge gate is clean. Unmet criteria: none."
 R >/dev/null
 check "the count floors at 0" 0 "$(stalls 5)"
 sa_thread t-5 idle 4 1 /wt/5 feat/x-5 "Stopped after the tests."
@@ -170,6 +170,10 @@ sa_thread t-5 idle 2 0 /wt/5 feat/x-5 "Stopped again."
 check "nor for a new completed run" "" "$(stalled "$(R --stall-window 60)")"
 L set "$repo#5" stalls 0 >/dev/null
 check "after the owner's reset a thread still at rest past its window counts again" "$repo#5 1 stall-window" "$(stalled "$(R --stall-window 60)")"
+fixture
+R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "ship 0.54.2: preflight refused, the issue is not triaged."
+check "ship's first reply or an early stop carries the version but is no gate summary" "$repo#5 1 run-completed" "$(stalled "$(R)")"
 fixture
 R >/dev/null
 sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "A relationship 1.2.3 of tickets, and I stopped."

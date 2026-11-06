@@ -78,7 +78,8 @@ sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 # its PR (through `gh` REST) as a snapshot in $obs:
 # {status, run_count, pending, gate, pr: {number, state}}, `state` one of none,
 # open, merged, closed, and `gate` true when the thread's last assistant message
-# is a ship merge-gate summary, which carries `ship <version>` as a word of its own. A thread is found by the id and worktree path the entry holds,
+# is a ship merge-gate summary, which carries `ship <version>` as a word of its own and its `Unmet criteria` item (ship
+# prints the version in its first reply too, so the version alone is no summary). A thread is found by the id and worktree path the entry holds,
 # never by a process name, which once matched the wrong process. On failure it
 # returns 1 with $obs_kind (thread-unreadable, thread-mismatch, pr-unreadable)
 # and $obs_detail, a JSON object. `t3` prints its migration warning on stdout,
@@ -106,7 +107,7 @@ sa_observe() {
   pr=$(jq -c '.[0] // null' <<<"$list")
   obs=$(jq -c --argjson pr "$pr" '{status: .thread.status, run_count: .thread.runCount,
     pending: .thread.pendingRequestCount,
-    gate: ([.messages[]? | select(.role == "assistant")] | last | (.text // "") | test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+")),
+    gate: ([.messages[]? | select(.role == "assistant")] | last | (.text // "") | (test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+") and test("Unmet criteria"))),
     pr: (if $pr == null then {number: null, state: "none"}
          else {number: $pr.number, state: (if $pr.merged_at != null then "merged"
            elif $pr.state == "closed" then "closed" else "open" end)} end)}' <<<"$line")
