@@ -229,7 +229,7 @@ check "each run records its usage, a retried first attempt's included" "$usage_r
 check "per_path sums every attempt's cost and tokens, failed ones included" \
   '[{"path":"ambiguous","passed":true,"attempts":1,"cost_usd":1,"input_tokens":11,"output_tokens":22,"cache_read_tokens":33,"cache_write_tokens":40,"turns":3,"subagents":1},{"path":"happy","passed":true,"attempts":2,"cost_usd":2,"input_tokens":22,"output_tokens":44,"cache_read_tokens":66,"cache_write_tokens":80,"turns":6,"subagents":2}]' \
   "$(STUB_USAGE=1 DRIVE_KEEP=.per_path drive happy-skips-gate happy ambiguous | head -n 1)"
-# `usage-first-only`: only the first claude run reports usage; per_path must not pass a partial sum off as the total.
+# USAGE_ONCE=1: only the first claude run reports usage; per_path must not pass a partial sum off as the total.
 check "per_path is null where any attempt lacked the field" '[null,2]' \
   "$(DRIVE_KEEP='[.per_path[] | select(.path == "happy") | (.input_tokens, .attempts)]' \
     USAGE_ONCE=1 STUB_USAGE=1 drive happy-skips-gate happy ambiguous | head -n 1)"
