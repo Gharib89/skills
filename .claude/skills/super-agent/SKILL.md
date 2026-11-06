@@ -32,7 +32,8 @@ directory.
   change: `pr-merged`, `pr-closed`, `pending-approval`, `run-finished`,
   `run-started`, or `thread-mismatch`, `thread-unreadable`, `pr-unreadable`,
   or `timeout`. It matches a thread by id and worktree path, never by process
-  name. It exits 1 on an entry `reconcile` has not observed yet.
+  name. It skips an entry `reconcile` has not observed yet, naming it in
+  `unobserved`, and exits 1 when none is observed.
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage, and prints one summary: `settled`, `closed`, `at_rest`, `errors`,
   `entries`.
@@ -61,7 +62,9 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
    `--model` and `--effort` as launched, then run
    `scripts/reconcile.sh --ledger <ledger>` once and ignore its summary: it
    gives the entry the baseline `watch.sh` compares against, and a thread that
-   has not started yet reads as at rest.
+   has not started yet reads as at rest. On the first wake, compare
+   `.thread.branch` from `t3 thread show` with the entry's branch: the PR is
+   found by branch, so when they differ, `ledger.sh set <key> branch <json>`.
 3. **Watch.** Start `scripts/watch.sh --ledger <ledger> --timeout 7000`
    (seconds) with Bash `run_in_background: true` and `timeout: 7200000` (ms),
    then end your turn. A background Bash stops at 2 h, so the watcher times
@@ -95,6 +98,8 @@ After the invocation line, the message tells the supervised thread:
 - the **merge allowance**: merge when `/ship`'s merge gate is clean, nothing
   wider; any other hold stops at the gate for the super agent;
 - commands harmless to run (reads, tests, the repo's own checks) need no hold;
+- work in the worktree it starts in, on the branch that worktree holds, and
+  make no other: the ledger finds the PR by that branch;
 - end its last message with the PR URL and the gate state.
 
 ## Acting on the summary
@@ -116,7 +121,9 @@ After the invocation line, the message tells the supervised thread:
   `ledger.sh set <key> stalls <n+1>`. At 2, escalate.
 - `errors`: an entry reconcile could not read or match (`kind` says why: a
   thread, PR or issue unreadable, or a thread of another id or worktree
-  path) gets no action from you: escalate it.
+  path) gets no action from you: escalate it. Reconcile records the kind in
+  the entry's `error`, and the watcher stays quiet about a recorded fault, so
+  start it again after escalating.
 
 ## Escalation
 

@@ -11,7 +11,8 @@
 # a thread at rest with the ticket undone is `at-rest`. Settling the thread in
 # T3 is the super agent's act, on each entry `settled` names, and it never
 # archives. An entry whose thread, PR or issue cannot be read is reported in
-# `errors` and left as it was. The ledger is written once, atomically, after
+# `errors`, its `error` set to the kind (cleared by the next good read), and
+# left in its stage. The ledger is written once, atomically, after
 # the last entry.
 #
 # stdout: {ledger, checked, entries, settled, closed, at_rest, errors}: `entries`
@@ -42,6 +43,7 @@ now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 checked=0 entries='[]' errors='[]'
 fail() { # <kind> <detail>: record the error of the entry in $key
   errors=$(jq -c --arg k "$key" --arg kind "$1" --argjson d "$2" '. + [{key: $k, kind: $kind, detail: $d}]' <<<"$errors")
+  doc=$(jq -c --arg k "$key" --arg kind "$1" '.entries[$k].error = $kind' <<<"$doc")
 }
 while IFS= read -r entry; do
   checked=$((checked + 1))
@@ -62,7 +64,7 @@ while IFS= read -r entry; do
       else stage=at-rest; fi ;;
   esac
   doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
-    '.entries[$k] |= (.stage = $s | .observed = $o | .updated_at = $now)' <<<"$doc")
+    '.entries[$k] |= (.stage = $s | .observed = $o | .error = null | .updated_at = $now)' <<<"$doc")
   entries=$(jq -c --argjson e "$entry" --arg s "$stage" --arg r "$reason" --argjson o "$obs" \
     '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, from: $e.stage, stage: $s, reason: $r, observed: $o}]' <<<"$entries")
 done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open)' <<<"$doc")

@@ -106,7 +106,12 @@ rm "$SA_FAKE/threads/t-5.json"
 out=$(R); rc=$?
 check_rc "an unreadable thread does not fail the run" 0 "$rc"
 check "it is in errors with its kind" "$repo#5 thread-unreadable" "$(jq -r '.errors[] | "\(.key) \(.kind)"' <<<"$out")"
-check "its entry is as it was" "$before" "$(jq -c --arg k "$repo#5" '.entries[$k]' "$led")"
+check "its entry is as it was, but for the error it carries" "$before" \
+  "$(jq -c --arg k "$repo#5" '.entries[$k] | del(.error)' "$led")"
+check "the error is the kind" thread-unreadable "$(jq -r --arg k "$repo#5" '.entries[$k].error' "$led")"
+sa_thread t-5 running 1 0 /wt/5 feat/x-5
+R >/dev/null
+check "a good read clears the error" null "$(jq -c --arg k "$repo#5" '.entries[$k].error' "$led")"
 check "the other entry is still reconciled" running "$(stage 6)"
 fixture
 rm "$SA_FAKE/gh/"*issues_5

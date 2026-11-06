@@ -138,8 +138,31 @@ check "t3 was never asked about it" "" "$(calls | grep '^t3 thread show t-6 ')"
 fixture
 bash "$s/ledger.sh" --ledger "$led" add --repo $repo --number 9 --thread t-9 --worktree /wt/9 --branch feat/x-9 >/dev/null
 out=$(W --timeout 2 2>/dev/null); rc=$?
-check_rc "an entry nothing has observed yet exits 1" 1 "$rc"
+check_rc "one entry nothing has observed yet does not stop the others" 0 "$rc"
+check "the others are still watched" "$repo#5 $repo#6" "$(jq -r '.watching | join(" ")' <<<"$out")"
+check "and it is named, not dropped silently" "$repo#9" "$(jq -r '.unobserved | join(" ")' <<<"$out")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5
+check "a change in an observed entry still wakes it" "$repo#5 run-finished" "$(event "$(W --timeout 5)")"
+
+fixture
+rm "$led"
+bash "$s/ledger.sh" --ledger "$led" add --repo $repo --number 9 --thread t-9 --worktree /wt/9 --branch feat/x-9 >/dev/null
+out=$(W --timeout 2 2>/dev/null); rc=$?
+check_rc "a ledger where nothing is observed yet exits 1" 1 "$rc"
 check "and asks for a reconcile first" "$repo#9 has no observed state: run reconcile first" "$(jq -r .error <<<"$out")"
+
+# a fault reconcile already recorded does not wake a restarted watcher again
+fixture
+rm "$SA_FAKE/threads/t-5.json"
+check "a thread fault is reported once by the watcher" "$repo#5 thread-unreadable" "$(event "$(W --timeout 5)")"
+bash "$s/ledger.sh" --ledger "$led" set "$repo#5" error '"thread-unreadable"' >/dev/null
+out=$(W --timeout 3)
+check "and not again once reconcile recorded it" "null timeout" "$(event "$out")"
+sa_thread t-6 idle 1 0 /wt/6 feat/x-6
+check "while the entry after it is still polled" "$repo#6 run-finished" "$(event "$(W --timeout 5)")"
+bash "$s/ledger.sh" --ledger "$led" set "$repo#5" error '"pr-unreadable"' >/dev/null
+sa_thread t-6 running 1 0 /wt/6 feat/x-6
+check "a different fault than the recorded one is reported" "$repo#5 thread-unreadable" "$(event "$(W --timeout 5)")"
 
 fixture
 for n in 5 6; do bash "$s/ledger.sh" --ledger "$led" set "$repo#$n" stage '"closed"' >/dev/null; done

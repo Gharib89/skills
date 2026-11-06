@@ -12,6 +12,9 @@
 # A thread that answers with another id or worktree path than the entry holds
 # is `thread-mismatch`; a thread or PR it cannot read is `thread-unreadable` or
 # `pr-unreadable`: a watcher that went quiet on those would be a silent stall.
+# A failure `reconcile` already recorded on the entry (its `error`) is not
+# reported again, so a restarted watcher does not wake on the same fault. An
+# entry with no `observed` baseline is skipped and named in `unobserved`.
 # Settled and closed entries are not watched. Watch writes nothing, so an
 # unreconciled change is reported again by the next watch.
 #
@@ -19,8 +22,9 @@
 #         {status, run_count, pending, pr: {number, state}}; {key, thread,
 #         event, detail} for `thread-mismatch`, `thread-unreadable` and
 #         `pr-unreadable`; {key: null, thread: null, event: "timeout",
-#         watching} once --timeout passes, `watching` the keys it polled
-# exit: 0 a change or the timeout · 1 no open entry, or one `reconcile` has not
+#         watching, unobserved} once --timeout passes, `watching` the keys it
+#         polled and `unobserved` the open keys it skipped
+# exit: 0 a change or the timeout · 1 no open entry, or none `reconcile` has
 #       observed yet · 2 usage, or an unreadable ledger
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -43,8 +47,10 @@ case $timeout in *[!0-9]*) sa_tooling "$usage" ;; esac
 sa_read "$ledger"
 open=$(jq -c "$sa_jq_open"'[.entries[] | select(is_open)]' <<<"$doc")
 [ "$(jq length <<<"$open")" -gt 0 ] || sa_fail "no open entry in the ledger $ledger"
-unobserved=$(jq -r '[.[] | select(.observed == null) | .key] | first // empty' <<<"$open")
-[ -z "$unobserved" ] || sa_fail "$unobserved has no observed state: run reconcile first"
+unobserved=$(jq -c '[.[] | select(.observed == null) | .key]' <<<"$open")
+open=$(jq -c '[.[] | select(.observed != null)]' <<<"$open")
+[ "$(jq length <<<"$open")" -gt 0 ] \
+  || sa_fail "$(jq -r 'first' <<<"$unobserved") has no observed state: run reconcile first"
 
 # change_of <observed> <snapshot>: the change from the baseline to the snapshot,
 # the PR's end first since it outranks a run that finished with it.
@@ -68,6 +74,7 @@ while :; do
       jq -cn --arg k "$key" --arg t "$thread" --arg e "$event" --argjson o "$obs" \
         '{key: $k, thread: $t, event: $e, observed: $o}'
     else
+      [ "$(jq -r '.error // ""' <<<"$entry")" = "$obs_kind" ] && continue
       jq -cn --arg k "$key" --arg t "$thread" --arg e "$obs_kind" --argjson d "$obs_detail" \
         '{key: $k, thread: $t, event: $e, detail: $d}'
     fi
@@ -76,4 +83,5 @@ while :; do
   [ -n "$timeout" ] && [ $((SECONDS - start)) -ge "$timeout" ] && break
   sleep "$interval"
 done
-jq -cn --argjson o "$open" '{key: null, thread: null, event: "timeout", watching: [$o[].key]}'
+jq -cn --argjson o "$open" --argjson u "$unobserved" \
+  '{key: null, thread: null, event: "timeout", watching: [$o[].key], unobserved: $u}'
