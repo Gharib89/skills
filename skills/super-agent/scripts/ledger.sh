@@ -4,8 +4,8 @@
 # agent reads to know what it owns.
 #
 #   ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id>
-#          --worktree <path> --branch <name> [--machine <name>] [--model <id>]
-#          [--effort <level>] [--area <path>]...
+#          --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>]
+#          [--model <id>] [--effort <level>] [--area <path>]...
 #   ledger --ledger <file> get <key>
 #   ledger --ledger <file> list [--open]
 #   ledger --ledger <file> set <key> <field> <json>
@@ -21,7 +21,7 @@
 # 0, observed null: `reconcile` fills `observed`, the baseline `watch` compares
 # against, and `error`, the fault kind it last failed to read. `set` takes any
 # field but the entry's identity (key, repo, number); `stage` must be one of
-# launched, running, at-rest, settled, closed. `rethread` points a ticket's entry
+# launched, running, at-rest, merged, settled, closed. `rethread` points a ticket's entry
 # at a fresh thread and starts its tracking over (stage launched, stalls 0, no
 # observed state), so the key stays one entry. A write is a temp file beside the
 # ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
@@ -32,7 +32,9 @@
 # which placement reads to run two tickets of one repo side by side. A ticket
 # that could not be placed is `wait`ed: a row in `waiting` (no thread, no
 # stage, never watched) that the morning report lists, and that `add` or
-# `unwait` removes.
+# `unwait` removes. `--kind` is the owner skill the thread runs, `ship` (the
+# default) or `triage`: a `triage` entry has no PR, and `reconcile` settles it
+# when its run has completed and the issue no longer carries `needs-triage`.
 #
 # stdout: `add` {ledger, key, entry}; `get` the entry; `list` {ledger, entries,
 #         rulings}, `entries` an array of entries (`--open` leaves out settled
@@ -46,7 +48,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--machine <name>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--model <id>] [--effort <level>] | ruling <text> [--allow <call>]... | allowed | wait <key> --reason <text> | unwait <key>'
+usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--model <id>] [--effort <level>] | ruling <text> [--allow <call>]... | allowed | wait <key> --reason <text> | unwait <key>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -54,7 +56,7 @@ cmd=${1:-}; [ $# -gt 0 ] && shift
 
 case $cmd in
   add)
-    repo='' number='' thread='' worktree='' branch='' machine=local model='' effort='' areas='[]'
+    repo='' number='' thread='' worktree='' branch='' machine=local model='' effort='' areas='[]' kind=ship
     while [ $# -gt 0 ]; do
       case $1 in
         --area) sa_flag_value "$usage" "${2:-}"; areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas") ;;
@@ -64,6 +66,7 @@ case $cmd in
         --worktree) sa_flag_value "$usage" "${2:-}"; worktree=$2 ;;
         --branch) sa_flag_value "$usage" "${2:-}"; branch=$2 ;;
         --machine) sa_flag_value "$usage" "${2:-}"; machine=$2 ;;
+        --kind) sa_flag_value "$usage" "${2:-}"; case $2 in ship|triage) kind=$2 ;; *) sa_tooling "$usage" ;; esac ;;
         --model) sa_flag_value "$usage" "${2:-}"; model=$2 ;;
         --effort) sa_flag_value "$usage" "${2:-}"; effort=$2 ;;
         *) sa_tooling "$usage" ;;
@@ -78,8 +81,8 @@ case $cmd in
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "$number" --arg t "$thread" \
       --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg model "$model" \
-      --arg effort "$effort" --arg now "$now" --argjson areas "$areas" \
-      '{key: $k, repo: $repo, number: $n, thread: $t, worktree: $w, branch: $b, machine: $m, areas: $areas,
+      --arg effort "$effort" --arg now "$now" --argjson areas "$areas" --arg kind "$kind" \
+      '{key: $k, repo: $repo, number: $n, thread: $t, worktree: $w, branch: $b, machine: $m, areas: $areas, kind: $kind,
         model: (if $model == "" then null else $model end),
         effort: (if $effort == "" then null else $effort end),
         stage: "launched", stalls: 0, observed: null, launched_at: $now, updated_at: $now}')
@@ -102,7 +105,7 @@ case $cmd in
     value=$(jq -c . <<<"$3" 2>/dev/null) && [ -n "$value" ] || sa_tooling "the value is not JSON: $3"
     case $field in key|repo|number) sa_fail "$field is the entry's identity and cannot be set" ;; esac
     if [ "$field" = stage ]; then
-      jq -ne --argjson v "$value" '$v | IN("launched", "running", "at-rest", "settled", "closed")' >/dev/null \
+      jq -ne --argjson v "$value" '$v | IN("launched", "running", "at-rest", "merged", "settled", "closed")' >/dev/null \
         || sa_fail "stage must be one of $sa_stages"
     fi
     sa_read "$ledger"

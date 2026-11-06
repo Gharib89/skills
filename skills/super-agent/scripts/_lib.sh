@@ -27,9 +27,10 @@ sa_flag_value() { case $2 in -*|'') sa_tooling "$1" ;; esac; }
 command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 
 # The stages an entry moves through. `launched` is an entry nothing has observed
-# yet; `settled` and `closed` end it and are never watched again.
+# yet; `merged` is a PR merged whose thread is still running, watched until it
+# rests; `settled` and `closed` end an entry and are never watched again.
 # shellcheck disable=SC2034  # read by ledger.sh
-sa_stages='launched, running, at-rest, settled, closed'
+sa_stages='launched, running, at-rest, merged, settled, closed'
 
 # sa_read <ledger>: the ledger's JSON in $doc, an empty one for a file not yet
 # written. A file that is not JSON or has the wrong shape is refused by name,
@@ -99,8 +100,14 @@ sa_observe() {
   if [ "$found" != "$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')" ]; then
     obs_kind='thread-mismatch' obs_detail=$found; return 1
   fi
-  list=$(gh api "repos/$repo/pulls?head=${repo%%/*}:$(sa_uri "$branch")&state=all&sort=created&direction=desc&per_page=1" 2>/dev/null </dev/null) \
-    || list=''
+  # One failed read is known to happen on REST and to clear at once, so it is
+  # tried twice before the PR is called unreadable.
+  for _ in 1 2; do
+    list=$(gh api "repos/$repo/pulls?head=${repo%%/*}:$(sa_uri "$branch")&state=all&sort=created&direction=desc&per_page=1" 2>/dev/null </dev/null) \
+      || list=''
+    jq -e 'type == "array"' <<<"$list" >/dev/null 2>&1 && break
+    sleep 1
+  done
   if ! jq -e 'type == "array"' <<<"$list" >/dev/null 2>&1; then
     obs_kind='pr-unreadable' obs_detail=$(jq -cn --arg r "$repo" --arg b "$branch" '{repo: $r, branch: $b}'); return 1
   fi

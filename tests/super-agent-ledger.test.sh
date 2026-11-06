@@ -78,7 +78,7 @@ check "set answers the key, field and value" '{"key":"Gharib89/skills#6","field"
 check "the change is in the file" running "$(jq -r '.entries["Gharib89/skills#6"].stage' "$led")"
 out=$(L set Gharib89/skills#6 stage '"asleep"' 2>/dev/null); rc=$?
 check_rc "a stage outside the list exits 1" 1 "$rc"
-check "and names the list" "stage must be one of launched, running, at-rest, settled, closed" "$(jq -r .error <<<"$out")"
+check "and names the list" "stage must be one of launched, running, at-rest, merged, settled, closed" "$(jq -r .error <<<"$out")"
 check "the refused stage left the entry alone" running "$(jq -r '.entries["Gharib89/skills#6"].stage' "$led")"
 L set Gharib89/skills#5 stage '"settled"' >/dev/null
 check "list --open leaves settled entries out" "Gharib89/skills#6 Gharib89/skills#7" \

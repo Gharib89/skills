@@ -212,4 +212,43 @@ sa_thread t-5 idle 1 0 /wt/5 feat/x-5
 W --timeout 5 >/dev/null
 check "watch leaves the ledger as it found it" "$before" "$(cat "$led")"
 
+
+# --- a merged entry is watched until its thread rests --------------------------
+fixture
+bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stage '"merged"' >/dev/null
+bash "$s/ledger.sh" --ledger "$led" set "$repo#5" observed '{"status":"running","run_count":1,"pending":0,"pr":{"number":7,"state":"merged"}}' >/dev/null
+sa_pr $repo feat/x-5 merged
+out=$(W --timeout 2)
+check "a merged entry whose thread still runs wakes nothing" "null timeout" "$(event "$out")"
+check "and is still watched" "$repo#5 $repo#6" "$(jq -r '.watching | join(" ")' <<<"$out")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5
+check "its thread coming to rest is run-finished" "$repo#5 run-finished" "$(event "$(W --timeout 5)")"
+
+# --- an entry added while a watcher runs is watched ----------------------------
+fixture
+bash "$s/ledger.sh" --ledger "$led" set "$repo#6" stage '"settled"' >/dev/null
+cat > "$SA_FAKE/on-sleep" <<EOS
+bash "$s/ledger.sh" --ledger "$led" add --repo $repo --number 7 --thread t-7 --worktree /wt/7 --branch feat/x-7 >/dev/null
+bash "$s/ledger.sh" --ledger "$led" set "$repo#7" observed '$base' >/dev/null
+EOS
+sa_thread t-7 idle 1 0 /wt/7 feat/x-7
+sa_pr $repo feat/x-7 none
+check "an entry added and observed mid-watch is reported when its run finished" "$repo#7 run-finished" "$(event "$(W --timeout 6)")"
+
+# --- one watcher per ledger ----------------------------------------------------
+fixture
+W --timeout 6 >"$tmp/first.out" 2>&1 &
+first=$!
+for _ in 1 2 3 4 5 6 7 8 9 10; do [ -f "$led.watch" ] && break; /usr/bin/sleep 0.2; done
+out=$(W --timeout 1 2>/dev/null); rc=$?
+check_rc "a second start while one runs exits 1" 1 "$rc"
+check "and reports the one running, the pid the lock holds" "$(cat "$led.watch")" "$(jq -r .running <<<"$out")"
+kill "$first" 2>/dev/null; wait "$first" 2>/dev/null
+rm -f "$led.watch"
+fixture
+echo 999999 > "$led.watch"
+out=$(W --timeout 1); rc=$?
+check_rc "a pid file of a dead watcher is taken over" 0 "$rc"
+check "and the lock is released at exit" "no" "$([ -f "$led.watch" ] && echo yes || echo no)"
+
 finish

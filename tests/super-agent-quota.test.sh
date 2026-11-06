@@ -43,6 +43,10 @@ check "--help writes nothing on stderr" "" "$(cat "$tmp/err")"
 out=$(bash "$s/quota.sh" --bogus 2>/dev/null); rc=$?
 check "a bad flag answers the usage line" "$(sed -n 1p <<<"$(bash "$s/quota.sh" --help)")" "$(jq -r .error <<<"$out")"
 check_rc "a bad flag exits 2" 2 "$rc"
+mkdir -p "$tmp/cfg/super-agent"; printf '{"providers":{}}\n' > "$tmp/cfg/super-agent/fleet.json"
+out=$(XDG_CONFIG_HOME="$tmp/cfg" HOME="$tmp/cfg" bash "$s/quota.sh" 2>/dev/null); rc=$?
+check_rc "a bare call exits 2 even where the owner keeps a fleet file" 2 "$rc"
+check "and answers the usage line" "$(sed -n 1p <<<"$(bash "$s/quota.sh" --help)")" "$(jq -r .error <<<"$out")"
 out=$(bash "$s/quota.sh" --fleet "$tmp/none.json" 2>/dev/null); rc=$?
 check_rc "a missing fleet file exits 2" 2 "$rc"
 check "and names it" "$tmp/none.json: no such file, run setup" "$(jq -r .error <<<"$out")"

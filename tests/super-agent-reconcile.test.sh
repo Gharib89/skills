@@ -95,6 +95,7 @@ check "an issue closed with no PR marks its entry closed" closed "$(stage 6)"
 check "and says why" "$repo#6 issue-closed" "$(jq -r '.closed[] | "\(.key) \(.reason)"' <<<"$out")"
 fixture
 sa_pr $repo feat/x-5 merged
+sa_thread t-5 idle 2 0 /wt/5 feat/x-5
 sa_issue $repo 5 closed
 R >/dev/null
 check "a merged PR outranks the issue it closed" settled "$(stage 5)"
@@ -194,5 +195,55 @@ rm -f "$led"
 out=$(R); rc=$?
 check_rc "an empty ledger exits 0" 0 "$rc"
 check "and checks nothing" 0 "$(jq .checked <<<"$out")"
+
+
+# --- a merged PR settles only once its thread is at rest -----------------------
+fixture
+sa_pr $repo feat/x-5 merged
+out=$(R)
+check "a merged PR with its thread still running is merged, not settled" merged "$(stage 5)"
+check "so nothing is settled" "[]" "$(jq -c .settled <<<"$out")"
+check "and the entry stays open for the watcher" 1 "$(L list --open | jq '[.entries[] | select(.key == "'$repo'#5")] | length')"
+sa_thread t-5 idle 2 0 /wt/5 feat/x-5
+out=$(R)
+check "the thread at rest settles it" settled "$(stage 5)"
+check "naming it once" "$repo#5" "$(jq -r '.settled[].key' <<<"$out")"
+
+# --- a triage entry has no PR: it ends when the label is gone ------------------
+rm -f "$led"
+L add --repo $repo --number 9 --thread t-9 --worktree /wt/9 --branch triage/x-9 --kind triage >/dev/null
+check "the entry records its kind" triage "$(L get $repo#9 | jq -r .kind)"
+check "an entry added without one is ship" ship "$(L add --repo $repo --number 10 --thread t-10 --worktree /wt/10 --branch b-10 | jq -r .entry.kind)"
+sa_pr $repo triage/x-9 none
+sa_thread t-9 running 1 0 /wt/9 triage/x-9
+sa_issue $repo 9 open needs-triage
+R >/dev/null
+sa_thread t-9 idle 1 0 /wt/9 triage/x-9
+out=$(R)
+check "a run done with the issue still needs-triage is no end" at-rest "$(stage 9)"
+sa_issue $repo 9 open ready-for-agent
+out=$(R)
+check "a run done and the label gone settles it, with no PR" settled "$(stage 9)"
+check "the summary says it was a triage entry" "$repo#9 triage" "$(jq -r '.settled[] | "\(.key) \(.kind)"' <<<"$out")"
+rm -f "$led"
+L add --repo $repo --number 9 --thread t-9 --worktree /wt/9 --branch triage/x-9 --kind triage >/dev/null
+sa_thread t-9 running 1 0 /wt/9 triage/x-9
+sa_issue $repo 9 open ready-for-agent
+R >/dev/null
+check "a triage run still running is not settled by the label alone" running "$(stage 9)"
+out=$(L add --repo $repo --number 11 --thread t-11 --worktree /wt/11 --branch b-11 --kind other 2>/dev/null); rc=$?
+check_rc "a kind outside ship and triage is a usage error" 2 "$rc"
+
+# --- one failed PR read is retried ---------------------------------------------
+fixture
+sa_gh_fail "/pulls" 1
+out=$(R)
+check "one failed PR read then success reads the PR" "[]" "$(jq -c .errors <<<"$out")"
+check "and the entry is observed" running "$(stage 5)"
+fixture
+sa_gh_fail "/pulls" 2
+out=$(R)
+check "two failed reads report the PR unreadable" "$repo#5 pr-unreadable" "$(jq -r '.errors[0] | "\(.key) \(.kind)"' <<<"$out")"
+rm -f "$SA_FAKE/gh-fail"
 
 finish

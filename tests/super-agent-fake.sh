@@ -70,6 +70,15 @@ while [ $# -gt 0 ]; do
     *) [ -n "$ep" ] || ep=$1; shift ;;
   esac
 done
+# `gh-fail` (sa_gh_fail) holds `<substring> <n>`: the next n calls whose endpoint
+# holds the substring fail with a 502, then answer as normal.
+if [ -f "$SA_FAKE/gh-fail" ]; then
+  read -r pat n < "$SA_FAKE/gh-fail"
+  case $ep in *"$pat"*) if [ "${n:-0}" -gt 0 ]; then
+    echo "$pat $((n - 1))" > "$SA_FAKE/gh-fail"
+    printf '%s' '{"message":"Bad Gateway","status":"502"}'; echo "gh: Bad Gateway (HTTP 502)" >&2; exit 1
+  fi ;; esac
+fi
 route() { printf '%s' "$1" | sed 's/[^A-Za-z0-9._-]/_/g'; }
 f="$SA_FAKE/gh/$(route "$ep")"
 case $method in
@@ -202,6 +211,10 @@ sa_pr() {
   sa_route "repos/$repo/pulls?head=${repo%%/*}:$(jq -rn --arg s "$branch" '$s | @uri')&state=all&sort=created&direction=desc&per_page=1" "$body"
 }
 
-sa_issue() { # <owner/name> <number> <open|closed>
-  sa_route "repos/$1/issues/$2" "{\"number\":$2,\"state\":\"$3\"}"
+sa_issue() { # <owner/name> <number> <open|closed> [<label>...]
+  local r=$1 n=$2 st=$3; shift 3
+  sa_route "repos/$r/issues/$n" "$(jq -cn --argjson n "$n" --arg s "$st" '{number: $n, state: $s, labels: ($ARGS.positional | map({name: .}))}' --args "$@")"
 }
+
+# sa_gh_fail <endpoint substring> <n>: the next n `gh api` calls on it fail
+sa_gh_fail() { printf '%s %s\n' "$1" "$2" > "$SA_FAKE/gh-fail"; }
