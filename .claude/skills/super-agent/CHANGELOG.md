@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.4.0 (2026-11-06)
+
+### Features
+
+- **super-agent**: Quota-aware routing and agy jobs
+  ([#1091](https://github.com/Gharib89/skills/pull/1091),
+  [`ff45ef2`](https://github.com/Gharib89/skills/commit/ff45ef2f1345700378fb145358ed701cd44e6522))
+
+
 ## v0.3.0 (2026-11-06)
 
 ### Features
