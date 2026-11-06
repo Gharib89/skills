@@ -120,6 +120,10 @@ fixture
 check "a thread whose read exits nonzero is thread-unreadable, whatever it printed" "$repo#5 thread-unreadable" \
   "$(event "$(SA_T3_RC=1 W --timeout 5)")"
 fixture
+jq -c 'del(.thread.runCount)' "$SA_FAKE/threads/t-5.json" > "$tmp/x" && mv "$tmp/x" "$SA_FAKE/threads/t-5.json"
+check "a thread answer without its run count is thread-unreadable, not a quiet null" "$repo#5 thread-unreadable" \
+  "$(event "$(W --timeout 5)")"
+fixture
 rm "$SA_FAKE/gh/"*x-5*
 check "a PR list GitHub will not answer is pr-unreadable" "$repo#5 pr-unreadable" "$(event "$(W --timeout 5)")"
 

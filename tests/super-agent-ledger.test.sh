@@ -67,6 +67,11 @@ check "the refused stage left the entry alone" running "$(jq -r '.entries["Ghari
 L set Gharib89/skills#5 stage '"settled"' >/dev/null
 check "list --open leaves settled entries out" "Gharib89/skills#6 Gharib89/skills#7" \
   "$(L list --open | jq -r '[.entries[].key] | join(" ")')"
+L set Gharib89/skills#6 model null >/dev/null; rc=$?
+check_rc "a JSON null is a value set accepts" 0 "$rc"
+check "and it is stored" null "$(jq -c '.entries["Gharib89/skills#6"].model' "$led")"
+L set Gharib89/skills#6 model false >/dev/null; rc=$?
+check_rc "so is false" 0 "$rc"
 out=$(L set Gharib89/skills#6 stalls 'not json' 2>/dev/null); rc=$?
 check_rc "a value that is not JSON exits 2" 2 "$rc"
 out=$(L set Gharib89/skills#6 repo '"x/y"' 2>/dev/null); rc=$?

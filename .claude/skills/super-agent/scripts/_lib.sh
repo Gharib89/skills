@@ -82,7 +82,9 @@ sa_observe() {
   obs_detail=$(jq -cn --arg t "$thread" '{thread: $t}')
   raw=$(t3 thread show "$thread" --json --messages 0 2>/dev/null </dev/null) || { obs_kind='thread-unreadable'; return 1; }
   line=$(grep '^{"' <<<"$raw" | tail -1)
-  if ! jq -e '.thread.threadId' <<<"$line" >/dev/null 2>&1; then obs_kind='thread-unreadable'; return 1; fi
+  if ! jq -e '.thread | (.threadId | type) == "string" and (.status | type) == "string"
+      and (.runCount | type) == "number" and (.pendingRequestCount | type) == "number"' \
+      <<<"$line" >/dev/null 2>&1; then obs_kind='thread-unreadable'; return 1; fi
   found=$(jq -c '{thread: .thread.threadId, worktree: .thread.worktreePath}' <<<"$line")
   if [ "$found" != "$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')" ]; then
     obs_kind='thread-mismatch' obs_detail=$found; return 1

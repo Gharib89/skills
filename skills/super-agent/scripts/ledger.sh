@@ -81,7 +81,7 @@ case $cmd in
   set)
     [ $# -eq 3 ] || sa_tooling "$usage"
     key=$1 field=$2
-    value=$(jq -ce . <<<"$3" 2>/dev/null) || sa_tooling "the value is not JSON: $3"
+    value=$(jq -c . <<<"$3" 2>/dev/null) && [ -n "$value" ] || sa_tooling "the value is not JSON: $3"
     case $field in key|repo|number) sa_fail "$field is the entry's identity and cannot be set" ;; esac
     if [ "$field" = stage ]; then
       jq -ne --argjson v "$value" '$v | IN("launched", "running", "at-rest", "settled", "closed")' >/dev/null \
