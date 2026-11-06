@@ -4,10 +4,10 @@
 # spent: Claude's `/usage` print, Codex's app-server `account/rateLimits/read`
 # and agy's `/usage` JSON are all free reads.
 #
-#   quota [--fleet <file>]
+#   quota --fleet <file>
 #
-# --fleet defaults to `super-agent/fleet.json` under $XDG_CONFIG_HOME
-# (`~/.config` when unset). A provider is read by its `driver` (its key when
+# --fleet is required, as every script's file is, so a bare call reads nothing
+# off the machine's own config. A provider is read by its `driver` (its key when
 # unset) through its `quota_command`, run once under a 30 s limit. A read that
 # fails, prints nothing readable or has no command is `unknown` with a reason,
 # never an error: the router falls back to the default tier without asking.
@@ -24,15 +24,16 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: quota [--fleet <file>]'
+usage='usage: quota --fleet <file>'
 sa_help "$usage" "$@"
-fleet_file="${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json"
+fleet_file=''
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet_file=$2; shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
 done
+[ -n "$fleet_file" ] || sa_tooling "$usage"
 [ -f "$fleet_file" ] || sa_tooling "$fleet_file: no such file, run setup"
 jq -e . "$fleet_file" >/dev/null 2>&1 || sa_tooling "$fleet_file: not JSON"
 jq -e '((.providers // {}) | type) == "object"' "$fleet_file" >/dev/null || sa_tooling "$fleet_file: providers must be an object"
