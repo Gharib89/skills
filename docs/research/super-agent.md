@@ -189,7 +189,7 @@ mode. A "wake" means a new turn starts in the supervisor after its turn ended.
 | Mechanism | Wakes the supervisor? | Notes |
 |---|---|---|
 | `delegate_task` child finishes | **Yes**, with the child's summary | P1 woke twice: first a premature "completed" (the child had moved its command to the background), then the real output from its continuation run. |
-| `t3_thread_launch` thread finishes, even with `delegatedFrom` set | **No** | P3 got `parentThreadId: null` despite `delegatedFrom`. Matches the crm batch's lost 30 minutes. |
+| `t3_thread_launch` thread finishes, even with `delegatedFrom` set | **No** | P3 got `parentThreadId: null` despite `delegatedFrom`. Matches a supervised batch that lost 30 minutes this way. |
 | Background Bash exits | **Yes**, about 5 s after exit | P5: exited 05:34:43, woke 05:34:48. Bash `run_in_background` allows up to 2 h. |
 | `schedule_task` once or interval, bound to this thread | **Yes**, as a user-role message | P4 fired on time. Interval minimum is 60 s. |
 | A child's permission prompt | **No** | A1, A3: the hold shows only in `task_status.pendingApproval`; the owner saw it in the UI. |
@@ -204,7 +204,7 @@ Other measured facts:
 - A run's `completed` status does not mean the work is done. P3's run reported
   `completed` after 8 s while its real command still ran in the background, then
   a second run delivered the output. A foreground `sleep` is blocked by the
-  harness in workers too. This is the crm batch's stall class.
+  harness in workers too. This is the stall class a supervised batch hit.
 - `t3 thread show <id> --json` (the `t3` CLI) prints a thread's status,
   `runCount`, `latestRunId`, `pendingRequestCount`, `pullRequests`, `settled`
   and `worktreePath`. 5 runs: median 0.92 s, range 0.90 to 1.92 s. The CLI
@@ -303,7 +303,7 @@ Each traces to a section above; the design proposal decides among them.
    finished worker against the issue's acceptance criteria and sends a fix back
    to the same thread (sections 1, 2).
 5. **One ticket, one thread, one worktree**, model picked at launch and recorded
-   (DeepSeek role models; owner's crm practice).
+   (DeepSeek role models; the owner's practice in a supervised batch).
 6. **Use agy's separate quota for text work and second reviews** through the
    CLI with session allow rules; a T3 agy child needs a full-access supervisor
    (section 6).
