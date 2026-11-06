@@ -4,7 +4,7 @@ description: >-
   Launch a T3 thread for a ticket the owner names, record it in a ledger, and
   wake on its changes through a background watcher until its PR merges. Use
   when running as the owner's pinned super agent thread in T3 Code, or when
-  the owner names a ticket for it to take or asks for `/super-agent setup`.
+  the owner names a ticket for it to take.
 metadata:
   version: 0.1.0
 ---

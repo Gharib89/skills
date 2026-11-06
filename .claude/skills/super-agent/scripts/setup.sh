@@ -70,13 +70,22 @@ cores=$(nproc 2>/dev/null) || sa_tooling "nproc failed: cannot size this machine
 ram_mb=$(free -m 2>/dev/null | awk '/^Mem:/ { print $2 }')
 [ -n "$ram_mb" ] || sa_tooling "free -m failed: cannot size this machine"
 ram_gb=$(( (ram_mb + 512) / 1024 ))
-gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | sed -n 1p) || gpu=''
+# A missing tool is no GPU, but a tool that is there and fails is unknown, so
+# the file keeps what it holds: a failed read is never a verdict.
+gpu_fact='{"gpu":null}'
+if command -v nvidia-smi >/dev/null; then
+  if gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null </dev/null | sed -n 1p) && [ -n "$gpu" ]; then
+    gpu_fact=$(jq -cn --arg g "$gpu" '{gpu: $g}')
+  else
+    gpu_fact='{}'; warn "nvidia-smi failed: gpu left as the file has it"
+  fi
+fi
 slots=$(( cores / 2 < ram_gb / floor_gb ? cores / 2 : ram_gb / floor_gb ))
 [ "$slots" -ge 1 ] || slots=1
-facts=$(jq -cn --arg n "$name" --argjson c "$cores" --argjson r "$ram_gb" --arg g "$gpu" \
-  '{machines: {($n): {local: true, probed: true, cores: $c, ram_gb: $r, gpu: (if $g == "" then null else $g end)}}}')
+facts=$(jq -cn --arg n "$name" --argjson c "$cores" --argjson r "$ram_gb" --argjson g "$gpu_fact" \
+  '{machines: {($n): ({probed: true, cores: $c, ram_gb: $r} + $g)}}')
 proposed=$(jq -cn --arg n "$name" --argjson c "$cores" --argjson s "$slots" --argjson f "$floor_gb" \
-  '{machines: {($n): {slots: $s, max_load: $c}}, thread_ram_floor_gb: $f, active_repos: [],
+  '{machines: {($n): {slots: $s, max_load: $c, gpu: null}}, thread_ram_floor_gb: $f, active_repos: [],
     waivers: [
       {id: "codex-usage-limit", condition: "Codex answers a review request with a usage-limit notice: drive the fallback reviewer and record Codex as not landed; do not hold the merge gate for it."},
       {id: "offline-live-e2e", condition: "A live end-to-end proof needs a real T3 server or other machines: prove it through the scripts over fake CLIs and say so in the PR body."},
@@ -86,9 +95,8 @@ proposed=$(jq -cn --arg n "$name" --argjson c "$cores" --argjson s "$slots" --ar
 # are probed from their own `setup` run, so only their reachability is a fact.
 if raw=$(t3 environment list --json 2>/dev/null </dev/null) \
     && envs=$(grep '^\[' <<<"$raw" | tail -1) && jq -e 'type == "array"' <<<"$envs" >/dev/null 2>&1; then
-  facts=$(jq -c --argjson e "$envs" '.machines += ([$e[] | {key: .label, value: {local: false, probed: false,
-    environment_id: .environmentId, reachable: (.status == "reachable")}}] | from_entries)' <<<"$facts")
-  proposed=$(jq -c --argjson e "$envs" '.machines += ([$e[] | {key: .label, value: {slots: 1}}] | from_entries)' <<<"$proposed")
+  facts=$(jq -c --argjson e "$envs" '.machines += ([$e[] | {key: .label, value: {environment_id: .environmentId, reachable: (.status == "reachable")}}] | from_entries)' <<<"$facts")
+  proposed=$(jq -c --argjson e "$envs" '.machines += ([$e[] | {key: .label, value: {probed: false, slots: 1}}] | from_entries)' <<<"$proposed")
 else
   warn "t3 environment list failed: no linked machines recorded"
 fi

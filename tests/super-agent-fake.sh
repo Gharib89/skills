@@ -21,7 +21,7 @@
 # warning then `environments.json` (no file: exit 1); `gh auth status --json
 # hosts` answers `gh-auth.json`, the real shape (measured 2026-11-06); `nproc`,
 # `free -m`, `nvidia-smi` and `hostname` answer from `probe/` (sa_machine sets
-# them; no GPU line is no GPU, exit 9); `claude`, `codex` and `agy` answer from
+# them; no GPU line is no tool, sa_gpu_failing a tool that fails); `claude`, `codex` and `agy` answer from
 # `provider/<name>.out` and `.rc` (sa_provider; no .rc is exit 0), and a
 # provider named in SA_FAKE_ABSENT at install time is not installed.
 
@@ -67,11 +67,7 @@ FAKE
 #!/usr/bin/env bash
 printf '              total        used        free      shared  buff/cache   available\nMem:       %s       10410        5292        2471       18557       21004\nSwap:        8191           0        8191\n' "$(cat "$SA_FAKE/probe/ram_mb")"
 FAKE
-  cat > "$1/nvidia-smi" <<'FAKE'
-#!/usr/bin/env bash
-[ -f "$SA_FAKE/probe/gpu" ] || { echo "NVIDIA-SMI has failed" >&2; exit 9; }
-cat "$SA_FAKE/probe/gpu"
-FAKE
+  SA_BIN=$1
   cat > "$1/hostname" <<'FAKE'
 #!/usr/bin/env bash
 cat "$SA_FAKE/probe/hostname"
@@ -87,15 +83,23 @@ exit "$(cat "$SA_FAKE/provider/$n.rc" 2>/dev/null || echo 0)"
 FAKE
     chmod +x "$1/$p"
   done
-  chmod +x "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/nvidia-smi" "$1/hostname"
+  chmod +x "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/hostname"
   mkdir -p "$SA_FAKE/threads" "$SA_FAKE/gh" "$SA_FAKE/probe" "$SA_FAKE/provider"
 }
 
-# sa_machine <hostname> <cores> <ram_mb> [<gpu line>]: what the machine probes read
+# sa_machine <hostname> <cores> <ram_mb> [<gpu line>]: what the machine probes
+# read. No GPU line removes `nvidia-smi`, a machine without the tool.
 sa_machine() {
   printf '%s\n' "$1" > "$SA_FAKE/probe/hostname"; printf '%s\n' "$2" > "$SA_FAKE/probe/cores"
-  printf '%s\n' "$3" > "$SA_FAKE/probe/ram_mb"; rm -f "$SA_FAKE/probe/gpu"
-  [ -z "${4:-}" ] || printf '%s\n' "$4" > "$SA_FAKE/probe/gpu"
+  printf '%s\n' "$3" > "$SA_FAKE/probe/ram_mb"; rm -f "$SA_BIN/nvidia-smi"
+  [ -z "${4:-}" ] || printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\n' "$4" > "$SA_BIN/nvidia-smi"
+  [ -z "${4:-}" ] || chmod +x "$SA_BIN/nvidia-smi"
+}
+
+# sa_gpu_failing: a machine whose `nvidia-smi` is there and fails, as after a driver mismatch
+sa_gpu_failing() {
+  printf '#!/usr/bin/env bash\necho "NVIDIA-SMI has failed" >&2\nexit 9\n' > "$SA_BIN/nvidia-smi"
+  chmod +x "$SA_BIN/nvidia-smi"
 }
 
 # sa_provider <claude|codex|agy> <exit code> <stdout>: what its quota command prints

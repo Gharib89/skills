@@ -12,10 +12,13 @@ source tests/super-agent-fake.sh
 s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/bin" "$tmp/fake"
-# Hermetic: the real claude, codex and agy sit outside /usr/bin, so a provider
-# whose fake is removed is truly not installed.
-export PATH="$tmp/bin:/usr/bin:/bin" SA_FAKE=$tmp/fake
+mkdir -p "$tmp/bin" "$tmp/tools" "$tmp/fake"
+# Hermetic: only the tools the script itself needs are linked in, so the real
+# nvidia-smi, claude, codex and agy cannot answer for a fake that is removed.
+for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut find wc diff chmod; do
+  ln -s "$(command -v $t)" "$tmp/tools/$t" || exit 2
+done
+export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake
 sa_fake_install "$tmp/bin"
 fleet=$tmp/config/fleet.json
 S() { bash "$s/setup.sh" --fleet "$fleet" "$@"; }
@@ -53,14 +56,14 @@ check "it says it wrote nothing" false "$(jq .written <<<"$out")"
 check "and left no file" absent "$([ -e "$fleet" ] && echo present || echo absent)"
 f=$(jq -c .fleet <<<"$out")
 check "this machine is probed: cores, RAM in GB, GPU" \
-  '{"cores":12,"ram_gb":32,"gpu":"NVIDIA GeForce RTX 2070 Super with Max-Q Design","local":true,"probed":true}' \
-  "$(jq -c '.machines.laptop | {cores, ram_gb, gpu, local, probed}' <<<"$f")"
+  '{"cores":12,"ram_gb":32,"gpu":"NVIDIA GeForce RTX 2070 Super with Max-Q Design","probed":true}' \
+  "$(jq -c '.machines.laptop | {cores, ram_gb, gpu, probed}' <<<"$f")"
 check "slots are the lesser of half the cores and RAM over the thread floor" 6 "$(jq '.machines.laptop.slots' <<<"$f")"
 check "the load threshold is the core count" 12 "$(jq '.machines.laptop.max_load' <<<"$f")"
 check "the per-thread RAM floor is proposed at 4 GB" 4 "$(jq .thread_ram_floor_gb <<<"$f")"
 check "linked environments become machines, each with its reachability" \
   '[{"k":"box","id":"env-box","r":true,"p":false},{"k":"down","id":"env-down","r":false,"p":false}]' \
-  "$(jq -c '[.machines | to_entries | sort_by(.key)[] | select(.value.local == false) | {k: .key, id: .value.environment_id, r: .value.reachable, p: .value.probed}]' <<<"$f")"
+  "$(jq -c '[.machines | to_entries | sort_by(.key)[] | select(.value.environment_id != null) | {k: .key, id: .value.environment_id, r: .value.reachable, p: .value.probed}]' <<<"$f")"
 check "an unprobed machine is proposed one slot" 1 "$(jq '.machines.box.slots' <<<"$f")"
 check "GitHub accounts, the active one marked" \
   '[{"login":"alice","active":true},{"login":"bob","active":false}]' "$(jq -c .github_accounts <<<"$f")"
@@ -149,6 +152,31 @@ check "and a key setup never wrote" mine "$(jq -r .note <<<"$g")"
 check "a machine no longer linked is kept, not dropped" present \
   "$(jq -r 'if .machines.down then "present" else "absent" end' <<<"$g")"
 check "a second run changes nothing" "$g" "$(S --name laptop --write >/dev/null; jq -c . "$fleet")"
+
+# --- a failed GPU read is not a verdict --------------------------------------------
+reset
+S --name laptop --write >/dev/null
+sa_machine laptop 12 32768
+sa_gpu_failing
+out=$(P --name laptop); rc=$?
+check_rc "an nvidia-smi that fails still exits 0" 0 "$rc"
+check "the GPU the file already holds is kept" "NVIDIA GeForce RTX 2070 Super with Max-Q Design" "$(jq -r .fleet.machines.laptop.gpu <<<"$out")"
+check "and the failure is a warning" "nvidia-smi failed: gpu left as the file has it" "$(jq -r '.warnings[0]' <<<"$out")"
+sa_machine laptop 12 32768
+check "a machine without the tool is no GPU, even where the file held one" null "$(P --name laptop | jq .fleet.machines.laptop.gpu)"
+
+# --- a file shared between machines keeps what another machine's run measured ------
+reset
+cat > "$fleet" <<'JSON'
+{"machines": {"box": {"environment_id": "env-box", "probed": true, "cores": 4, "ram_gb": 8, "slots": 2, "max_load": 4}}}
+JSON
+out=$(S --name laptop --write); rc=$?
+check_rc "a run on another machine exits 0" 0 "$rc"
+check "the machine another run sized stays probed, with its cores and slots" \
+  '{"probed":true,"cores":4,"slots":2}' "$(jq -c '.fleet.machines.box | {probed, cores, slots}' <<<"$out")"
+check "its reachability is refreshed" true "$(jq .fleet.machines.box.reachable <<<"$out")"
+check "only one machine is this one's own, the file holds no local flag" 0 \
+  "$(jq '[.fleet.machines[] | select(has("local"))] | length' <<<"$out")"
 
 # --- an unreadable fleet file is refused, not overwritten --------------------------
 printf 'not json\n' > "$fleet"
