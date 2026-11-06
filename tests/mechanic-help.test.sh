@@ -47,6 +47,7 @@ help_case preflight      'usage: preflight <issue|none> [--unattended] | preflig
 help_case prepare        'usage: prepare [--unattended]'
 help_case read-issue     'usage: read-issue <issue>'
 help_case read-pr        'usage: read-pr <pr>'
+help_case protections    'usage: protections <pr>'
 help_case reflect        'usage: reflect <issue> <pr>'
 help_case revert-red     'usage: revert-red <test> <path>... [--fix <commit>] [-- <command>...]'
 help_case reply-thread   'usage: reply-thread <pr> <thread-id> --body-file <path>'
