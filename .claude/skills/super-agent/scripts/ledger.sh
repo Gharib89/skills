@@ -19,9 +19,10 @@
 #
 # A key is `<owner/name>#<number>`. `--ledger` comes first and names the file,
 # which a first `add` creates. `add` starts an entry at stage `launched`, stalls
-# 0, observed null, and replaces an entry whose stage is `settled` or `closed`
-# (a triaged ticket that now ships), refusing any other: `reconcile` fills `observed`, the baseline `watch` compares
-# against, and `error`, the fault kind it last failed to read. `set` takes any
+# 0, observed null: `reconcile` fills `observed`, the baseline `watch` compares
+# against, and `error`, the fault kind it last failed to read. `add` over an
+# entry whose stage is `settled` or `closed` (a triaged ticket that now ships)
+# replaces it; over any other entry it refuses. `set` takes any
 # field but the entry's identity (key, repo, number); `stage` must be one of
 # launched, running, at-rest, merged, settled, closed. `rethread` points a
 # ticket's entry at a fresh thread and starts its tracking over (stage
