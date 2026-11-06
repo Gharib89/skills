@@ -10,9 +10,10 @@
 # its thread is at rest and `merged` while the thread still runs (post-merge
 # cleanup), a PR closed unmerged or a closed issue is `closed`, a running thread
 # is `running`, a thread at rest with the ticket undone is `at-rest`. A
-# `--kind triage` entry has no PR: it is `settled` when its thread is at rest
-# and the issue no longer carries `needs-triage`. Settling the thread in T3 is
-# the super agent's act, on each entry `settled` names, and it never archives. It keeps each entry's stall count: +1 for a stall (a run that
+# `--kind triage` entry has no PR: it is `settled` when its thread has run and
+# is at rest and the issue no longer carries `needs-triage`. Settling the
+# thread in T3 is the super agent's act, on each entry `settled` names, and it
+# never archives. It keeps each entry's stall count: +1 for a stall (a run that
 # completed with no merged PR and no merge-gate summary, counted once per run,
 # or a thread at rest `--stall-window` seconds, default 900, with no new run,
 # counted again each window, neither once an entry is at 3, which is
@@ -75,6 +76,7 @@ while IFS= read -r entry; do
       if [ "$(jq -r .state <<<"$issue")" = closed ]; then stage=closed reason=issue-closed
       elif [ "$(jq -r .status <<<"$obs")" = running ]; then stage=running
       elif [ "$(jq -r '.kind // "ship"' <<<"$entry")" = triage ] \
+          && [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] \
           && ! jq -e '[.labels[]?.name] | index("needs-triage")' <<<"$issue" >/dev/null; then stage=settled
       else stage=at-rest; fi ;;
   esac

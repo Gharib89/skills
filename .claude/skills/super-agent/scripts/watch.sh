@@ -41,8 +41,8 @@
 #         polled and `unobserved` the open keys it skipped
 #         a watcher already running is {error, running: <pid>}
 # exit: 0 a change or the timeout · 1 no open entry, none `reconcile` has
-#       observed yet, or a watcher already running · 2 usage, or an unreadable
-#       ledger
+#       observed yet, or a watcher already running · 2 usage, an unreadable
+#       ledger, or a lock it cannot take
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -64,19 +64,25 @@ case $timeout in *[!0-9]*) sa_tooling "$usage" ;; esac
 case $recheck in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
 [ -n "$ledger" ] || sa_tooling "$usage"
 
-# One watcher per ledger. The pid file is made atomically (noclobber); a pid that
-# is gone is a dead watcher's, taken over once.
+# One watcher per ledger. The pid is written to a temp file and linked to the
+# lock, which is atomic and never leaves an empty lock for a second start to
+# misread; a lock whose pid is gone is a dead watcher's, taken over once. A lock
+# that reads empty is kept, since an unknown answer is no proof of a dead one.
 lock="$ledger.watch"
+mine=$(mktemp "$lock.XXXXXX") || sa_tooling "cannot take $lock"
+printf '%s\n' "$$" > "$mine"
 for try in 1 2; do
-  if ( set -o noclobber; printf '%s\n' "$$" > "$lock" ) 2>/dev/null; then break; fi
+  if ln "$mine" "$lock" 2>/dev/null; then break; fi
   pid=$(cat "$lock" 2>/dev/null)
-  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-    jq -cn --argjson p "$pid" '{error: "a watcher already runs on this ledger", running: $p}'
-    printf 'a watcher already runs on this ledger (pid %s)\n' "$pid" >&2; exit 1
+  if [ -z "$pid" ] || kill -0 "$pid" 2>/dev/null; then
+    rm -f "$mine"
+    jq -cn --arg p "$pid" '{error: "a watcher already runs on this ledger", running: (if $p == "" then null else ($p | tonumber) end)}'
+    printf 'a watcher already runs on this ledger (pid %s)\n' "${pid:-unknown}" >&2; exit 1
   fi
   rm -f "$lock"
-  [ "$try" -lt 2 ] || sa_tooling "cannot take $lock"
+  [ "$try" -lt 2 ] || { rm -f "$mine"; sa_tooling "cannot take $lock"; }
 done
+rm -f "$mine"
 trap '[ "$(cat "$lock" 2>/dev/null)" = "$$" ] && rm -f "$lock"' EXIT
 
 # load: the ledger's open, observed entries in $open and the open ones not yet

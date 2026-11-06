@@ -100,8 +100,8 @@ sa_observe() {
   if [ "$found" != "$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')" ]; then
     obs_kind='thread-mismatch' obs_detail=$found; return 1
   fi
-  # One failed read is known to happen on REST and to clear at once, so it is
-  # tried twice before the PR is called unreadable.
+  # A one-off failed read, with the next one fine, was measured on 2026-11-06,
+  # so the read is tried twice before the PR is called unreadable.
   for _ in 1 2; do
     list=$(gh api "repos/$repo/pulls?head=${repo%%/*}:$(sa_uri "$branch")&state=all&sort=created&direction=desc&per_page=1" 2>/dev/null </dev/null) \
       || list=''

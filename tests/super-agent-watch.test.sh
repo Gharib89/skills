@@ -239,11 +239,16 @@ check "an entry added and observed mid-watch is reported when its run finished" 
 fixture
 W --timeout 6 >"$tmp/first.out" 2>&1 &
 first=$!
-for _ in 1 2 3 4 5 6 7 8 9 10; do [ -f "$led.watch" ] && break; /usr/bin/sleep 0.2; done
+for _ in 1 2 3 4 5 6 7 8 9 10; do [ -f "$led.watch" ] && break; /usr/bin/sleep 0.2; done  # the real sleep, past the fake on PATH
 out=$(W --timeout 1 2>/dev/null); rc=$?
 check_rc "a second start while one runs exits 1" 1 "$rc"
 check "and reports the one running, the pid the lock holds" "$(cat "$led.watch")" "$(jq -r .running <<<"$out")"
 kill "$first" 2>/dev/null; wait "$first" 2>/dev/null
+rm -f "$led.watch"
+: > "$led.watch"
+fixture
+out=$(W --timeout 1 2>/dev/null); rc=$?
+check_rc "a lock that reads empty is kept, not taken over" 1 "$rc"
 rm -f "$led.watch"
 fixture
 echo 999999 > "$led.watch"

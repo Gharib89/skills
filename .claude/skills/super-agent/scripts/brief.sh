@@ -28,7 +28,6 @@ done
 [ -n "$fleet" ] && [ -n "$ledger" ] || sa_tooling "$usage"
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file, run setup"
 jq -e '((.waivers // []) | type) == "array"' "$fleet" >/dev/null 2>&1 || sa_tooling "$fleet: not a fleet file (waivers must be an array)"
-sa_read "$ledger"
 allowed=$(bash "$(dirname "${BASH_SOURCE[0]}")/ledger.sh" --ledger "$ledger" allowed) || sa_tooling "cannot read the allowed calls from $ledger"
 
 jq -cn --slurpfile f "$fleet" --argjson a "$allowed" '

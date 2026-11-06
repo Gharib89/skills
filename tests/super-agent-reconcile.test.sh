@@ -215,6 +215,10 @@ L add --repo $repo --number 9 --thread t-9 --worktree /wt/9 --branch triage/x-9 
 check "the entry records its kind" triage "$(L get $repo#9 | jq -r .kind)"
 check "an entry added without one is ship" ship "$(L add --repo $repo --number 10 --thread t-10 --worktree /wt/10 --branch b-10 | jq -r .entry.kind)"
 sa_pr $repo triage/x-9 none
+sa_thread t-9 idle 0 0 /wt/9 triage/x-9
+sa_issue $repo 9 open ready-for-agent
+R >/dev/null
+check "a triage thread that has not run yet is not settled by an absent label" at-rest "$(stage 9)"
 sa_thread t-9 running 1 0 /wt/9 triage/x-9
 sa_issue $repo 9 open needs-triage
 R >/dev/null
