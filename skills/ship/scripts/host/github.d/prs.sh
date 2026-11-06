@@ -254,11 +254,11 @@ host_branch_protections() { # <branch>
     | ($cls == "unknown" or $rules == "unknown") as $blind
     | {branch: $b, protected: $p,
        required_checks: (if $p == "no" then [] elif $blind then "unknown" else
-         [($cls | objects | .required_status_checks.checks[]?.context),
+         [($cls | objects | .required_status_checks | (.checks[]?.context, .contexts[]?)),
           ($rr[] | select(.type == "required_status_checks") | .parameters.required_status_checks[]?.context)] | unique end),
        required_reviews: (if $p == "no" then 0 elif $blind then "unknown" else
          [0, ($cls | objects | .required_pull_request_reviews.required_approving_review_count // 0),
           ($rr[] | select(.type == "pull_request") | .parameters.required_approving_review_count // 0)] | max end),
        bypass: (if $p == "no" then "n/a" elif $blind or ($rr | length) > 0 then "unknown"
-                elif $cls.enforce_admins.enabled then "no" else "yes" end)}'
+                elif $cls.enforce_admins.enabled and (($cls.required_pull_request_reviews.bypass_pull_request_allowances // {}) | [.users[]?, .teams[]?, .apps[]?] | length == 0) then "no" else "yes" end)}'
 }

@@ -12,7 +12,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 
-gh() { # <classic: json | notprotected | 403 | hidden> <rules: json | fail> -> compact answer
+read_github() { # <classic: json | notprotected | 403 | hidden> <rules: json | fail> -> compact answer
   (
     SHIP_OWNER=o SHIP_REPO=r
     source skills/ship/scripts/_lib.sh; source skills/ship/scripts/host/github.sh
@@ -33,28 +33,32 @@ copilot='{"type":"copilot_code_review","parameters":{}}'
 
 check "no protection and only the copilot ruleset is unprotected" \
   '{"branch":"main","protected":"no","required_checks":[],"required_reviews":0,"bypass":"n/a"}' \
-  "$(gh notprotected "[$copilot]")"
+  "$(read_github notprotected "[$copilot]")"
 classic='{"required_status_checks":{"checks":[{"context":"check-full"},{"context":"bump-guard"}]},"required_pull_request_reviews":{"required_approving_review_count":2},"enforce_admins":{"enabled":false}}'
 check "classic protection reports its checks, reviews and an admin bypass" \
   '{"branch":"main","protected":"yes","required_checks":["bump-guard","check-full"],"required_reviews":2,"bypass":"yes"}' \
-  "$(gh "$classic" '[]')"
+  "$(read_github "$classic" '[]')"
 check "enforce_admins closes the bypass" '"no"' \
-  "$(gh "${classic/\"enabled\":false/\"enabled\":true}" '[]' | jq -c .bypass)"
+  "$(read_github "${classic/\"enabled\":false/\"enabled\":true}" '[]' | jq -c .bypass)"
 rule='[{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"ci"}]}},{"type":"pull_request","parameters":{"required_approving_review_count":1}}]'
 check "a ruleset alone protects, and its bypass actors are unread" \
   '{"branch":"main","protected":"yes","required_checks":["ci"],"required_reviews":1,"bypass":"unknown"}' \
-  "$(gh notprotected "$rule")"
+  "$(read_github notprotected "$rule")"
 check "a refused classic read (403) is unknown, never none" \
   '{"branch":"main","protected":"unknown","required_checks":"unknown","required_reviews":"unknown","bypass":"unknown"}' \
-  "$(gh 403 '[]')"
+  "$(read_github 403 '[]')"
 check "a bare 404 on a branch the token cannot administer is unknown too" '"unknown"' \
-  "$(gh hidden '[]' | jq -c .protected)"
-check "an unreadable rules read cannot say none" '"unknown"' "$(gh notprotected fail | jq -c .protected)"
+  "$(read_github hidden '[]' | jq -c .protected)"
+check "an unreadable rules read cannot say none" '"unknown"' "$(read_github notprotected fail | jq -c .protected)"
 check "a ruleset still shows when the classic read is refused, its fields unknown" \
   '{"branch":"main","protected":"yes","required_checks":"unknown","required_reviews":"unknown","bypass":"unknown"}' \
-  "$(gh 403 "$rule")"
+  "$(read_github 403 "$rule")"
 
-ado() { # <policy-list json | fail> -> compact answer
+legacy='{"required_status_checks":{"contexts":["old-ci"],"checks":[]},"enforce_admins":{"enabled":true},"required_pull_request_reviews":{"bypass_pull_request_allowances":{"users":[{"login":"x"}]}}}'
+check "legacy contexts count as required checks" '["old-ci"]' "$(read_github "$legacy" '[]' | jq -c .required_checks)"
+check "a bypass allowance opens the bypass even with enforce_admins" '"yes"' "$(read_github "$legacy" '[]' | jq -c .bypass)"
+
+read_ado() { # <policy-list json | fail> -> compact answer
   (
     SHIP_ORG_URL=https://dev.azure.com/o SHIP_PROJECT=p SHIP_REPO=r
     source skills/ship/scripts/_lib.sh; source skills/ship/scripts/host/ado.sh
@@ -70,10 +74,12 @@ pol='[{"isEnabled":true,"isBlocking":true,"type":{"id":"fa4e907d-c16b-4a4c-9dfa-
 {"isEnabled":true,"isBlocking":false,"type":{"id":"cbdc66da-9728-4af8-aada-9a5a32e4a226"},"settings":{"statusName":"advisory"}},
 {"isEnabled":false,"isBlocking":true,"type":{"id":"fa4e907d-c16b-4a4c-9dfa-4906e5d171dd"},"settings":{"minimumApproverCount":9}}]'
 check "an empty policy list is unprotected" \
-  '{"branch":"main","protected":"no","required_checks":[],"required_reviews":0,"bypass":"n/a"}' "$(ado '[]')"
+  '{"branch":"main","protected":"no","required_checks":[],"required_reviews":0,"bypass":"n/a"}' "$(read_ado '[]')"
 check "enabled blocking policies are reported, the others ignored" \
-  '{"branch":"main","protected":"yes","required_checks":["build"],"required_reviews":2,"bypass":"unknown"}' "$(ado "$pol")"
+  '{"branch":"main","protected":"yes","required_checks":["build"],"required_reviews":2,"bypass":"unknown"}' "$(read_ado "$pol")"
+check "a build policy with no display name adds no null" '[]' \
+  "$(read_ado '[{"isEnabled":true,"isBlocking":true,"type":{"id":"0609b952-1397-4640-95ec-e00a01b2c241"},"settings":{}}]' | jq -c .required_checks)"
 check "a refused policy read is unknown, never none" \
-  '{"branch":"main","protected":"unknown","required_checks":"unknown","required_reviews":"unknown","bypass":"unknown"}' "$(ado fail)"
+  '{"branch":"main","protected":"unknown","required_checks":"unknown","required_reviews":"unknown","bypass":"unknown"}' "$(read_ado fail)"
 
 finish

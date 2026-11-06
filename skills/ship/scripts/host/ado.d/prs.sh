@@ -163,7 +163,7 @@ host_branch_protections() { # <branch>
   jq --arg b "$1" '[.[] | select(.isEnabled and .isBlocking)] as $p | {branch: $b,
     protected: (if ($p | length) > 0 then "yes" else "no" end),
     required_checks: [$p[] | select(.type.id | IN("0609b952-1397-4640-95ec-e00a01b2c241", "cbdc66da-9728-4af8-aada-9a5a32e4a226"))
-      | .settings | (.displayName // .statusName)] | unique,
+      | .settings | (.displayName // .statusName) | select(. != null)] | unique,
     required_reviews: ([0, ($p[] | select(.type.id == "fa4e907d-c16b-4a4c-9dfa-4906e5d171dd") | .settings.minimumApproverCount)] | max),
     bypass: (if ($p | length) > 0 then "unknown" else "n/a" end)}' <<<"$pol"
 }

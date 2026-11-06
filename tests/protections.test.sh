@@ -40,6 +40,6 @@ out=$(run 7 2>/dev/null); rc=$?
 check_rc "a PR that cannot be read is tooling" 2 "$rc"
 check "and says so" 'cannot read PR 7' "$(jq -r .error <<<"$out")"
 
-check "a second positional is named" 'unknown flag: --x' "$(run 7 --x 2>/dev/null | jq -r .error)"
+check "a flag after the PR is named" 'unknown flag: --x' "$(run 7 --x 2>/dev/null | jq -r .error)"
 
 finish
