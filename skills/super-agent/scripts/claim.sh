@@ -6,7 +6,8 @@
 # caller offers back to the owner. The claim is a comment whose first line is
 # `<!-- super-agent-claim machine=<m> thread=<t> -->`; the earliest one on the
 # issue is the holder's, so two claims posted at once resolve to one: the later
-# one deletes its own comment and reports the holder.
+# one deletes its own comment and reports the holder. Calling it again on an own
+# claim assigns the ticket again, which repairs a claim whose assignment failed.
 #
 #   claim --repo <owner/name> --number <n> --machine <key> --thread <id>
 #         [--stale-after <seconds>] [--now <iso time>] [--check]
@@ -24,7 +25,8 @@
 #         `stale` (another machine's claim older than --stale-after); `claim`
 #         {machine, thread, comment_id, created_at, age_s} or null
 # exit: 0 `taken`, `own` or `free` · 1 `claimed` or `stale`, the ticket is not
-#       ours to take · 2 usage, a comment list or a post the host refused
+#       ours to take · 2 usage, a comment list, post, assignment or delete the
+#       host refused, or a posted claim that vanished
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -80,20 +82,32 @@ held_by_other() {
   answer claimed "$c" 1
 }
 
+# assign: the issue to the signed-in account.
+assign() {
+  local login raw
+  raw=$(gh api user 2>/dev/null </dev/null) || sa_tooling "cannot read the signed-in account"
+  login=$(jq -r '.login // empty' <<<"$raw")
+  [ -n "$login" ] || sa_tooling "cannot read the signed-in account"
+  gh api -X POST "repos/$repo/issues/$number/assignees" -f "assignees[]=$login" >/dev/null 2>&1 </dev/null \
+    || sa_tooling "$repo#$number is claimed but assigning $login failed"
+}
+
 read_claims
 first=$(jq -c '.[0] // null' <<<"$claims")
 if [ "$first" != null ]; then
-  if [ "$(jq -r .machine <<<"$first")" = "$machine" ]; then answer own "$first" 0; fi
+  if [ "$(jq -r .machine <<<"$first")" = "$machine" ]; then
+    # A claim whose assignment failed is repaired by the next call: assigning twice is harmless.
+    $check || assign
+    answer own "$first" 0
+  fi
   held_by_other "$first"
 fi
 $check && answer free null 0
 
-login=$(gh api user 2>/dev/null </dev/null | jq -r '.login // empty') || login=''
-[ -n "$login" ] || sa_tooling "cannot read the signed-in account"
 text=$(printf '<!-- super-agent-claim machine=%s thread=%s -->\nClaimed by a super agent on `%s` (thread `%s`). Another super agent skips this ticket; ask the owner before taking it over.' \
   "$machine" "$thread" "$machine" "$thread")
-mine=$(gh api -X POST "$comments" -f "body=$text" 2>/dev/null </dev/null | jq -r '.id // empty') \
-  || mine=''
+posted=$(gh api -X POST "$comments" -f "body=$text" 2>/dev/null </dev/null) || posted=''
+mine=$(jq -r '.id // empty' <<<"$posted" 2>/dev/null)
 [ -n "$mine" ] || sa_tooling "cannot post the claim on $comments"
 
 # Two claims posted together both saw none: the earliest comment holds it.
@@ -105,6 +119,5 @@ if [ "$first" = null ] || [ "$(jq -r .comment_id <<<"$first")" != "$mine" ]; the
   [ "$first" != null ] || sa_tooling "the claim comment vanished after posting"
   held_by_other "$first"
 fi
-gh api -X POST "repos/$repo/issues/$number/assignees" -f "assignees[]=$login" >/dev/null 2>&1 </dev/null \
-  || sa_tooling "claim posted on $comments but assigning $login failed"
+assign
 answer taken "$first" 0

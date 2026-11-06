@@ -45,7 +45,7 @@ The fleet file's list of repos the super agent scans for ready work, edited by t
 _Avoid_: watchlist, subscriptions
 
 **Daily offer**:
-The list of open `ready-for-agent` issues in the active repos that no ledger entry or other machine's claim holds, which the super agent shows the owner once a day. It reads and writes nothing; a ticket launches only on the owner's go.
+The list of open `ready-for-agent` issues in the active repos that no ledger entry or other machine's claim holds, which the super agent shows the owner once a day. It writes nothing; a ticket launches only on the owner's go.
 _Avoid_: digest, auto-pickup, queue
 
 **Probe thread**:

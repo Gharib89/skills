@@ -60,7 +60,7 @@ while IFS= read -r repo; do
     if jq -e --arg k "$key" "$sa_jq_open"' (.entries[$k] // null) | . != null and is_open' <<<"$doc" >/dev/null; then
       held=$(jq -c --arg k "$key" '. + [$k]' <<<"$held"); continue
     fi
-    out=$(bash "$here/claim.sh" --check --repo "$repo" --number "$n" --machine "$machine" --thread "$thread" "${claim_args[@]}" 2>/dev/null </dev/null)
+    out=$(bash "$here/claim.sh" --check --repo "$repo" --number "$n" --machine "$machine" --thread "$thread" ${claim_args[@]+"${claim_args[@]}"} 2>/dev/null </dev/null)
     case $(jq -r '.status // empty' <<<"$out" 2>/dev/null) in
       free|own) offer=$(jq -c --arg k "$key" --argjson i "$issue" '. + [{key: $k, title: $i.title, labels: [$i.labels[].name]}]' <<<"$offer") ;;
       claimed) claimed=$(jq -c --arg k "$key" --argjson o "$out" '. + [{key: $k, machine: $o.claim.machine, age_s: $o.claim.age_s}]' <<<"$claimed") ;;

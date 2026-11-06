@@ -154,7 +154,7 @@ as they are. Exit 2 (the host refused a read or post) is an escalation.
 
 When the owner says "track <repo>" or "stop tracking <repo>", run
 `scripts/track.sh --fleet <fleet> track|stop <owner/name>` and say the
-resulting active repos in one line. Only this script edits the active repos.
+resulting active repos in one line. Edit the active repos through this script.
 
 The **daily offer**: run `scripts/intake.sh --fleet <fleet> --ledger <ledger>
 --machine <key> --thread $T3CODE_THREAD_ID` at your first turn of each
