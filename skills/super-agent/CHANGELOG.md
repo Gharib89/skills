@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.8.0 (2026-11-06)
+
+### Features
+
+- **super-agent**: Watch and reconcile threads on linked machines
+  ([#1096](https://github.com/Gharib89/skills/pull/1096),
+  [`d425740`](https://github.com/Gharib89/skills/commit/d42574089d52a3ee5f115a7148d5186d4bee99af))
+
+
 ## v0.7.0 (2026-11-06)
 
 ### Features
