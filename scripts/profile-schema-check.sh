@@ -9,6 +9,7 @@
 #
 #   scripts/profile-schema-check.sh [<root>]
 #
+# The ship value is a quoted string (older copies carry it bare), read unquoted.
 # Each read stops at the first body heading, so an example line further down the
 # same file cannot feed a second value into the comparison, and the doc lookup
 # is an exact fixed line, so a titled heading is not the entry.
@@ -27,7 +28,7 @@ doc=$root/skills/setup-skills/profile-schema.md
 # which is an answer, and 2 or more for a failure.
 tmpl_schema=$(awk '/^## /{exit} /^Schema: /{print $2; exit}' "$tmpl") \
   || { printf 'cannot read %s\n' "$tmpl" >&2; exit 2; }
-ship_schema=$(awk '/^# /{exit} /^  profile-schema: /{print $2; exit}' "$ship") \
+ship_schema=$(awk '/^# /{exit} /^  profile-schema: /{gsub(/"/, "", $2); print $2; exit}' "$ship") \
   || { printf 'cannot read %s\n' "$ship" >&2; exit 2; }
 grep -qxF "## Schema $ship_schema" "$doc"; st=$?
 [ "$st" -le 1 ] || { printf 'cannot search %s\n' "$doc" >&2; exit 2; }

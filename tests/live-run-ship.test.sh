@@ -120,7 +120,20 @@ case $play in
   silent) exit 0 ;;
   no-reply) reply="" ;;
 esac
-jq -cn --arg r "$reply" '{subtype: "success", result: $r, total_cost_usd: 1, session_id: "s"}'
+# STUB_USAGE=1: the usage fields a real result carries, two models (a parent
+# and a child agent's); unset, a result without them.
+# USAGE_ONCE=1: only the first run reports it.
+if [ -n "${STUB_USAGE:-}" ] && { [ -z "${USAGE_ONCE:-}" ] || [ ! -e "$S/usage-given" ]; }; then
+  touch "$S/usage-given"
+  jq -cn --arg r "$reply" '{subtype: "success", result: $r, total_cost_usd: 1, session_id: "s", num_turns: 3,
+    subagent_stats: {spawned: 1},
+    modelUsage: {a: {inputTokens: 10, outputTokens: 20, cacheReadInputTokens: 30, cacheCreationInputTokens: 40},
+                 b: {inputTokens: 1, outputTokens: 2, cacheReadInputTokens: 3, cacheCreationInputTokens: 0}}}
+    | if env.USAGE_PARTIAL then del(.modelUsage.b.cacheCreationInputTokens) else . end
+    | if env.USAGE_MALFORMED then .modelUsage.b = 3 else . end'
+else
+  jq -cn --arg r "$reply" '{subtype: "success", result: $r, total_cost_usd: 1, session_id: "s"}'
+fi
 CLAUDE
 
 cat > "$T/bin/npx" <<'NPX'
@@ -170,7 +183,7 @@ drive() {
   [ -z "${NPX_FAILS:-}" ] || echo "$NPX_FAILS" > "$LIVE_STUB/npx-fails"
   [ -z "${NPX_NOOP:-}" ] || echo "$NPX_NOOP" > "$LIVE_STUB/npx-noop"
   [ -z "${NPX_LOCKS:-}" ] || touch "$LIVE_STUB/npx-locks"
-  bash scripts/live-run-ship.sh "$PWD" 2>/dev/null | jq -c 'del(.runs)'
+  bash scripts/live-run-ship.sh "$PWD" 2>/dev/null | jq -c "${DRIVE_KEEP:-del(.runs, .per_path)}"
   printf 'rc=%s\n' "${PIPESTATUS[0]}"
 }
 
@@ -208,6 +221,31 @@ rc=2' "$(OFF_PIN=find-docs NPX_LOCKS=1 drive happy ambiguous)"
 check "a pass on the retry is a pass that names the first failure" \
   '{"result":"pass","failed":[],"retried":["happy: phase 5: not closed","happy: phase 6: not closed","happy: phase 7: not closed","happy: phase 8: not closed","happy: merge gate: not reached"]}
 rc=0' "$(drive happy-skips-gate happy ambiguous)"
+
+# Usage: two attempts of happy (the first fails), one of ambiguous, each result
+# carrying 3 turns and 1 child agent; tokens sum over both models.
+usage_runs='[{"path":"happy","attempt":1,"input_tokens":11,"output_tokens":22,"cache_read_tokens":33,"cache_write_tokens":40,"turns":3,"subagents":1},{"path":"happy","attempt":2,"input_tokens":11,"output_tokens":22,"cache_read_tokens":33,"cache_write_tokens":40,"turns":3,"subagents":1},{"path":"ambiguous","attempt":1,"input_tokens":11,"output_tokens":22,"cache_read_tokens":33,"cache_write_tokens":40,"turns":3,"subagents":1}]'
+check "each run records its usage, a retried first attempt's included" "$usage_runs" \
+  "$(STUB_USAGE=1 DRIVE_KEEP='[.runs[] | {path, attempt, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, turns, subagents}]' \
+    drive happy-skips-gate happy ambiguous | head -n 1)"
+check "per_path sums every attempt's cost and tokens, failed ones included" \
+  '[{"path":"ambiguous","passed":true,"attempts":1,"cost_usd":1,"input_tokens":11,"output_tokens":22,"cache_read_tokens":33,"cache_write_tokens":40,"turns":3,"subagents":1},{"path":"happy","passed":true,"attempts":2,"cost_usd":2,"input_tokens":22,"output_tokens":44,"cache_read_tokens":66,"cache_write_tokens":80,"turns":6,"subagents":2}]' \
+  "$(STUB_USAGE=1 DRIVE_KEEP=.per_path drive happy-skips-gate happy ambiguous | head -n 1)"
+# USAGE_ONCE=1: only the first claude run reports usage; per_path must not pass a partial sum off as the total.
+check "per_path is null where any attempt lacked the field" '[null,2]' \
+  "$(DRIVE_KEEP='[.per_path[] | select(.path == "happy") | (.input_tokens, .attempts)]' \
+    USAGE_ONCE=1 STUB_USAGE=1 drive happy-skips-gate happy ambiguous | head -n 1)"
+check "a token key one model omits is null, not a partial sum" '[33,null]' \
+  "$(USAGE_PARTIAL=1 STUB_USAGE=1 DRIVE_KEEP='[.runs[0] | .cache_read_tokens, .cache_write_tokens]' drive happy ambiguous | head -n 1)"
+check "malformed model usage keeps the attempt and reports null" '[2,null]' \
+  "$(USAGE_MALFORMED=1 STUB_USAGE=1 DRIVE_KEEP='[.runs | length, .[0].input_tokens]' drive happy ambiguous | head -n 1)"
+check "an unavailable tool-call count is explicit" '[true,null]' \
+  "$(DRIVE_KEEP='[.runs[0] | has("tool_calls"), .tool_calls]' drive happy ambiguous | head -n 1)"
+check "a cleanup failure makes its path fail despite a passing retry" '[false]' \
+  "$(PR_CLOSE_FAILS=1 DRIVE_KEEP='[.per_path[] | select(.path == "happy") | .passed]' drive happy-skips-gate happy ambiguous | head -n 1)"
+check "a result without usage records null, never a guess" \
+  '[{"input_tokens":null,"output_tokens":null,"cache_read_tokens":null,"cache_write_tokens":null,"turns":null,"subagents":null}]' \
+  "$(DRIVE_KEEP='[.runs[0] | {input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, turns, subagents}]' drive happy ambiguous | head -n 1)"
 
 check "a retry does not hide the first attempt's cleanup failure" \
   '["happy: cleanup: left PR #101 open"]

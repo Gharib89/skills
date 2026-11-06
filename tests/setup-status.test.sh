@@ -93,6 +93,10 @@ check "the harness reads run with no harness profile" "run" "$(state harness "$d
 d=$(tree noship); rm "$d/docs/agents/ship.md"
 check "Ship's setup reads run with no ship profile" "run" "$(state ships-setup "$d")"
 
+d=$(tree quotedship); sed -i 's/profile-schema: 4/profile-schema: "4"/' "$d/.claude/skills/ship/SKILL.md"
+check "a quoted ship profile-schema still matches the profile's bare Schema" \
+  "done" "$(state ships-setup "$d")"
+
 d=$(tree oldharness); printf '# Harness profile\n\nSchema: 2\n' > "$d/docs/agents/harness.md"
 check "a harness profile whose schema trails setup-harness reads re-run audit" \
   "re-run audit" "$(state harness "$d")"
