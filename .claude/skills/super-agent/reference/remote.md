@@ -22,10 +22,8 @@ no file: it is found on GitHub by branch, the same from any machine.
 ## Steps
 
 1. **Record.** On a remote launch, pass `--environment
-   <placed.environment_id>` to `ledger.sh add`. A `rethread` keeps the entry's
-   `environment_id`; when the new thread runs in another environment, run
-   `ledger.sh set <key> environment_id '"<environment id>"'` too (the value
-   is JSON, so the id is quoted).
+   <placed.environment_id>` to `ledger.sh add`. A `rethread` sets it
+   from its own `--environment`, and clears it when the flag is absent.
 2. **Read.** Before each `reconcile.sh` run and each `watch.sh` start, read
    every open remote entry's thread with `t3_thread_read`, its
    `environmentId` the entry's `environment_id`, with a low `limit` and
@@ -63,9 +61,12 @@ watcher runs, or stop it and start it again after a fresh read.
 
 ## Errors
 
-An environment with no `--remote`, a missing reply file, or one that is not
-the thread's JSON gives `thread-unreadable` with the `environment_id` in its
-detail, for that environment's entries alone; local entries are still read.
-That is a missing or stale read, not a dead thread: read the thread again,
-rewrite the file, and rerun with the `--remote` in place. Escalate only when a
-fresh `t3_thread_read` itself fails.
+An environment with no `--remote`, a missing reply file, one that is not JSON
+or one of the wrong shape gives `thread-unreadable` for that environment's
+entries alone; local entries are still read. Its detail holds the
+`environment_id`, a `reason` (`no-remote`, `missing`, `not-json` or `shape`)
+and the `file` read. `no-remote` means pass the `--remote`; `missing` means
+write the file; `not-json` and `shape` mean the save is not the thread's
+`t3 thread show --json` shape, so fix how you save it, since a rerun reads the
+same bytes. After a missing or stale read, read the thread again, rewrite the
+file and rerun. Escalate only when a fresh `t3_thread_read` itself fails.

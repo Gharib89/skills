@@ -73,6 +73,25 @@ out=$(R "${remote_args[@]}")
 check "a reply that is not JSON is thread-unreadable" "$repo#7 thread-unreadable" \
   "$(jq -r '.errors[] | "\(.key) \(.kind)"' <<<"$out")"
 
+# --- the detail says why, so a missing --remote reads apart from a bad save ---------
+reason_of() { jq -r '.errors[] | select(.key == "'"$repo#7"'") | .detail.reason' <<<"$1"; }
+fixture
+check "no --remote for the environment is no-remote" no-remote "$(reason_of "$(R --remote "env-a=$rem/env-a")")"
+rm -f "$rem/env-b/t-7.json"
+check "no file is missing, and the detail names it" "missing $rem/env-b/t-7.json" \
+  "$(out=$(R "${remote_args[@]}"); echo "$(reason_of "$out") $(jq -r '.errors[0].detail.file' <<<"$out")")"
+printf 'not json\n' > "$rem/env-b/t-7.json"
+check "a file that is not JSON is not-json" not-json "$(reason_of "$(R "${remote_args[@]}")")"
+echo '{"messages":[]}' > "$rem/env-b/t-7.json"
+check "JSON of the wrong shape is shape" shape "$(reason_of "$(R "${remote_args[@]}")")"
+
+# --- rethread names the new thread's environment, or clears it ---------------------
+fixture
+L rethread "$repo#6" --thread t-6b --worktree /wt/6b --branch feat/x-6 --environment env-c >/dev/null
+check "rethread --environment records the new environment" env-c "$(L get "$repo#6" | jq -r .environment_id)"
+L rethread "$repo#6" --thread t-6c --worktree /wt/6c --branch feat/x-6 >/dev/null
+check "rethread without it puts the entry back on this machine" null "$(L get "$repo#6" | jq -c .environment_id)"
+
 # --- watch reads the same files ---------------------------------------------------
 fixture
 R "${remote_args[@]}" >/dev/null

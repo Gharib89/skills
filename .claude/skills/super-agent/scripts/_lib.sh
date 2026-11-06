@@ -99,25 +99,38 @@ sa_remote_flag() {
 # so the answer is the one line that opens a JSON object.
 # shellcheck disable=SC2034  # obs, obs_kind and obs_detail are read by the callers
 sa_observe() {
-  local thread worktree repo branch raw line found list pr env dir
+  local thread worktree repo branch raw line found list pr env dir reason file
   thread=$(jq -r .thread <<<"$1") worktree=$(jq -r .worktree <<<"$1")
   repo=$(jq -r .repo <<<"$1") branch=$(jq -r .branch <<<"$1")
   obs_detail=$(jq -cn --arg t "$thread" '{thread: $t}')
-  env=$(jq -r '.environment_id // empty' <<<"$1")
+  env=$(jq -r '.environment_id // empty' <<<"$1") reason='' file=''
   if [ -n "$env" ]; then
-    obs_detail=$(jq -cn --arg t "$thread" --arg e "$env" '{thread: $t, environment_id: $e}')
     dir=$(jq -r --arg e "$env" '.[$e] // empty' <<<"$sa_remote_dirs")
     # a thread id with a `/` would name a file outside the reply directory
     case $thread in */*) dir='' ;; esac
-    [ -n "$dir" ] || { obs_kind='thread-unreadable'; return 1; }
-    line=$(jq -c . "$dir/$thread.json" 2>/dev/null </dev/null | tail -1)
+    if [ -z "$dir" ]; then reason=no-remote
+    else
+      file=$dir/$thread.json
+      if [ ! -f "$file" ]; then reason=missing
+      else
+        line=$(jq -c . "$file" 2>/dev/null </dev/null | tail -1)
+        [ -n "$line" ] || reason=not-json
+      fi
+    fi
   else
     raw=$(t3 thread show "$thread" --json --messages 1 2>/dev/null </dev/null) || { obs_kind='thread-unreadable'; return 1; }
     line=$(grep '^{"' <<<"$raw" | tail -1)
   fi
-  if ! jq -e '.thread | (.threadId | type) == "string" and (.status | type) == "string"
+  if [ -z "$reason" ] && ! jq -e '.thread | (.threadId | type) == "string" and (.status | type) == "string"
       and (.runCount | type) == "number" and (.pendingRequestCount | type) == "number"' \
-      <<<"$line" >/dev/null 2>&1; then obs_kind='thread-unreadable'; return 1; fi
+      <<<"$line" >/dev/null 2>&1; then reason=shape; fi
+  if [ -n "$reason" ]; then
+    obs_kind='thread-unreadable'
+    # a remote read names why and which file, so a missing --remote reads apart from a wrong-shaped save
+    [ -z "$env" ] || obs_detail=$(jq -cn --arg t "$thread" --arg e "$env" --arg r "$reason" --arg f "$file" \
+      '{thread: $t, environment_id: $e, reason: $r} + (if $f == "" then {} else {file: $f} end)')
+    return 1
+  fi
   found=$(jq -c '{thread: .thread.threadId, worktree: .thread.worktreePath}' <<<"$line")
   if [ "$found" != "$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')" ]; then
     obs_kind='thread-mismatch' obs_detail=$found; return 1

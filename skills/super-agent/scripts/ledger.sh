@@ -10,7 +10,7 @@
 #   ledger --ledger <file> list [--open]
 #   ledger --ledger <file> set <key> <field> <json>
 #   ledger --ledger <file> rethread <key> --thread <id> --worktree <path>
-#          --branch <name> [--model <id>] [--effort <level>]
+#          --branch <name> [--environment <id>] [--model <id>] [--effort <level>]
 #   ledger --ledger <file> ruling <text> [--allow <call>]...
 #   ledger --ledger <file> allowed
 #   ledger --ledger <file> wait <key> --reason <text>
@@ -23,7 +23,8 @@
 # field but the entry's identity (key, repo, number); `stage` must be one of
 # launched, running, at-rest, merged, settled, closed. `rethread` points a
 # ticket's entry at a fresh thread and starts its tracking over (stage
-# launched, stalls 0, no observed state), so the key stays one entry. A write is
+# launched, stalls 0, no observed state), so the key stays one entry; `--environment` names the new thread's linked
+# machine, and without it the entry is this machine's again. A write is
 # a temp file beside the ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
 # `--allow` is a call the answer lets a supervised thread make without a hold,
 # and `allowed` lists them as the lines the launch brief carries. `--machine`
@@ -50,7 +51,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>] [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--model <id>] [--effort <level>] | ruling <text> [--allow <call>]... | allowed | wait <key> --reason <text> | unwait <key>'
+usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>] [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--environment <id>] [--model <id>] [--effort <level>] | ruling <text> [--allow <call>]... | allowed | wait <key> --reason <text> | unwait <key>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -120,12 +121,13 @@ case $cmd in
     jq -cn --arg k "$key" --arg f "$field" --argjson v "$value" '{key: $k, field: $f, value: $v}' ;;
   rethread)
     [ $# -ge 1 ] || sa_tooling "$usage"
-    key=$1; shift; thread='' worktree='' branch='' model='' effort=''
+    key=$1; shift; thread='' worktree='' branch='' environment='' model='' effort=''
     while [ $# -gt 0 ]; do
       case $1 in
         --thread) sa_flag_value "$usage" "${2:-}"; thread=$2 ;;
         --worktree) sa_flag_value "$usage" "${2:-}"; worktree=$2 ;;
         --branch) sa_flag_value "$usage" "${2:-}"; branch=$2 ;;
+        --environment) sa_flag_value "$usage" "${2:-}"; environment=$2 ;;
         --model) sa_flag_value "$usage" "${2:-}"; model=$2 ;;
         --effort) sa_flag_value "$usage" "${2:-}"; effort=$2 ;;
         *) sa_tooling "$usage" ;;
@@ -137,7 +139,8 @@ case $cmd in
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$key is not in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     doc=$(jq -c --arg k "$key" --arg t "$thread" --arg w "$worktree" --arg b "$branch" --arg m "$model" \
-      --arg e "$effort" --arg now "$now" '.entries[$k] |= (.thread = $t | .worktree = $w | .branch = $b
+      --arg e "$effort" --arg env "$environment" --arg now "$now" '.entries[$k] |= (.thread = $t | .worktree = $w | .branch = $b
+        | .environment_id = (if $env == "" then null else $env end)
         | .model = (if $m == "" then null else $m end) | .effort = (if $e == "" then null else $e end)
         | .stage = "launched" | .stalls = 0 | .observed = null | .error = null | .rest_since = null
         | .judged_run = 0 | .launched_at = $now | .updated_at = $now)' <<<"$doc")
