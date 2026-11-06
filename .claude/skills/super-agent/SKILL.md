@@ -150,7 +150,8 @@ fleet key> --thread $T3CODE_THREAD_ID` (your own thread) and read `status`:
   comment; then rerun `claim.sh` and launch only on `taken`.
 
 A claim belongs to its holder: leave another machine's claim and its comment
-as they are. Exit 2 (the host refused a read or post) is an escalation.
+as they are, except a stale one the owner told you to delete. Exit 2 (the
+host refused a read or post) is an escalation.
 
 When the owner says "track <repo>" or "stop tracking <repo>", run
 `scripts/track.sh --fleet <fleet> track|stop <owner/name>` and say the
