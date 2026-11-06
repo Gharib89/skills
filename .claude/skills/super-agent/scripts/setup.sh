@@ -13,7 +13,9 @@
 # merges: what a probe measured (cores, RAM, GPU, reachability, each provider's
 # status, the GitHub accounts) is refreshed, and everything else (slots,
 # thresholds, quota commands, active repos, waivers, any key the owner added)
-# keeps the file's value, so an owner's edit survives. A machine the file holds
+# keeps the file's value, so an owner's edit survives (a quota command a
+# previous setup recorded is kept too: fix one by hand in the file, or delete it
+# there and re-run). A machine the file holds
 # and T3 no longer lists is kept. This machine's slots are the lesser of half
 # its cores and its RAM over the per-thread floor, at least 1; a linked machine
 # is probed from its own `setup` run, so it starts at 1 slot.

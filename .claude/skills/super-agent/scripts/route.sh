@@ -24,7 +24,8 @@
 #         one line. With --job: {job, driver, group, model, reason}, `driver`
 #         `agy` or `claude`, `group` and `model` null for `claude`
 # exit: 0 a route, an unknown quota included · 2 usage, or a --quota file that
-#       is missing or not JSON
+#       is missing, not JSON, or of the wrong shape (providers an object, every
+#       bucket's remaining a number)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -50,26 +51,33 @@ else
 fi
 [ -f "$quota" ] || sa_tooling "$quota: no such file"
 jq -e . "$quota" >/dev/null 2>&1 || sa_tooling "$quota: not JSON"
+# A wrong shape would route silently (a string sorts above any number in jq, so a
+# low bucket would read as full and a raise would go out unasked), so refuse by name.
+jq -e '(.providers | type) == "object"' "$quota" >/dev/null || sa_tooling "$quota: providers must be an object"
+jq -e '[.providers[]? | .buckets[]? | .remaining | type] | all(. == "number")' "$quota" >/dev/null \
+  || sa_tooling "$quota: every bucket's remaining must be a number"
 
-# threshold: the weekly remaining below which a bucket counts as low
+# low: the weekly remaining below which a bucket counts as low
+low=0.5
 if [ -n "$job" ]; then
-  jq -c --argjson claude "$claude" '
+  jq -c --argjson claude "$claude" --argjson low "$low" '
     def weekly($p; pred): [.providers[$p].buckets[]? | select(.window == "weekly" and pred)] | first | .remaining;
     (weekly("claude"; .id == "week")) as $cc
     | (weekly("agy"; (.group // "") | startswith("Claude"))) as $agyc
-    | if ($claude | not) then {job: "text", driver: "agy", group: "gemini", model: "gemini-3.8-flash-medium", reason: "text jobs run on agy'"'"'s own quota"}
-      elif $cc != null and $cc < 0.5 and $agyc != null and $agyc >= 0.5
-        then {job: "text", driver: "agy", group: "claude", model: "claude-sonnet-4-6", reason: "Claude Code weekly under 50%: overflow to agy'"'"'s Claude group"}
-      else {job: "text", driver: "claude", group: null, model: null, reason: "stays on Claude Code"} end' "$quota"
+    | if ($claude | not) then {job: "text", driver: "agy", group: "gemini", model: "gemini-3.8-flash-medium", reason: "text jobs run on the agy quota"}
+      elif $cc != null and $cc < $low and $agyc != null and $agyc >= $low
+        then {job: "text", driver: "agy", group: "claude", model: "claude-sonnet-4-6", reason: "Claude Code weekly under 50%: overflow to the agy Claude group"}
+      else {job: "text", driver: "claude", group: null, model: null, reason: "stays on Claude Code"} end' "$quota" || sa_tooling "$quota: cannot be read"
   exit 0
 fi
-jq -c --arg size "$size" --argjson raise "$raise" '
+jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" '
+  def weekly($p; pred): [.providers[$p].buckets[]? | select(.window == "weekly" and pred)] | first;
   [{model: "sonnet", effort: "low"}, {model: "sonnet", effort: "medium"}, {model: "sonnet", effort: "high"}, {model: "opus", effort: "high"}] as $ladder
   | ({XS: 0, S: 0, M: 1, L: 2, XL: 3}[$size]) as $d
   | ([$d + $raise, 3] | min) as $w
-  | ([.providers.claude.buckets[]? | select(.window == "weekly" and .id == "week")] | first) as $b
+  | weekly("claude"; .id == "week") as $b
   | (if $b == null then null else {provider: "claude", id: $b.id, remaining: $b.remaining} end) as $bucket
-  | ($w > $d and $bucket != null and $bucket.remaining < 0.5) as $ask
+  | ($w > $d and $bucket != null and $bucket.remaining < $low) as $ask
   | {size: $size, raise: $raise, default: $ladder[$d], wanted: $ladder[$w],
      tier: (if $w > $d and ($bucket == null or $ask) then $ladder[$d] else $ladder[$w] end),
      ask: $ask,
@@ -77,4 +85,4 @@ jq -c --arg size "$size" --argjson raise "$raise" '
        elif $bucket == null then "quota unknown: default tier"
        elif $ask then "weekly under 50%: the owner decides the raise"
        else "weekly at or above 50%: raised" end),
-     bucket: $bucket}' "$quota"
+     bucket: $bucket}' "$quota" || sa_tooling "$quota: cannot be read"

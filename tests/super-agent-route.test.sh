@@ -30,17 +30,35 @@ check "--help names its stdout fields next" stdout: "$(sed -n 2p <<<"$out" | cut
 check_rc "--help exits 0" 0 "$rc"
 check "--help writes nothing on stderr" "" "$(cat "$tmp/err")"
 usage=$(sed -n 1p <<<"$out")
-for bad in "--bogus" "--size M" "--size XXL --quota $tmp/q.json" "--size M --raise x --quota $tmp/q.json" "--job poem --quota $tmp/q.json" \
-  "--size M --job text --quota $tmp/q.json" "--quota $tmp/q.json" "--size M --quota $tmp/none.json"; do
-  quota 0.9 0.9
-  # shellcheck disable=SC2086
-  res=$(bash "$s/route.sh" $bad 2>/dev/null); rc=$?
-  check_rc "a call of '$bad' exits 2" 2 "$rc"
-done
+quota 0.9 0.9
+refused() { # <case> <args>...: a malformed call exits 2
+  local c=$1; shift
+  bash "$s/route.sh" "$@" >/dev/null 2>&1; check_rc "$c exits 2" 2 "$?"
+}
+refused "an unknown flag" --bogus
+refused "no quota" --size M
+refused "a size that is not a label" --size XXL --quota "$tmp/q.json"
+refused "a raise that is not a number" --size M --raise x --quota "$tmp/q.json"
+refused "a job that is not text" --job poem --quota "$tmp/q.json"
+refused "a size with a job" --size M --job text --quota "$tmp/q.json"
+refused "neither size nor job" --quota "$tmp/q.json"
+refused "a quota file that is missing" --size M --quota "$tmp/none.json"
+refused "--claude with a size" --size M --claude --quota "$tmp/q.json"
 quota 0.9 0.9
 check "a bad call answers the usage line" "$usage" "$(bash "$s/route.sh" --bogus 2>/dev/null | jq -r .error)"
 printf 'not json\n' > "$tmp/bad.json"
 check_rc "quota output that is not JSON exits 2" 2 "$(bash "$s/route.sh" --size M --quota "$tmp/bad.json" >/dev/null 2>&1; echo $?)"
+
+# --- a quota file of the wrong shape is refused by name, never routed on ---------------------------
+echo '{"providers":[]}' > "$tmp/shape.json"
+out=$(R --size M --raise 1 --quota "$tmp/shape.json" 2>/dev/null); rc=$?
+check_rc "providers that are not an object exit 2" 2 "$rc"
+check "and name the file and field" "$tmp/shape.json: providers must be an object" "$(jq -r .error <<<"$out")"
+echo '{"providers":{"claude":{"buckets":[{"id":"week","window":"weekly","remaining":"0.1"}]}}}' > "$tmp/shape.json"
+out=$(R --size M --raise 1 --quota "$tmp/shape.json" 2>/dev/null); rc=$?
+check_rc "a remaining that is a string exits 2, not an unasked raise" 2 "$rc"
+check "and says which field" "$tmp/shape.json: every bucket's remaining must be a number" "$(jq -r .error <<<"$out")"
+check_rc "the same for a job" 2 "$(R --job text --claude --quota "$tmp/shape.json" >/dev/null 2>&1; echo $?)"
 
 # --- the Size label sets the starting tier -------------------------------------------
 quota 0.9 0.9

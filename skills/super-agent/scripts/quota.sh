@@ -61,9 +61,11 @@ parse_agy() {
 }
 
 out='{}'
-# Provider names are keys the owner wrote, words with no space in them.
+# One name per line, split without globbing: the owner wrote these keys.
 names=$(jq -r '(.providers // {}) | keys[]' "$fleet_file")
+set -f; IFS=$'\n'
 for name in $names; do
+  unset IFS; set +f
   cfg=$(jq -c --arg n "$name" '.providers[$n] | if type == "object" then . else {} end' "$fleet_file")
   driver=$(jq -r --arg n "$name" '.driver // $n' <<<"$cfg")
   cmd=$(jq -r '.quota_command // empty' <<<"$cfg")

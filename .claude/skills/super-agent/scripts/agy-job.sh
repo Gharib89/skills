@@ -62,10 +62,10 @@ allow_json=$(printf '%s\n' "${allow[@]}" | jq -R . | jq -cs .)
 settings=$(jq -cn --argjson a "$allow_json" '{permissions: {allow: [$a[] | "command(\(.))"]}}')
 args=(-p "$task" --settings "$settings" --output-format json --print-timeout "${timeout_s}s")
 [ -z "$model" ] || args+=(--model "$model")
-raw=$(cd "$wt" && timeout "$((timeout_s + 15))" agy "${args[@]}" 2>/dev/null </dev/null); rc=$?
+raw=$(cd "$wt" && timeout "$((timeout_s + 15))" agy "${args[@]}" 2>"$scratch/stderr" </dev/null); rc=$?
 line=$(grep '^{' <<<"$raw" | tail -1)
 if [ -z "$line" ] || ! jq -e . <<<"$line" >/dev/null 2>&1; then
-  sa_fail "agy exited $rc with no JSON answer"
+  sa_fail "agy exited $rc with no JSON answer: $(tail -c 300 "$scratch/stderr" | tr '\n' ' ' | sed 's/ $//')"
 fi
 jq -c --argjson a "$allow_json" --argjson rc "$rc" '
   {status, response: (.response // ""), allow: $a, denied: (.denied_actions // []),

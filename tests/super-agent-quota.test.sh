@@ -92,7 +92,11 @@ reset
 jq '.providers.agy.quota_command = null' "$fleet" > "$tmp/f2.json"
 check "a provider with no quota command is unknown with that reason" 'unknown no quota command in the fleet file' \
   "$(bash "$s/quota.sh" --fleet "$tmp/f2.json" | jq -r '.providers.agy | "\(.status) \(.reason)"')"
-reset; SA_FAKE_ABSENT=""; rm -f "$tmp/bin/codex"
+reset; rm -f "$tmp/bin/codex"
 check "a provider that is not installed is unknown" unknown "$(Q | jq -r .providers.codex.status)"
+
+# a provider key is read as a name, never globbed against the working directory
+jq -n '{providers: {"*": {}}}' > "$tmp/glob.json"
+check "a provider keyed * is one provider, not every file here" '["*"]' "$(bash "$s/quota.sh" --fleet "$tmp/glob.json" | jq -c '.providers | keys')"
 
 finish
