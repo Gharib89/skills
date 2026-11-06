@@ -22,9 +22,9 @@ no file: it is found on GitHub by branch, the same from any machine.
 ## Steps
 
 1. **Record.** On a remote launch, pass `--environment
-   <placed.environment_id>` to `ledger.sh add`. A `rethread` to a remote
-   thread keeps the entry's `environment_id`, so the new thread must run in
-   the same environment.
+   <placed.environment_id>` to `ledger.sh add`. A `rethread` keeps the entry's
+   `environment_id`; when the new thread runs in another environment, run
+   `ledger.sh set <key> environment_id <json>` too.
 2. **Read.** Before each `reconcile.sh` run and each `watch.sh` start, read
    every open remote entry's thread with `t3_thread_read`, its
    `environmentId` the entry's `environment_id`, with a low `limit` and

@@ -79,7 +79,6 @@ sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 # reads of the threads on that linked machine, one `<thread id>.json` each. `t3
 # thread show` has no environment flag (measured 2026-11-06), so a remote entry
 # is read from these files, which the super agent writes with `t3_thread_read`.
-# shellcheck disable=SC2034  # read by sa_observe
 sa_remote_dirs='{}'
 # sa_remote_flag <usage> <value>: one `--remote` value into $sa_remote_dirs.
 sa_remote_flag() {

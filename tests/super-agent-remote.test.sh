@@ -93,7 +93,21 @@ out=$(W "${remote_args[@]}" --timeout 5)
 check "a local entry still wakes past the unreachable environment" "$repo#5 run-finished" "$(jq -r '[.key, .event] | join(" ")' <<<"$out")"
 
 # --- usage -----------------------------------------------------------------------
-check_rc "--remote without =<dir> is a usage error" 2 "$(R --remote env-a >/dev/null 2>&1; echo $?)"
-check_rc "--environment on add needs a value" 2 "$(L add --repo $repo --number 9 --thread t --worktree w --branch b --environment >/dev/null 2>&1; echo $?)"
+usage_r=$(bash "$s/reconcile.sh" --help | sed -n 1p)
+for bad in env-a =dir env-a= ; do
+  out=$(R --remote "$bad" 2>/dev/null); rc=$?
+  check_rc "--remote $bad is a usage error" 2 "$rc"
+  check "and it answers the usage line" "$usage_r" "$(jq -r .error <<<"$out")"
+done
+out=$(L add --repo $repo --number 9 --thread t --worktree w --branch b --environment 2>/dev/null); rc=$?
+check_rc "--environment on add needs a value" 2 "$rc"
+check "and it answers the usage line" "usage: ledger" "$(jq -r .error <<<"$out" | cut -d' ' -f1-2)"
+
+# a thread id with a slash never names a file outside the reply directory
+fixture
+L set "$repo#6" thread '"../env-b/t-7"' >/dev/null
+out=$(R "${remote_args[@]}")
+check "a thread id holding a slash is thread-unreadable" "$repo#6 thread-unreadable" \
+  "$(jq -r '.errors[] | select(.key == "'"$repo#6"'") | "\(.key) \(.kind)"' <<<"$out")"
 
 finish
