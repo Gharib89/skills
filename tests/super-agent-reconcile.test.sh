@@ -16,7 +16,7 @@ export PATH="$tmp/bin:$PATH" SA_FAKE=$tmp/fake
 sa_fake_install "$tmp/bin"
 led=$tmp/ledger.json
 repo=Gharib89/skills
-R() { bash "$s/reconcile.sh" --ledger "$led"; }
+R() { bash "$s/reconcile.sh" --ledger "$led" "$@"; }
 L() { bash "$s/ledger.sh" --ledger "$led" "$@"; }
 calls() { cat "$SA_FAKE/calls" 2>/dev/null; }
 stage() { jq -r --arg k "$repo#$1" '.entries[$k].stage' "$led"; }
@@ -51,7 +51,7 @@ check "one JSON object is the whole answer" 1 "$(jq -s length <<<"$out")"
 check "it checked both entries" 2 "$(jq .checked <<<"$out")"
 check "a running thread moves its entry from launched to running" "launched>running launched>running" \
   "$(jq -r '[.entries[] | "\(.from)>\(.stage)"] | join(" ")' <<<"$out")"
-check "the baseline is in the ledger" '{"status":"running","run_count":1,"pending":0,"pr":{"number":null,"state":"none"}}' \
+check "the baseline is in the ledger" '{"status":"running","run_count":1,"pending":0,"gate":false,"pr":{"number":null,"state":"none"}}' \
   "$(jq -c --arg k "$repo#5" '.entries[$k].observed' "$led")"
 check "so a watch after it sees nothing" "null timeout" \
   "$(bash "$s/watch.sh" --ledger "$led" --interval 1 --timeout 2 | jq -r '[(.key // "null"), .event] | join(" ")')"
@@ -119,6 +119,74 @@ check "an issue GitHub will not answer is issue-unreadable" "$repo#5 issue-unrea
 fixture
 sa_thread t-5 running 1 0 /elsewhere feat/x-5
 check "a thread of that id elsewhere is thread-mismatch" "$repo#5 thread-mismatch" "$(R | jq -r '.errors[] | "\(.key) \(.kind)"')"
+
+# --- the stall count -----------------------------------------------------------
+stalls() { jq -r --arg k "$repo#$1" '.entries[$k].stalls' "$led"; }
+stalled() { jq -r '[.stalled[] | "\(.key) \(.stalls) \(.reason)"] | join(",")' <<<"$1"; }
+old=$(date -u -d '2 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+fixture
+R >/dev/null
+check "a first look is a baseline, never a stall" 0 "$(stalls 5)"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "Stopped after the tests."
+out=$(R)
+check "a completed run with no PR and no gate summary is a stall" "$repo#5 1 run-completed" "$(stalled "$out")"
+check "which raises the count" 1 "$(stalls 5)"
+check "and the other ticket, still running, is not one" 0 "$(stalls 6)"
+check "the entries list carries the count" 1 "$(jq '[.entries[] | select(.key == "'"$repo#5"'")][0].stalls' <<<"$out")"
+out=$(R)
+check "the same run seen again is not a second stall" "" "$(stalled "$out")"
+check "its count stays" 1 "$(stalls 5)"
+L set "$repo#5" rest_since "\"$old\"" >/dev/null
+out=$(R --stall-window 60)
+check "a thread at rest past the window, with no new run, is another stall" "$repo#5 2 stall-window" "$(stalled "$out")"
+out=$(R --stall-window 60)
+check "and the window starts over from that count" "" "$(stalled "$out")"
+sa_thread t-5 running 2 0 /wt/5 feat/x-5
+R >/dev/null
+check "a new run is no stall and no step" 2 "$(stalls 5)"
+sa_thread t-5 idle 2 0 /wt/5 feat/x-5 "ship 0.54.2: the merge gate is clean. Unmet criteria: none."
+out=$(R)
+check "a run that ends in the merge-gate summary is a real step: the count falls" 1 "$(stalls 5)"
+check "and is no stall" "" "$(stalled "$out")"
+sa_thread t-5 running 3 0 /wt/5 feat/x-5
+sa_pr $repo feat/x-5 open
+R >/dev/null
+check "a PR opened since the last look is a real step too" 0 "$(stalls 5)"
+sa_thread t-5 idle 3 0 /wt/5 feat/x-5 "ship 0.54.2: the merge gate is clean. Unmet criteria: none."
+R >/dev/null
+check "the count floors at 0" 0 "$(stalls 5)"
+sa_thread t-5 idle 4 1 /wt/5 feat/x-5 "Stopped after the tests."
+out=$(R)
+check "a thread holding a permission request is no stall" "" "$(stalled "$out")"
+fixture
+R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "Stopped after the tests."
+L set "$repo#5" stalls 3 >/dev/null
+L set "$repo#5" rest_since "\"$old\"" >/dev/null
+out=$(R --stall-window 60)
+check "an entry already at 3 stalls is escalated: no stall past 3 for its window" "" "$(stalled "$out")"
+check "and its count stays 3" 3 "$(stalls 5)"
+sa_thread t-5 idle 2 0 /wt/5 feat/x-5 "Stopped again."
+check "nor for a new completed run" "" "$(stalled "$(R --stall-window 60)")"
+L set "$repo#5" stalls 0 >/dev/null
+check "after the owner's reset a thread still at rest past its window counts again" "$repo#5 1 stall-window" "$(stalled "$(R --stall-window 60)")"
+fixture
+R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "ship 0.54.2: preflight refused, the issue is not triaged."
+check "ship's first reply or an early stop carries the version but is no gate summary" "$repo#5 1 run-completed" "$(stalled "$(R)")"
+fixture
+R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "Unmet criteria: none, but I stopped before the gate."
+check "the Unmet criteria item without ship's version is no gate summary" "$repo#5 1 run-completed" "$(stalled "$(R)")"
+fixture
+R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "A relationship 1.2.3 of tickets, and I stopped."
+check "a message that only contains 'ship 1.2.3' inside another word is no gate summary" "$repo#5 1 run-completed" "$(stalled "$(R)")"
+sa_thread t-6 idle 0 0 /wt/6 feat/x-6
+R >/dev/null
+L set "$repo#6" rest_since "\"$old\"" >/dev/null
+check "a thread that never started stalls once the window passes" "$repo#6 1 stall-window" "$(stalled "$(R --stall-window 60)")"
+check "--stall-window takes a positive integer" 2 "$(bash "$s/reconcile.sh" --ledger "$led" --stall-window 0 >/dev/null 2>&1; echo $?)"
 
 # --- never by process name, and an empty ledger is fine -------------------------
 check "no process was asked about" "" "$(cat "$SA_FAKE/proc-calls" 2>/dev/null)"

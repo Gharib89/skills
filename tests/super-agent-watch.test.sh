@@ -16,7 +16,7 @@ export PATH="$tmp/bin:$PATH" SA_FAKE=$tmp/fake
 sa_fake_install "$tmp/bin"
 led=$tmp/ledger.json
 repo=Gharib89/skills
-W() { bash "$s/watch.sh" --ledger "$led" --interval 1 "$@"; }
+W() { bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 0 "$@"; }
 calls() { cat "$SA_FAKE/calls" 2>/dev/null; }
 base='{"status":"running","run_count":1,"pending":0,"pr":{"number":null,"state":"none"}}'
 
@@ -65,7 +65,7 @@ check "watch writes nothing: the finished run is reported again" "$repo#5 run-fi
 
 fixture
 sa_thread t-5 running 2 0 /wt/5 feat/x-5
-check "a new run is run-started" "$repo#5 run-started" "$(event "$(W --timeout 5)")"
+check "a new run is no event: a run starting is not worth a wake" "null timeout" "$(event "$(W --timeout 2)")"
 sa_thread t-5 idle 2 0 /wt/5 feat/x-5
 check "a new run that already ended is run-finished" "$repo#5 run-finished" "$(event "$(W --timeout 5)")"
 
@@ -98,7 +98,7 @@ check "with two changes, the ledger's order decides" "$repo#5 run-finished" "$(e
 fixture
 W --timeout 2 >/dev/null
 check "watch asked t3 for each thread by the id the ledger holds" \
-  "t3 thread show t-5 --json --messages 0" "$(calls | grep -m1 '^t3 thread show t-5 ')"
+  "t3 thread show t-5 --json --messages 1" "$(calls | grep -m1 '^t3 thread show t-5 ')"
 check "and asked nothing about processes" "" "$(cat "$SA_FAKE/proc-calls" 2>/dev/null)"
 
 fixture
@@ -111,6 +111,42 @@ fixture
 sa_thread t-5 running 1 0 /wt/5 feat/x-5
 jq -c '.thread.threadId = "t-other"' "$SA_FAKE/threads/t-5.json" > "$tmp/x" && mv "$tmp/x" "$SA_FAKE/threads/t-5.json"
 check "an answer for another thread id is thread-mismatch" "$repo#5 thread-mismatch" "$(event "$(W --timeout 5)")"
+
+# --- a run that finished is rechecked before it is reported --------------------
+fixture
+sa_thread t-5 running 2 0 /wt/5 feat/x-5
+cp "$SA_FAKE/threads/t-5.json" "$tmp/running.json"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5
+printf 'cp "%s" "$SA_FAKE/threads/t-5.json"\n' "$tmp/running.json" > "$SA_FAKE/on-sleep"
+out=$(bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 1 --timeout 3)
+check "a run that restarts within the recheck is no event" "null timeout" "$(event "$out")"
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5
+check "one still at rest after the recheck is run-finished" "$repo#5 run-finished" \
+  "$(event "$(bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 1 --timeout 5)")"
+
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5
+printf 'rm -f "%s/threads/t-5.json"\n' "$SA_FAKE" > "$SA_FAKE/on-sleep"
+check "a fault in the recheck look is reported, not the stale run-finished" "$repo#5 thread-unreadable" \
+  "$(event "$(bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 1 --timeout 5)")"
+
+# --- the stall window: at rest, with no new run, for too long ------------------
+old=$(date -u -d '2 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5
+bash "$s/ledger.sh" --ledger "$led" set "$repo#5" observed '{"status":"idle","run_count":1,"pending":0,"pr":{"number":null,"state":"none"},"gate":false}' >/dev/null
+bash "$s/ledger.sh" --ledger "$led" set "$repo#5" rest_since "\"$old\"" >/dev/null
+check "a thread at rest past the window is stall-window" "$repo#5 stall-window" "$(event "$(W --timeout 5 --stall-window 60)")"
+check "not before it" "null timeout" "$(event "$(W --timeout 2 --stall-window 86400)")"
+bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stalls 3 >/dev/null
+check "an entry already at 3 stalls is escalated, so its window is quiet" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stalls 1 >/dev/null
+sa_thread t-5 running 2 0 /wt/5 feat/x-5
+check "a thread that started again is no stall" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+sa_thread t-5 idle 1 1 /wt/5 feat/x-5
+check "a thread holding a permission request is pending-approval, not a stall" "$repo#5 pending-approval" "$(event "$(W --timeout 5 --stall-window 60)")"
+check "--stall-window takes a positive integer" 2 "$(bash "$s/watch.sh" --ledger "$led" --stall-window 0 >/dev/null 2>&1; echo $?)"
 
 # --- what it cannot read is an event, not a silent stall -----------------------
 fixture

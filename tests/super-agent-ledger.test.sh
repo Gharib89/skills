@@ -54,6 +54,22 @@ out=$(L get Gharib89/skills#99 2>/dev/null); rc=$?
 check_rc "get of a key the ledger lacks exits 1" 1 "$rc"
 check "and names it" "Gharib89/skills#99 is not in the ledger" "$(jq -r .error <<<"$out")"
 
+# --- rulings that allow a call: the launch brief carries them up front ----------
+out=$(L allowed)
+check "with no allowing ruling, no call is allowed" "[]" "$(jq -c .allowed <<<"$out")"
+out=$(L ruling "approve the held pnpm install" --allow "pnpm install" --allow "pnpm run build")
+day=$(jq -r .ruling.date <<<"$out")
+check "a ruling records the calls it allows" '["pnpm install","pnpm run build"]' "$(jq -c .ruling.allow <<<"$out")"
+check "a ruling with no --allow is dated and allows nothing" "waive a Codex usage limit [] 1" \
+  "$(jq -r '.rulings[0] | "\(.text) \(.allow) \(.date | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") | if . then 1 else 0 end)"' <<<"$(L list)")"
+out=$(L allowed)
+check "allowed lists each call with its date" "pnpm install pnpm run build" "$(jq -r '[.allowed[].call] | join(" ")' <<<"$out")"
+check "dated by its ruling" "$day" "$(jq -r '.allowed[0].date' <<<"$out")"
+check "and written as the line the launch brief carries" \
+  "Run \`pnpm install\` without a hold: the owner allowed it on $day." "$(jq -r '.allowed[0].line' <<<"$out")"
+out=$(L ruling "x" --allow 2>/dev/null); rc=$?
+check_rc "--allow with no call exits 2" 2 "$rc"
+
 # --- set: one field, the stage a closed list ------------------------------------
 out=$(L set Gharib89/skills#6 stage '"running"'); rc=$?
 check_rc "set stage exits 0" 0 "$rc"
@@ -112,5 +128,23 @@ check "and answers the usage line" "$(sed -n 1p <<<"$(bash "$s/ledger.sh" --help
 out=$(bash "$s/ledger.sh" --ledger "$tmp/none/ledger.json" list)
 check "a ledger not yet written reads as empty" '{"entries":[],"rulings":[]}' "$(jq -c '{entries, rulings}' <<<"$out")"
 check "and reading creates nothing" "" "$(ls "$tmp/none" 2>/dev/null)"
+
+LR() { bash "$s/ledger.sh" --ledger "$tmp/re.json" "$@"; }
+# --- rethread: a fresh thread for a ticket, its tracking started over -----------
+LR add --repo Gharib89/skills --number 8 --thread t-8 --worktree /wt/8 --branch feat/x-8 >/dev/null
+LR set Gharib89/skills#8 stalls 3 >/dev/null
+LR set Gharib89/skills#8 rest_since '"2026-11-06T01:00:00Z"' >/dev/null
+LR set Gharib89/skills#8 judged_run 4 >/dev/null
+LR set Gharib89/skills#8 observed '{"status":"idle"}' >/dev/null
+out=$(LR rethread Gharib89/skills#8 --thread t-9 --worktree /wt/9 --branch feat/x-9 --model sonnet --effort high)
+check "rethread answers the entry" t-9 "$(jq -r .entry.thread <<<"$out")"
+check "it holds the fresh thread, worktree, branch, model and effort" "t-9 /wt/9 feat/x-9 sonnet high" \
+  "$(LR get Gharib89/skills#8 | jq -r '[.thread, .worktree, .branch, .model, .effort] | join(" ")')"
+check "and starts the tracking over: launched, 0 stalls, nothing observed" "launched 0 null null 0" \
+  "$(LR get Gharib89/skills#8 | jq -r '[.stage, .stalls, .observed, .rest_since, .judged_run] | map(tostring) | join(" ")')"
+out=$(LR rethread Gharib89/skills#99 --thread t-9 --worktree /wt/9 --branch b 2>/dev/null); rc=$?
+check_rc "rethread of a key the ledger lacks exits 1" 1 "$rc"
+out=$(LR rethread Gharib89/skills#8 --thread t-9 2>/dev/null); rc=$?
+check_rc "rethread without a worktree and branch exits 2" 2 "$rc"
 
 finish

@@ -23,7 +23,9 @@
 # `free -m`, `nvidia-smi` and `hostname` answer from `probe/` (sa_machine sets
 # them; no GPU line is no tool, sa_gpu_failing a tool that fails); `claude`, `codex` and `agy` answer from
 # `provider/<name>.out` and `.rc` (sa_provider; no .rc is exit 0), and a
-# provider named in SA_FAKE_ABSENT at install time is not installed.
+# provider named in SA_FAKE_ABSENT at install time is not installed. `sleep` runs
+# the one-shot script `on-sleep` first, to change what the fakes answer while a
+# script waits.
 
 sa_fake_install() { # <dir>
   cat > "$1/t3" <<'FAKE'
@@ -56,6 +58,11 @@ f="$SA_FAKE/gh/$(printf '%s' "$2" | sed 's/[^A-Za-z0-9._-]/_/g')"
 [ -f "$f" ] || { printf '%s' '{"message":"Not Found","status":"404"}'; echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
 cat "$f"
 FAKE
+  cat > "$1/sleep" <<'FAKE'
+#!/usr/bin/env bash
+if [ -f "$SA_FAKE/on-sleep" ]; then bash "$SA_FAKE/on-sleep"; rm -f "$SA_FAKE/on-sleep"; fi
+exec /usr/bin/sleep "$@"
+FAKE
   for p in pgrep ps; do
     printf '#!/usr/bin/env bash\nprintf "%s %%s\\n" "$*" >> "$SA_FAKE/proc-calls"\n' "$p" > "$1/$p"
   done
@@ -83,7 +90,7 @@ exit "$(cat "$SA_FAKE/provider/$n.rc" 2>/dev/null || echo 0)"
 FAKE
     chmod +x "$1/$p"
   done
-  chmod +x "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/hostname"
+  chmod +x "$1/sleep" "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/hostname"
   mkdir -p "$SA_FAKE/threads" "$SA_FAKE/gh" "$SA_FAKE/probe" "$SA_FAKE/provider"
 }
 
