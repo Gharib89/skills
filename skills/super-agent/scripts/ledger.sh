@@ -14,8 +14,8 @@
 # A key is `<owner/name>#<number>`. `--ledger` comes first and names the file,
 # which a first `add` creates. `add` starts an entry at stage `launched`, stalls
 # 0, observed null: `reconcile` fills `observed`, the baseline `watch` compares
-# against. `set` takes any field
-# but the entry's identity (key, repo, number); `stage` must be one of
+# against, and `error`, the fault kind it last failed to read. `set` takes any
+# field but the entry's identity (key, repo, number); `stage` must be one of
 # launched, running, at-rest, settled, closed. A write is a temp file beside the
 # ledger, then a rename.
 #

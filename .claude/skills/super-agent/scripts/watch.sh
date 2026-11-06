@@ -13,8 +13,10 @@
 # is `thread-mismatch`; a thread or PR it cannot read is `thread-unreadable` or
 # `pr-unreadable`: a watcher that went quiet on those would be a silent stall.
 # A failure `reconcile` already recorded on the entry (its `error`) is not
-# reported again, so a restarted watcher does not wake on the same fault. An
-# entry with no `observed` baseline is skipped and named in `unobserved`.
+# reported again, so a restarted watcher does not wake on the same fault; such
+# an entry stays in `watching` though it wakes nothing, and a fault that clears
+# and returns between two reconciles stays quiet. An entry with no `observed`
+# baseline is skipped and named in `unobserved`.
 # Settled and closed entries are not watched. Watch writes nothing, so an
 # unreconciled change is reported again by the next watch.
 #
