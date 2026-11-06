@@ -39,8 +39,8 @@ directory.
   `entries`.
 - `setup.sh` probes this machine, its linked T3 environments, the GitHub
   accounts and each provider's quota command, and proposes the fleet file
-  (below); it takes `--fleet <file>` in place of `--ledger`, and writes only
-  with `--write`.
+  (below) with `--propose`; it takes `--fleet <file>` in place of
+  `--ledger`, and writes only with `--write`.
 
 ## Setup
 
@@ -51,7 +51,7 @@ commands from the fleet file, never from this text.
 
 When the fleet file is missing, or the owner asks for `/super-agent setup`:
 
-1. Run `scripts/setup.sh` without `--write` and show the owner its proposal:
+1. Run `scripts/setup.sh --propose` and show the owner its proposal:
    each machine's slots, the thresholds, each provider marked `unavailable`
    with its `reason`, and every line of `warnings`.
 2. Ask the owner to confirm or adjust it. After the yes, run it again with

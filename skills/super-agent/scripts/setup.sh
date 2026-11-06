@@ -2,10 +2,10 @@
 # Probe this machine, the linked T3 environments, GitHub and each provider's
 # quota command, and propose the fleet file: the owner's machines, providers,
 # accounts, active repos and standing waivers, which the launch reads instead of
-# the skill text. Nothing is written without --write, so the owner reads the
-# proposal and confirms first.
+# the skill text. --propose prints the proposal and writes nothing, so the owner
+# reads it and confirms first; --write then writes it.
 #
-#   setup [--fleet <file>] [--name <machine>] [--write]
+#   setup (--propose | --write) [--fleet <file>] [--name <machine>]
 #
 # --fleet defaults to `super-agent/fleet.json` under $XDG_CONFIG_HOME
 # (`~/.config` when unset), the user-scope path the owner keeps in their
@@ -28,18 +28,20 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: setup [--fleet <file>] [--name <machine>] [--write]'
+usage='usage: setup (--propose | --write) [--fleet <file>] [--name <machine>]'
 sa_help "$usage" "$@"
 fleet_file="${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json"
-name='' write=false
+name='' write=false mode=''
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet_file=$2; shift 2 ;;
     --name) sa_flag_value "$usage" "${2:-}"; name=$2; shift 2 ;;
-    --write) write=true; shift ;;
+    --propose) mode=propose; shift ;;
+    --write) mode=write write=true; shift ;;
     *) sa_tooling "$usage" ;;
   esac
 done
+[ -n "$mode" ] || sa_tooling "$usage"
 [ -n "$name" ] || name=$(hostname 2>/dev/null) || sa_tooling "cannot read this machine's name: pass --name"
 existing='{}'
 if [ -f "$fleet_file" ]; then

@@ -19,6 +19,7 @@ export PATH="$tmp/bin:/usr/bin:/bin" SA_FAKE=$tmp/fake
 sa_fake_install "$tmp/bin"
 fleet=$tmp/config/fleet.json
 S() { bash "$s/setup.sh" --fleet "$fleet" "$@"; }
+P() { S --propose "$@"; }
 
 claude_ok='{"type":"result","result":"Current session: 3% used · resets 14:00"}'
 agy_ok='{"conversation_id":"","status":"SUCCESS","response":"Gemini Models\tWeekly Limit Remaining\t96%"}'
@@ -40,10 +41,13 @@ check "--help writes nothing on stderr" "" "$(cat "$tmp/err")"
 out=$(bash "$s/setup.sh" --bogus 2>/dev/null); rc=$?
 check "a bad flag answers the usage line" "$(sed -n 1p <<<"$(bash "$s/setup.sh" --help)")" "$(jq -r .error <<<"$out")"
 check_rc "a bad flag exits 2" 2 "$rc"
+out=$(bash "$s/setup.sh" 2>/dev/null); rc=$?
+check_rc "a bare call, which names neither --propose nor --write, exits 2" 2 "$rc"
+check "and writes nothing" absent "$([ -e "$fleet" ] && echo present || echo absent)"
 
 # --- a proposal is printed, and nothing is written without --write --------------
 reset
-out=$(S --name laptop); rc=$?
+out=$(P --name laptop); rc=$?
 check_rc "a proposal exits 0" 0 "$rc"
 check "it says it wrote nothing" false "$(jq .written <<<"$out")"
 check "and left no file" absent "$([ -e "$fleet" ] && echo present || echo absent)"
@@ -85,7 +89,7 @@ check "no temp file is left beside it" 1 "$(find "$(dirname "$fleet")" -type f |
 reset
 sa_provider codex 1 "boom"
 sa_provider claude 0 "not json at all"
-out=$(S --name laptop); rc=$?
+out=$(P --name laptop); rc=$?
 check_rc "a failing provider still exits 0" 0 "$rc"
 check "the one that exited nonzero is unavailable, with a reason" \
   '{"status":"unavailable","reason":"quota command exited 1"}' "$(jq -c '.fleet.providers.codex | {status, reason}' <<<"$out")"
@@ -94,7 +98,7 @@ check "the one that printed no quota is unavailable too" \
 check "the others are untouched" available "$(jq -r .fleet.providers.agy.status <<<"$out")"
 reset
 rm -f "$tmp/bin/codex"
-out=$(S --name laptop); rc=$?
+out=$(P --name laptop); rc=$?
 check_rc "a provider that is not installed exits 0" 0 "$rc"
 check "and is unavailable, saying so" \
   '{"status":"unavailable","reason":"codex is not installed"}' "$(jq -c '.fleet.providers.codex | {status, reason}' <<<"$out")"
@@ -103,20 +107,20 @@ sa_fake_install "$tmp/bin"
 # --- the other probes failing is not fatal either --------------------------------
 reset
 rm -f "$SA_FAKE/environments.json" "$SA_FAKE/gh-auth.json"
-out=$(S --name laptop); rc=$?
+out=$(P --name laptop); rc=$?
 check_rc "no T3 environments and no gh login still exit 0" 0 "$rc"
 check "only this machine is listed" laptop "$(jq -r '.fleet.machines | keys | join(",")' <<<"$out")"
 check "each failed probe is a warning" 2 "$(jq '.warnings | length' <<<"$out")"
-check "no GPU is null" null "$(sa_machine laptop 4 8192; jq .fleet.machines.laptop.gpu <<<"$(S --name laptop)")"
+check "no GPU is null" null "$(sa_machine laptop 4 8192; jq .fleet.machines.laptop.gpu <<<"$(P --name laptop)")"
 
 # --- slot proposals follow cores and RAM -----------------------------------------
 reset
 sa_machine srv 4 8192
-check "4 cores and 8 GB: 2 slots" 2 "$(S --name srv | jq .fleet.machines.srv.slots)"
+check "4 cores and 8 GB: 2 slots" 2 "$(P --name srv | jq .fleet.machines.srv.slots)"
 sa_machine srv 16 16384
-check "RAM binds before cores: 16 cores and 16 GB, 4 slots" 4 "$(S --name srv | jq .fleet.machines.srv.slots)"
+check "RAM binds before cores: 16 cores and 16 GB, 4 slots" 4 "$(P --name srv | jq .fleet.machines.srv.slots)"
 sa_machine srv 2 3072
-check "never below one slot" 1 "$(S --name srv | jq .fleet.machines.srv.slots)"
+check "never below one slot" 1 "$(P --name srv | jq .fleet.machines.srv.slots)"
 
 # --- a re-run updates the file and keeps what the owner edited --------------------
 reset
@@ -144,7 +148,7 @@ check "and a quota command the owner changed" 'claude -p /usage' "$(jq -r .provi
 check "and a key setup never wrote" mine "$(jq -r .note <<<"$g")"
 check "a machine no longer linked is kept, not dropped" present \
   "$(jq -r 'if .machines.down then "present" else "absent" end' <<<"$g")"
-check "the re-run keeps a second run changes nothing" "$g" "$(S --name laptop --write >/dev/null; jq -c . "$fleet")"
+check "a second run changes nothing" "$g" "$(S --name laptop --write >/dev/null; jq -c . "$fleet")"
 
 # --- an unreadable fleet file is refused, not overwritten --------------------------
 printf 'not json\n' > "$fleet"
