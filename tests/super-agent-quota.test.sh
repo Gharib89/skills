@@ -96,7 +96,7 @@ reset; rm -f "$tmp/bin/codex"
 check "a provider that is not installed is unknown" unknown "$(Q | jq -r .providers.codex.status)"
 
 reset; sa_provider agy 0 '{"status":"SUCCESS","command":{"data":{"groups":[{"name":"G","buckets":[{"id":"a","window":"weekly","reset_time":"x"},{"id":"b","window":"5h","remaining_fraction":0.5,"reset_time":"y"}]}]}}}'
-check "an agy bucket with no remaining fraction is dropped, so route's shape check never sees it" '["b"]' "$(Q | jq -c '[.providers.agy.buckets[].id]')"
+check "an agy bucket with no remaining fraction is dropped" '["b"]' "$(Q | jq -c '[.providers.agy.buckets[].id]')"
 
 # a provider key is read as a name, never globbed against the working directory
 jq -n '{providers: {"*": {}}}' > "$tmp/glob.json"
