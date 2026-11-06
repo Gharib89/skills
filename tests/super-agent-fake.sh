@@ -13,7 +13,11 @@
 # `SA_T3_RC` makes a found thread exit nonzero after its answer. `gh api
 # <endpoint>` answers from `gh/<endpoint with every character outside
 # [A-Za-z0-9._-] turned into _>`; no file is a 404, exit 1 with the JSON body
-# on stdout like the real CLI (measured 2026-11-06). `pgrep` and `ps` record
+# on stdout like the real CLI (measured 2026-11-06). A POST to an endpoint
+# ending `/comments` appends the `body=` field to that route's array, as
+# `{id, body, created_at, user}` (the `now` file sets the time, the `user` route's login the author), and
+# a DELETE removes its id from every comments route; any other POST answers `{}`
+# or its route file. `pgrep` and `ps` record
 # themselves in `proc-calls` and print nothing: a script that matches a
 # process by name shows up there. Every t3 and gh call is a line of `calls`.
 #
@@ -57,9 +61,42 @@ if [ "$1 $2" = "auth status" ]; then
   cat "$SA_FAKE/gh-auth.json"; exit 0
 fi
 [ "$1" = api ] || { echo "fake gh: unsupported: $*" >&2; exit 2; }
-f="$SA_FAKE/gh/$(printf '%s' "$2" | sed 's/[^A-Za-z0-9._-]/_/g')"
-[ -f "$f" ] || { printf '%s' '{"message":"Not Found","status":"404"}'; echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
-cat "$f"
+shift; method=GET ep='' body=''
+while [ $# -gt 0 ]; do
+  case $1 in
+    -X|--method) method=$2; shift 2 ;;
+    -f|-F|--field|--raw-field) case $2 in body=*) body=${2#body=} ;; esac; shift 2 ;;
+    -*) shift ;;
+    *) [ -n "$ep" ] || ep=$1; shift ;;
+  esac
+done
+route() { printf '%s' "$1" | sed 's/[^A-Za-z0-9._-]/_/g'; }
+f="$SA_FAKE/gh/$(route "$ep")"
+case $method in
+  POST)
+    case $ep in
+      */comments)
+        # A new comment joins the issue's list, after the one-shot `on-post` script ran (a rival's claim landing first).
+        if [ -f "$SA_FAKE/on-post" ]; then bash "$SA_FAKE/on-post"; rm -f "$SA_FAKE/on-post"; fi
+        [ -f "$f" ] || echo '[]' > "$f"
+        c=$(jq -c --arg b "$body" --arg t "$(cat "$SA_FAKE/now" 2>/dev/null || echo 2026-11-06T12:00:00Z)" \
+          --arg u "$(jq -r '.login // "octo"' "$SA_FAKE/gh/user" 2>/dev/null)" \
+          '{id: (([.[].id] | max // 1000) + 1), body: $b, created_at: $t, user: {login: $u}}' "$f")
+        jq -c --argjson c "$c" '. + [$c]' "$f" > "$f.new" && mv "$f.new" "$f"
+        printf '%s\n' "$c" ;;
+      *) if [ -f "$f" ]; then cat "$f"; else echo '{}'; fi ;;
+    esac ;;
+  DELETE)
+    id=${ep##*/}
+    for g in "$SA_FAKE"/gh/*_comments*; do
+      [ -f "$g" ] || continue
+      jq -c --argjson i "$id" 'map(select(.id != $i))' "$g" > "$g.new" && mv "$g.new" "$g"
+    done
+    echo '{}' ;;
+  *)
+    [ -f "$f" ] || { printf '%s' '{"message":"Not Found","status":"404"}'; echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
+    cat "$f" ;;
+esac
 FAKE
   cat > "$1/sleep" <<'FAKE'
 #!/usr/bin/env bash
