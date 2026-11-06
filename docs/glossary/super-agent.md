@@ -13,7 +13,7 @@ The super agent's JSON file in the state directory, one entry per ticket it hold
 _Avoid_: board, roster (that is drive-session's), wiki, memory
 
 **Watcher**:
-The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent. A thread finishing wakes nothing by itself.
+The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
 _Avoid_: watchdog, poller, monitor
 
 **Stall**:
@@ -21,7 +21,7 @@ A supervised thread at rest with its ticket not done: its run completed with no 
 _Avoid_: hang, idle (idle is a thread state, not a judgement), crash
 
 **Standing waiver**:
-A merge-gate hold the launch template waives in advance, with its condition written out, so a run that meets it merges without a round trip to the owner. Any hold outside the listed waivers is still an escalation.
+A merge-gate hold the launch template waives in advance, with its condition written out, so a run that meets it merges without a round trip to the owner. The fleet file lists them and the launch brief carries each condition word for word. Any hold outside the listed waivers is still an escalation.
 _Avoid_: auto-merge, merge allowance (that is the launch permission to merge at all), exception
 
 **Fleet file**:
@@ -51,3 +51,7 @@ _Avoid_: digest, auto-pickup, queue
 **Probe thread**:
 A scratch thread the super agent launches on a linked machine to run the fixed probe there (cores, RAM, GPU, provider CLIs, gh logins) and reply with one JSON line, which setup merges into the fleet file. It is settled once its reply is read and is no ledger entry.
 _Avoid_: health check, ping
+
+**Recurring find**:
+One class of mistake or gap seen in two or more tickets. It is filed once as an issue in the repo it hits and ordered before the work it would hit, never fixed per ticket; a find that holds across repos is proposed to the owner as a global rule instead.
+_Avoid_: pattern, trend, retro item
