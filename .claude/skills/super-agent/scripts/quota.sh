@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Read every fleet-file provider's quota through the command setup probed and
+# recorded for it, so routing never relies on documentation. No model turn is
+# spent: Claude's `/usage` print, Codex's app-server `account/rateLimits/read`
+# and agy's `/usage` JSON are all free reads.
+#
+#   quota [--fleet <file>]
+#
+# --fleet defaults to `super-agent/fleet.json` under $XDG_CONFIG_HOME
+# (`~/.config` when unset). A provider is read by its `driver` (its key when
+# unset) through its `quota_command`, run once under a 30 s limit. A read that
+# fails, prints nothing readable or has no command is `unknown` with a reason,
+# never an error: the router falls back to the default tier without asking.
+#
+# stdout: {providers: {<name>: {status, reason, buckets}}}: `status` `available`
+#         or `unknown`, `reason` null or why; `buckets` one {id, window,
+#         remaining, resets} per bucket, `window` `5h` or `weekly`, `remaining`
+#         a fraction 0 to 1 (agy's buckets add `group`), `resets` the provider's
+#         own reset time as text. Claude's ids are `session`, `week` (all
+#         models) and `week-<model>`; Codex's are `session` and `week`; agy's
+#         are its own bucket ids
+# exit: 0 a read, unknown providers included · 2 usage, or a fleet file that is
+#       missing, not JSON or has providers that are not an object
+set -uo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
+
+usage='usage: quota [--fleet <file>]'
+sa_help "$usage" "$@"
+fleet_file="${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json"
+while [ $# -gt 0 ]; do
+  case $1 in
+    --fleet) sa_flag_value "$usage" "${2:-}"; fleet_file=$2; shift 2 ;;
+    *) sa_tooling "$usage" ;;
+  esac
+done
+[ -f "$fleet_file" ] || sa_tooling "$fleet_file: no such file, run setup"
+jq -e . "$fleet_file" >/dev/null 2>&1 || sa_tooling "$fleet_file: not JSON"
+jq -e '((.providers // {}) | type) == "object"' "$fleet_file" >/dev/null || sa_tooling "$fleet_file: providers must be an object"
+
+# Each parser reads the command's stdout and prints the bucket array, or nothing
+# when the output holds no quota.
+parse_claude() { # the `/usage` print is text inside the JSON's `.result`
+  jq -c '[(.result // "" | split("\n")[]
+      | capture("^Current (?<what>session|week \\((?<m>[^)]+)\\)): (?<used>[0-9]+)% used · resets (?<resets>.+)$")?
+      | {id: (if .what == "session" then "session" elif .m == "all models" then "week" else "week-\(.m | ascii_downcase)" end),
+         window: (if .what == "session" then "5h" else "weekly" end),
+         remaining: ((100 - (.used | tonumber)) / 100), resets})]
+    | select(length > 0)' 2>/dev/null
+}
+parse_codex() { # JSON lines; the answer to request 2 is the one that holds the limits
+  jq -c -n '[inputs | select(.id == 2) | .result.rateLimits // empty | (.primary, .secondary) | select(. != null)
+      | (.windowDurationMins | if . == 300 then "5h" elif . == 10080 then "weekly" else "\(.)m" end) as $w
+      | {id: (if $w == "5h" then "session" elif $w == "weekly" then "week" else $w end), window: $w,
+         remaining: ((100 - .usedPercent) / 100), resets: (.resetsAt | todate)}]
+    | select(length > 0)' 2>/dev/null
+}
+parse_agy() {
+  jq -c 'select(.status == "SUCCESS") | [.command.data.groups[]? | .name as $g | .buckets[]?
+      | {id, window, remaining: .remaining_fraction, resets: .reset_time, group: $g}]
+    | select(length > 0)' 2>/dev/null
+}
+
+out='{}'
+# Provider names are keys the owner wrote, words with no space in them.
+names=$(jq -r '(.providers // {}) | keys[]' "$fleet_file")
+for name in $names; do
+  cfg=$(jq -c --arg n "$name" '.providers[$n] | if type == "object" then . else {} end' "$fleet_file")
+  driver=$(jq -r --arg n "$name" '.driver // $n' <<<"$cfg")
+  cmd=$(jq -r '.quota_command // empty' <<<"$cfg")
+  status=unknown reason='' buckets='[]'
+  if [ -z "$cmd" ]; then
+    reason='no quota command in the fleet file'
+  else
+    raw=$(timeout 30 bash -c "$cmd" 2>/dev/null </dev/null); rc=$?
+    if [ "$rc" -ne 0 ]; then
+      reason="quota command exited $rc"
+    else
+      case $driver in
+        claude) parsed=$(parse_claude <<<"$raw") ;;
+        codex) parsed=$(parse_codex <<<"$raw") ;;
+        agy) parsed=$(parse_agy <<<"$raw") ;;
+        *) parsed='' reason="no parser for driver $driver" ;;
+      esac
+      if [ -n "$parsed" ]; then status=available buckets=$parsed
+      else [ -n "$reason" ] || reason='quota command printed no quota'; fi
+    fi
+  fi
+  out=$(jq -c --arg n "$name" --arg s "$status" --arg r "$reason" --argjson b "$buckets" \
+    '.[$n] = {status: $s, reason: (if $r == "" then null else $r end), buckets: $b}' <<<"$out")
+done
+jq -cn --argjson p "$out" '{providers: $p}'

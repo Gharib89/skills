@@ -113,7 +113,9 @@ fi
 # back, and the provider is `unavailable` with the reason when it does not print
 # a quota: the router skips it, and the owner can fix the command in the file
 # and re-run, which probes the command the file holds.
-codex_cmd="printf '%s\\n' '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"clientInfo\":{\"name\":\"super-agent\",\"version\":\"0\"}}}' '{\"jsonrpc\":\"2.0\",\"method\":\"initialized\"}' '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"account/rateLimits/read\"}' | timeout 15 codex app-server"
+# The server exits on end of input before it answers request 2 (measured, codex
+# 0.166.0), so the requests are followed by a `sleep` that holds stdin open.
+codex_cmd="{ printf '%s\\n' '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"clientInfo\":{\"name\":\"super-agent\",\"version\":\"0\"}}}' '{\"jsonrpc\":\"2.0\",\"method\":\"initialized\"}' '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"account/rateLimits/read\"}' ; sleep 4; } | timeout 15 codex app-server"
 # provider: <name> <quota command> <jq test that the output holds a quota>
 probe_provider() {
   local p=$1 cmd test=$3 out rc status=available reason=null
