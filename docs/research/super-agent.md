@@ -230,6 +230,16 @@ Other measured facts:
   unavailable: AppArmor restricts unprivileged user namespaces
   (kernel.apparmor_restrict_unprivileged_userns = 1)". `bwrap` still runs here,
   since Ubuntu ships it an AppArmor profile; agy has none (**inferred**).
+- Re-probed with the sysctl at 0 (`sudo sysctl -w
+  kernel.apparmor_restrict_unprivileged_userns=0`, non-persistent; agy had
+  auto-updated to 1.5.1, the server to 1.5.2). The sandbox gate clears, and a
+  second gate shows: `--mode auto` now prints "--mode auto is not available for
+  this account" and still auto-denies `RunCommand`. `--sandbox` with the allow
+  rule ran the command (9.4 s), but agy reported the sandbox's working
+  directory read-only and ran it "with sandbox bypass", so the sandbox gave no
+  isolation for a write. A T3 `antigravity` child in inherited `auto` still
+  held its first shell command for approval. Verdict: the sysctl buys nothing
+  for the workflow; leave it at 1 (a reboot restores it).
 - A session-only allow rule works without `--dangerously-skip-permissions`:
   `agy -p "<task>" --settings '{"permissions":{"allow":["command(*)"]}}' --output-format json`
   ran the shell command, 12.4 s wall, 30.8k input tokens.
