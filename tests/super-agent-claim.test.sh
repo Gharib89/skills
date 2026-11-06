@@ -76,6 +76,8 @@ check "a window shorter than the age makes a fresh claim stale" stale \
   "$(sa_route "$ep" "[$(rival 11 beta 2026-11-06T09:00:00Z)]"; C --stale-after 3600 | jq -r .status)"
 check "a window longer than the age keeps it claimed" claimed \
   "$(C --stale-after 86400 | jq -r .status)"
+check "an age equal to the window is still claimed" claimed "$(C --stale-after 10800 | jq -r .status)"
+check "one second past the window is stale" stale "$(C --stale-after 10799 | jq -r .status)"
 check "the stale window is reported" 86400 "$(C --stale-after 86400 | jq .stale_after)"
 
 # --- the same machine's claim is its own, found by any thread --------------------------

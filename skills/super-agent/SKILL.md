@@ -145,9 +145,9 @@ fleet key> --thread $T3CODE_THREAD_ID` (your own thread) and read `status`:
 - `taken` or `own`: launch.
 - `claimed`: skip the ticket, and say in one chat line which machine holds it
   and its age.
-- `stale`: offer it back to the owner with the holder and age. Launch only on
-  the owner's explicit go, once the owner has removed the stale claim comment
-  or decided otherwise.
+- `stale`: offer it back to the owner with the holder and age. On the owner's
+  go, the owner (or you, at the owner's word) deletes that stale claim
+  comment; then rerun `claim.sh` and launch only on `taken`.
 
 A claim belongs to its holder: leave another machine's claim and its comment
 as they are. Exit 2 (the host refused a read or post) is an escalation.
