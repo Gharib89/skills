@@ -16,15 +16,29 @@
 # on stdout like the real CLI (measured 2026-11-06). `pgrep` and `ps` record
 # themselves in `proc-calls` and print nothing: a script that matches a
 # process by name shows up there. Every t3 and gh call is a line of `calls`.
+#
+# For `setup`'s probes: `t3 environment list --json` prints the migration
+# warning then `environments.json` (no file: exit 1); `gh auth status --json
+# hosts` answers `gh-auth.json`, the real shape (measured 2026-11-06); `nproc`,
+# `free -m`, `nvidia-smi` and `hostname` answer from `probe/` (sa_machine sets
+# them; no GPU line is no GPU, exit 9); `claude`, `codex` and `agy` answer from
+# `provider/<name>.out` and `.rc` (sa_provider; no .rc is exit 0), and a
+# provider named in SA_FAKE_ABSENT at install time is not installed.
 
 sa_fake_install() { # <dir>
   cat > "$1/t3" <<'FAKE'
 #!/usr/bin/env bash
 printf 't3 %s\n' "$*" >> "$SA_FAKE/calls"
+warn() { printf '%s\n' '[09:53:24.008] WARN (#20): Database migration history diverges from this build. {' \
+  "  divergent: [" "    '77:Repair (unknown to this build)'" "  ]" "}"; }
+if [ "$1 $2" = "environment list" ]; then
+  warn
+  [ -f "$SA_FAKE/environments.json" ] || { echo "environment list failed" >&2; exit 1; }
+  cat "$SA_FAKE/environments.json"; exit 0
+fi
 [ "$1 $2" = "thread show" ] || { echo "fake t3: unsupported: $*" >&2; exit 2; }
 id=$3
-printf '%s\n' '[09:53:24.008] WARN (#20): Database migration history diverges from this build. {' \
-  "  divergent: [" "    '77:Repair (unknown to this build)'" "  ]" "}"
+warn
 f="$SA_FAKE/threads/$id.json"
 [ -f "$f" ] || { echo "thread $id not found" >&2; exit 1; }
 cat "$f"
@@ -33,6 +47,10 @@ FAKE
   cat > "$1/gh" <<'FAKE'
 #!/usr/bin/env bash
 printf 'gh %s\n' "$*" >> "$SA_FAKE/calls"
+if [ "$1 $2" = "auth status" ]; then
+  [ -f "$SA_FAKE/gh-auth.json" ] || { echo "gh: not logged in" >&2; exit 1; }
+  cat "$SA_FAKE/gh-auth.json"; exit 0
+fi
 [ "$1" = api ] || { echo "fake gh: unsupported: $*" >&2; exit 2; }
 f="$SA_FAKE/gh/$(printf '%s' "$2" | sed 's/[^A-Za-z0-9._-]/_/g')"
 [ -f "$f" ] || { printf '%s' '{"message":"Not Found","status":"404"}'; echo "gh: Not Found (HTTP 404)" >&2; exit 1; }
@@ -41,8 +59,61 @@ FAKE
   for p in pgrep ps; do
     printf '#!/usr/bin/env bash\nprintf "%s %%s\\n" "$*" >> "$SA_FAKE/proc-calls"\n' "$p" > "$1/$p"
   done
-  chmod +x "$1/t3" "$1/gh" "$1/pgrep" "$1/ps"
-  mkdir -p "$SA_FAKE/threads" "$SA_FAKE/gh"
+  cat > "$1/nproc" <<'FAKE'
+#!/usr/bin/env bash
+cat "$SA_FAKE/probe/cores"
+FAKE
+  cat > "$1/free" <<'FAKE'
+#!/usr/bin/env bash
+printf '              total        used        free      shared  buff/cache   available\nMem:       %s       10410        5292        2471       18557       21004\nSwap:        8191           0        8191\n' "$(cat "$SA_FAKE/probe/ram_mb")"
+FAKE
+  cat > "$1/nvidia-smi" <<'FAKE'
+#!/usr/bin/env bash
+[ -f "$SA_FAKE/probe/gpu" ] || { echo "NVIDIA-SMI has failed" >&2; exit 9; }
+cat "$SA_FAKE/probe/gpu"
+FAKE
+  cat > "$1/hostname" <<'FAKE'
+#!/usr/bin/env bash
+cat "$SA_FAKE/probe/hostname"
+FAKE
+  for p in claude codex agy; do
+    case " ${SA_FAKE_ABSENT:-} " in *" $p "*) continue ;; esac
+    cat > "$1/$p" <<'FAKE'
+#!/usr/bin/env bash
+n=$(basename "$0")
+printf '%s %s\n' "$n" "$*" >> "$SA_FAKE/calls"
+cat "$SA_FAKE/provider/$n.out" 2>/dev/null
+exit "$(cat "$SA_FAKE/provider/$n.rc" 2>/dev/null || echo 0)"
+FAKE
+    chmod +x "$1/$p"
+  done
+  chmod +x "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/nvidia-smi" "$1/hostname"
+  mkdir -p "$SA_FAKE/threads" "$SA_FAKE/gh" "$SA_FAKE/probe" "$SA_FAKE/provider"
+}
+
+# sa_machine <hostname> <cores> <ram_mb> [<gpu line>]: what the machine probes read
+sa_machine() {
+  printf '%s\n' "$1" > "$SA_FAKE/probe/hostname"; printf '%s\n' "$2" > "$SA_FAKE/probe/cores"
+  printf '%s\n' "$3" > "$SA_FAKE/probe/ram_mb"; rm -f "$SA_FAKE/probe/gpu"
+  [ -z "${4:-}" ] || printf '%s\n' "$4" > "$SA_FAKE/probe/gpu"
+}
+
+# sa_provider <claude|codex|agy> <exit code> <stdout>: what its quota command prints
+sa_provider() {
+  printf '%s\n' "$3" > "$SA_FAKE/provider/$1.out"; printf '%s\n' "$2" > "$SA_FAKE/provider/$1.rc"
+}
+
+# sa_environments <json array>: what `t3 environment list --json` prints
+sa_environments() { printf '%s\n' "$1" > "$SA_FAKE/environments.json"; }
+
+# sa_github <login>...: the accounts `gh auth status --json hosts` lists, the first active
+sa_github() {
+  local first=true out='' l
+  for l in "$@"; do
+    out+=$(jq -cn --arg l "$l" --argjson a $first '{state:"success",active:$a,host:"github.com",login:$l}'),
+    first=false
+  done
+  printf '{"hosts":{"github.com":[%s]}}\n' "${out%,}" > "$SA_FAKE/gh-auth.json"
 }
 
 # sa_thread <id> <status> <runCount> <pending> <worktree> <branch> [<last message>]
