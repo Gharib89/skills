@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Probe this machine, the linked T3 environments, GitHub and each provider's
 # quota command, and propose the fleet file: the owner's machines, providers,
-# accounts, active repos and standing waivers, which the skill reads and never
-# embeds. Nothing is written without --write, so the owner reads the proposal
-# and confirms first.
+# accounts, active repos and standing waivers, which the launch reads instead of
+# the skill text. Nothing is written without --write, so the owner reads the
+# proposal and confirms first.
 #
 #   setup [--fleet <file>] [--name <machine>] [--write]
 #
@@ -89,11 +89,13 @@ fi
 
 # Each provider's quota command, run once. It is recorded as the owner reads it
 # back, and the provider is `unavailable` with the reason when it does not print
-# a quota: the router skips it, and the owner can fix the command and re-run.
+# a quota: the router skips it, and the owner can fix the command in the file
+# and re-run, which probes the command the file holds.
 codex_cmd="printf '%s\\n' '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"clientInfo\":{\"name\":\"super-agent\",\"version\":\"0\"}}}' '{\"jsonrpc\":\"2.0\",\"method\":\"initialized\"}' '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"account/rateLimits/read\"}' | timeout 15 codex app-server"
 # provider: <name> <quota command> <jq test that the output holds a quota>
 probe_provider() {
-  local p=$1 cmd=$2 test=$3 out rc status=available reason=null
+  local p=$1 cmd test=$3 out rc status=available reason=null
+  cmd=$(jq -r --arg p "$p" --arg d "$2" '.providers[$p].quota_command // $d' <<<"$existing")
   if ! command -v "$p" >/dev/null; then
     status=unavailable reason=$(jq -cn --arg p "$p" '"\($p) is not installed"')
   else

@@ -45,9 +45,9 @@ directory.
 ## Setup
 
 The **fleet file** is `super-agent/fleet.json` under `$XDG_CONFIG_HOME`
-(`~/.config` when unset). It is the only source of the machines and their
-slots, the GitHub accounts, the active repos, the standing waivers and the
-provider quota commands: read them from it, since this skill names none.
+(`~/.config` when unset). A launch reads the machines and their slots, the
+GitHub accounts, the active repos, the standing waivers and the provider quota
+commands from the fleet file, never from this text.
 
 When the fleet file is missing, or the owner asks for `/super-agent setup`:
 
@@ -55,7 +55,7 @@ When the fleet file is missing, or the owner asks for `/super-agent setup`:
    each machine's slots, the thresholds, each provider marked `unavailable`
    with its `reason`, and every line of `warnings`.
 2. Ask the owner to confirm or adjust it. After the yes, run it again with
-   `--write`, carrying the adjustments.
+   `--write`, then apply the owner's adjustments by editing the written file.
 3. Tell the owner to keep the fleet file in their dotfiles, so every machine a
    super agent may start on has it.
 

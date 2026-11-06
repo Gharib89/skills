@@ -134,6 +134,8 @@ check "probed facts are refreshed: cores, RAM, GPU" '{"cores":16,"ram_gb":64,"gp
   "$(jq -c '.machines.laptop | {cores, ram_gb, gpu}' <<<"$g")"
 check "so is a provider's status" unavailable "$(jq -r .providers.agy.status <<<"$g")"
 check "and the account list" '[{"login":"alice","active":true}]' "$(jq -c .github_accounts <<<"$g")"
+check "the re-run probed the command the owner edited, not the default" \
+  "claude -p /usage" "$(grep '^claude ' "$SA_FAKE/calls" | tail -1)"
 check "the owner's slot count stays" 2 "$(jq .machines.laptop.slots <<<"$g")"
 check "and the load threshold" 8 "$(jq .machines.laptop.max_load <<<"$g")"
 check "and the active repos" '["Gharib89/skills"]' "$(jq -c .active_repos <<<"$g")"
@@ -142,7 +144,7 @@ check "and a quota command the owner changed" 'claude -p /usage' "$(jq -r .provi
 check "and a key setup never wrote" mine "$(jq -r .note <<<"$g")"
 check "a machine no longer linked is kept, not dropped" present \
   "$(jq -r 'if .machines.down then "present" else "absent" end' <<<"$g")"
-check "the re-run keeps the ledger of nothing: a second run changes nothing" "$g" "$(S --name laptop --write >/dev/null; jq -c . "$fleet")"
+check "the re-run keeps a second run changes nothing" "$g" "$(S --name laptop --write >/dev/null; jq -c . "$fleet")"
 
 # --- an unreadable fleet file is refused, not overwritten --------------------------
 printf 'not json\n' > "$fleet"
