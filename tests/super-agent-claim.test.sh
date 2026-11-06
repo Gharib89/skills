@@ -26,7 +26,7 @@ reset() { rm -f "$SA_FAKE/calls" "$SA_FAKE/on-post"; sa_route "$ep" '[]'; sa_rou
 writes() { grep -c -- '-X POST\|-X DELETE' "$SA_FAKE/calls" 2>/dev/null || true; }
 rival() { # <id> <machine> <created_at>: a claim comment of another machine
   jq -cn --argjson i "$1" --arg m "$2" --arg t "$3" \
-    '{id: $i, created_at: $t, body: "<!-- super-agent-claim machine=\($m) thread=th-\($m) -->\nClaimed."}'
+    '{id: $i, created_at: $t, user: {login: "octo"}, body: "<!-- super-agent-claim machine=\($m) thread=th-\($m) -->\nClaimed."}'
 }
 
 # --- the contract every script keeps ------------------------------------------
@@ -87,8 +87,15 @@ check "it is own, however old and whichever thread" own "$(jq -r .status <<<"$ou
 
 # --- comments that are no claim are ignored --------------------------------------------
 reset
-sa_route "$ep" '[{"id":3,"created_at":"2026-11-06T08:00:00Z","body":"claimed? <!-- super-agent-claim machine=beta thread=x -->"},{"id":4,"created_at":"2026-11-06T08:00:00Z","body":"looks good"}]'
+sa_route "$ep" '[{"id":3,"created_at":"2026-11-06T08:00:00Z","user":{"login":"octo"},"body":"claimed? <!-- super-agent-claim machine=beta thread=x -->"},{"id":4,"created_at":"2026-11-06T08:00:00Z","user":{"login":"octo"},"body":"looks good"}]'
 check "a mention of the marker mid-comment is no claim" taken "$(C | jq -r .status)"
+
+# --- a claim-shaped comment of another account is no claim ---------------------------------
+reset
+sa_route "$ep" '[{"id":3,"created_at":"2026-11-06T08:00:00Z","user":{"login":"passerby"},"body":"<!-- super-agent-claim machine=beta thread=x -->\nhi"}]'
+check "a passer-by's marker does not hold the ticket" taken "$(C | jq -r .status)"
+check "and the claim made sits beside it, authored by the signed-in account" '[[3,"passerby"],[4,"octo"]]' \
+  "$(jq -c '[.[] | [.id, .user.login]]' "$SA_FAKE/gh/$(printf '%s' "$ep" | sed 's/[^A-Za-z0-9._-]/_/g')")"
 
 # --- two claims posted together: the earlier comment holds it ---------------------------
 reset

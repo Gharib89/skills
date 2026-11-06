@@ -8,7 +8,8 @@
 #
 # The file is the one `setup --write` made; a missing file is refused rather
 # than created, since the machines and waivers a fresh one lacks are setup's to
-# propose. Tracking a repo already tracked, or stopping one that is not, changes
+# propose. A repo name is compared without regard to case, as GitHub does.
+# Tracking a repo already tracked, or stopping one that is not, changes
 # nothing and says so.
 #
 # stdout: {fleet_file, action, repo, changed, active_repos}: `active_repos` the
@@ -34,9 +35,10 @@ jq -e '(.active_repos // []) | type == "array" and all(type == "string")' "$flee
   || sa_tooling "$fleet: active_repos must be an array of strings"
 
 new=$(jq -c --arg r "$repo" --arg a "$action" '
-  (.active_repos // []) as $old
-  | .active_repos = (if $a == "track" then ($old + (if $old | index($r) then [] else [$r] end))
-                     else ($old | map(select(. != $r))) end)' "$fleet")
+  ($r | ascii_downcase) as $l
+  | (.active_repos // []) as $old
+  | .active_repos = (if $a == "track" then ($old + (if $old | map(ascii_downcase) | index($l) then [] else [$r] end))
+                     else ($old | map(select(ascii_downcase != $l))) end)' "$fleet")
 changed=$(jq -n --slurpfile o "$fleet" --argjson n "$new" '($o[0].active_repos // []) != $n.active_repos')
 [ "$changed" = false ] || sa_write "$fleet" "$new"
 jq -cn --arg f "$fleet" --arg a "$action" --arg r "$repo" --argjson c "$changed" --argjson n "$new" \

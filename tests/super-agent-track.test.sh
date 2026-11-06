@@ -48,6 +48,11 @@ check "stopping an untracked repo changes nothing" '{"changed":false,"active_rep
 T stop acme/gadgets >/dev/null
 check "stopping the last repo leaves an empty list" '[]' "$(jq -c .active_repos "$fleet")"
 
+# --- GitHub names are case-insensitive ------------------------------------------
+seed
+check "tracking a repo in another case adds nothing" '{"changed":false,"active_repos":["acme/widgets"]}' "$(T track Acme/Widgets | jq -c '{changed, active_repos}')"
+check "stopping it in another case removes it" '[]' "$(T stop ACME/WIDGETS | jq -c .active_repos)"
+
 # --- a fleet file with no active_repos key yet --------------------------------
 printf '%s\n' '{"machines":{}}' > "$fleet"
 check "a file without the key gains it" '["acme/widgets"]' "$(T track acme/widgets | jq -c .active_repos)"

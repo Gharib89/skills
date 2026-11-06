@@ -57,7 +57,7 @@ while IFS= read -r repo; do
   while IFS= read -r issue; do
     [ -n "$issue" ] || continue
     n=$(jq -r .number <<<"$issue") key="$repo#$n"
-    if jq -e --arg k "$key" "$sa_jq_open"' (.entries[$k] // null) | . != null and is_open' <<<"$doc" >/dev/null; then
+    if jq -e --arg k "$key" "$sa_jq_open"' [.entries | to_entries[] | select((.key | ascii_downcase) == ($k | ascii_downcase)) | .value | select(is_open)] | length > 0' <<<"$doc" >/dev/null; then
       held=$(jq -c --arg k "$key" '. + [$k]' <<<"$held"); continue
     fi
     out=$(bash "$here/claim.sh" --check --repo "$repo" --number "$n" --machine "$machine" --thread "$thread" ${claim_args[@]+"${claim_args[@]}"} 2>/dev/null </dev/null)

@@ -15,7 +15,7 @@
 # [A-Za-z0-9._-] turned into _>`; no file is a 404, exit 1 with the JSON body
 # on stdout like the real CLI (measured 2026-11-06). A POST to an endpoint
 # ending `/comments` appends the `body=` field to that route's array, as
-# `{id, body, created_at}` (the `now` file sets the last), and
+# `{id, body, created_at, user}` (the `now` file sets the time, the `user` route's login the author), and
 # a DELETE removes its id from every comments route; any other POST answers `{}`
 # or its route file. `pgrep` and `ps` record
 # themselves in `proc-calls` and print nothing: a script that matches a
@@ -80,7 +80,8 @@ case $method in
         if [ -f "$SA_FAKE/on-post" ]; then bash "$SA_FAKE/on-post"; rm -f "$SA_FAKE/on-post"; fi
         [ -f "$f" ] || echo '[]' > "$f"
         c=$(jq -c --arg b "$body" --arg t "$(cat "$SA_FAKE/now" 2>/dev/null || echo 2026-11-06T12:00:00Z)" \
-          '{id: (([.[].id] | max // 1000) + 1), body: $b, created_at: $t}' "$f")
+          --arg u "$(jq -r '.login // "octo"' "$SA_FAKE/gh/user" 2>/dev/null)" \
+          '{id: (([.[].id] | max // 1000) + 1), body: $b, created_at: $t, user: {login: $u}}' "$f")
         jq -c --argjson c "$c" '. + [$c]' "$f" > "$f.new" && mv "$f.new" "$f"
         printf '%s\n' "$c" ;;
       *) if [ -f "$f" ]; then cat "$f"; else echo '{}'; fi ;;

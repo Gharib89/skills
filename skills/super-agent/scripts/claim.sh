@@ -4,7 +4,8 @@
 # and the claiming thread. A claim by another machine is reported with its age
 # and never taken over: a claim older than --stale-after is `stale`, which the
 # caller offers back to the owner. The claim is a comment whose first line is
-# `<!-- super-agent-claim machine=<m> thread=<t> -->`; the earliest one on the
+# `<!-- super-agent-claim machine=<m> thread=<t> -->`, posted by the signed-in
+# account (a claim-shaped comment of anyone else is ignored); the earliest one on the
 # issue is the holder's, so two claims posted at once resolve to one: the later
 # one deletes its own comment and reports the holder. Calling it again on an own
 # claim assigns the ticket again, which repairs a claim whose assignment failed.
@@ -55,13 +56,19 @@ else now_s=$(date -u +%s); fi
 
 comments="repos/$repo/issues/$number/comments"
 
+# me: the account the super agents sign in as. Only its comments are claims, so
+# a passer-by posting the marker on a public issue blocks nothing.
+raw=$(gh api user 2>/dev/null </dev/null) || sa_tooling "cannot read the signed-in account"
+me=$(jq -r '.login // empty' <<<"$raw")
+[ -n "$me" ] || sa_tooling "cannot read the signed-in account"
+
 # claims: the claim comments of the issue as {machine, thread, comment_id, created_at, age_s},
 # earliest first, in $claims.
 read_claims() {
   local raw
   raw=$(gh api --paginate "$comments" 2>/dev/null </dev/null) || sa_tooling "cannot read $comments"
-  claims=$(jq -sc --argjson now "$now_s" '
-    (add // []) | map(select(.body | test("^<!-- super-agent-claim machine=[^ ]+ thread=[^ ]+ -->")))
+  claims=$(jq -sc --argjson now "$now_s" --arg me "$me" '
+    (add // []) | map(select(.user.login == $me and (.body | test("^<!-- super-agent-claim machine=[^ ]+ thread=[^ ]+ -->"))))
     | sort_by(.id)
     | map((.body | capture("^<!-- super-agent-claim machine=(?<machine>[^ ]+) thread=(?<thread>[^ ]+) -->"))
         + {comment_id: .id, created_at: .created_at, age_s: ($now - (.created_at | fromdateiso8601))})' <<<"$raw") \
@@ -84,12 +91,8 @@ held_by_other() {
 
 # assign: the issue to the signed-in account.
 assign() {
-  local login raw
-  raw=$(gh api user 2>/dev/null </dev/null) || sa_tooling "cannot read the signed-in account"
-  login=$(jq -r '.login // empty' <<<"$raw")
-  [ -n "$login" ] || sa_tooling "cannot read the signed-in account"
-  gh api -X POST "repos/$repo/issues/$number/assignees" -f "assignees[]=$login" >/dev/null 2>&1 </dev/null \
-    || sa_tooling "$repo#$number is claimed but assigning $login failed"
+  gh api -X POST "repos/$repo/issues/$number/assignees" -f "assignees[]=$me" >/dev/null 2>&1 </dev/null \
+    || sa_tooling "$repo#$number is claimed but assigning $me failed"
 }
 
 read_claims

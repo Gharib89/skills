@@ -27,10 +27,10 @@ issue() { jq -cn --argjson n "$1" --arg t "$2" --argjson pr "${3:-false}" \
   '{number: $n, title: $t, labels: [{name: "ready-for-agent"}, {name: "M"}]} + (if $pr then {pull_request: {}} else {} end)'; }
 claim() { # <repo> <number> <machine> <created_at>
   sa_route "repos/$1/issues/$2/comments" "[$(jq -cn --arg m "$3" --arg t "$4" \
-    '{id: 11, created_at: $t, body: "<!-- super-agent-claim machine=\($m) thread=th-\($m) -->\nClaimed."}')]"
+    '{id: 11, created_at: $t, user: {login: "octo"}, body: "<!-- super-agent-claim machine=\($m) thread=th-\($m) -->\nClaimed."}')]"
 }
 reset() {
-  rm -f "$SA_FAKE/calls" "$led"
+  rm -f "$SA_FAKE/calls" "$led"; sa_route user '{"login":"octo"}'
   printf '%s\n' '{"machines":{"alpha":{}},"active_repos":["acme/widgets","acme/gadgets"]}' > "$fleet"
   issues acme/widgets "[$(issue 3 'Third'),$(issue 1 'First'),$(issue 2 'A pull request' true)]"
   issues acme/gadgets "[$(issue 9 'Gadget')]"
@@ -85,6 +85,8 @@ check "an open ledger entry is held, not offered" '{"held":["acme/widgets#1"],"o
   "$(jq -c '{held, offer: [.offer[].key]}' <<<"$out")"
 bash "$s/ledger.sh" --ledger "$led" set acme/widgets#1 stage '"settled"' >/dev/null
 check "a settled entry is no hold" '["acme/widgets#1","acme/widgets#3","acme/gadgets#9"]' "$(I | jq -c '[.offer[].key]')"
+bash "$s/ledger.sh" --ledger "$led" add --repo Acme/Gadgets --number 9 --thread t-9 --worktree /wt/9 --branch b-9 >/dev/null
+check "a ledger key in another case still holds the ticket" '["acme/gadgets#9"]' "$(I | jq -c .held)"
 
 # --- another machine's claim ------------------------------------------------------------------
 reset
