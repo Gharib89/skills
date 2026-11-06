@@ -267,24 +267,20 @@ session. No Gemini or Google API key is set in the environment.
 
 ## 8. Inventory (measured 2026-11-06)
 
-- **T3 providers** (`orchestrator_capabilities`): Claude (Opus 5.5, Sonnet 5.5,
-  Fable 5.1, Haiku 5.5), Codex (`gpt-6.1-sol`, `gpt-6-astra`, `gpt-6.1-terra`,
-  `gpt-6-luna`, 4 more), Antigravity (the models above). Cursor, Grok, OpenCode,
-  fx, Kiro, Muse and Pi are disabled. Batch thread creation up to 20; scheduled
-  tasks on.
-- **T3 environments** (`t3_environment_links`): `gharibs-server` reachable
-  (full access, link expires 2026-12-03); `Gharib-ITWorx` unreachable.
-- **Herdr machines** (`herdr machine list`): `server` (`myserver`) only. The OMEN
-  laptop named in the hosts rule is not saved there.
-- **This host**: 12 cores, 30 GB RAM (20 GB available), RTX 2070 Super Max-Q
-  8 GB.
-- **GitHub** (`gh auth status`): `Gharib89` (active; `repo`, `workflow`,
-  `delete_repo`) and `ahmed-gharib89` (`repo`, `workflow`).
-- **MCP** (`claude mcp list`, in this repo): connected are Exa, Microsoft Learn,
-  Microsoft 365 and Playwright. Context7, Claude Docs, Excalidraw, Notion,
-  Linear, Atlassian, Asana, Box, Canva, HubSpot and Intercom are disabled for
-  this project; Firecrawl needs authentication. The `ctx7` CLI covers library
-  docs without the MCP.
+What one owner's setup held, recorded only as the kinds of facts the fleet file
+must carry; the owner's own values stay in that file, outside this repo.
+
+- **T3 providers** (`orchestrator_capabilities`): Claude, Codex and Antigravity
+  enabled, each with its model list and options; other drivers disabled. Batch
+  thread creation up to 20; scheduled tasks on.
+- **T3 environments** (`t3_environment_links`): linked machines, each reachable
+  or not, with its access level and link expiry. One was linked but unreachable.
+- **Machines**: cores, RAM and GPU differ widely (a 12-core laptop with an 8 GB
+  GPU, a 4-core server with none), so slots and GPU placement are per machine.
+- **GitHub** (`gh auth status`): two accounts, one active, which matters for
+  repos only the other account can reach.
+- **MCP** (`claude mcp list`): a per-project mix of connected, disabled and
+  unauthenticated servers; a supervised thread cannot assume any of them.
 
 ## 9. Implications for the design
 
