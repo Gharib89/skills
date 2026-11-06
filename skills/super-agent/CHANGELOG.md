@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.0 (2026-11-06)
+
+### Features
+
+- **super-agent**: Placement across linked machines
+  ([#1092](https://github.com/Gharib89/skills/pull/1092),
+  [`60f6d35`](https://github.com/Gharib89/skills/commit/60f6d3576c3a2d6c534eb669495b7ca1c945358e))
+
+
 ## v0.4.0 (2026-11-06)
 
 ### Features
