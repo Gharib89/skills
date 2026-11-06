@@ -4,7 +4,7 @@
 # ticket's repo has no open ticket it must not run beside.
 #
 #   launch-check --fleet <file> --ledger <file> --machine <key> --load <n>
-#                --free-gb <n> [--own <key>] [--repo <owner/name>
+#                --free-gb <n> [--own <key>] [--key <ledger key>] [--repo <owner/name>
 #                [--area <path>]... [--blocked-by <n>]...]
 #
 # --load and --free-gb are the machine's live 1-minute load and available RAM
@@ -23,6 +23,8 @@
 # with no areas, either side, overlaps everything, since nothing says the work
 # is apart. Different repos never refuse.
 #
+# --key names a ledger entry to leave out of the slot count and the repo
+# conflicts: a rethread of a ticket the ledger still holds.
 # stdout: {machine, ok, refused, slots: {used, ceiling}, load: {value, limit},
 #         free_gb: {value, floor}, repo: {conflicts}}: `refused` the checks that
 #         failed, each one of slots, load, ram, repo; `repo.conflicts` the keys
@@ -33,9 +35,9 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: launch-check --fleet <file> --ledger <file> --machine <key> --load <n> --free-gb <n> [--own <key>] [--repo <owner/name> [--area <path>]... [--blocked-by <n>]...]'
+usage='usage: launch-check --fleet <file> --ledger <file> --machine <key> --load <n> --free-gb <n> [--own <key>] [--key <ledger key>] [--repo <owner/name> [--area <path>]... [--blocked-by <n>]...]'
 sa_help "$usage" "$@"
-fleet='' ledger='' machine='' load='' free='' own='' repo='' areas='[]' blockers='[]'
+fleet='' ledger='' machine='' load='' free='' own='' key='' repo='' areas='[]' blockers='[]'
 num() { case $1 in ''|.|*[!0-9.]*|*.*.*) sa_tooling "$usage" ;; esac; }
 while [ $# -gt 0 ]; do
   case $1 in
@@ -45,6 +47,7 @@ while [ $# -gt 0 ]; do
     --load) sa_flag_value "$usage" "${2:-}"; num "$2"; load=$2 ;;
     --free-gb) sa_flag_value "$usage" "${2:-}"; num "$2"; free=$2 ;;
     --own) sa_flag_value "$usage" "${2:-}"; own=$2 ;;
+    --key) sa_flag_value "$usage" "${2:-}"; key=$2 ;;
     --repo) sa_flag_value "$usage" "${2:-}"; repo=$2 ;;
     --area) sa_flag_value "$usage" "${2:-}"; areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas") ;;
     --blocked-by) sa_flag_value "$usage" "${2:-}"; case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac
@@ -61,12 +64,12 @@ jq -e '(.machines | type) == "object"' "$fleet" >/dev/null 2>&1 || sa_tooling "$
 jq -e --arg m "$machine" '.machines[$m] | type == "object"' "$fleet" >/dev/null || sa_fail "$machine is not in the fleet file"
 sa_read "$ledger"
 
-out=$(jq -cn --slurpfile fleet "$fleet" --argjson doc "$doc" --arg m "$machine" --arg own "$own" \
+out=$(jq -cn --slurpfile fleet "$fleet" --argjson doc "$doc" --arg m "$machine" --arg own "$own" --arg key "$key" \
   --argjson load "$load" --argjson free "$free" --arg repo "$repo" --argjson areas "$areas" --argjson blockers "$blockers" \
   "$sa_jq_open"'
   def under($a; $b): $a == $b or ($a | startswith($b + "/")) or ($b | startswith($a + "/"));
   $fleet[0] as $f | $f.machines[$m] as $mm
-  | [$doc.entries[] | select(is_open)] as $open
+  | [$doc.entries[] | select(is_open) | select(.key != $key)] as $open
   | ([$open[] | select(.machine == $m or (.machine == "local" and $m == $own))] | length) as $used
   | (($mm.slots // 1) - ($mm.reserve // 0)) as $ceiling
   | ($mm.max_load // $mm.cores // 0) as $limit

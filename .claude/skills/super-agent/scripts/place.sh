@@ -28,7 +28,7 @@
 #         `gpu` when the work wanted a GPU and no machine with one is up;
 #         `need_reading` {machine, environment_id} or null; `considered` one
 #         {machine, outcome} per candidate looked at, `outcome` skipped:<why>
-#         (excluded, no-environment, unreachable, no-gpu, account, unmeasured)
+#         (excluded, no-environment, unreachable, unknown, no-gpu, account, unmeasured)
 #         or the refusals of `launch-check`
 # exit: 0 an answer, any of the three · 2 usage, an unreadable fleet file or
 #       ledger, or a ledger write that failed
@@ -61,11 +61,12 @@ jq -e '(.machines | type) == "object"' "$fleet" >/dev/null 2>&1 || sa_tooling "$
 [ -n "$own" ] || own=$(hostname 2>/dev/null) || sa_tooling "cannot read this machine's name: pass --own"
 sa_read "$ledger"
 
-# Reachability now. A failed read leaves every linked machine unreachable.
-reach='{}'
+# Reachability now. A failed read leaves it unknown, never down: a linked
+# machine is then skipped:unknown and no ticket waits on that answer.
+reach='{}' reach_known=false
 if raw=$(t3 environment list --json 2>/dev/null </dev/null) && envs=$(grep '^\[' <<<"$raw" | tail -1) \
     && jq -e 'type == "array"' <<<"$envs" >/dev/null 2>&1; then
-  reach=$(jq -c '[.[] | {key: .environmentId, value: (.status == "reachable")}] | from_entries' <<<"$envs")
+  reach=$(jq -c '[.[] | {key: .environmentId, value: (.status == "reachable")}] | from_entries' <<<"$envs") && reach_known=true
 fi
 
 considered='[]' placed=null need=null wait_reason='' eligible=0
@@ -76,6 +77,7 @@ while IFS= read -r m; do
   if jq -e --arg m "$m" 'index($m)' <<<"$excluded" >/dev/null; then note "$m" skipped:excluded; continue; fi
   if [ "$m" != "$own" ]; then
     [ -n "$id" ] || { note "$m" skipped:no-environment; continue; }
+    $reach_known || { note "$m" skipped:unknown; continue; }
     [ "$(jq -r --arg i "$id" '.[$i] // false' <<<"$reach")" = true ] || { note "$m" skipped:unreachable; continue; }
   fi
   if $gpu && ! jq -e '.gpu | type == "string"' <<<"$mj" >/dev/null; then note "$m" skipped:no-gpu; continue; fi
@@ -90,7 +92,7 @@ while IFS= read -r m; do
       need=$(jq -cn --arg m "$m" --arg i "$id" '{machine: $m, environment_id: $i}'); break
     fi
   fi
-  rc=0; res=$(bash "$here/launch-check.sh" --fleet "$fleet" --ledger "$ledger" --machine "$m" --own "$own" \
+  rc=0; res=$(bash "$here/launch-check.sh" --fleet "$fleet" --ledger "$ledger" --machine "$m" --own "$own" ${number:+--key "$repo#$number"} \
     --load "$(jq -r .load1 <<<"$reading")" --free-gb "$(jq -r .free_gb <<<"$reading")" --repo "$repo" ${check_args[@]+"${check_args[@]}"} 2>/dev/null) || rc=$?
   case $rc in 0|1) ;; *) sa_tooling "launch-check failed for $m: $res" ;; esac
   if [ "$rc" = 0 ]; then
@@ -106,6 +108,8 @@ done < <(jq -r --arg own "$own" '.machines | keys as $k | ($k | map(select(. != 
 
 waiting=false
 if [ "$placed" = null ] && [ "$need" = null ]; then
+  ! jq -e 'any(.[]; .outcome == "skipped:unknown")' >/dev/null <<<"$considered" \
+    || sa_tooling "t3 environment list failed: reachability unknown, nothing placed and nothing recorded"
   waiting=true
   if [ -z "$wait_reason" ]; then
     if $gpu && [ "$eligible" = 0 ]; then wait_reason="gpu: no reachable machine with a GPU${account:+ and the $account login}"

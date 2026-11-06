@@ -85,9 +85,10 @@ out=$(P --readings "$readings")
 check "the machine that is down is skipped" '{"machine":"gpubox","outcome":"skipped:unreachable"}' "$(jq -c '.considered[1]' <<<"$out")"
 check "and the next one that fits takes it" plain "$(jq -r .placed.machine <<<"$out")"
 rm -f "$SA_FAKE/environments.json"
-check "an environment list that fails leaves every linked machine unreachable" \
-  '["skipped:unreachable","skipped:unreachable"]' \
-  "$(P --readings "$readings" | jq -c '[.considered[] | select(.machine == "gpubox" or .machine == "plain") | .outcome]')"
+out=$(P --readings "$readings" --number 9 2>/dev/null); rc=$?
+check_rc "an environment list that fails is a tooling fault, exit 2" 2 "$rc"
+check "and records no waiting row, since reachability is unknown, not down" 0 \
+  "$(jq '(.waiting // []) | length' "$led" 2>/dev/null || echo 0)"
 
 # --- GPU work with no GPU machine up waits in the ledger -------------------------------
 reset
@@ -133,6 +134,13 @@ bash "$s/ledger.sh" --ledger "$led" add --repo Gharib89/skills --number 1 --thre
 check "a same-repo ticket with an overlapping area waits, whichever machine" true "$(P --area skills/ship/scripts --readings "$readings" | jq .waiting)"
 check "with the ticket in the way named" 1 "$(P --area skills/ship --readings "$readings" | jq '.reason | test("skills#1") | if . then 1 else 0 end')"
 check "an apart area is placed beside it" home "$(P --area skills/drive-session --readings "$readings" | jq -r .placed.machine)"
+
+# --- a rethread of a ticket the ledger already holds ---------------------------------------
+reset
+bash "$s/ledger.sh" --ledger "$led" add --repo Gharib89/skills --number 1 --thread t-1 --worktree /wt/1 --branch b-1 --machine home --area skills/ship >/dev/null
+out=$(P --area skills/ship --readings "$readings" --number 1); rc=$?
+check_rc "a rethread does not conflict with its own open entry" 0 "$rc"
+check "and is placed, its own slot not counted" home "$(jq -r .placed.machine <<<"$out")"
 
 # --- a machine the fleet file lacks as this one is not a candidate -----------------------
 reset
