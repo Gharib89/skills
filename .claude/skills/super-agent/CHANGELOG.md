@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.7.0 (2026-11-06)
+
+### Features
+
+- **super-agent**: Standing waivers, schedules and lessons
+  ([#1095](https://github.com/Gharib89/skills/pull/1095),
+  [`dfefb70`](https://github.com/Gharib89/skills/commit/dfefb70efdaf7bfaa2f56883d4e57b8637867240))
+
+
 ## v0.6.0 (2026-11-06)
 
 ### Features
