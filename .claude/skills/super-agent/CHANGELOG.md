@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.3.0 (2026-11-06)
+
+### Features
+
+- **super-agent**: Stalls and permission holds
+  ([#1090](https://github.com/Gharib89/skills/pull/1090),
+  [`8b4c285`](https://github.com/Gharib89/skills/commit/8b4c28536530f94141e6f32b2dafc3dd1932858f))
+
+
 ## v0.2.0 (2026-11-06)
 
 ### Features
