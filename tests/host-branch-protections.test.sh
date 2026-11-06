@@ -69,10 +69,10 @@ read_ado() { # <policy-list json | fail> -> compact answer
     SHIP_ORG_URL=https://dev.azure.com/o SHIP_PROJECT=p SHIP_REPO=r
     source skills/ship/scripts/_lib.sh; source skills/ship/scripts/host/ado.sh
     az() { case "$1 $2" in
-      "repos show") echo '{"id":"rid","defaultBranch":"refs/heads/main"}' ;;
+      "repos show") if [ -n "$REPO" ]; then echo "$REPO"; else echo '{"id":"rid","defaultBranch":"refs/heads/main"}'; fi ;;
       "repos policy") [ "$POLICIES" != fail ] && echo "$POLICIES" || return 1 ;; esac; }
     sleep() { :; }
-    POLICIES=$1 host_branch_protections main | jq -c .
+    REPO=${2:-} POLICIES=$1 host_branch_protections main | jq -c .
   )
 }
 pol='[{"isEnabled":true,"isBlocking":true,"type":{"id":"fa4e907d-c16b-4a4c-9dfa-4906e5d171dd"},"settings":{"minimumApproverCount":2,"scope":[{"repositoryId":"rid","refName":"refs/heads/main","matchKind":"Exact"}]}},
@@ -83,7 +83,7 @@ check "an empty policy list is unprotected" \
   '{"branch":"main","protected":"no","required_checks":[],"required_reviews":0,"bypass":"n/a"}' "$(read_ado '[]')"
 check "enabled blocking policies are reported, the others ignored" \
   '{"branch":"main","protected":"yes","required_checks":["build"],"required_reviews":2,"bypass":"unknown"}' "$(read_ado "$pol")"
-check "a build policy with no display name adds no null" '[]' \
+check "a build policy with no display name remains visible" '["unnamed required check"]' \
   "$(read_ado '[{"isEnabled":true,"isBlocking":true,"type":{"id":"0609b952-1397-4640-95ec-e00a01b2c241"},"settings":{"scope":[{"repositoryId":"rid","refName":"refs/heads/main","matchKind":"Exact"}]}}]' | jq -c .required_checks)"
 rv='"type":{"id":"fa4e907d-c16b-4a4c-9dfa-4906e5d171dd"},"isEnabled":true,"isBlocking":true'
 check "a prefix scope and a default-branch scope apply, another branch's scope does not" '3' \
@@ -93,5 +93,23 @@ check "a prefix scope and a default-branch scope apply, another branch's scope d
   {$rv,\"settings\":{\"minimumApproverCount\":8,\"scope\":[{\"repositoryId\":\"elsewhere\",\"refName\":\"refs/heads/main\",\"matchKind\":\"Exact\"}]}}]" | jq -c .required_reviews)"
 check "a refused policy read is unknown, never none" \
   '{"branch":"main","protected":"unknown","required_checks":"unknown","required_reviews":"unknown","bypass":"unknown"}' "$(read_ado fail)"
+check "a malformed policy response is unknown" '"unknown"' "$(read_ado '{}' | jq -c .protected)"
+check "a blocking policy with no scope is unknown" '"unknown"' \
+  "$(read_ado '[{"isEnabled":true,"isBlocking":true,"settings":{}}]' | jq -c .protected)"
+check "a blocking policy with an incomplete scope is unknown" '"unknown"' \
+  "$(read_ado '[{"isEnabled":true,"isBlocking":true,"settings":{"scope":[{}]}}]' | jq -c .protected)"
+check "a policy with missing flags is unknown" '"unknown"' \
+  "$(read_ado '[{"isBlocking":true,"settings":{"scope":[{"matchKind":"Exact","refName":"refs/heads/main"}]}}]' | jq -c .protected)"
+check "a missing default branch is unknown" '"unknown"' \
+  "$(read_ado '[{"isEnabled":true,"isBlocking":true,"settings":{"scope":[{"matchKind":"DefaultBranch"}]}}]' '{"id":"rid"}' | jq -c .protected)"
+check "a matching reviewer policy with no count is wholly unknown" \
+  '{"branch":"main","protected":"unknown","required_checks":"unknown","required_reviews":"unknown","bypass":"unknown"}' \
+  "$(read_ado '[{"isEnabled":true,"isBlocking":true,"type":{"id":"fa4e907d-c16b-4a4c-9dfa-4906e5d171dd"},"settings":{"scope":[{"repositoryId":"rid","matchKind":"Exact","refName":"refs/heads/main"}]}}]')"
+check "an applicable policy with no type is unknown" '"unknown"' \
+  "$(read_ado '[{"isEnabled":true,"isBlocking":true,"settings":{"scope":[{"matchKind":"Exact","refName":"refs/heads/main"}]}}]' | jq -c .protected)"
+check "disabled and nonblocking incomplete policies are ignored" '"no"' \
+  "$(read_ado '[{"isEnabled":false},{"isEnabled":true,"isBlocking":false}]' | jq -c .protected)"
+check "a reviewer policy on another branch needs no count" '"no"' \
+  "$(read_ado '[{"isEnabled":true,"isBlocking":true,"type":{"id":"fa4e907d-c16b-4a4c-9dfa-4906e5d171dd"},"settings":{"scope":[{"matchKind":"Exact","refName":"refs/heads/other"}]}}]' | jq -c .protected)"
 
 finish
