@@ -107,6 +107,7 @@ cat > "$fm" <<'MD'
 name: ship
 metadata:
   version: 3.5.0
+  profile-schema: "5"
   composes: mattpocock/skills:tdd upstash/context7:find-docs
 ---
 
@@ -116,6 +117,7 @@ MD
 check "a single-token value"          '3.5.0' "$(ship_frontmatter "$fm" version)"
 check "a space-separated value whole" 'mattpocock/skills:tdd upstash/context7:find-docs' \
   "$(ship_frontmatter "$fm" composes)"
-check "a key the frontmatter lacks"   ''      "$(ship_frontmatter "$fm" profile-schema)"
+check "a quoted value without its quotes" '5' "$(ship_frontmatter "$fm" profile-schema)"
+check "a key the frontmatter lacks"   ''      "$(ship_frontmatter "$fm" missing-key)"
 
 finish
