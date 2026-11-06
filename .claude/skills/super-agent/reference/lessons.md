@@ -16,7 +16,9 @@ the owner's yes: a schedule runs unattended, so the owner chooses each one.
 
 1. Run `scripts/schedules.sh --fleet <fleet>` (`--morning HH:MM` and
    `--retro-day 0-6` when the owner named a time). It proposes `morning`, the
-   ledger report, and one `retro` row per active repo.
+   ledger report on each day of the fleet file's `work_week`, and one weekly
+   `retro` row per active repo, on the work week's last day unless
+   `--retro-day` names another.
 2. Show the proposal: each title, schedule and prompt.
 3. Ask with AskUserQuestion, yes first as the recommendation, one option per
    schedule or a single yes for all.

@@ -147,6 +147,34 @@ check_rc "rethread of a key the ledger lacks exits 1" 1 "$rc"
 out=$(LR rethread Gharib89/skills#8 --thread t-9 2>/dev/null); rc=$?
 check_rc "rethread without a worktree and branch exits 2" 2 "$rc"
 
+# rethread keeps what it is not given, and replaces what it is: a triaged ticket now shipping
+LR add --repo Gharib89/skills --number 10 --thread t-10 --worktree /wt/10 --branch b-10 --kind triage --area docs >/dev/null
+LR rethread Gharib89/skills#10 --thread t-11 --worktree /wt/11 --branch b-11 >/dev/null
+check "rethread without --kind or --area keeps both" 'triage ["docs"]' \
+  "$(LR get Gharib89/skills#10 | jq -r '"\(.kind) \(.areas | tojson)"')"
+LR rethread Gharib89/skills#10 --thread t-12 --worktree /wt/12 --branch b-12 --kind ship --area skills/ship --area tests >/dev/null
+check "rethread with --kind and repeated --area replaces both" 'ship ["skills/ship","tests"]' \
+  "$(LR get Gharib89/skills#10 | jq -r '"\(.kind) \(.areas | tojson)"')"
+LR rethread Gharib89/skills#10 --thread t-13 --worktree /wt/13 --branch b-13 --kind triage >/dev/null
+check "--kind alone leaves the areas" '["skills/ship","tests"]' "$(LR get Gharib89/skills#10 | jq -c .areas)"
+out=$(LR rethread Gharib89/skills#10 --thread t-13 --worktree /wt/13 --branch b-13 --kind bogus 2>/dev/null); rc=$?
+check_rc "rethread with a kind outside ship and triage exits 2" 2 "$rc"
+
+# --- add over a finished entry: a triaged ticket that then ships ----------------------------
+LR add --repo Gharib89/skills --number 12 --thread t-t --worktree /wt/t --branch triage-12 --kind triage >/dev/null
+LR set Gharib89/skills#12 stalls 2 >/dev/null
+LR set Gharib89/skills#12 observed '{"status":"idle"}' >/dev/null
+out=$(LR add --repo Gharib89/skills --number 12 --thread t-s --worktree /wt/s --branch ship-12 --kind ship --area skills/x --model m --effort high 2>/dev/null); rc=$?
+check_rc "add over an open entry exits 1" 1 "$rc"
+check "and keeps the open entry" "t-t triage" "$(LR get Gharib89/skills#12 | jq -r '"\(.thread) \(.kind)"')"
+for st in settled closed; do
+  LR set Gharib89/skills#12 stage "\"$st\"" >/dev/null
+  out=$(LR add --repo Gharib89/skills --number 12 --thread "t-$st" --worktree /wt/s --branch ship-12 --kind ship --area skills/x --model m --effort high); rc=$?
+  check_rc "add over a $st entry exits 0" 0 "$rc"
+  check "and replaces it with a fresh ship entry ($st)" "t-$st ship launched 0 null m high [\"skills/x\"]" \
+    "$(LR get Gharib89/skills#12 | jq -r '[.thread, .kind, .stage, .stalls, .observed, .model, .effort, (.areas | tojson)] | map(tostring) | join(" ")')"
+done
+
 # --- areas: the paths a ticket's work touches, which placement reads ------------------
 rm -f "$led"
 out=$(L add --repo Gharib89/skills --number 20 --thread t-20 --worktree /wt/20 --branch b-20 --area skills/ship --area docs)

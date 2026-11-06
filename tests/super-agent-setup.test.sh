@@ -68,6 +68,7 @@ check "an unprobed machine is proposed one slot" 1 "$(jq '.machines.box.slots' <
 check "GitHub accounts, the active one marked" \
   '[{"login":"alice","active":true},{"login":"bob","active":false}]' "$(jq -c .github_accounts <<<"$f")"
 check "no repo is active until the owner names one" '[]' "$(jq -c .active_repos <<<"$f")"
+check "the work week is proposed Monday to Friday, for the owner to edit" '[1,2,3,4,5]' "$(jq -c .work_week <<<"$f")"
 check "the three default standing waivers, each with its condition" \
   'codex-usage-limit offline-live-e2e last-fix-after-cap' "$(jq -r '[.waivers[].id] | join(" ")' <<<"$f")"
 check "every waiver states its condition" 3 "$(jq '[.waivers[] | select(.condition | length > 20)] | length' <<<"$f")"
@@ -131,7 +132,7 @@ check "never below one slot" 1 "$(P --name srv | jq .fleet.machines.srv.slots)"
 reset
 S --name laptop --write >/dev/null
 jq '.machines.laptop.slots = 2 | .machines.laptop.max_load = 8 | .active_repos = ["Gharib89/skills"]
-  | .waivers = [.waivers[0]] | .providers.claude.quota_command = "claude -p /usage" | .note = "mine"' \
+  | .waivers = [.waivers[0]] | .work_week = [0,1,2,3,4] | .providers.claude.quota_command = "claude -p /usage" | .note = "mine"' \
   "$fleet" > "$tmp/edited.json" && mv "$tmp/edited.json" "$fleet"
 sa_machine laptop 16 65536 "A GPU"
 sa_provider agy 1 "down now"
@@ -149,6 +150,7 @@ check "the owner's slot count stays" 2 "$(jq .machines.laptop.slots <<<"$g")"
 check "and the load threshold" 8 "$(jq .machines.laptop.max_load <<<"$g")"
 check "and the active repos" '["Gharib89/skills"]' "$(jq -c .active_repos <<<"$g")"
 check "and a waiver list the owner cut down" 1 "$(jq '.waivers | length' <<<"$g")"
+check "and the work week the owner set" '[0,1,2,3,4]' "$(jq -c .work_week <<<"$g")"
 check "and a quota command the owner changed" 'claude -p /usage' "$(jq -r .providers.claude.quota_command <<<"$g")"
 check "and a key setup never wrote" mine "$(jq -r .note <<<"$g")"
 check "a machine no longer linked is kept, not dropped" present \
@@ -187,7 +189,7 @@ check_rc "a fleet file that is not JSON exits 2" 2 "$rc"
 check "and names it" "$fleet: not JSON" "$(jq -r .error <<<"$out")"
 check "and is left alone" "not json" "$(cat "$fleet")"
 
-for bad in '[]' '{"providers":[]}' '{"machines":"x"}' '{"waivers":{}}' '{"active_repos":"x"}' '{"providers":{"claude":{"quota_command":3}}}'; do
+for bad in '[]' '{"providers":[]}' '{"machines":"x"}' '{"waivers":{}}' '{"active_repos":"x"}' '{"work_week":[7]}' '{"work_week":[1,1]}' '{"work_week":"x"}' '{"providers":{"claude":{"quota_command":3}}}'; do
   printf '%s\n' "$bad" > "$fleet"
   out=$(S --name laptop --write 2>/dev/null); rc=$?
   check_rc "a fleet file shaped $bad exits 2" 2 "$rc"
