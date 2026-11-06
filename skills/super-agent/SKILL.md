@@ -4,7 +4,7 @@ description: >-
   Launch a T3 thread for a ticket the owner names, record it in a ledger, and
   wake on its changes through a background watcher until its PR merges. Use
   when running as the owner's pinned super agent thread in T3 Code, or when
-  the owner names a ticket for it to take.
+  the owner names a ticket for it to take or asks for `/super-agent setup`.
 metadata:
   version: 0.1.0
 ---
@@ -37,6 +37,32 @@ directory.
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage, and prints one summary: `settled`, `closed`, `at_rest`, `errors`,
   `entries`.
+- `setup.sh` probes this machine, its linked T3 environments, the GitHub
+  accounts and each provider's quota command, and proposes the fleet file
+  (below); it takes `--fleet <file>` in place of `--ledger`, and writes only
+  with `--write`.
+
+## Setup
+
+The **fleet file** is `super-agent/fleet.json` under `$XDG_CONFIG_HOME`
+(`~/.config` when unset). It is the only source of the machines and their
+slots, the GitHub accounts, the active repos, the standing waivers and the
+provider quota commands: read them from it, since this skill names none.
+
+When the fleet file is missing, or the owner asks for `/super-agent setup`:
+
+1. Run `scripts/setup.sh` without `--write` and show the owner its proposal:
+   each machine's slots, the thresholds, each provider marked `unavailable`
+   with its `reason`, and every line of `warnings`.
+2. Ask the owner to confirm or adjust it. After the yes, run it again with
+   `--write`, carrying the adjustments.
+3. Tell the owner to keep the fleet file in their dotfiles, so every machine a
+   super agent may start on has it.
+
+The owner edits the file by hand for anything setup proposed (slots,
+thresholds, active repos, waivers); a re-run keeps those edits and refreshes
+only the probed facts. An `unavailable` provider is a fact to report, not an
+error: name it with its reason and carry on.
 
 ## The loop
 
@@ -97,6 +123,9 @@ After the invocation line, the message tells the supervised thread:
 
 - the **merge allowance**: merge when `/ship`'s merge gate is clean, nothing
   wider; any other hold stops at the gate for the super agent;
+- the **standing waivers**: each entry of the fleet file's `waivers`, its
+  `condition` text copied verbatim; a hold outside the listed waivers still
+  stops at the gate and escalates;
 - commands harmless to run (reads, tests, the repo's own checks) need no hold;
 - work in the worktree it starts in, on the branch that worktree holds, and
   make no other: the ledger finds the PR by that branch;
