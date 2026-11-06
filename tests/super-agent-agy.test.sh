@@ -90,6 +90,8 @@ reset; sa_provider agy 3 ""; mkdir -p "$tmp/boom"; printf "#!/usr/bin/env bash\n
 out=$(PATH="$tmp/boom:$PATH" J --repo "$repo" --task t 2>/dev/null); rc=$?
 check_rc "an agy exit with no answer exits 1" 1 "$rc"
 check "the answer says so" "agy exited 3 with no JSON answer: boom" "$(jq -r .error <<<"$out")"
+reset; sa_provider agy 3 ""
+check "with no stderr there is no dangling colon" "agy exited 3 with no JSON answer" "$(J --repo "$repo" --task t 2>/dev/null | jq -r .error)"
 reset; sa_provider agy 0 '{"status":"ERROR","response":"","error":"interrupted"}'
 out=$(J --repo "$repo" --task t 2>/dev/null); rc=$?
 check_rc "a status that is not SUCCESS exits 1" 1 "$rc"

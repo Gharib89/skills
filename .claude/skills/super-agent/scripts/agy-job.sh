@@ -65,7 +65,8 @@ args=(-p "$task" --settings "$settings" --output-format json --print-timeout "${
 raw=$(cd "$wt" && timeout "$((timeout_s + 15))" agy "${args[@]}" 2>"$scratch/stderr" </dev/null); rc=$?
 line=$(grep '^{' <<<"$raw" | tail -1)
 if [ -z "$line" ] || ! jq -e . <<<"$line" >/dev/null 2>&1; then
-  sa_fail "agy exited $rc with no JSON answer: $(tail -c 300 "$scratch/stderr" | tr '\n' ' ' | sed 's/ $//')"
+  err=$(tail -c 300 "$scratch/stderr" | tr '\n' ' ' | sed 's/ $//')
+  sa_fail "agy exited $rc with no JSON answer${err:+: $err}"
 fi
 jq -c --argjson a "$allow_json" --argjson rc "$rc" '
   {status, response: (.response // ""), allow: $a, denied: (.denied_actions // []),

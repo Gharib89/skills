@@ -55,17 +55,15 @@ parse_codex() { # JSON lines; the answer to request 2 is the one that holds the 
     | select(length > 0)' 2>/dev/null
 }
 parse_agy() {
-  jq -c 'select(.status == "SUCCESS") | [.command.data.groups[]? | .name as $g | .buckets[]?
+  jq -c 'select(.status == "SUCCESS") | [.command.data.groups[]? | .name as $g | .buckets[]? | select(.remaining_fraction | type == "number")
       | {id, window, remaining: .remaining_fraction, resets: .reset_time, group: $g}]
     | select(length > 0)' 2>/dev/null
 }
 
 out='{}'
 # One name per line, split without globbing: the owner wrote these keys.
-names=$(jq -r '(.providers // {}) | keys[]' "$fleet_file")
-set -f; IFS=$'\n'
-for name in $names; do
-  unset IFS; set +f
+IFS=$'\n' read -r -d '' -a names < <(jq -r '(.providers // {}) | keys[]' "$fleet_file") || true
+for name in ${names[@]+"${names[@]}"}; do
   cfg=$(jq -c --arg n "$name" '.providers[$n] | if type == "object" then . else {} end' "$fleet_file")
   driver=$(jq -r --arg n "$name" '.driver // $n' <<<"$cfg")
   cmd=$(jq -r '.quota_command // empty' <<<"$cfg")
