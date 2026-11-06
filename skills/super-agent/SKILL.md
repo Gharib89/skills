@@ -26,17 +26,27 @@ They live in `scripts/` under this skill's base directory, and each answers
 `$XDG_STATE_HOME` (`~/.local/state` when unset), your own machine's state
 directory.
 
-- `ledger.sh add|get|list|set|ruling` reads and writes the ledger; its
-  `--ledger` comes first. A key is `<owner/name>#<n>`.
+- `ledger.sh add|get|list|set|rethread|ruling|allowed` reads and writes the
+  ledger; its `--ledger` comes first. A key is `<owner/name>#<n>`.
 - `watch.sh` polls every open entry's thread and PR and exits on the first
   change: `pr-merged`, `pr-closed`, `pending-approval`, `run-finished`,
-  `run-started`, or `thread-mismatch`, `thread-unreadable`, `pr-unreadable`,
-  or `timeout`. It matches a thread by id and worktree path, never by process
-  name. It skips an entry `reconcile` has not observed yet, naming it in
-  `unobserved`, and exits 1 when none is observed.
+  `stall-window`, or `thread-mismatch`, `thread-unreadable`, `pr-unreadable`,
+  or `timeout`. A run starting wakes nothing. A finished run is looked at again
+  `--recheck` seconds later (default 90) and reported only if the thread is
+  still at rest, since a run waiting on its own background subagent restarts
+  within about a minute. `stall-window` is an entry at rest with no new run for
+  `--stall-window` seconds (default 900), never one already at 3 stalls. It
+  matches a thread by id and worktree path, never by process name. It skips an
+  entry `reconcile` has not observed yet, naming it in `unobserved`, and exits
+  1 when none is observed.
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
-  stage, and prints one summary: `settled`, `closed`, `at_rest`, `errors`,
-  `entries`.
+  stage, keeps each entry's `stalls`, and prints one summary: `settled`,
+  `closed`, `stalled`, `at_rest`, `errors`, `entries`. A stall (a completed
+  run with no merged PR and no merge-gate summary, or a window passed with no
+  new run) adds 1; a real step (a run ending in the merge-gate summary, or a
+  PR opened) takes 1 off, never below 0. `stalled` holds one
+  `{key, thread, stalls, reason}` per stall counted now. You never set
+  `stalls` by hand, except the reset below.
 - `setup.sh` probes this machine, its linked T3 environments, the GitHub
   accounts and each provider's quota command, and proposes the fleet file
   (below) with `--propose`; it takes `--fleet <file>` in place of
@@ -130,6 +140,8 @@ After the invocation line, the message tells the supervised thread:
   `condition` text copied verbatim; a hold outside the listed waivers still
   stops at the gate and escalates;
 - commands harmless to run (reads, tests, the repo's own checks) need no hold;
+- the calls the owner allowed in a dated ruling, one per line, each line
+  `ledger.sh allowed` prints, so the same hold is never asked twice;
 - work in the worktree it starts in, on the branch that worktree holds, and
   make no other: the ledger finds the PR by that branch;
 - end its last message with the PR URL and the gate state.
@@ -142,15 +154,25 @@ After the invocation line, the message tells the supervised thread:
   watched, so a message to its thread would go unseen.
 - `closed`: one chat line naming the ticket and the reason.
 - An entry whose `observed.pending` is above 0 holds a permission request:
-  escalate it, and skip its `at_rest` line, since a held thread is not
-  running.
-- `at_rest`: the run finished and the ticket is not done. Read the thread's
-  last messages. An allowed merge in progress needs nothing from you, and a
-  merge-gate hold outside the merge allowance is an escalation. Otherwise the
-  thread stalled: read the entry's `stalls` with `ledger.sh get`. Below 2, send
-  the same thread a fix or a nudge with `t3_thread_send` (it keeps its
-  context, and a run's `completed` does not mean the ticket is done) and
-  `ledger.sh set <key> stalls <n+1>`. At 2, escalate.
+  escalate it, since a held thread is not a stall.
+- `at_rest` with a merge-gate summary is not a stall: an allowed merge in
+  progress needs nothing from you, and a hold outside the merge allowance and
+  the standing waivers is an escalation.
+- `stalled`: climb the **stall ladder**, keyed on the entry's `stalls` after
+  reconcile:
+  1. Nudge the same thread with `t3_thread_send`: it keeps its context, and a
+     run's `completed` does not mean the ticket is done.
+  2. Re-brief the same thread: read its last messages first, then resend the
+     launch brief with what it was missing.
+  3. Start a fresh thread on a tier raised one step (Sonnet low, medium, high,
+     then Opus high) and point the entry at it with `ledger.sh rethread`. XL's
+     Opus high, or any tier above the default when that bucket's weekly
+     remaining is under 50%, is the owner's call: escalate instead. Escalate
+     too when the ticket's premise or scope, not the thread, is the problem.
+
+  An entry at 3 stalls that you escalated stays quiet until the owner
+  answers; then reset it with `ledger.sh set <key> stalls 0`.
+
 - `errors`: an entry reconcile could not read or match (`kind` says why: a
   thread, PR or issue unreadable, or a thread of another id or worktree
   path) gets no action from you: escalate it. Reconcile records the kind in
@@ -168,13 +190,32 @@ The owner decides these, and you decide everything else:
 - a design or scope fork the supervised thread cannot settle;
 - a disagreement between the ledger and T3 or GitHub that reconcile does not
   resolve, a `thread-mismatch` included;
-- a supervised thread whose `stalls` reached 2 with its ticket undone;
+- a supervised thread at rung 3 of the stall ladder whose raised tier is the
+  owner's call, or whose ticket's premise or scope is the problem;
 - a ticket whose labels name no owner skill, or whose repo has no T3 project.
 
-Reach the owner with one push notification plus one chat line, naming the
-ticket and the one action, and only when the owner is needed. Record the
-owner's answer to a hold with
-`scripts/ledger.sh --ledger <ledger> ruling <text>`, which dates it.
+### Escalation format
+
+These are the only forms the owner ever sees, and every escalation in this
+skill uses them, the permission hold and the stall at 3 included:
+
+- **Progress**: one or two plain lines, no heading, no push. A completed step
+  (merged, launched, settled) starts with `Done:`.
+- **Needs you**: the message starts with `> [!CAUTION]`, then the line
+  `> **NEEDS YOU:** <run>: <the one action>`, and names exactly one action.
+  Send one push notification (the PushNotification tool) naming the run and
+  that action. When the answer is a pick from fixed options (approve or deny a
+  held call, a scope fork), also open an AskUserQuestion dialog with the
+  recommended option first.
+
+No progress message uses the alert, so a message without it never needs the
+owner. One push per need, none for progress.
+
+A held call's message names the thread, the held call and your
+recommendation. Record the owner's answer with
+`scripts/ledger.sh --ledger <ledger> ruling <text> --allow <call>`, which dates
+it; pass `--allow` only when the answer lets that call run unheld in later
+briefs, so a deny is a ruling with no `--allow`.
 
 ## After a restart or compaction
 
