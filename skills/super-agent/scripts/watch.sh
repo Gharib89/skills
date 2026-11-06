@@ -77,8 +77,11 @@ trap 'rm -f "$mine"' EXIT
 printf '%s\n' "$$" > "$mine"
 for try in 1 2; do
   if ln "$mine" "$lock" 2>/dev/null; then break; fi
-  pid=$(cat "$lock" 2>/dev/null)
-  if [ -z "$pid" ] || { kill -0 "$pid" 2>/dev/null && grep -qa 'watch\.sh' "/proc/$pid/cmdline" 2>/dev/null; }; then
+  pid=$(cat "$lock" 2>/dev/null) args=''
+  # /bin/ps by its full path, which Linux and macOS both ship, and which the
+  # tests' fake `ps` on PATH does not shadow.
+  [ -z "$pid" ] || args=$(/bin/ps -p "$pid" -o args= 2>/dev/null)
+  if [ -z "$pid" ] || [[ $args == *watch.sh* ]]; then
     jq -cn --arg p "$pid" '{error: "a watcher already runs on this ledger", running: (if $p == "" then null else ($p | tonumber) end)}'
     printf 'a watcher already runs on this ledger (pid %s)\n' "${pid:-unknown}" >&2; exit 1
   fi
