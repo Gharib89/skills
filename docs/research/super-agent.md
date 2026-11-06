@@ -1,7 +1,7 @@
 # Research: a super agent that supervises many tickets across repos
 
 Researched 2026-11-06 for the owner's "one agent to talk to" goal: a supervisor
-that keeps a ticket ledger across repos, launches and watches T3 worker threads,
+that keeps a ticket ledger across repos, launches and watches T3 supervised threads,
 and routes work across every model, server and machine the owner has.
 
 Each claim carries its basis: **verified** (primary page or repo file read),
@@ -189,7 +189,7 @@ mode. A "wake" means a new turn starts in the supervisor after its turn ended.
 | Mechanism | Wakes the supervisor? | Notes |
 |---|---|---|
 | `delegate_task` child finishes | **Yes**, with the child's summary | P1 woke twice: first a premature "completed" (the child had moved its command to the background), then the real output from its continuation run. |
-| `t3_thread_launch` thread finishes, even with `delegatedFrom` set | **No** | P3 got `parentThreadId: null` despite `delegatedFrom`. Matches a supervised batch that lost 30 minutes this way. |
+| `t3_thread_launch` thread finishes, even with `delegatedFrom` set | **No** | P3 got `parentThreadId: null` despite `delegatedFrom`. Matches a spec batch that lost 30 minutes this way. |
 | Background Bash exits | **Yes**, about 5 s after exit | P5: exited 05:34:43, woke 05:34:48. Bash `run_in_background` allows up to 2 h. |
 | `schedule_task` once or interval, bound to this thread | **Yes**, as a user-role message | P4 fired on time. Interval minimum is 60 s. |
 | A child's permission prompt | **No** | A1, A3: the hold shows only in `task_status.pendingApproval`; the owner saw it in the UI. |
@@ -199,22 +199,22 @@ Other measured facts:
 
 - `delegate_task` runs only in the supervisor's own project: `target.projectId`
   for another repo is refused ("A local task runs in this thread's project").
-  A worker in another repo is a `t3_thread_launch` thread, or a delegate on
+  A supervised thread in another repo is a `t3_thread_launch` thread, or a delegate on
   another machine through `target.environmentId`.
 - A run's `completed` status does not mean the work is done. P3's run reported
   `completed` after 8 s while its real command still ran in the background, then
   a second run delivered the output. A foreground `sleep` is blocked by the
-  harness in workers too. This is the stall class a supervised batch hit.
+  harness in supervised threads too. This is the stall class a spec batch hit.
 - `t3 thread show <id> --json` (the `t3` CLI) prints a thread's status,
   `runCount`, `latestRunId`, `pendingRequestCount`, `pullRequests`, `settled`
   and `worktreePath`. 5 runs: median 0.92 s, range 0.90 to 1.92 s. The CLI
   build is older than the server and logs a migration-divergence warning on
-  stderr. So a background shell watcher can poll every worker and exit on a
+  stderr. So a background shell watcher can poll every supervised thread and exit on a
   change, which wakes the supervisor.
 - `t3_thread_list` over all projects reported 916 threads. Archiving works
   (`t3_thread_organize archive`); settle and snooze exist.
 - `t3_pending_request` "cannot approve a permission request": a supervisor
-  cannot clear a worker's permission hold.
+  cannot clear a supervised thread's permission hold.
 
 ## 6. Antigravity (`agy`) (measured)
 
@@ -290,7 +290,7 @@ Each traces to a section above; the design proposal decides among them.
    delegate completions, background Bash exits, schedules and (per docs) PR
    watches wake a supervisor; launched threads and permission holds never do
    (section 5). A watcher over `t3 thread show` and GitHub REST that exits on
-   any change gives one wake path for every worker in every repo, the same shape
+   any change gives one wake path for every supervised thread in every repo, the same shape
    as `drive-session`'s `watch`.
 2. **Detect stalls from state, judge them with a model.** A run `completed`
    with no merged PR and no gate summary is the stall signature (section 5).
@@ -300,14 +300,14 @@ Each traces to a section above; the design proposal decides among them.
    stage enum**, written before acting (DeepSeek outbox, Anthropic harness).
    GitHub stays the source of truth for issues, edges and PRs.
 4. **The supervisor routes and verifies; it never implements.** It checks a
-   finished worker against the issue's acceptance criteria and sends a fix back
+   finished supervised thread against the issue's acceptance criteria and sends a fix back
    to the same thread (sections 1, 2).
 5. **One ticket, one thread, one worktree**, model picked at launch and recorded
-   (DeepSeek role models; the owner's practice in a supervised batch).
+   (DeepSeek role models; the owner's practice in a spec batch).
 6. **Use agy's separate quota for text work and second reviews** through the
    CLI with session allow rules; a T3 agy child needs a full-access supervisor
    (section 6).
-7. **Reserve a slot for the owner** and cap live workers near the 3 to 5 a
+7. **Reserve a slot for the owner** and cap live supervised threads near the 3 to 5 a
    person can follow (DeepSeek).
 8. **Recover by checking before repeating**: after a crash or compaction, read
    the worktree, git log and PR before any outside action (DeepSeek restart
