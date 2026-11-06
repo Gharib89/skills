@@ -246,6 +246,14 @@ check_rc "a second start while one runs exits 1" 1 "$rc"
 check "and reports the one running, the pid the lock holds" "$(cat "$led.watch")" "$(jq -r .running <<<"$out")"
 kill "$first" 2>/dev/null; wait "$first" 2>/dev/null
 rm -f "$led.watch"
+/usr/bin/sleep 30 &
+other=$!
+echo "$other" > "$led.watch"
+fixture
+out=$(W --timeout 1 2>/dev/null); rc=$?
+check_rc "a lock holding the pid of a live process that is no watcher is taken over" 0 "$rc"
+kill "$other" 2>/dev/null; wait "$other" 2>/dev/null
+rm -f "$led.watch"
 : > "$led.watch"
 fixture
 out=$(W --timeout 1 2>/dev/null); rc=$?

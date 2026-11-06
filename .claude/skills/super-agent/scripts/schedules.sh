@@ -25,7 +25,7 @@ fleet='' morning='08:00' day=5
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2 ;;
-    --morning) sa_flag_value "$usage" "${2:-}"; case $2 in [0-2][0-9]:[0-5][0-9]) morning=$2 ;; *) sa_tooling "$usage" ;; esac ;;
+    --morning) sa_flag_value "$usage" "${2:-}"; case $2 in [01][0-9]:[0-5][0-9]|2[0-3]:[0-5][0-9]) morning=$2 ;; *) sa_tooling "$usage" ;; esac ;;
     --retro-day) sa_flag_value "$usage" "${2:-}"; case $2 in [0-6]) day=$2 ;; *) sa_tooling "$usage" ;; esac ;;
     *) sa_tooling "$usage" ;;
   esac

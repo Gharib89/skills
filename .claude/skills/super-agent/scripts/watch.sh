@@ -68,7 +68,9 @@ case $recheck in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
 # One watcher per ledger. The pid is written to a temp file and linked to the
 # lock, which is atomic and never leaves an empty lock for a second start to
 # misread; a lock whose pid is gone is a dead watcher's, taken over once. A lock
-# that reads empty is kept, since an unknown answer is no proof of a dead one.
+# that reads empty is kept, since an unknown answer is no proof of a dead one. A
+# live pid counts only when its command line is a watch.sh, so a pid reused by
+# another process after a kill or a reboot does not block every later start.
 lock="$ledger.watch"
 mine=$(mktemp "$lock.XXXXXX") || sa_tooling "cannot take $lock"
 trap 'rm -f "$mine"' EXIT
@@ -76,7 +78,7 @@ printf '%s\n' "$$" > "$mine"
 for try in 1 2; do
   if ln "$mine" "$lock" 2>/dev/null; then break; fi
   pid=$(cat "$lock" 2>/dev/null)
-  if [ -z "$pid" ] || kill -0 "$pid" 2>/dev/null; then
+  if [ -z "$pid" ] || { kill -0 "$pid" 2>/dev/null && grep -qa 'watch\.sh' "/proc/$pid/cmdline" 2>/dev/null; }; then
     jq -cn --arg p "$pid" '{error: "a watcher already runs on this ledger", running: (if $p == "" then null else ($p | tonumber) end)}'
     printf 'a watcher already runs on this ledger (pid %s)\n' "${pid:-unknown}" >&2; exit 1
   fi

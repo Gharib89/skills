@@ -35,6 +35,7 @@ done
 check_rc "brief with no ledger exits 2" 2 "$(bash "$s/brief.sh" --fleet "$fleet" >/dev/null 2>&1; echo $?)"
 check_rc "brief with a missing fleet file exits 2" 2 "$(bash "$s/brief.sh" --fleet "$tmp/none.json" --ledger "$led" >/dev/null 2>&1; echo $?)"
 check_rc "schedules with a malformed time exits 2" 2 "$(S --morning 8am >/dev/null 2>&1; echo $?)"
+check_rc "schedules with a time past 23:59 exits 2" 2 "$(S --morning 24:00 >/dev/null 2>&1; echo $?)"
 check_rc "schedules with a day outside 0 to 6 exits 2" 2 "$(S --retro-day 7 >/dev/null 2>&1; echo $?)"
 
 # --- the brief lists the three waivers with their conditions -------------------
