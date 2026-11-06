@@ -75,7 +75,7 @@ if [ -f "$fleet_file" ]; then
     elif ([(.providers // {})[] | objects | .quota_command | select(. != null and type != "string")] | length) > 0 then "quota_command must be a string"
     elif ((.waivers // []) | type) != "array" then "waivers must be an array"
     elif ((.active_repos // []) | type) != "array" then "active_repos must be an array"
-    elif ((.work_week // [1]) | type == "array" and length > 0 and length == (unique | length) and all(type == "number" and . >= 0 and . <= 6 and . == floor)) | not then "work_week must be a non-empty list of distinct weekday numbers 0 to 6"
+    elif ((if .work_week == null then [1] else .work_week end) | type == "array" and length > 0 and length == (unique | length) and all(type == "number" and . >= 0 and . <= 6 and . == floor)) | not then "work_week must be a non-empty list of distinct weekday numbers 0 to 6"
     else empty end' "$fleet_file")
   [ -z "$bad" ] || sa_tooling "$fleet_file: $bad"
   existing=$(cat "$fleet_file")

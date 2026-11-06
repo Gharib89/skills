@@ -161,6 +161,12 @@ sa_machine() {
 # sa_load <load1> <available_mb>: the live readings `uptime` and `free -m` answer
 sa_load() { printf '%s\n' "$1" > "$SA_FAKE/probe/load"; printf '%s\n' "$2" > "$SA_FAKE/probe/avail_mb"; }
 
+# sa_finished_triage <ledger> <repo> <number>: an earlier triage run to relaunch
+sa_finished_triage() {
+  bash skills/super-agent/scripts/ledger.sh --ledger "$1" add --repo "$2" --number "$3" --thread old --worktree /old --branch old --kind triage >/dev/null
+  bash skills/super-agent/scripts/ledger.sh --ledger "$1" set "$2#$3" stage '"closed"' >/dev/null
+}
+
 # sa_gpu_failing: a machine whose `nvidia-smi` is there and fails, as after a driver mismatch
 sa_gpu_failing() {
   printf '#!/usr/bin/env bash\necho "NVIDIA-SMI has failed" >&2\nexit 9\n' > "$SA_BIN/nvidia-smi"

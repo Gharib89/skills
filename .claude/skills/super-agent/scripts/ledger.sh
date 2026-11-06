@@ -178,7 +178,7 @@ case $cmd in
     case $key in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
     case ${key##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
     sa_read "$ledger"
-    jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
+    jq -e --arg k "$key" '.entries[$k] | . != null and (.stage != "settled" and .stage != "closed")' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
     # A repeat keeps the first `since`: how long it has waited is the report's point.
     row=$(jq -cn --arg k "$key" --arg r "${key%#*}" --argjson n "${key##*#}" --arg why "$reason" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
       --argjson old "$(jq -c --arg k "$key" '(.waiting // []) | map(select(.key == $k)) | first // null' <<<"$doc")" \

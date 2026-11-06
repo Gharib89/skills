@@ -87,10 +87,13 @@ check "an explicit --retro-day still wins" 2 "$(jq -r '.retro[0].schedule.weekda
 jq '.work_week = [3,1,2]' "$fleet" > "$tmp/mid.json"
 check "the last day is the last of the week's order, not the largest number" 2 \
   "$(bash "$s/schedules.sh" --fleet "$tmp/mid.json" | jq -r '.retro[0].schedule.weekdays[0]')"
-for bad in '[]' '"x"' '[7]' '[1,1]'; do
+for bad in '[]' '"x"' 'false' '[7]' '[1,1]'; do
   jq --argjson w "$bad" '.work_week = $w' "$fleet" > "$tmp/bad.json"
   check_rc "a work_week of $bad exits 2" 2 "$(bash "$s/schedules.sh" --fleet "$tmp/bad.json" >/dev/null 2>&1; echo $?)"
 done
+jq '.work_week = [6]' "$fleet" > "$tmp/sat.json"
+out=$(bash "$s/schedules.sh" --fleet "$tmp/sat.json")
+check "Saturday is accepted for morning and retro" '[[6],[6]]' "$(jq -c '[.morning.schedule.weekdays, .retro[0].schedule.weekdays]' <<<"$out")"
 
 jq '.active_repos = []' "$fleet" > "$tmp/none.json"
 check "no active repos proposes no retro-run" '[]' "$(bash "$s/schedules.sh" --fleet "$tmp/none.json" | jq -c .retro)"

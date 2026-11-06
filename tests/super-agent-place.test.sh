@@ -128,6 +128,22 @@ check "a machine the fleet holds with no environment id cannot be launched on" \
   '{"machine":"zghost","outcome":"skipped:no-environment"}' "$(jq -c '.considered[] | select(.machine == "zghost")' <<<"$out")"
 check "and the ledger holds it as waiting" 'Gharib89/skills#7' "$(jq -r '.waiting[0].key' "$led")"
 
+# A finished triage can wait for capacity before its ship launch.
+reset
+sa_finished_triage "$led" Gharib89/skills 7
+sa_load 9 12288
+printf '{"gpubox":{"load1":99,"free_gb":20},"plain":{"load1":99,"free_gb":6}}\n' > "$readings"
+out=$(P --readings "$readings" --number 7); rc=$?
+check_rc "finished triage can wait for a ship placement" 0 "$rc"
+check "the old entry stays while the new launch waits" '["closed","Gharib89/skills#7"]' "$(jq -c '[.entries["Gharib89/skills#7"].stage,.waiting[0].key]' "$led")"
+sa_load 0.5 12288
+out=$(P --readings "$readings" --number 7)
+check "capacity clears the wait" '["home",0]' "$(jq -cn --argjson p "$out" --slurpfile l "$led" '[$p.placed.machine,($l[0].waiting | length)]')"
+bash "$s/ledger.sh" --ledger "$led" add --repo Gharib89/skills --number 7 --thread new --worktree /new --branch new --kind ship >/dev/null
+check "the ship launch replaces the triage entry" '["ship","new","launched"]' "$(jq -c '.entries["Gharib89/skills#7"] | [.kind,.thread,.stage]' "$led")"
+sa_load 9 12288
+check_rc "an open entry cannot also wait" 2 "$(P --readings "$readings" --number 7 >/dev/null 2>&1; echo $?)"
+
 # --- the same repo beside itself -------------------------------------------------------------
 reset
 bash "$s/ledger.sh" --ledger "$led" add --repo Gharib89/skills --number 1 --thread t-1 --worktree /wt/1 --branch b-1 --machine home --area skills/ship >/dev/null

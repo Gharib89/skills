@@ -189,7 +189,7 @@ check_rc "a fleet file that is not JSON exits 2" 2 "$rc"
 check "and names it" "$fleet: not JSON" "$(jq -r .error <<<"$out")"
 check "and is left alone" "not json" "$(cat "$fleet")"
 
-for bad in '[]' '{"providers":[]}' '{"machines":"x"}' '{"waivers":{}}' '{"active_repos":"x"}' '{"work_week":[7]}' '{"work_week":[1,1]}' '{"work_week":"x"}' '{"providers":{"claude":{"quota_command":3}}}'; do
+for bad in '[]' '{"providers":[]}' '{"machines":"x"}' '{"waivers":{}}' '{"active_repos":"x"}' '{"work_week":false}' '{"work_week":[7]}' '{"work_week":[1,1]}' '{"work_week":"x"}' '{"providers":{"claude":{"quota_command":3}}}'; do
   printf '%s\n' "$bad" > "$fleet"
   out=$(S --name laptop --write 2>/dev/null); rc=$?
   check_rc "a fleet file shaped $bad exits 2" 2 "$rc"

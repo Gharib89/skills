@@ -38,7 +38,7 @@ done
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file, run setup"
 jq -e '((.active_repos // []) | type) == "array"' "$fleet" >/dev/null 2>&1 || sa_tooling "$fleet: not a fleet file (active_repos must be an array)"
 
-jq -e '(.work_week // [1,2,3,4,5]) | type == "array" and length > 0 and length == (unique | length) and all(type == "number" and . >= 0 and . <= 6 and . == floor)' "$fleet" >/dev/null 2>&1 \
+jq -e '(if .work_week == null then [1,2,3,4,5] else .work_week end) | type == "array" and length > 0 and length == (unique | length) and all(type == "number" and . >= 0 and . <= 6 and . == floor)' "$fleet" >/dev/null 2>&1 \
   || sa_tooling "$fleet: work_week must be a non-empty list of distinct weekday numbers 0 to 6"
 
 jq -cn --slurpfile f "$fleet" --arg m "$morning" --arg d "$day" '
