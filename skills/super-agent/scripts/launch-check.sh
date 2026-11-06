@@ -67,7 +67,9 @@ sa_read "$ledger"
 out=$(jq -cn --slurpfile fleet "$fleet" --argjson doc "$doc" --arg m "$machine" --arg own "$own" --arg key "$key" \
   --argjson load "$load" --argjson free "$free" --arg repo "$repo" --argjson areas "$areas" --argjson blockers "$blockers" \
   "$sa_jq_open"'
-  def under($a; $b): $a == $b or ($a | startswith($b + "/")) or ($b | startswith($a + "/"));
+  def norm: sub("^(\\./)+"; "") | sub("/+$"; "");
+  def under($a; $b): ($a | norm) as $x | ($b | norm) as $y
+    | $x == $y or ($x | startswith($y + "/")) or ($y | startswith($x + "/"));
   $fleet[0] as $f | $f.machines[$m] as $mm
   | [$doc.entries[] | select(is_open) | select(.key != $key)] as $open
   | ([$open[] | select(.machine == $m or (.machine == "local" and $m == $own))] | length) as $used

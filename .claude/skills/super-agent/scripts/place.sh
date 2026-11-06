@@ -31,7 +31,8 @@
 #         (excluded, no-environment, unreachable, unknown, no-gpu, account, unmeasured)
 #         or the refusals of `launch-check`
 # exit: 0 an answer, any of the three · 2 usage, an unreadable fleet file or
-#       ledger, or a ledger write that failed
+#       ledger, a launch-check that failed, a failed `t3 environment list` with
+#       nothing placed (nothing is recorded), or a ledger write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 

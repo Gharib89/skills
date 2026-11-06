@@ -88,6 +88,8 @@ check "an area above it overlaps too" 1 "$(R --area skills >/dev/null; echo $?)"
 check "the same area overlaps" 1 "$(R --area skills/ship >/dev/null; echo $?)"
 check "an apart area runs beside it" 0 "$(R --area skills/drive-session >/dev/null; echo $?)"
 check "a sibling sharing only a name prefix is apart" 0 "$(R --area skills/ship-extra >/dev/null; echo $?)"
+check "a trailing slash on either side does not hide an overlap" 1 "$(R --area skills/ship/scripts/ >/dev/null; echo $?)"
+check "nor does a leading ./" 1 "$(R --area ./skills/ship/scripts >/dev/null; echo $?)"
 check "no area at all overlaps everything, since nothing says it is apart" 1 "$(R >/dev/null; echo $?)"
 add Gharib89/skills 3 box
 check "an open ticket with no areas blocks a same-repo launch" 1 "$(R --area skills/drive-session >/dev/null; echo $?)"
