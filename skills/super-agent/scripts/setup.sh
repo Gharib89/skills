@@ -6,6 +6,7 @@
 # reads it and confirms first; --write then writes it.
 #
 #   setup (--propose | --write) [--fleet <file>] [--name <machine>]
+#         [--probe <environment id>=<reply file>]...
 #
 # --fleet defaults to `super-agent/fleet.json` under $XDG_CONFIG_HOME
 # (`~/.config` when unset), the user-scope path the owner keeps in their
@@ -16,31 +17,47 @@
 # keeps the file's value, so an owner's edit survives (a quota command a
 # previous setup recorded is kept too: fix one by hand in the file, or delete it
 # there and re-run). A machine the file holds
-# and T3 no longer lists is kept. This machine's slots are the lesser of half
-# its cores and its RAM over the per-thread floor, at least 1; a linked machine
-# is probed from its own `setup` run, so it starts at 1 slot.
+# and T3 no longer lists is kept. A machine's slots are the lesser of half
+# its cores and its RAM over the per-thread floor, at least 1, and this
+# machine keeps 1 slot (`reserve`) for the owner's messages. This machine is
+# measured by `probe.sh`. A linked machine is measured by the same probe run in
+# a scratch thread there: setup cannot launch one, so the first call lists the
+# reachable linked machines in `to_probe`, the caller runs the probe on each
+# and saves each thread's reply to a file, and a second call passes each as
+# `--probe <environment id>=<file>`. The reply's one JSON line is merged under
+# that machine (cores, RAM, GPU, `clis`, `gh_logins`), and its slots, load
+# threshold and `proposed_slots` are computed from it. A machine probed before
+# keeps the file's slots and load threshold (the owner's edits) and only
+# `proposed_slots` moves; one never probed takes the computed ones, since
+# nobody could have chosen them. A machine that is unreachable keeps its
+# previous facts and is probed on the next run that finds it reachable. The
+# file holds environment ids only, never a host, user or key.
 #
-# stdout: {fleet_file, written, fleet, warnings}: `fleet` the merged file as it
-#         is or would be written, `warnings` one string per probe that failed
-#         (T3 environments, GitHub accounts); a provider whose quota command
+# stdout: {fleet_file, written, fleet, warnings, to_probe}: `fleet` the merged
+#         file as it is or would be written, `warnings` one string per probe
+#         that failed (T3 environments, GitHub accounts, a reply that is no
+#         probe); `to_probe` one {machine, environment_id} per reachable linked
+#         machine no `--probe` covered; a provider whose quota command
 #         fails is `unavailable` with a `reason` in `fleet.providers`, not a
 #         warning
 # exit: 0 a proposal or a write, failed probes included · 2 usage, a fleet file
 #       that is not JSON or has a field of the wrong shape, a machine probe
-#       (hostname, nproc, free) that failed, or a write that failed
+#       (hostname, nproc, free, uptime) that failed, or a write that failed
 #
 # Linux only: the machine probes are GNU `nproc`, `free` and `timeout`.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: setup (--propose | --write) [--fleet <file>] [--name <machine>]'
+usage='usage: setup (--propose | --write) [--fleet <file>] [--name <machine>] [--probe <environment id>=<reply file>]...'
 sa_help "$usage" "$@"
 fleet_file="${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json"
-name='' write=false mode=''
+name='' write=false mode='' replies='{}'
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet_file=$2; shift 2 ;;
     --name) sa_flag_value "$usage" "${2:-}"; name=$2; shift 2 ;;
+    --probe) sa_flag_value "$usage" "${2:-}"; case $2 in *=?*) ;; *) sa_tooling "$usage" ;; esac
+      replies=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$replies"); shift 2 ;;
     --propose) mode=propose; shift ;;
     --write) mode=write write=true; shift ;;
     *) sa_tooling "$usage" ;;
@@ -67,38 +84,54 @@ floor_gb=4
 warnings='[]'
 warn() { warnings=$(jq -c --arg w "$1" '. + [$w]' <<<"$warnings"); }
 
-# This machine. A missing GPU tool is no GPU, not a failure.
-cores=$(nproc 2>/dev/null) || sa_tooling "nproc failed: cannot size this machine"
-ram_mb=$(free -m 2>/dev/null | awk '/^Mem:/ { print $2 }')
-[ -n "$ram_mb" ] || sa_tooling "free -m failed: cannot size this machine"
-ram_gb=$(( (ram_mb + 512) / 1024 ))
-# A missing tool is no GPU, but a tool that is there and fails is unknown, so
-# the file keeps what it holds: a failed read is never a verdict.
-gpu_fact='{"gpu":null}'
-if command -v nvidia-smi >/dev/null; then
-  if gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null </dev/null | sed -n 1p) && [ -n "$gpu" ]; then
-    gpu_fact=$(jq -cn --arg g "$gpu" '{gpu: $g}')
-  else
-    gpu_fact='{}'; warn "nvidia-smi failed: gpu left as the file has it"
-  fi
-fi
-slots=$(( cores / 2 < ram_gb / floor_gb ? cores / 2 : ram_gb / floor_gb ))
-[ "$slots" -ge 1 ] || slots=1
-facts=$(jq -cn --arg n "$name" --argjson c "$cores" --argjson r "$ram_gb" --argjson g "$gpu_fact" \
-  '{machines: {($n): ({probed: true, cores: $c, ram_gb: $r} + $g)}}')
-proposed=$(jq -cn --arg n "$name" --argjson c "$cores" --argjson s "$slots" --argjson f "$floor_gb" \
-  '{machines: {($n): {slots: $s, max_load: $c, gpu: null}}, thread_ram_floor_gb: $f, active_repos: [],
+# One machine's facts and proposal from a probe line: slots the lesser of half
+# its cores and its RAM over the floor, at least 1. A GPU read that failed is
+# left out of the facts, so the file keeps what it holds.
+machine_jq='def machine($p; $gb; $extra):
+  ([([($p.cores / 2 | floor), ($p.ram_gb / $gb | floor)] | min), 1] | max) as $slots
+  | {facts: ({probed: true, cores: $p.cores, ram_gb: $p.ram_gb, clis: $p.clis, gh_logins: $p.gh_logins, proposed_slots: $slots}
+             + (if $p.gpu_failed then {} else {gpu: $p.gpu} end)),
+     proposal: ({slots: $slots, max_load: $p.cores, gpu: null} + $extra)};'
+
+# This machine, measured by the same probe a linked machine runs.
+probe_out=$(bash "$(dirname "${BASH_SOURCE[0]}")/probe.sh" --json 2>/dev/null </dev/null) \
+  || sa_tooling "$(jq -r '.error // "probe.sh failed"' <<<"$probe_out" 2>/dev/null || echo "probe.sh failed")"
+local_m=$(jq -c "$machine_jq"' machine(.; $f; {reserve: 1})' --argjson f "$floor_gb" <<<"$probe_out")
+! jq -e .gpu_failed >/dev/null <<<"$probe_out" || warn "nvidia-smi failed: gpu left as the file has it"
+facts=$(jq -cn --arg n "$name" --argjson m "$local_m" '{machines: {($n): $m.facts}}')
+proposed=$(jq -cn --arg n "$name" --argjson m "$local_m" --argjson f "$floor_gb" \
+  '{machines: {($n): $m.proposal}, thread_ram_floor_gb: $f, active_repos: [],
     waivers: [
       {id: "codex-usage-limit", condition: "Codex answers a review request with a usage-limit notice: drive the fallback reviewer and record Codex as not landed; do not hold the merge gate for it."},
       {id: "offline-live-e2e", condition: "A live end-to-end proof needs a real T3 server or other machines: prove it through the scripts over fake CLIs and say so in the PR body."},
       {id: "last-fix-after-cap", condition: "The last fix after the review cap is reached may merge without another review round: record it in the PR body."}]}')
 
-# Linked T3 environments: each is a machine this super agent may launch on. They
-# are probed from their own `setup` run, so only their reachability is a fact.
+# Linked T3 environments: each is a machine this super agent may launch on. A
+# reachable one is probed through a scratch thread there (the caller runs it, see
+# the header), an unreachable one only has its reachability recorded.
+to_probe='[]'
 if raw=$(t3 environment list --json 2>/dev/null </dev/null) \
     && envs=$(grep '^\[' <<<"$raw" | tail -1) && jq -e 'type == "array"' <<<"$envs" >/dev/null 2>&1; then
   facts=$(jq -c --argjson e "$envs" '.machines += ([$e[] | {key: .label, value: {environment_id: .environmentId, reachable: (.status == "reachable")}}] | from_entries)' <<<"$facts")
   proposed=$(jq -c --argjson e "$envs" '.machines += ([$e[] | {key: .label, value: {probed: false, slots: 1}}] | from_entries)' <<<"$proposed")
+  while IFS=$'\t' read -r label id reachable; do
+    if [ -n "$(jq -r --arg i "$id" '.[$i] // empty' <<<"$replies")" ]; then
+      [ "$reachable" = true ] || { warn "$label: unreachable, so its probe reply was not merged"; continue; }
+      reply=$(jq -r --arg i "$id" '.[$i]' <<<"$replies")
+      line=$(grep '^{' "$reply" 2>/dev/null | tail -1)
+      if ! jq -e '(.cores | type) == "number" and (.ram_gb | type) == "number"' <<<"$line" >/dev/null 2>&1; then
+        warn "$label: no probe line in $reply${line:+: $(jq -r '.error // empty' <<<"$line" 2>/dev/null)}"; continue
+      fi
+      m=$(jq -c "$machine_jq"' machine(.; $f; {})' --argjson f "$floor_gb" <<<"$line")
+      first=$(jq -r --arg l "$label" '.machines[$l].probed // false | not' <<<"$existing")
+      facts=$(jq -c --arg l "$label" --argjson m "$m" '.machines[$l] += $m.facts' <<<"$facts")
+      proposed=$(jq -c --arg l "$label" --argjson m "$m" '.machines[$l] = $m.proposal' <<<"$proposed")
+      # Slots nobody chose (never probed) give way to the computed ones.
+      [ "$first" != true ] || existing=$(jq -c --arg l "$label" 'if .machines[$l] then del(.machines[$l].slots, .machines[$l].max_load) else . end' <<<"$existing")
+    elif [ "$reachable" = true ]; then
+      to_probe=$(jq -c --arg l "$label" --arg i "$id" '. + [{machine: $l, environment_id: $i}]' <<<"$to_probe")
+    fi
+  done < <(jq -r '.[] | [.label, .environmentId, (.status == "reachable")] | @tsv' <<<"$envs")
 else
   warn "t3 environment list failed: no linked machines recorded"
 fi
@@ -144,5 +177,5 @@ probe_provider agy 'agy -p /usage --output-format json' '.status == "SUCCESS"'
 merged=$(jq -cn --argjson p "$proposed" --argjson e "$existing" --argjson f "$facts" '$p * $e * $f')
 
 if $write; then sa_write "$fleet_file" "$merged"; fi
-jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjson warn "$warnings" \
-  '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn}'
+jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjson warn "$warnings" --argjson p "$to_probe" \
+  '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn, to_probe: $p}'

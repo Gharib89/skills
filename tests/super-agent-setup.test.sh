@@ -197,4 +197,74 @@ printf '{"providers":[]}\n' > "$fleet"
 check "the refusal names the file and the field" "$fleet: providers must be an object" \
   "$(S --name laptop --write 2>/dev/null | jq -r .error)"
 
+# --- this machine's capabilities, from the same probe a linked machine runs -------------
+reset
+f=$(P --name laptop | jq -c .fleet)
+check "this machine's gh logins and provider CLIs are recorded" \
+  '{"gh_logins":["alice","bob"],"clis":{"claude":true,"codex":true,"agy":true,"gh":true,"bun":false}}' \
+  "$(jq -c '.machines.laptop | {gh_logins, clis}' <<<"$f")"
+check "one slot is kept for the owner's messages on this machine" 1 "$(jq .machines.laptop.reserve <<<"$f")"
+check "and none on a linked one" null "$(jq .machines.box.reserve <<<"$f")"
+
+# --- a linked machine is probed through a scratch thread the caller runs ------------------
+probe_line() { # <cores> <ram_gb> <gpu json> <logins json>
+  printf 'Probe thread reply:\n{"cores":%s,"ram_gb":%s,"free_gb":6.1,"load1":0.3,"gpu":%s,"gpu_failed":false,"clis":{"claude":true,"codex":false,"agy":false,"gh":true,"bun":false},"gh_logins":%s}\n' "$1" "$2" "$3" "$4"
+}
+probe_line 4 8 null '["alice"]' > "$tmp/box.reply"
+reset
+out=$(P --name laptop)
+check "the first call lists each reachable linked machine to probe, and never an unreachable one" \
+  '[{"machine":"box","environment_id":"env-box"}]' "$(jq -c .to_probe <<<"$out")"
+out=$(P --name laptop --probe env-box="$tmp/box.reply"); rc=$?
+check_rc "a call with the reply exits 0" 0 "$rc"
+check "nothing is left to probe" '[]' "$(jq -c .to_probe <<<"$out")"
+check "the reply's facts are merged under the machine" \
+  '{"probed":true,"cores":4,"ram_gb":8,"gpu":null,"gh_logins":["alice"],"environment_id":"env-box","reachable":true}' \
+  "$(jq -c '.fleet.machines.box | {probed, cores, ram_gb, gpu, gh_logins, environment_id, reachable}' <<<"$out")"
+check "with its provider CLIs" '{"claude":true,"codex":false,"agy":false,"gh":true,"bun":false}' "$(jq -c .fleet.machines.box.clis <<<"$out")"
+check "never probed, its slots and load threshold are the computed ones, not the placeholder" '{"slots":2,"max_load":4}' \
+  "$(jq -c '.fleet.machines.box | {slots, max_load}' <<<"$out")"
+check "a live reading is not a fact the file keeps" '[]' "$(jq -c '[.fleet.machines.box | keys[] | select(. == "load1" or . == "free_gb")]' <<<"$out")"
+check "a linked machine's quota is the account's, so the file keeps none under it" '[]' \
+  "$(jq -c '[.fleet.machines.box | keys[] | select(test("quota|providers"))]' <<<"$out")"
+check "the file holds the environment id and no host, user or key" \
+  '["clis","cores","environment_id","gh_logins","gpu","max_load","probed","proposed_slots","ram_gb","reachable","slots"]' \
+  "$(jq -c '.fleet.machines.box | keys' <<<"$out")"
+check "a GPU the probe found is recorded" "RTX 4090" \
+  "$(probe_line 4 8 '"RTX 4090"' '[]' > "$tmp/gpu.reply"; P --name laptop --probe env-box="$tmp/gpu.reply" | jq -r .fleet.machines.box.gpu)"
+
+# --- a re-run keeps the owner's slot edits and moves only the probed facts ----------------
+reset
+S --name laptop --probe env-box="$tmp/box.reply" --write >/dev/null
+jq '.machines.box.slots = 3 | .machines.box.max_load = 2' "$fleet" > "$tmp/e.json" && mv "$tmp/e.json" "$fleet"
+probe_line 8 32 null '["alice","bob"]' > "$tmp/box2.reply"
+out=$(S --name laptop --probe env-box="$tmp/box2.reply" --write); g=$(jq -c .fleet <<<"$out")
+check "the facts are refreshed" '{"cores":8,"ram_gb":32,"gh_logins":["alice","bob"]}' "$(jq -c '.machines.box | {cores, ram_gb, gh_logins}' <<<"$g")"
+check "the owner's slots and load threshold stay" '{"slots":3,"max_load":2}' "$(jq -c '.machines.box | {slots, max_load}' <<<"$g")"
+check "the proposal moves, so the owner can see what a re-measure would set" 4 "$(jq .machines.box.proposed_slots <<<"$g")"
+check "a second identical run changes nothing" "$g" "$(S --name laptop --probe env-box="$tmp/box2.reply" --write >/dev/null; jq -c . "$fleet")"
+
+# --- an unreachable machine keeps its previous facts and is probed once it is back ---------
+sa_environments '[{"environmentId":"env-box","label":"box","status":"unreachable"}]'
+out=$(S --name laptop --probe env-box="$tmp/box.reply" --write)
+check "an unreachable machine is recorded unreachable" false "$(jq .fleet.machines.box.reachable <<<"$out")"
+check "with its previous facts kept, a reply for it unmerged" '{"cores":8,"ram_gb":32}' "$(jq -c '.fleet.machines.box | {cores, ram_gb}' <<<"$out")"
+check "and the reply's refusal is a warning" 1 "$(jq '[.warnings[] | select(startswith("box: unreachable"))] | length' <<<"$out")"
+check "it is not offered for probing while down" '[]' "$(jq -c .to_probe <<<"$out")"
+sa_environments "$envs"
+check "the next run that finds it reachable offers it again" '[{"machine":"box","environment_id":"env-box"}]' "$(P --name laptop | jq -c .to_probe)"
+
+# --- a reply that is no probe is a warning, never a merge ---------------------------------
+reset
+printf 'I could not run it\n' > "$tmp/bad.reply"
+out=$(P --name laptop --probe env-box="$tmp/bad.reply"); rc=$?
+check_rc "a reply with no probe line exits 0" 0 "$rc"
+check "and is a warning naming the machine" 1 "$(jq '[.warnings[] | select(startswith("box: no probe line"))] | length' <<<"$out")"
+check "its facts stay the unprobed ones" false "$(jq .fleet.machines.box.probed <<<"$out")"
+printf '{"error":"jq not installed"}\n' > "$tmp/err.reply"
+check "a probe's own error is carried into the warning" "box: no probe line in $tmp/err.reply: jq not installed" \
+  "$(P --name laptop --probe env-box="$tmp/err.reply" | jq -r '.warnings[0]')"
+check "a malformed --probe is a usage error" 2 "$(P --name laptop --probe nofile >/dev/null 2>&1; echo $?)"
+check "setup never links a machine" 0 "$(grep -c '^t3 environment link' "$SA_FAKE/calls")"
+
 finish

@@ -5,7 +5,7 @@
 #
 #   ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id>
 #          --worktree <path> --branch <name> [--machine <name>] [--model <id>]
-#          [--effort <level>]
+#          [--effort <level>] [--area <path>]...
 #   ledger --ledger <file> get <key>
 #   ledger --ledger <file> list [--open]
 #   ledger --ledger <file> set <key> <field> <json>
@@ -13,6 +13,8 @@
 #          --branch <name> [--model <id>] [--effort <level>]
 #   ledger --ledger <file> ruling <text> [--allow <call>]...
 #   ledger --ledger <file> allowed
+#   ledger --ledger <file> wait <key> --reason <text>
+#   ledger --ledger <file> unwait <key>
 #
 # A key is `<owner/name>#<number>`. `--ledger` comes first and names the file,
 # which a first `add` creates. `add` starts an entry at stage `launched`, stalls
@@ -24,20 +26,27 @@
 # observed state), so the key stays one entry. A write is a temp file beside the
 # ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
 # `--allow` is a call the answer lets a supervised thread make without a hold,
-# and `allowed` lists them as the lines the launch brief carries.
+# and `allowed` lists them as the lines the launch brief carries. `--machine`
+# is the fleet file's key for the machine the thread runs on (`local` means the
+# machine the ledger is on), and each `--area` a path the ticket's work touches,
+# which placement reads to run two tickets of one repo side by side. A ticket
+# that could not be placed is `wait`ed: a row in `waiting` (no thread, no
+# stage, never watched) that the morning report lists, and that `add` or
+# `unwait` removes.
 #
 # stdout: `add` {ledger, key, entry}; `get` the entry; `list` {ledger, entries,
 #         rulings}, `entries` an array of entries (`--open` leaves out settled
 #         and closed ones); `set` {key, field, value}; `rethread` {ledger, key, entry}; `ruling` {ruling:
-#         {date, text, allow}}; `allowed` {allowed: [{date, call, line}]}; any
-#         failure {error}
+#         {date, text, allow}}; `allowed` {allowed: [{date, call, line}]}; `wait`
+#         {waiting: {key, repo, number, reason, since}}; `unwait` {key,
+#         removed}; `list` also holds `waiting`; any failure {error}
 # exit: 0 ok · 1 the key is already in, or not in, the ledger, a stage outside
 #       the list, or an identity field · 2 usage, a value that is not JSON, an
 #       unreadable or wrong-shaped ledger, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--machine <name>] [--model <id>] [--effort <level>] | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--model <id>] [--effort <level>] | ruling <text> [--allow <call>]... | allowed'
+usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--machine <name>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--model <id>] [--effort <level>] | ruling <text> [--allow <call>]... | allowed | wait <key> --reason <text> | unwait <key>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -45,9 +54,10 @@ cmd=${1:-}; [ $# -gt 0 ] && shift
 
 case $cmd in
   add)
-    repo='' number='' thread='' worktree='' branch='' machine=local model='' effort=''
+    repo='' number='' thread='' worktree='' branch='' machine=local model='' effort='' areas='[]'
     while [ $# -gt 0 ]; do
       case $1 in
+        --area) sa_flag_value "$usage" "${2:-}"; areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas") ;;
         --repo) sa_flag_value "$usage" "${2:-}"; repo=$2 ;;
         --number) sa_flag_value "$usage" "${2:-}"; number=$2 ;;
         --thread) sa_flag_value "$usage" "${2:-}"; thread=$2 ;;
@@ -68,12 +78,12 @@ case $cmd in
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "$number" --arg t "$thread" \
       --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg model "$model" \
-      --arg effort "$effort" --arg now "$now" \
-      '{key: $k, repo: $repo, number: $n, thread: $t, worktree: $w, branch: $b, machine: $m,
+      --arg effort "$effort" --arg now "$now" --argjson areas "$areas" \
+      '{key: $k, repo: $repo, number: $n, thread: $t, worktree: $w, branch: $b, machine: $m, areas: $areas,
         model: (if $model == "" then null else $model end),
         effort: (if $effort == "" then null else $effort end),
         stage: "launched", stalls: 0, observed: null, launched_at: $now, updated_at: $now}')
-    sa_write "$ledger" "$(jq -c --arg k "$key" --argjson e "$entry" '.entries[$k] = $e' <<<"$doc")"
+    sa_write "$ledger" "$(jq -c --arg k "$key" --argjson e "$entry" '.entries[$k] = $e | .waiting = ((.waiting // []) | map(select(.key != $k)))' <<<"$doc")"
     jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$entry" '{ledger: $l, key: $k, entry: $e}' ;;
   get)
     [ $# -eq 1 ] || sa_tooling "$usage"
@@ -85,7 +95,7 @@ case $cmd in
     case ${1:-} in --open) open=true; shift ;; esac
     [ $# -eq 0 ] || sa_tooling "$usage"
     sa_read "$ledger"
-    jq -c --arg l "$ledger" --argjson open "$open" "$sa_jq_open"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings}' <<<"$doc" ;;
+    jq -c --arg l "$ledger" --argjson open "$open" "$sa_jq_open"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings, waiting: (.waiting // [])}' <<<"$doc" ;;
   set)
     [ $# -eq 3 ] || sa_tooling "$usage"
     key=$1 field=$2
@@ -143,5 +153,24 @@ case $cmd in
     sa_read "$ledger"
     jq -c '{allowed: [.rulings[] | .date as $d | (.allow // [])[] | {date: $d, call: .,
       line: "Run `\(.)` without a hold: the owner allowed it on \($d)."}]}' <<<"$doc" ;;
+  wait)
+    [ $# -eq 3 ] && [ "$2" = --reason ] || sa_tooling "$usage"
+    key=$1; sa_flag_value "$usage" "$3"; reason=$3
+    case $key in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
+    case ${key##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
+    sa_read "$ledger"
+    jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
+    # A repeat keeps the first `since`: how long it has waited is the report's point.
+    row=$(jq -cn --arg k "$key" --arg r "${key%#*}" --argjson n "${key##*#}" --arg why "$reason" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      --argjson old "$(jq -c --arg k "$key" '(.waiting // []) | map(select(.key == $k)) | first // null' <<<"$doc")" \
+      '{key: $k, repo: $r, number: $n, reason: $why, since: ($old.since // $now)}')
+    sa_write "$ledger" "$(jq -c --arg k "$key" --argjson w "$row" '.waiting = ((.waiting // []) | map(select(.key != $k)) + [$w])' <<<"$doc")"
+    jq -cn --argjson w "$row" '{waiting: $w}' ;;
+  unwait)
+    [ $# -eq 1 ] || sa_tooling "$usage"
+    sa_read "$ledger"
+    had=$(jq -r --arg k "$1" '[(.waiting // [])[] | select(.key == $k)] | length > 0' <<<"$doc")
+    [ "$had" != true ] || sa_write "$ledger" "$(jq -c --arg k "$1" '.waiting = ((.waiting // []) | map(select(.key != $k)))' <<<"$doc")"
+    jq -cn --arg k "$1" --argjson r "$had" '{key: $k, removed: $r}' ;;
   *) sa_tooling "$usage" ;;
 esac

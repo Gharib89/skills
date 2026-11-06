@@ -29,5 +29,13 @@ The owner's user-scope file, written by the super agent's setup step and carried
 _Avoid_: config, inventory, profile (a ship profile is per repo)
 
 **Slot**:
-One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling; a launch still checks the machine's free memory and load before it takes a slot.
+One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling, less the slots it keeps for the owner's messages (`reserve`, 1 on the super agent's own machine); a launch still checks the machine's free memory and load before it takes a slot. A probe thread takes none.
 _Avoid_: worker, lane, seat
+
+**Placement**:
+Choosing the machine a launch runs on: the super agent's own machine first, a GPU machine for GPU work, the next reachable linked machine that fits when one is down, and a row in the ledger's waiting list when none does. A machine is reached only through its T3 environment id, and only if the owner already linked it.
+_Avoid_: scheduling, load balancing
+
+**Probe thread**:
+A scratch thread the super agent launches on a linked machine to run the fixed probe there (cores, RAM, GPU, provider CLIs, gh logins) and reply with one JSON line, which setup merges into the fleet file. It is settled once its reply is read and is no ledger entry.
+_Avoid_: health check, ping

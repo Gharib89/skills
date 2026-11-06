@@ -20,8 +20,9 @@
 # For `setup`'s probes: `t3 environment list --json` prints the migration
 # warning then `environments.json` (no file: exit 1); `gh auth status --json
 # hosts` answers `gh-auth.json`, the real shape (measured 2026-11-06); `nproc`,
-# `free -m`, `nvidia-smi` and `hostname` answer from `probe/` (sa_machine sets
-# them; no GPU line is no tool, sa_gpu_failing a tool that fails); `claude`, `codex` and `agy` answer from
+# `free -m`, `uptime`, `nvidia-smi` and `hostname` answer from `probe/` (sa_machine
+# sets them; no GPU line is no tool, sa_gpu_failing a tool that fails; sa_load
+# sets the load and the available memory, 0.50 and 21004 MB until then); `claude`, `codex` and `agy` answer from
 # `provider/<name>.out` and `.rc` (sa_provider; no .rc is exit 0), and a
 # provider named in SA_FAKE_ABSENT at install time is not installed; `agy` also
 # records the directory it was run in and that directory's git common dir, a line of
@@ -74,9 +75,14 @@ cat "$SA_FAKE/probe/cores"
 FAKE
   cat > "$1/free" <<'FAKE'
 #!/usr/bin/env bash
-printf '              total        used        free      shared  buff/cache   available\nMem:       %s       10410        5292        2471       18557       21004\nSwap:        8191           0        8191\n' "$(cat "$SA_FAKE/probe/ram_mb")"
+printf '              total        used        free      shared  buff/cache   available\nMem:       %s       10410        5292        2471       18557       %s\nSwap:        8191           0        8191\n' "$(cat "$SA_FAKE/probe/ram_mb")" "$(cat "$SA_FAKE/probe/avail_mb" 2>/dev/null || echo 21004)"
 FAKE
   SA_BIN=$1
+  cat > "$1/uptime" <<'FAKE'
+#!/usr/bin/env bash
+l=$(cat "$SA_FAKE/probe/load" 2>/dev/null || echo 0.50)
+printf ' 14:02:11 up 3 days,  2:11,  1 user,  load average: %s, 0.58, 0.59\n' "$l"
+FAKE
   cat > "$1/hostname" <<'FAKE'
 #!/usr/bin/env bash
 cat "$SA_FAKE/probe/hostname"
@@ -93,7 +99,7 @@ exit "$(cat "$SA_FAKE/provider/$n.rc" 2>/dev/null || echo 0)"
 FAKE
     chmod +x "$1/$p"
   done
-  chmod +x "$1/sleep" "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/hostname"
+  chmod +x "$1/uptime" "$1/sleep" "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/hostname"
   mkdir -p "$SA_FAKE/threads" "$SA_FAKE/gh" "$SA_FAKE/probe" "$SA_FAKE/provider"
 }
 
@@ -105,6 +111,9 @@ sa_machine() {
   [ -z "${4:-}" ] || printf '#!/usr/bin/env bash\nprintf "%%s\\n" "%s"\n' "$4" > "$SA_BIN/nvidia-smi"
   [ -z "${4:-}" ] || chmod +x "$SA_BIN/nvidia-smi"
 }
+
+# sa_load <load1> <available_mb>: the live readings `uptime` and `free -m` answer
+sa_load() { printf '%s\n' "$1" > "$SA_FAKE/probe/load"; printf '%s\n' "$2" > "$SA_FAKE/probe/avail_mb"; }
 
 # sa_gpu_failing: a machine whose `nvidia-smi` is there and fails, as after a driver mismatch
 sa_gpu_failing() {
