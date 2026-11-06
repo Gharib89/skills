@@ -23,7 +23,9 @@
 # `free -m`, `nvidia-smi` and `hostname` answer from `probe/` (sa_machine sets
 # them; no GPU line is no tool, sa_gpu_failing a tool that fails); `claude`, `codex` and `agy` answer from
 # `provider/<name>.out` and `.rc` (sa_provider; no .rc is exit 0), and a
-# provider named in SA_FAKE_ABSENT at install time is not installed. `sleep` runs
+# provider named in SA_FAKE_ABSENT at install time is not installed; `agy` also
+# records the directory it was run in and that directory's git common dir, a line of
+# `agy-cwd`. `sleep` runs
 # the one-shot script `on-sleep` first, to change what the fakes answer while a
 # script waits.
 
@@ -85,6 +87,7 @@ FAKE
 #!/usr/bin/env bash
 n=$(basename "$0")
 printf '%s %s\n' "$n" "$*" >> "$SA_FAKE/calls"
+[ "$n" != agy ] || printf '%s|%s\n' "$PWD" "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" >> "$SA_FAKE/agy-cwd"
 cat "$SA_FAKE/provider/$n.out" 2>/dev/null
 exit "$(cat "$SA_FAKE/provider/$n.rc" 2>/dev/null || echo 0)"
 FAKE

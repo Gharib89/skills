@@ -80,6 +80,8 @@ check "agy's quota command is the measured /usage print" \
   'agy -p /usage --output-format json' "$(jq -r .providers.agy.quota_command <<<"$f")"
 check "codex's quota command asks the app server for the rate limits" 1 \
   "$(jq -r '.providers.codex.quota_command | test("account/rateLimits/read") and test("codex app-server") | if . then 1 else 0 end' <<<"$f")"
+check "and holds its stdin open while the server answers, which exits at once on end of input (measured with codex 0.166.0)" 1 \
+  "$(jq -r '.providers.codex.quota_command | test("sleep [0-9]+; *}? *\\| *timeout") | if . then 1 else 0 end' <<<"$f")"
 
 # --- --write puts the same file on disk, atomically, in a directory it creates ---
 out=$(S --name laptop --write); rc=$?

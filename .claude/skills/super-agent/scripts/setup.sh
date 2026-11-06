@@ -13,7 +13,9 @@
 # merges: what a probe measured (cores, RAM, GPU, reachability, each provider's
 # status, the GitHub accounts) is refreshed, and everything else (slots,
 # thresholds, quota commands, active repos, waivers, any key the owner added)
-# keeps the file's value, so an owner's edit survives. A machine the file holds
+# keeps the file's value, so an owner's edit survives (a quota command a
+# previous setup recorded is kept too: fix one by hand in the file, or delete it
+# there and re-run). A machine the file holds
 # and T3 no longer lists is kept. This machine's slots are the lesser of half
 # its cores and its RAM over the per-thread floor, at least 1; a linked machine
 # is probed from its own `setup` run, so it starts at 1 slot.
@@ -113,7 +115,9 @@ fi
 # back, and the provider is `unavailable` with the reason when it does not print
 # a quota: the router skips it, and the owner can fix the command in the file
 # and re-run, which probes the command the file holds.
-codex_cmd="printf '%s\\n' '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"clientInfo\":{\"name\":\"super-agent\",\"version\":\"0\"}}}' '{\"jsonrpc\":\"2.0\",\"method\":\"initialized\"}' '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"account/rateLimits/read\"}' | timeout 15 codex app-server"
+# The server exits on end of input before it answers request 2 (measured, codex
+# 0.166.0), so the requests are followed by a `sleep` that holds stdin open.
+codex_cmd="{ printf '%s\\n' '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"clientInfo\":{\"name\":\"super-agent\",\"version\":\"0\"}}}' '{\"jsonrpc\":\"2.0\",\"method\":\"initialized\"}' '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"account/rateLimits/read\"}' ; sleep 4; } | timeout 15 codex app-server"
 # provider: <name> <quota command> <jq test that the output holds a quota>
 probe_provider() {
   local p=$1 cmd test=$3 out rc status=available reason=null
