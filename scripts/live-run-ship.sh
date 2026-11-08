@@ -15,13 +15,28 @@
 #                  must sit at its `seed` tag, which carries the ship profile.
 #   LIVE_RUN_WALL_S: the wall-clock cap per run in seconds, default 1800
 #
-# Two paths, each on its own fresh issue and a fresh copy of the fixture: the
-# happy path, a plain issue Ship must take to the merge gate, and the ambiguous
+#   LIVE_RUN_PATHS: the paths to run, comma-separated, default all of them:
+#                   happy,ambiguous,defect,red,head-moved,reviewer-outage
+#
+# Four live paths, each on its own fresh issue and a fresh copy of the fixture:
+# the happy path, a plain issue Ship must take to the merge gate; the ambiguous
 # path, a deliberately vague issue Ship must stop `ambiguous` on with no claim,
-# no branch and no PR. Each runs `claude -p --model sonnet --permission-mode
-# auto` with `/ship <n> --unattended`, then closes the issue and every PR from
-# the run and deletes its branches, pass or fail. That cleanup is this script's
+# no branch and no PR; the defect path, whose first criterion prescribes a proof
+# unrelated to its deliverable and which Ship may not mark `met` on it; and the
+# red path, whose change turns the repo's own tests red and which Ship must stop
+# on (`red-after-retry` or `mis-specified`) with no PR and the claim handed back.
+# Each runs `claude -p --model sonnet --permission-mode auto` with
+# `/ship <n> --unattended`, then closes the issue and every PR from the run and
+# deletes its branches, pass or fail. That cleanup is this script's
 # scaffolding, not a Ship mechanic.
+#
+# Two mechanic-level paths run Ship's own mechanics from <ship-source> over a
+# stub host, no claude run, no fixture issue and so no cost: the fixture's
+# profile names no reviewer and a live push race is impractical. head-moved:
+# `merge` refuses a PR whose head moved past the gated head, with no merge call
+# and the branch kept, and still merges at the gated head. reviewer-outage:
+# `run-file gate clean` holds a merge whose primary reviewer was not reviewed,
+# unless its fallback reviewed, so an outage never passes silently.
 #
 # Pass rule: a path that fails re-runs once on a new issue, and a pass on the
 # retry is a pass, its first attempt's failures kept in `retried`. A cleanup the
@@ -60,9 +75,16 @@ done
 repo=${LIVE_RUN_REPO:-Gharib89/ship-fixture}
 # Caps per claude run, set from the baseline of 4 happy-path runs: cost median
 # $1.01, highest $1.25, so twice the highest; wall clock median 166 s, highest
-# 189 s, under the 30 minutes the Verification allows.
-budget=2.50
+# 189 s, under the 30 minutes the Verification allows. The defect path, from 4
+# runs: cost $1.09 to $1.32, wall clock 195 to 220 s, so $2.65. The red path stops
+# before a PR, from 3 runs: cost $0.26 to $0.31, wall clock 40 to 59 s, so $0.65.
+# A run costing past its path's cap is a failed check, not a reason to raise it.
+budget_of() { case $1 in defect) echo 2.65 ;; red) echo 0.65 ;; *) echo 2.50 ;; esac; }
 wall_cap=${LIVE_RUN_WALL_S:-1800}
+paths=${LIVE_RUN_PATHS:-happy,ambiguous,defect,red,head-moved,reviewer-outage}
+for p in ${paths//,/ }; do
+  case $p in happy|ambiguous|defect|red|head-moved|reviewer-outage) ;; *) unavailable "unknown path in LIVE_RUN_PATHS: $p" ;; esac
+done
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # ship_body_closes: a PR closes the issue the way Ship reads it. This checkout's
 # copy rather than <ship-source>'s, so a Ship under test cannot change how it is
@@ -213,30 +235,18 @@ $4" --jq .number) || issue=""
   [ -n "$issue" ] || unavailable "cannot file the issue on $repo"
 }
 
-happy_title='Add a sub helper to calc.sh'
-happy_body=$(cat <<'BODY'
-## What to build
-
-`calc.sh` has `add`. Add `sub`, which prints its first argument minus its second, the same way `add` prints a sum.
-
-## Acceptance criteria
-
-- [ ] `sub 5 3` prints `2`, and `sub 3 5` prints `-2`.
-- [ ] `test.sh` checks both cases.
-BODY
-)
-# Deliberately vague: nothing in it says what to change, so Ship must stop
-# `ambiguous` before it claims.
-ambiguous_title='Fix calc.sh the way we discussed'
-ambiguous_body='Do what we agreed on the call.'
-
 # One Ship run of <path> on a new issue and a fresh copy of the fixture, judged,
 # then reset. Appends its record to $tmp/runs; returns 0 pass, 1 fail.
-attempt() { # <happy|ambiguous> <attempt>
-  local co=$tmp/$1-$2 failed=$tmp/failed-$1-$2 rc start wall pr="" flag="" reply run_file assignees prs mine branches state n b closing
+attempt() { # <happy|ambiguous|defect|red> <attempt>
+  local budget co=$tmp/$1-$2 failed=$tmp/failed-$1-$2 rc start wall pr="" flag="" reply run_file assignees prs mine branches state n b closing
+  budget=$(budget_of "$1")
   cp -a "$base" "$co" || unavailable "cannot copy the fixture clone"
-  if [ "$1" = happy ]; then file_issue "$1" "$2" "$happy_title" "$happy_body"
-  else file_issue "$1" "$2" "$ambiguous_title" "$ambiguous_body"; flag=--ambiguous; fi
+  case $1 in
+    happy) file_issue "$1" "$2" "$happy_title" "$happy_body" ;;
+    ambiguous) file_issue "$1" "$2" "$ambiguous_title" "$ambiguous_body"; flag=--ambiguous ;;
+    defect) file_issue "$1" "$2" "$defect_title" "$defect_body"; flag=--defect ;;
+    red) file_issue "$1" "$2" "$red_title" "$red_body"; flag=--red ;;
+  esac
 
   start=$(date +%s)
   # -k: a claude that outlives SIGTERM by a minute is killed, and timeout then
@@ -297,20 +307,19 @@ attempt() { # <happy|ambiguous> <attempt>
     echo "cleanup: unverified, a fixture read failed" >> "$failed"
   fi
 
-  jq -cn --arg path "$1" --argjson attempt "$2" --rawfile f "$failed" --argjson issue "$issue" \
-    --argjson pr "${pr:-null}" --argjson wall "$wall" --slurpfile c <(jq -c . "$co.json" 2>/dev/null || echo '{}') \
-    'def run_tokens(k): if ($c[0].modelUsage | type) != "object" then null else ([$c[0].modelUsage[] | if type == "object" then .[k] else null end] | if any(type != "number") then null else add end) end;
-     {path: $path, attempt: $attempt, issue: $issue, pr: $pr, failed: ($f | split("\n") | map(select(. != ""))),
-      cost_usd: ($c[0].total_cost_usd // null), wall_s: $wall, session: ($c[0].session_id // null),
-      input_tokens: run_tokens("inputTokens"), output_tokens: run_tokens("outputTokens"),
-      cache_read_tokens: run_tokens("cacheReadInputTokens"), cache_write_tokens: run_tokens("cacheCreationInputTokens"),
-      turns: ($c[0].num_turns // null), subagents: ($c[0].subagent_stats.spawned // null), tool_calls: null}' >> "$tmp/runs"
+  record "$1" "$2" "$failed" "$issue" "${pr:-null}" "$wall" "$co.json"
   issue="" mark="" run_heads=""
   [ ! -s "$failed" ]
 }
 
-for path in happy ambiguous; do
-  attempt "$path" 1 || attempt "$path" 2
+# shellcheck source=live-run-ship.d/paths.sh
+source "$here/live-run-ship.d/paths.sh"
+
+for path in ${paths//,/ }; do
+  case $path in
+    head-moved|reviewer-outage) stub_attempt "$path" 1 || stub_attempt "$path" 2 ;;
+    *) attempt "$path" 1 || attempt "$path" 2 ;;
+  esac
 done
 
 # A first attempt that failed is the one retried; every other run is its path's
