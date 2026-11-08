@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.9.1 (2026-11-08)
+
+### Bug Fixes
+
+- **super-agent**: Read each Claude instance's own account in quota and auth
+  ([#1117](https://github.com/Gharib89/skills/pull/1117),
+  [`912ae36`](https://github.com/Gharib89/skills/commit/912ae3689e4bb52e5f6a83e50c198505c659a411))
+
+
 ## v0.9.0 (2026-11-08)
 
 ### Features
