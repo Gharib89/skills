@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Pick a supervised thread's starting model tier from the issue's Size label, or
-# the driver for a bounded text job, from `quota`'s answer.
+# Pick a supervised thread's launch instance and starting model tier from the
+# issue's Size label, or the driver for a bounded text job, from `quota`'s
+# answer.
 #
 #   route --size <XS|S|M|L|XL> [--raise <n>] --quota <file>
 #   route --job text [--claude] --quota <file>
@@ -8,21 +9,35 @@
 # --quota is a file holding `quota`'s output. The tier ladder is Sonnet low,
 # Sonnet medium, Sonnet high, Opus high; XS and S start on the first rung, M on
 # the second, L on the third, XL on the fourth. --raise (default 0) climbs one
-# rung per stall or hard finding, and stops at the top. A tier above the
-# default is a question for the owner only when Claude Code's weekly bucket
-# (`week` of `claude`) has under 50% remaining; the tier to launch meanwhile is
-# the default. A quota that is unknown never asks: the tier is the default.
+# rung per stall or hard finding, and stops at the top. Each provider is a T3
+# provider instance, its key the instance id. A launch's candidates are the
+# `claude` instances plus the `pi` instances the owner allowed (`route: true`)
+# whose `models` map the tier's `sonnet` and `opus` to a model id. One whose
+# `auth` is `failed`, or whose weekly bucket is at 0, is skipped; of the rest the
+# one with the most weekly quota left wins, an instance with no measured weekly
+# bucket after every measured one, and a tie goes to a `claude` instance, then
+# to the first id. A Claude instance's weekly bucket is its `week`, a Pi
+# instance's the weekly bucket of agy's Claude group. A tier above the default
+# is a question for the owner only when the chosen instance's weekly bucket has
+# under 50% remaining; the tier to launch meanwhile is the default. A quota that
+# is unknown never asks: the tier is the default. With no candidate left,
+# `instance_id` is null with the reason, for the caller to escalate. An old
+# quota file keyed `claude` routes as before, on the instance `claude`.
 # A text job goes to agy on its Gemini group. With --claude the job wants a
 # Claude model: it stays on Claude Code, and overflows to agy's Claude group
 # only when Claude Code's weekly bucket is under 50% and agy's Claude weekly
 # bucket is not, both known.
 #
-# stdout: with --size: {size, raise, default, wanted, tier, ask, reason, bucket},
-#         each tier a {model, effort}; `tier` is what to launch now and `ask`
-#         true when `wanted` needs the owner's yes first; `bucket` the weekly
-#         bucket read, {provider, id, remaining}, null when unknown; `reason`
-#         one line. With --job: {job, driver, group, model, reason}, `driver`
-#         `agy` or `claude`, `group` and `model` null for `claude`
+# stdout: with --size: {size, raise, default, wanted, tier, ask, reason, bucket,
+#         instance_id, model, options}, each tier a {model, effort}; `tier` is
+#         what to launch now and `ask` true when `wanted` needs the owner's yes
+#         first; `bucket` the weekly bucket read, {provider (the instance id),
+#         id, remaining}, null when unknown; `instance_id` the T3 instance to
+#         launch on, `model` the model id to send there (the tier's model on a
+#         Claude instance, the mapped one on a Pi instance) and `options` the
+#         `modelSelection` options for it; `reason` one line. With --job: {job,
+#         driver, group, model, reason}, `driver` `agy` or `claude`, `group` and
+#         `model` null for `claude`
 # exit: 0 a route, an unknown quota included · 2 usage, or a --quota file that
 #       is missing, not JSON, or of the wrong shape (providers an object, every
 #       bucket's remaining a number)
@@ -71,18 +86,34 @@ if [ -n "$job" ]; then
   exit 0
 fi
 jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" '
-  def weekly($p; pred): [.providers[$p].buckets[]? | select(.window == "weekly" and pred)] | first;
   [{model: "sonnet", effort: "low"}, {model: "sonnet", effort: "medium"}, {model: "sonnet", effort: "high"}, {model: "opus", effort: "high"}] as $ladder
   | ({XS: 0, S: 0, M: 1, L: 2, XL: 3}[$size]) as $d
   | ([$d + $raise, 3] | min) as $w
-  | weekly("claude"; .id == "week") as $b
-  | (if $b == null then null else {provider: "claude", id: $b.id, remaining: $b.remaining} end) as $bucket
+  | ([$ladder[$d].model, $ladder[$w].model] | unique) as $models
+  | def weekly($e): [$e.value.buckets[]? | select(.window == "weekly"
+      and (if $e.driver == "pi" then ((.group // "") | startswith("Claude")) else .id == "week" end))] | first;
+    [.providers | to_entries[] | (.value.driver // .key) as $drv | . + {driver: $drv}
+      | select($drv == "claude" or ($drv == "pi" and .value.route == true))
+      | . + {bucket: weekly(.)}
+      | . + {skip: (if .value.auth == "failed" then "auth failed"
+                    elif .bucket != null and .bucket.remaining == 0 then "weekly at 0"
+                    elif $drv == "pi" and ([$models[] as $m | (.value.models[$m] // null)] | any(. == null)) then "no model for the tier"
+                    else null end)}] as $cands
+  | ([$cands[] | select(.skip == null)] | sort_by([(if .bucket == null then 1 else 0 end), -(.bucket.remaining // 0), (if .driver == "claude" then 0 else 1 end), .key]) | first) as $pick
+  | (if $pick == null or $pick.bucket == null then null else {provider: $pick.key, id: $pick.bucket.id, remaining: $pick.bucket.remaining} end) as $bucket
   | ($w > $d and $bucket != null and $bucket.remaining < $low) as $ask
+  | (if $w > $d and ($bucket == null or $ask) then $ladder[$d] else $ladder[$w] end) as $tier
   | {size: $size, raise: $raise, default: $ladder[$d], wanted: $ladder[$w],
-     tier: (if $w > $d and ($bucket == null or $ask) then $ladder[$d] else $ladder[$w] end),
+     tier: $tier,
      ask: $ask,
-     reason: (if $w == $d then "the default tier"
+     reason: (if $pick == null then
+         "no instance can launch: " + (if ($cands | length) == 0 then "no claude instance, and no pi instance the owner allowed, in the quota read"
+           else ([$cands[] | "\(.key) \(.skip)"] | join(", ")) end)
+       elif $w == $d then "the default tier"
        elif $bucket == null then "quota unknown: default tier"
        elif $ask then "weekly under 50%: the owner decides the raise"
        else "weekly at or above 50%: raised" end),
-     bucket: $bucket}' "$quota" || sa_tooling "$quota: cannot be read"
+     bucket: $bucket,
+     instance_id: ($pick.key // null),
+     model: (if $pick == null then null elif $pick.driver == "pi" then $pick.value.models[$tier.model] else $tier.model end),
+     options: (if $pick == null then null elif $pick.driver == "pi" then [{id: "thinking", value: "high"}] else [{id: "effort", value: $tier.effort}] end)}' "$quota" || sa_tooling "$quota: cannot be read"

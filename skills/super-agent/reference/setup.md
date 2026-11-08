@@ -10,12 +10,17 @@ skill's base directory.
 
 ## Steps
 
-1. Run `scripts/setup.sh --propose`. Its `to_probe` lists each reachable
-   linked machine as `{machine, environment_id}`.
+1. Call `orchestrator_capabilities` and save its answer to a file, then run
+   `scripts/setup.sh --propose --instances <file>`; pass `--instances <file>`
+   to every later `--propose` and `--write` too. Its `to_probe` lists each
+   reachable linked machine as `{machine, environment_id}`.
 2. Launch one **probe thread** per `to_probe` row, all at once, with
    `t3_thread_launch`: `environmentId` set, `scratch: true`, no worktree, the
-   cheapest tier (`modelSelection` `{instanceId: <claude instance>, model:
-   <sonnet>, options: [{"id":"effort","value":"low"}]}`). Its message is one
+   cheapest tier. With a fleet file, take `modelSelection` from route
+   (`quota.sh`, then `route.sh --size XS`: its `instance_id`, `model`,
+   `options`); on a first setup, use the first enabled Claude instance in the
+   capabilities answer, its Sonnet model and effort low, as that answer names
+   them. Its message is one
    line asking it to run the script below with `bash -s -- --json` and reply
    with its one JSON line and nothing else, then the full text of
    `scripts/probe.sh` in a code fence: that machine has no checkout of this
@@ -27,9 +32,11 @@ skill's base directory.
 3. Run setup again with `--propose` and one `--probe <environment id>=<reply
    file>` per machine, and show the owner its proposal: each machine's slots,
    the thresholds, the `work_week` (weekday numbers in week order, 0 is
-   Sunday; proposed Monday to Friday), each provider marked `unavailable`
-   with its `reason`, and every line of `warnings` (a reply that is no probe
-   lands there).
+   Sunday; proposed Monday to Friday), each of `instances` with its driver,
+   instance id, quota source and auth result, each provider marked
+   `unavailable` with its `reason`, and every line of `warnings` (a reply that
+   is no probe lands there; so does a Claude instance with no
+   `env.CLAUDE_CONFIG_DIR`, which each one needs when there are several).
 4. Ask the owner to confirm or adjust it, the `work_week` set to their own
    working days (the morning report and the retro follow it). After the yes,
    run it again with `--write` and the same `--probe` flags, then apply the
@@ -45,5 +52,6 @@ hand for anything setup proposed (slots, thresholds, active repos, waivers,
 refreshes only the probed facts (`proposed_slots` shows what a fresh measure
 would set), while a machine never probed takes the computed slots. An
 unreachable machine keeps its previous facts and is probed on the next setup
-that finds it reachable. An `unavailable` provider is a fact to report, not an
-error: name it with its reason and carry on.
+that finds it reachable. An `unavailable` provider, or an instance whose
+`auth` is `failed`, is a fact to report, not an error: name it with its reason
+and carry on. Setup runs on Linux only (GNU `nproc`, `free`, `timeout`).

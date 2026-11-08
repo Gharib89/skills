@@ -26,48 +26,45 @@ They live in `scripts/` under this skill's base directory, and each answers
 `$XDG_STATE_HOME` (`~/.local/state` when unset), your own machine's state
 directory.
 
-- `ledger.sh add|get|list|set|rethread|ruling|allowed|wait|unwait` reads and
-  writes the ledger; its `--ledger` comes first. A key is `<owner/name>#<n>`.
-  `add --kind triage` records a `/triage` ticket, which has no PR (default
-  `ship`). `list` also prints `waiting`, the tickets placement could not place.
+- `ledger.sh add|get|list|set|rethread|ruling|allowed|briefed|wait|unwait`
+  reads and writes the ledger; its `--ledger` comes first. A key is
+  `<owner/name>#<n>`. `add --kind triage` records a `/triage` ticket, which has
+  no PR (default `ship`). `list` also prints `waiting`, the tickets placement
+  could not place. `ruling --brief` marks a ruling every launch brief carries;
+  `briefed` lists those.
 - `watch.sh` polls every open entry's thread and PR and exits on the first
   change: `pr-merged`, `pr-closed`, `pending-approval`, `run-finished`,
   `stall-window`, or `thread-mismatch`, `thread-unreadable`, `pr-unreadable`,
-  or `timeout`. A finished run is reported only if still at rest `--recheck`
-  seconds later (default 90): a run awaiting its own subagent restarts.
-  `stall-window` is an entry at rest with no new run for `--stall-window`
-  seconds (default 900). One watcher runs per ledger: a second start exits 1
-  with `running`, the first left alone. It re-reads the ledger each poll, and
-  skips an entry `reconcile` has not observed yet (`unobserved`).
+  or `timeout`. It re-reads the ledger each poll, and skips an entry
+  `reconcile` has not observed yet (`unobserved`). Rules:
+  [watching](reference/watching.md).
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage (a merged PR is `merged` until its thread rests, then `settled`),
   keeps each entry's `stalls`, and prints one summary: `settled` (each with
-  its `kind`), `closed`, `stalled`, `at_rest`, `errors`, `entries`. A stall (a
-  completed run with no merged PR and no merge-gate summary, or a window
-  passed with no new run) adds 1; a real step (a run ending in the merge-gate
-  summary, or a PR opened) takes 1 off, never below 0. An entry at 3 stalls
-  gains none.
-  `stalled` holds one `{key, thread, stalls, reason}` per stall counted now.
-  You never set `stalls` by hand, except the reset below.
+  its `kind`), `closed`, `stalled`, `at_rest`, `errors`, `entries`. A stall
+  adds 1 and a real step takes 1 off ([watching](reference/watching.md)). You
+  never set `stalls` by hand, except the reset below.
 - `setup.sh` probes this machine, its linked T3 environments, the GitHub
   accounts and each provider's quota command, merges each `--probe` reply,
-  and proposes the fleet file (below) with `--propose`; it takes
-  `--fleet <file>` in place of `--ledger`, and writes only with `--write`.
+  and proposes the fleet file (below) with `--propose`, one provider per T3
+  provider instance from `--instances <file>`; it takes `--fleet <file>` in
+  place of `--ledger`, and writes only with `--write`.
 - `probe.sh --json` measures the machine it runs on (cores, RAM, `free_gb`,
   `load1`, GPU, `clis`, `gh_logins`) and prints one JSON line.
 - `launch-check.sh` answers whether one machine takes a launch now: a free
   slot, load, RAM, and no open same-repo ticket in the way.
 - `place.sh` picks the machine a launch runs on (Placement).
-- `quota.sh` reads every fleet-file provider's quota through the quota command
-  setup recorded, and prints each bucket's remaining fraction and reset. A read
-  that fails is `unknown`, not an error. `--fleet <file>` is required.
+- `quota.sh --fleet <file>` reads each provider instance's quota and auth
+  under its own account. A read that fails is `unknown`, not an error.
 - `brief.sh --fleet <file> --ledger <ledger>` prints `{brief, waivers,
   allowed}`: `brief` is the whole standing launch brief.
 - `schedules.sh --fleet <file>` proposes the morning report and weekly
   retro-runs; it creates nothing (Schedules and lessons).
-- `route.sh` picks a launch's model tier from the issue's Size label and a
-  saved quota read (`--size`, `--raise`, `--quota <file>`), or the driver for a
-  bounded text job (`--job text`, `--claude`).
+- `route.sh` picks a launch's instance, model tier, `model` and `options` from
+  the issue's Size label and a saved quota read (`--size`, `--raise`, `--quota
+  <file>`), or the driver for a bounded text job (`--job text`, `--claude`).
+- `worktree.sh remove` removes a settled or closed entry's clean worktree,
+  never forced, and keeps the branch.
 - `agy-job.sh` runs one bounded text job on agy from a disposable scratch
   worktree of the repo, under a session-only allow list of harmless binaries,
   and prints its response as JSON.
@@ -84,32 +81,34 @@ The **fleet file** is `super-agent/fleet.json` under `$XDG_CONFIG_HOME`
 (`~/.config` when unset). The machines and their slots, the GitHub accounts,
 the active repos, the work week, the standing waivers and the provider quota
 commands come from the fleet file, never from this text: any step that needs a
-machine, account, repo or quota command reads it from the file. Setup runs on
-Linux only (it uses GNU `nproc`, `free` and `timeout`).
+machine, account, repo or quota command reads it from the file.
 
 When the fleet file is missing, or the owner asks for `/super-agent setup`,
 follow [reference/setup.md](reference/setup.md).
 
 ## Routing
 
-Every launch, a rethread included, runs on the tier `route.sh` picks:
+Every launch, a rethread included, runs on the instance and tier `route.sh`
+picks:
 
 1. Run `scripts/quota.sh --fleet <fleet>` here and save its stdout to a file.
    Read it fresh for each launch: buckets move between launches. Quota is per
-   account, so every machine draws on the same buckets (measured: remote probes
-   saw the local weekly bucket); a remote machine is never extra quota, and a
-   probe never reads quota.
+   provider instance (one account each), read here under that account, so
+   every machine draws on the same buckets (measured: remote probes saw the
+   local weekly bucket); a remote machine is never extra quota, and a probe
+   never reads quota.
 2. Run `scripts/route.sh --size <XS|S|M|L|XL> --quota <file>`, the size from
    the issue's Size label, with `--raise <n>` on a raised launch (the stall
    ladder below). The ladder is Sonnet low, Sonnet medium, Sonnet high, Opus
    high; XS and S start on the first rung, M the second, L the third, XL the
    fourth.
-3. Launch `tier`. When `ask` is true, `wanted` sits above the default while
-   Claude Code's weekly bucket has under 50% remaining: escalate first (Needs
-   you, with an AskUserQuestion offering `wanted` and `tier`, your
-   recommendation first, naming `bucket` and `reason`), then launch `wanted`
-   on a yes and `tier` on a no. An unknown quota never asks: route returns the
-   default tier.
+3. Launch `tier` on `instance_id`. When `ask` is true, `wanted` sits above the
+   default while the chosen instance's weekly bucket has under 50% remaining:
+   escalate first (Needs you, with an AskUserQuestion offering `wanted` and
+   `tier`, your recommendation first, naming `bucket` and `reason`), then
+   launch `wanted` on a yes and `tier` on a no. An unknown quota never asks.
+   A null `instance_id` (no usable instance) goes to Needs you with route's
+   `reason`.
 
 ## Placement
 
@@ -178,11 +177,10 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
    with `gh issue view`, once for both reads: the owner-skill label and the
    Size label. `ready-for-agent` takes `/ship <n>`, `needs-triage` takes
    `/triage <n>`, anything else is an escalation (below). Claim it (Claims and
-   intake), then pick the tier under Routing and the machine under Placement.
-   Call
-   `t3_thread_launch`, never `delegate_task`: `delegate_task` runs only in your
-   own project and refuses another repo ("A local task runs in this thread's
-   project", measured). Pass:
+   intake), then pick the instance and tier (Routing) and the machine
+   (Placement). Call `t3_thread_launch`, never `delegate_task`:
+   `delegate_task` runs only in your own project and refuses another repo ("A
+   local task runs in this thread's project", measured). Pass:
    - `environmentId`: `placed.environment_id`, on a remote launch only;
    - `projectId`: the repo's T3 project, from `t3_project_list` on that
      environment. With none there, rerun place with `--exclude <machine>`.
@@ -191,13 +189,9 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
    - `workspaceStrategy`: `{type: "worktree", baseRef: <default branch>,
      branch: "<type>/<slug>-<n>", startFromOrigin: true}`, the branch named
      the way `/ship` names its branches;
-   - `modelSelection`: `{instanceId, model, options}`, `instanceId` the
-     provider instance as T3 names it (`claudeAgent`, say), then route's
-     `{model, effort}` tier: `model` as is, and `effort` as the one entry of
-     `options`, an array of `{id, value}`:
-     `[{"id":"effort","value":"low"}]`. A `{model, options}` shape with a
-     map is rejected (`Expected string at modelSelection.instanceId`,
-     measured);
+   - `modelSelection`: `{instanceId, model, options}`, verbatim from route's
+     `instance_id`, `model` and `options` (an array of `{id, value}`; a map is
+     rejected, measured);
    - `message`: the owner-skill invocation on its first line, then `brief`
      verbatim (The launch brief).
 2. **Record.** Read the thread's id and worktree path from the launch result,
@@ -268,6 +262,10 @@ escalation (Escalation).
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
 - `closed`: one chat line naming the ticket and the reason.
+- Once a `settled` row's thread is settled, and for each `closed` row, run
+  `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
+  [reference/remote.md](reference/remote.md)). A `kept: true` result is one
+  chat line naming the key and `reason`, not an escalation.
 - An entry whose `observed.pending` is above 0 holds a permission request:
   escalate it, since a held thread is not a stall.
 - `at_rest` with a merge-gate summary is not a stall: an allowed merge in
@@ -340,7 +338,8 @@ A held call's message names the thread, the held call and your
 recommendation. Record the owner's answer with
 `scripts/ledger.sh --ledger <ledger> ruling <text> --allow <call>`, which dates
 it; pass `--allow` only when the answer lets that call run unheld in later
-briefs, so a deny is a ruling with no `--allow`.
+briefs, so a deny is a ruling with no `--allow`, and `--brief` when every
+later brief must carry the ruling.
 
 ## Agy jobs
 
@@ -367,6 +366,7 @@ come back.
 - Touch only threads the ledger holds and the probe threads you launch.
 - Route and verify; the supervised thread implements, and its owner skill
   merges.
-- Settle a finished thread; never archive one.
+- Settle a finished thread; never archive one. Remove a worktree only through
+  `worktree.sh`, which takes only a settled or closed entry's clean one.
 - Launch only on a claim of your own and the owner's go: a claim is never
   taken over, and the daily offer never launches.

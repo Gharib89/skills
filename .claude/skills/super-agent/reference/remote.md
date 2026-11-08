@@ -33,6 +33,15 @@ no file: it is found on GitHub by branch, the same from any machine.
    id>=<dir>` per environment that holds an open entry.
 4. **Settle.** Settle a remote thread with `t3_thread_organize` action
    `settle`, passing its `environmentId`.
+5. **Remove the worktree.** Launch a scratch thread on the entry's
+   environment, the way setup's probe thread runs
+   ([setup](setup.md#steps) step 2). Its message asks it to run the pasted
+   full text of `scripts/worktree.sh` with `bash -s -- remove --key <key>
+   --path <worktree> --branch <branch> --stage <stage> --kind <kind> --merged
+   <true|false>`, from the ledger entry (`merged` true only for a `ship` entry
+   whose observed PR state is merged), and reply with its one JSON line. Read
+   the reply, settle the scratch thread, and report a `kept` result as a local
+   one. Never SSH.
 
 ## The reply file
 
