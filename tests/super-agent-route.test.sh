@@ -115,4 +115,67 @@ unknown
 check "nor when quota is unknown" claude "$(R --job text --claude --quota "$tmp/q.json" | jq -r .driver)"
 check "an unknown quota leaves a plain text job on agy Gemini" gemini "$(R --job text --quota "$tmp/q.json" | jq -r .group)"
 
+# --- the launch instance: route picks the T3 instance with the most quota in the tier's driver ----
+# inst <id> <driver> <weekly|null> <auth> [extra json]: one provider entry of a `quota` answer
+inst() {
+  jq -cn --arg id "$1" --arg d "$2" --argjson w "$3" --arg a "$4" --argjson x "${5:-{\}}" '{($id): ({driver: $d, status: (if $w == null then "unknown" else "available" end),
+    reason: null, auth: $a, auth_reason: (if $a == "failed" then "auth command exited 1" else null end),
+    buckets: (if $w == null then [] else [{id: "week", window: "weekly", remaining: $w, resets: "x"}] end)} + $x)}'
+}
+quotas() { jq -cn --argjson p "$(jq -cs 'add' <<<"$*")" '{providers: $p}' > "$tmp/q.json"; }
+pick() { jq -r '"\(.instance_id) \(.model) \(.tier.effort) ask=\(.ask)"'; }
+
+quotas "$(inst claudeAgent claude 0.9 ok)"
+res=$(R --size M --quota "$tmp/q.json")
+check "the answer names the instance, the model to send and its launch options" 'claudeAgent sonnet [{"id":"effort","value":"medium"}]' \
+  "$(jq -r '"\(.instance_id) \(.model) \(.options | tostring)"' <<<"$res")"
+quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst claudeAgent_b claude 0.8 ok)"
+check "two Claude instances: the one with the most weekly quota left" "claudeAgent_b sonnet medium ask=false" "$(R --size M --quota "$tmp/q.json" | pick)"
+quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst claudeAgent_b claude 0.2 ok)"
+res=$(R --size M --quota "$tmp/q.json")
+check "an instance whose auth failed is skipped, however much quota it shows" "claudeAgent_b sonnet medium ask=false" "$(pick <<<"$res")"
+quotas "$(inst claudeAgent claude 0 ok)" "$(inst claudeAgent_b claude 0.2 ok)"
+check "an instance at 0 weekly is skipped" claudeAgent_b "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst a claude 0.5 ok)" "$(inst b claude 0.5 ok)"
+check "a tie goes to the first by name" a "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst claudeAgent claude 0.5 unknown)" "$(inst claudeAgent_b claude 0.1 ok)"
+check "an unknown auth is no reason to skip" claudeAgent "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst claudeAgent claude null ok)" "$(inst claudeAgent_b claude 0.1 ok)"
+check "a measured bucket beats an unmeasured one" claudeAgent_b "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst claudeAgent_b claude 0 ok)"
+res=$(R --size M --raise 1 --quota "$tmp/q.json"); rc=$?
+check_rc "no instance left still answers, exit 0" 0 "$rc"
+check "with a null instance and the reason, for the caller to escalate" 'null no instance can launch: claudeAgent auth failed, claudeAgent_b weekly at 0' \
+  "$(jq -r '"\(.instance_id) \(.reason)"' <<<"$res")"
+check "and the default tier, no ask" "sonnet medium ask=false" "$(tier <<<"$res")"
+
+# the raise-ask rule reads the chosen instance's bucket
+quotas "$(inst claudeAgent claude 0.45 ok)" "$(inst claudeAgent_b claude 0.4 ok)"
+res=$(R --size M --raise 1 --quota "$tmp/q.json")
+check "the weekly bucket asked about is the chosen instance's" 'claudeAgent true {"provider":"claudeAgent","id":"week","remaining":0.45}' \
+  "$(jq -r '"\(.instance_id) \(.ask) \(.bucket | tostring)"' <<<"$res")"
+
+# a Pi instance: a candidate only when the owner allowed it, its model the tier's mapping
+pi_models='{"route": true, "models": {"sonnet": "antigravity/claude-sonnet-4-6", "opus": "antigravity/claude-opus-4-6"}}'
+pi_buckets='{"buckets": [{"id": "3p-weekly", "group": "Claude and GPT models", "window": "weekly", "remaining": 0.9, "resets": "x"}, {"id": "gemini-weekly", "group": "Gemini Models", "window": "weekly", "remaining": 0.1, "resets": "x"}]}'
+quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst pi pi 0.9 ok "$(jq -cn --argjson a "$pi_models" --argjson b "$pi_buckets" '$a + $b')")"
+res=$(R --size M --quota "$tmp/q.json")
+check "a Pi instance with more Claude-group quota takes the launch, on its mapped model" 'pi antigravity/claude-sonnet-4-6 [{"id":"thinking","value":"high"}]' \
+  "$(jq -r '"\(.instance_id) \(.model) \(.options | tostring)"' <<<"$res")"
+check "its tier is still the size's" "sonnet medium ask=false" "$(tier <<<"$res")"
+res=$(R --size XL --quota "$tmp/q.json")
+check "the Opus rung maps to the Pi instance's Opus model" 'pi antigravity/claude-opus-4-6' "$(jq -r '"\(.instance_id) \(.model)"' <<<"$res")"
+quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst pi pi 0.9 ok "$(jq -cn --argjson b "$pi_buckets" '{route: false} + $b')")"
+check "a Pi instance the owner did not allow is never picked" claudeAgent "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst claudeAgent claude 0.5 ok)" "$(inst pi pi 0.5 ok "$(jq -cn --argjson a "$pi_models" '$a + {buckets: [{id: "3p-weekly", group: "Claude and GPT models", window: "weekly", remaining: 0.5, resets: "x"}]}')")"
+check "a tie between a Claude instance and a Pi instance goes to Claude" claudeAgent "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst pi pi 0.2 ok "$(jq -cn --argjson a "$pi_models" --argjson b "$pi_buckets" '$a + $b | .buckets[0].remaining = 0.2')")"
+check "with Claude unauthenticated, the Pi instance is the launch" pi "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst pi pi 0.9 ok '{"route": true, "models": {"sonnet": "antigravity/claude-sonnet-4-6"}, "buckets": [{"id": "3p-weekly", "group": "Claude and GPT models", "window": "weekly", "remaining": 0.9, "resets": "x"}]}')"
+check "a Pi instance with no model for the tier cannot take it" 'null' "$(R --size XL --quota "$tmp/q.json" | jq -r .instance_id)"
+
+# an old-shaped quota file (keyed claude) routes as before, instance `claude`
+quota 0.9 0.9
+check "an old-shaped file names its key as the instance" 'claude sonnet' "$(R --size M --quota "$tmp/q.json" | jq -r '"\(.instance_id) \(.model)"')"
+
 finish
