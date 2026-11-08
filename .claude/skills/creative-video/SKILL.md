@@ -328,8 +328,8 @@ release this skill's `package.json` installs. Authoring needs both; when
 either is missing, ask once, then install it with:
 
 ```
-npx skills add heygen-com/hyperframes#318724f5f4b7293de19f610f309dec2748942ed8 --skill hyperframes --agent claude-code -y
-npx skills add heygen-com/hyperframes#318724f5f4b7293de19f610f309dec2748942ed8 --skill media-use --agent claude-code -y
+npx skills add heygen-com/hyperframes#7ad2be96ea1cdf6c1c5d3da7f3be20584c3a9f25 --skill hyperframes --agent claude-code -y
+npx skills add heygen-com/hyperframes#7ad2be96ea1cdf6c1c5d3da7f3be20584c3a9f25 --skill media-use --agent claude-code -y
 ```
 
 ## Voice
