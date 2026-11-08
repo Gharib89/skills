@@ -67,14 +67,14 @@ stub_head_moved() { # <attempt>
   # The host now reports a head past the one the merge gate read.
   pr open "$c" 1
   out=$(merge); rc=$?
-  [ "$rc" -eq 1 ] || echo "refusal: a moved head exited $rc, want 1"
-  [ "$(jq -r .error <<<"$out" 2>/dev/null)" = "head-moved: $c != $a" ] || echo "refusal: not named head-moved: <current> != <gated>"
-  ! grep -q '^host_pr_merge' "$fake/calls" 2>/dev/null || echo "merge: a merge call reached the host"
-  [ "$(git -C "$origin" rev-parse -q --verify refs/heads/fix/x)" = "$a" ] || echo "branch: not kept on origin"
+  [ "$rc" -eq 1 ] || echo "refusal: a moved head exited $rc, want 1" >> "$stub_failed"
+  [ "$(jq -r .error <<<"$out" 2>/dev/null)" = "head-moved: $c != $a" ] || echo "refusal: not named head-moved: <current> != <gated>" >> "$stub_failed"
+  ! grep -q '^host_pr_merge' "$fake/calls" 2>/dev/null || echo "merge: a merge call reached the host" >> "$stub_failed"
+  [ "$(git -C "$origin" rev-parse -q --verify refs/heads/fix/x)" = "$a" ] || echo "branch: not kept on origin" >> "$stub_failed"
   # The control: the same PR at the gated head still merges (ADR 0009).
   rm -rf "$fake"; mkdir -p "$fake"; pr open "$a" 1; pr merged "$a" 2
   merge >/dev/null; rc=$?
-  [ "$rc" -eq 0 ] || echo "control: a PR at its gated head exited $rc, want 0"
+  [ "$rc" -eq 0 ] || echo "control: a PR at its gated head exited $rc, want 0" >> "$stub_failed"
 }
 
 # reviewer-outage, mechanic-level: <ship-source>'s `run-file gate clean` over a
@@ -94,11 +94,11 @@ stub_reviewer_outage() { # <attempt>
     (cd "$repo" && bash "$src/skills/ship/scripts/run-file.sh" gate clean "$w/ci.json" --head "$head" --file "$run" 2>/dev/null)
   }
   out=$(gate 'Stop: fallback: not reviewed: outage'); rc=$?
-  [ "$rc" -eq 1 ] || echo "outage: both reviewers out exited $rc, want 1 (held)"
+  [ "$rc" -eq 1 ] || echo "outage: both reviewers out exited $rc, want 1 (held)" >> "$stub_failed"
   [ "$(jq -r '.clean == false and (.held_by | index("reviewer primary: not reviewed") != null)' <<<"$out" 2>/dev/null)" = true ] \
-    || echo "outage: the hold does not name the unreviewed primary"
+    || echo "outage: the hold does not name the unreviewed primary" >> "$stub_failed"
   out=$(gate 'Round: fallback 1: dispositioned' "Stop: fallback: tree unchanged at $head"); rc=$?
-  [ "$rc" -eq 0 ] || echo "fallback: a fallback that reviewed exited $rc, want 0 (clean)"
+  [ "$rc" -eq 0 ] || echo "fallback: a fallback that reviewed exited $rc, want 0 (clean)" >> "$stub_failed"
 }
 
 # One record and verdict for a mechanic-level path, which has no claude run and
@@ -106,7 +106,8 @@ stub_reviewer_outage() { # <attempt>
 stub_attempt() { # <head-moved|reviewer-outage> <attempt>
   local failed=$tmp/failed-$1-$2 start
   start=$(date +%s)
-  "stub_${1//-/_}" "$2" > "$failed"
+  : > "$failed"; stub_failed=$failed # the stub's lines go to the file, so an `unavailable` keeps stdout
+  "stub_${1//-/_}" "$2"
   record "$1" "$2" "$failed" null null "$(( $(date +%s) - start ))" "$tmp/no-claude.json"
   [ ! -s "$failed" ]
 }

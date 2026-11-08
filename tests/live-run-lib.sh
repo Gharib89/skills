@@ -184,4 +184,3 @@ drive() {
   bash scripts/live-run-ship.sh "${SRC:-$PWD}" 2>/dev/null | jq -c "${DRIVE_KEEP:-del(.runs, .per_path)}"
   printf 'rc=%s\n' "${PIPESTATUS[0]}"
 }
-

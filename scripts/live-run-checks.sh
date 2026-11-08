@@ -60,7 +60,7 @@ fail() { printf '%s\n' "$1"; failed=1; }
 if [ "$mode" = defect ]; then
   [ -f "$run" ] || { fail "run file: missing"; exit "$failed"; }
   line=$(grep -E '^(- )?Criterion 1:' "$run" | tail -n 1)
-  if grep -q 'Criterion 1: met' <<<"$line" && grep -q 'README.md' <<<"$line" && ! grep -q 'mul' <<<"$line"; then
+  if grep -q 'Criterion 1: met' <<<"$line" && grep -q 'README.md' <<<"$line" && ! grep -qw 'mul' <<<"$line"; then
     fail "criterion 1: met on the seeded unrelated proof"
   fi
   exit "$failed"

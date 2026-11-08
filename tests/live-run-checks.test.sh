@@ -257,6 +257,8 @@ Criterion 1: not met: unrelated proof')"
 check "the last line decides: a later met replaces an earlier not met" "criterion 1: met on the seeded unrelated proof
 rc=1" "$(defect 'Criterion 1: not met: x
 Criterion 1: met: stat README.md')"
+check "the word multiple is not mul" "criterion 1: met on the seeded unrelated proof
+rc=1" "$(defect 'Criterion 1: met: stat README.md for multiple things')"
 check "criterion 2 is not the seeded one" "rc=0" "$(defect 'Criterion 2: met: stat README.md')"
 check "a missing Run file is named" "run file: missing
 rc=1" "$(bash scripts/live-run-checks.sh --defect "$T/nope.md" "$host_ok" 7 2>/dev/null; printf 'rc=%s\n' "$?")"
