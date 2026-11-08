@@ -14,7 +14,8 @@
 # under a 30 s limit with the entry's `env` (an object, e.g. the account's
 # `CLAUDE_CONFIG_DIR`, a leading `~` read as HOME) set, so the read is that
 # instance's account and not the caller's: a Claude entry with no
-# `CLAUDE_CONFIG_DIR` reads the default account. A `pi` instance's buckets are agy's, read through the agy parser. A
+# `CLAUDE_CONFIG_DIR` reads the default account. A `pi` instance's buckets are
+# agy's, read through the agy parser. A
 # read that fails, prints nothing readable or has no command is `unknown` with a
 # reason, never an error: the router falls back to the default tier without
 # asking. Auth is probed apart from quota: the entry's `auth_command`, run under
