@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.9.0 (2026-11-08)
+
+### Features
+
+- **super-agent**: Route launches across provider instances, check auth, carry rulings, remove
+  settled worktrees ([#1115](https://github.com/Gharib89/skills/pull/1115),
+  [`7c8764c`](https://github.com/Gharib89/skills/commit/7c8764c3ee444bb20070a8e7d4265ec1caba1a1f))
+
+
 ## v0.8.1 (2026-11-06)
 
 ### Bug Fixes
