@@ -27,7 +27,10 @@
 # `free -m`, `uptime`, `nvidia-smi` and `hostname` answer from `probe/` (sa_machine
 # sets them; no GPU line is no tool, sa_gpu_failing a tool that fails; sa_load
 # sets the load and the available memory, 0.50 and 21004 MB until then); `claude`, `codex` and `agy` answer from
-# `provider/<name>.out` and `.rc` (sa_provider; no .rc is exit 0), and a
+# `provider/<name>.out` and `.rc` (sa_provider; no .rc is exit 0), or for the account
+# whose CLAUDE_CONFIG_DIR basename matches from `provider/<name>@<dir>.*` (sa_account;
+# `claude auth status` from sa_claude_auth; sa_instances writes the saved
+# `orchestrator_capabilities` list; sa_worktree_repo a real throwaway repo), and a
 # provider named in SA_FAKE_ABSENT at install time is not installed; `agy` also
 # records the directory it was run in and that directory's git common dir, a line of
 # `agy-cwd`. `sleep` runs
@@ -140,8 +143,18 @@ FAKE
 n=$(basename "$0")
 printf '%s %s\n' "$n" "$*" >> "$SA_FAKE/calls"
 [ "$n" != agy ] || printf '%s|%s\n' "$PWD" "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" >> "$SA_FAKE/agy-cwd"
-cat "$SA_FAKE/provider/$n.out" 2>/dev/null
-exit "$(cat "$SA_FAKE/provider/$n.rc" 2>/dev/null || echo 0)"
+# One account per CLAUDE_CONFIG_DIR: `provider/<name>@<dir basename>.*` answers that
+# account's reads, and `claude auth status` answers `claude-auth@<dir basename>.rc`
+# (no file: signed in), the way the real CLI exits 1 for a login that is gone.
+k=$n d=${CLAUDE_CONFIG_DIR:+$(basename "$CLAUDE_CONFIG_DIR")}
+if [ "$n" = claude ] && [ "${1:-} ${2:-}" = "auth status" ]; then
+  rc=$(cat "$SA_FAKE/provider/claude-auth@$d.rc" 2>/dev/null || echo 0)
+  [ "$rc" = 0 ] && echo '{"loggedIn": true}' || echo '{"loggedIn": false}'
+  exit "$rc"
+fi
+[ -z "$d" ] || [ ! -f "$SA_FAKE/provider/$n@$d.out" ] || k=$n@$d
+cat "$SA_FAKE/provider/$k.out" 2>/dev/null
+exit "$(cat "$SA_FAKE/provider/$k.rc" 2>/dev/null || echo 0)"
 FAKE
     chmod +x "$1/$p"
   done
@@ -176,6 +189,42 @@ sa_gpu_failing() {
 # sa_provider <claude|codex|agy> <exit code> <stdout>: what its quota command prints
 sa_provider() {
   printf '%s\n' "$3" > "$SA_FAKE/provider/$1.out"; printf '%s\n' "$2" > "$SA_FAKE/provider/$1.rc"
+}
+
+# sa_account <claude|codex|agy> <config dir name> <exit code> <stdout>: what the quota
+# command prints for the account whose CLAUDE_CONFIG_DIR has that basename
+sa_account() {
+  printf '%s\n' "$4" > "$SA_FAKE/provider/$1@$2.out"; printf '%s\n' "$3" > "$SA_FAKE/provider/$1@$2.rc"
+}
+
+# sa_claude_auth <config dir name> <exit code>: `claude auth status` for that account
+sa_claude_auth() { printf '%s\n' "$2" > "$SA_FAKE/provider/claude-auth@$1.rc"; }
+
+# sa_instances <file> <id>:<driverKind>[:disabled|:unauth|:home=<path>]...: the saved
+# `orchestrator_capabilities` answer, in the shape measured on 2026-11-08: one row per
+# instance with `providerInstanceId`, `driverKind`, `models` and `constraints`, and no
+# `enabled` flag (a disabled row says so in `constraints`). A pi row lists the agy models.
+sa_instances() {
+  local f=$1 spec id kind flag rows='[]'; shift
+  for spec in "$@"; do
+    IFS=: read -r id kind flag <<<"$spec"
+    rows=$(jq -c --arg id "$id" --arg k "$kind" --arg f "${flag:-}" '. + [{providerInstanceId: $id, driverKind: $k, displayName: $id,
+      models: (if $k == "pi" then [{id: "default"}, {id: "antigravity/claude-opus-4-6"}, {id: "antigravity/claude-sonnet-4-6"}, {id: "antigravity/gemini-3.8-flash"}]
+               else [{id: "model-a"}] end),
+      constraints: (if $f == "disabled" then ["Provider instance is disabled."]
+                    elif $f == "unauth" then ["Provider is not authenticated."] else [] end)}
+      + (if ($f | startswith("home=")) then {homePath: ($f | ltrimstr("home="))} else {} end)]' <<<"$rows")
+  done
+  jq -cn --argjson r "$rows" '{parentThreadId: "mcp:launch:x", providers: $r}' > "$f"
+}
+
+# sa_worktree_repo <dir>: a throwaway repo with a pushed `main` (`<dir>/main`, its remote
+# `<dir>/origin.git`), the fake worktree's home. Needs git on the test's PATH.
+sa_worktree_repo() {
+  git init -q --bare -b main "$1/origin.git"
+  git clone -q "$1/origin.git" "$1/main" 2>/dev/null
+  git -C "$1/main" -c user.name=t -c user.email=t@t commit -q --allow-empty -m init
+  git -C "$1/main" push -q origin main 2>/dev/null
 }
 
 # sa_environments <json array>: what `t3 environment list --json` prints
