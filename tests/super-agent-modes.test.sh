@@ -7,8 +7,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 for tree in skills/super-agent .claude/skills/super-agent; do
-  scripts=$(git ls-files -s "$tree/scripts" | awk '$4 ~ /\.sh$/ && $4 !~ /\/_lib\.sh$/ { print $1 }' | sort | uniq -c)
-  count=$(git ls-files "$tree/scripts" | grep -c '\.sh$')
+  scripts=$(git ls-files -s "$tree/scripts" | awk '$4 ~ /\/scripts\/[^\/]*\.sh$/ && $4 !~ /\/_lib\.sh$/ { print $1 }' | sort | uniq -c)
+  count=$(git ls-files "$tree/scripts" | grep -c '/scripts/[^/]*\.sh$')
   check "$tree: every script but _lib.sh is 100755 in the index" "$((count - 1)) 100755" "$(sed 's/^ *//' <<<"$scripts")"
 done
 
