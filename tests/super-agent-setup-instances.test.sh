@@ -64,11 +64,26 @@ check "Pi is a provider with its agy quota command, not routed until the owner a
 check "its sonnet and opus come from the agy models it lists" '{"sonnet":"antigravity/claude-sonnet-4-6","opus":"antigravity/claude-opus-4-6"}' "$(jq -c .providers.pi.models <<<"$f")"
 check "its quota was read through agy" available "$(jq -r .providers.pi.status <<<"$f")"
 check "the proposal lists each instance with driver, quota source and auth result" \
-  'claudeAgent|claude|the caller'"'"'s own account|failed claudeAgent_b|claude|CLAUDE_CONFIG_DIR=/acct/b|ok pi|pi|the caller'"'"'s own account|unknown' \
+  'claudeAgent|claude|the default account|failed claudeAgent_b|claude|CLAUDE_CONFIG_DIR=/acct/b|ok pi|pi|the caller'"'"'s own account|unknown' \
   "$(jq -r '[.instances[] | "\(.instance_id)|\(.driver)|\(.quota_source)|\(.auth)"] | join(" ")' <<<"$out")"
 check "a Claude instance with no env beside another one is warned about" 'claudeAgent: no env set' \
   "$(jq -r '.warnings[] | select(startswith("claudeAgent:")) | .[0:23]' <<<"$out")"
 check "nothing was written" absent "$([ -e "$fleet" ] && echo present || echo absent)"
+
+# --- each Claude instance reads its own account: ~ expanded, and no env means the default account ------------
+# measured 2026-11-08: a literal `~` in CLAUDE_CONFIG_DIR logs the CLI out, and a caller's own value leaks into
+# an instance that sets none; Codex keeps the caller's environment
+inst_reset
+sa_instances "$tmp/inst-home.json" claudeAgent:claudeAgent claudeAgent_b:claudeAgent:home='~/x' codex:codex
+sa_claude_auth other 1
+rm -f "$SA_FAKE/config-dirs"
+out=$(HOME=/h CLAUDE_CONFIG_DIR=/other P --name laptop --instances "$tmp/inst-home.json")
+check "a ~ homePath is kept as T3 wrote it in the proposal" '{"CLAUDE_CONFIG_DIR":"~/x"}' "$(jq -c .fleet.providers.claudeAgent_b.env <<<"$out")"
+check "each Claude command sees its own config dir: HOME/x, none; Codex keeps the caller's" 'agy|/other claude|/h/x claude|<unset> codex|/other' \
+  "$(LC_ALL=C sort -u "$SA_FAKE/config-dirs" | tr '\n' ' ' | sed 's/ $//')"
+check "the instance with no env passes its auth command though the caller's account is signed out" 'ok ok' \
+  "$(jq -r '.fleet.providers | "\(.claudeAgent.auth) \(.claudeAgent_b.auth)"' <<<"$out")"
+check "its quota source says the default account" 'the default account' "$(jq -r '.instances[] | select(.instance_id == "claudeAgent") | .quota_source' <<<"$out")"
 
 # --- a home path from T3's settings file, for a row that carries none (measured: real rows have no homePath) ------
 inst_reset

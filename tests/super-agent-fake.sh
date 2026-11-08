@@ -142,6 +142,7 @@ FAKE
 #!/usr/bin/env bash
 n=$(basename "$0")
 printf '%s %s\n' "$n" "$*" >> "$SA_FAKE/calls"
+printf '%s|%s\n' "$n" "${CLAUDE_CONFIG_DIR-<unset>}" >> "$SA_FAKE/config-dirs"
 [ "$n" != agy ] || printf '%s|%s\n' "$PWD" "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" >> "$SA_FAKE/agy-cwd"
 # One account per CLAUDE_CONFIG_DIR: `provider/<name>@<dir basename>.*` answers that
 # account's reads, and `claude auth status` answers `claude-auth@<dir basename>.rc`

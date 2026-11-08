@@ -233,5 +233,5 @@ jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjso
   '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn, to_probe: $p,
     instances: [$rows[] | .providerInstanceId as $k | $m.providers[$k] as $v
       | {instance_id: $k, driver: $v.driver,
-         quota_source: (if ($v.env // {}) == {} then "the caller\u0027s own account" else ($v.env | to_entries | map("\(.key)=\(.value)") | join(" ")) end),
+         quota_source: (if ($v.env // {}) == {} then (if $v.driver == "claude" then "the default account" else "the caller\u0027s own account" end) else ($v.env | to_entries | map("\(.key)=\(.value)") | join(" ")) end),
          auth: $v.auth, auth_reason: $v.auth_reason, status: $v.status}]}'

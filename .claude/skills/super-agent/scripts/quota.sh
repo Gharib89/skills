@@ -12,8 +12,9 @@
 # readings. Each is read by its `driver` (its key when unset: an old file keyed
 # `claude`, `codex`, `agy` still reads) through its `quota_command`, run once
 # under a 30 s limit with the entry's `env` (an object, e.g. the account's
-# `CLAUDE_CONFIG_DIR`) set, so the read is that instance's account and not the
-# caller's. A `pi` instance's buckets are agy's, read through the agy parser. A
+# `CLAUDE_CONFIG_DIR`, a leading `~` read as HOME) set, so the read is that
+# instance's account and not the caller's: a Claude entry with no
+# `CLAUDE_CONFIG_DIR` reads the default account. A `pi` instance's buckets are agy's, read through the agy parser. A
 # read that fails, prints nothing readable or has no command is `unknown` with a
 # reason, never an error: the router falls back to the default tier without
 # asking. Auth is probed apart from quota: the entry's `auth_command`, run under
@@ -79,12 +80,11 @@ for name in ${names[@]+"${names[@]}"}; do
   driver=$(jq -r --arg n "$name" '.driver // $n' <<<"$cfg")
   cmd=$(jq -r '.quota_command // empty' <<<"$cfg")
   status=unknown reason='' buckets='[]'
-  # NUL-separated, so a value holding a newline stays one KEY=VALUE word and never becomes the program `env` runs
-  envs=(); while IFS= read -r -d '' kv; do envs+=("$kv"); done < <(jq -j '(.env // {}) | to_entries[] | "\(.key)=\(.value)" | select(explode | any(. == 0) | not) | . + "\u0000"' <<<"$cfg")
+  sa_env_words "$driver" "$(jq -c '.env // {}' <<<"$cfg")"
   auth=unknown auth_reason='no auth command in the fleet file'
   auth_cmd=$(jq -r '.auth_command // empty' <<<"$cfg")
   if [ -n "$auth_cmd" ]; then
-    if env ${envs[@]+"${envs[@]}"} timeout 15 bash -c "$auth_cmd" >/dev/null 2>&1 </dev/null; then auth=ok auth_reason=''
+    if env ${env_args[@]+"${env_args[@]}"} timeout 15 bash -c "$auth_cmd" >/dev/null 2>&1 </dev/null; then auth=ok auth_reason=''
     else auth=failed auth_reason="auth command exited $?"; fi
   fi
   if [ "$(jq -r '.auth // empty' <<<"$cfg")" = failed ]; then
@@ -93,7 +93,7 @@ for name in ${names[@]+"${names[@]}"}; do
   if [ -z "$cmd" ]; then
     reason='no quota command in the fleet file'
   else
-    raw=$(env ${envs[@]+"${envs[@]}"} timeout 30 bash -c "$cmd" 2>/dev/null </dev/null); rc=$?
+    raw=$(env ${env_args[@]+"${env_args[@]}"} timeout 30 bash -c "$cmd" 2>/dev/null </dev/null); rc=$?
     if [ "$rc" -ne 0 ]; then
       reason="quota command exited $rc"
     else
