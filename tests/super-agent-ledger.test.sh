@@ -67,6 +67,15 @@ check "allowed lists each call with its date" "pnpm install pnpm run build" "$(j
 check "dated by its ruling" "$day" "$(jq -r '.allowed[0].date' <<<"$out")"
 check "and written as the line the launch brief carries" \
   "Run \`pnpm install\` without a hold: the owner allowed it on $day." "$(jq -r '.allowed[0].line' <<<"$out")"
+
+# --- a brief-bound ruling is marked, and `briefed` lists only those ---------------
+out=$(L ruling "reviews are Claude self-review only" --brief)
+check "a ruling added with --brief is marked brief-bound" true "$(jq .ruling.brief <<<"$out")"
+check "one added without it is not" false "$(L ruling "plain" | jq .ruling.brief)"
+out=$(L briefed)
+check "briefed lists the brief-bound rulings with their date and text, word for word" "reviews are Claude self-review only" "$(jq -r '.briefed[].text' <<<"$out")"
+check "and only those" 1 "$(jq '.briefed | length' <<<"$out")"
+check "--brief composes with --allow" 'a call true' "$(L ruling both --allow "a call" --brief | jq -r '"\(.ruling.allow[0]) \(.ruling.brief)"')"
 out=$(L ruling "x" --allow 2>/dev/null); rc=$?
 check_rc "--allow with no call exits 2" 2 "$rc"
 

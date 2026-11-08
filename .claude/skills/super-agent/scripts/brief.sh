@@ -6,11 +6,13 @@
 #   brief --fleet <file> --ledger <file>
 #
 # The waivers are the fleet file's `waivers`, each `condition` verbatim, and the
-# allowed calls are the ledger's `allowed` lines (the owner's dated rulings). A
-# fleet file with no waivers says so, so a hold is never read as waived.
+# allowed calls are the ledger's `allowed` lines (the owner's dated rulings). The
+# rulings the owner marked brief-bound (`ledger ruling --brief`) follow under
+# `Owner rulings:`, each word for word. A fleet file with no waivers says so, so a
+# hold is never read as waived.
 #
-# stdout: {brief, waivers, allowed}: `brief` the text to send, `waivers` and
-#         `allowed` how many of each it carries
+# stdout: {brief, waivers, allowed, rulings}: `brief` the text to send, `waivers`,
+#         `allowed` and `rulings` how many of each it carries
 # exit: 0 a brief · 2 usage, or a fleet file or ledger that is unreadable
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -29,9 +31,10 @@ done
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file, run setup"
 jq -e '((.waivers // []) | type) == "array"' "$fleet" >/dev/null 2>&1 || sa_tooling "$fleet: not a fleet file (waivers must be an array)"
 allowed=$(bash "$(dirname "${BASH_SOURCE[0]}")/ledger.sh" --ledger "$ledger" allowed) || sa_tooling "cannot read the allowed calls from $ledger"
+briefed=$(bash "$(dirname "${BASH_SOURCE[0]}")/ledger.sh" --ledger "$ledger" briefed) || sa_tooling "cannot read the rulings from $ledger"
 
-jq -cn --slurpfile f "$fleet" --argjson a "$allowed" '
-  ($f[0].waivers // []) as $w | $a.allowed as $al
+jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" '
+  ($f[0].waivers // []) as $w | $a.allowed as $al | $r.briefed as $rl
   | {brief: ([
       "Merge allowance: merge when /ship'"'"'s merge gate is clean, nothing wider.",
       "Standing waivers, the only holds you may pass without stopping:",
@@ -39,7 +42,8 @@ jq -cn --slurpfile f "$fleet" --argjson a "$allowed" '
       "Any hold outside the merge allowance and these waivers stops at the gate: end with the gate state and the hold named, and do not work around it; the super agent escalates it to the owner.",
       "Commands harmless to run (reads, tests, the repo'"'"'s own checks) need no hold.",
       (if ($al | length) == 0 then empty else "Calls the owner allowed, no hold needed:", ($al[] | "  \(.line)") end),
+      (if ($rl | length) == 0 then empty else "Owner rulings:", ($rl[] | "  \(.date): \(.text)") end),
       "Work in the worktree you start in, on the branch it holds, and make no other: the PR is found by that branch.",
       "End your last message with the PR URL and the gate state."
     ] | join("\n")),
-    waivers: ($w | length), allowed: ($al | length)}'
+    waivers: ($w | length), allowed: ($al | length), rulings: ($rl | length)}'

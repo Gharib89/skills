@@ -60,6 +60,18 @@ check "an allowed call is counted" 1 "$(jq .allowed <<<"$out")"
 check "and listed under its heading" 1 "$(grep -c '^Calls the owner allowed, no hold needed:' <<<"$brief")"
 check "with its line" 1 "$(grep -c 'git push to the branch' <<<"$brief")"
 
+# --- a brief-bound ruling is carried word for word, one without the flag is not ------
+check "with no brief-bound ruling there is no rulings block" '0 0' "$(jq -r '"\(.rulings) \(.brief | split("\n") | map(select(startswith("Owner rulings:"))) | length)"' <<<"$(B)")"
+bash "$s/ledger.sh" --ledger "$led" ruling "Reviews are Claude self-review only: the hosted review action and Codex will not work." --brief >/dev/null
+bash "$s/ledger.sh" --ledger "$led" ruling "a private note that stays out" >/dev/null
+out=$(B); brief=$(jq -r .brief <<<"$out")
+check "a --brief ruling appears verbatim" 1 "$(grep -cF 'Reviews are Claude self-review only: the hosted review action and Codex will not work.' <<<"$brief")"
+check "one without the flag does not" 0 "$(grep -c 'a private note' <<<"$brief")"
+check "they are counted" 1 "$(jq .rulings <<<"$out")"
+check "under the Owner rulings heading, before the worktree line" 'Owner rulings: Work' \
+  "$(grep -A99 '^Owner rulings:' <<<"$brief" | awk 'NR==1 {a=$1" "$2} /^Work in the worktree/ {print a" "$1; exit}')"
+check "the launch brief still ends on its closing line" "End your last message with the PR URL and the gate state." "$(tail -1 <<<"$brief")"
+
 # --- a fleet file with no waivers says so --------------------------------------
 jq '.waivers = []' "$fleet" > "$tmp/none.json"
 out=$(bash "$s/brief.sh" --fleet "$tmp/none.json" --ledger "$led")

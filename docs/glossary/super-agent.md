@@ -25,8 +25,12 @@ A merge-gate hold the launch template waives in advance, with its condition writ
 _Avoid_: auto-merge, merge allowance (that is the launch permission to merge at all), exception
 
 **Fleet file**:
-The owner's user-scope file, written by the super agent's setup step and carried to every machine, that lists what the super agent may use: each linked machine with its capabilities and slot count, each subscription with its quota read, the GitHub accounts, the active repos and the default standing waivers. The skill itself names none of these, so it stays the same for every owner.
+The owner's user-scope file, written by the super agent's setup step and carried to every machine, that lists what the super agent may use: each linked machine with its capabilities and slot count, each provider instance with its quota read and auth result, the GitHub accounts, the active repos and the default standing waivers. The skill itself names none of these, so it stays the same for every owner.
 _Avoid_: config, inventory, profile (a ship profile is per repo)
+
+**Provider instance**:
+One T3 provider the super agent may launch on, named by T3's instance id: two Claude accounts are two instances of one driver, Pi another. Each is signed in and read for quota under its own account directory, so the fleet file keys its providers by instance id and routing picks the instance with the most weekly quota left, skipping one that is signed out; two instances on one account read the same buckets.
+_Avoid_: account, provider (that is the driver), subscription
 
 **Slot**:
 One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling, less the slots it keeps for the owner's messages (`reserve`, 1 on the super agent's own machine); a launch still checks the machine's free memory and load before it takes a slot. A probe thread takes none.

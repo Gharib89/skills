@@ -106,4 +106,55 @@ check "an agy bucket with no remaining fraction is dropped" '["b"]' "$(Q | jq -c
 jq -n '{providers: {"*": {}}}' > "$tmp/glob.json"
 check "a provider keyed * is one provider, not every file here" '["*"]' "$(bash "$s/quota.sh" --fleet "$tmp/glob.json" | jq -c '.providers | keys')"
 
+# --- a provider is a T3 instance: its own account, its own auth probe ----------------------------
+# two Claude instances, each its own CLAUDE_CONFIG_DIR, and a Pi instance that reads agy's buckets
+claude_a=$(jq -cn --arg r $'Current session: 1% used · resets x\nCurrent week (all models): 99% used · resets y' '{result:$r}')
+claude_b=$(jq -cn --arg r $'Current session: 2% used · resets x\nCurrent week (all models): 20% used · resets y' '{result:$r}')
+cat > "$tmp/inst.json" <<'JSON'
+{"providers": {
+  "claudeAgent": {"driver": "claude", "env": {"CLAUDE_CONFIG_DIR": "/acct/a"}, "quota_command": "claude -p \"/usage\" --output-format json", "auth_command": "claude auth status"},
+  "claudeAgent_b": {"driver": "claude", "env": {"CLAUDE_CONFIG_DIR": "/acct/b"}, "quota_command": "claude -p \"/usage\" --output-format json", "auth_command": "claude auth status"},
+  "pi": {"driver": "pi", "route": true, "quota_command": "agy -p /usage --output-format json"}}}
+JSON
+reset; sa_account claude a 0 "$claude_a"; sa_account claude b 0 "$claude_b"
+out=$(bash "$s/quota.sh" --fleet "$tmp/inst.json"); rc=$?
+check_rc "an instance-keyed fleet file reads" 0 "$rc"
+check "two Claude instances give two separate readings, each under its own instance" '0.01 0.8' \
+  "$(jq -r '[.providers.claudeAgent, .providers.claudeAgent_b | .buckets[] | select(.id == "week") | .remaining] | join(" ")' <<<"$out")"
+check "each entry names its instance and driver" 'claudeAgent claude claudeAgent_b claude pi pi' \
+  "$(jq -r '[.providers | to_entries[] | .key, .value.driver] | join(" ")' <<<"$out")"
+check "a Pi instance reads its buckets through the agy parser, groups kept" '["Claude and GPT models","Gemini Models"]' \
+  "$(jq -c '[.providers.pi.buckets[].group] | unique' <<<"$out")"
+check "auth is ok where the auth command exits 0" 'ok ok' "$(jq -r '[.providers.claudeAgent.auth, .providers.claudeAgent_b.auth] | join(" ")' <<<"$out")"
+check "auth is unknown for an instance with no auth command, with the reason" 'unknown no auth command in the fleet file' \
+  "$(jq -r '.providers.pi | "\(.auth) \(.auth_reason)"' <<<"$out")"
+check "each Claude instance's auth probe ran once" 2 "$(grep -c '^claude auth status' "$SA_FAKE/calls")"
+
+# the auth command fails: failed, with the reason, and the quota is still read
+reset; sa_account claude a 0 "$claude_a"; sa_account claude b 0 "$claude_b"; sa_claude_auth a 1
+out=$(bash "$s/quota.sh" --fleet "$tmp/inst.json")
+check "a failing auth command is auth failed with its exit" 'failed auth command exited 1' \
+  "$(jq -r '.providers.claudeAgent | "\(.auth) \(.auth_reason)"' <<<"$out")"
+check "the other instance is untouched" ok "$(jq -r .providers.claudeAgent_b.auth <<<"$out")"
+check "the failed instance's quota is still read" available "$(jq -r .providers.claudeAgent.status <<<"$out")"
+
+# the verdict setup recorded from T3 holds where no command can tell the account apart
+reset; sa_account claude b 0 "$claude_b"
+jq '.providers.claudeAgent_b.auth = "failed" | .providers.claudeAgent_b.auth_reason = "Provider is not authenticated."' "$tmp/inst.json" > "$tmp/inst2.json"
+out=$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")
+check "a recorded failed auth stands even where the live command passes" 'failed Provider is not authenticated.' \
+  "$(jq -r '.providers.claudeAgent_b | "\(.auth) \(.auth_reason)"' <<<"$out")"
+
+# an env value holding a newline stays one KEY=VALUE word: it never becomes the program `env` runs
+reset; sa_account claude touch 0 "$claude_b"
+jq -n '{providers: {claudeAgent_b: {driver: "claude", env: {CLAUDE_CONFIG_DIR: "/acct/x\ntouch"}, quota_command: "claude -p \"/usage\" --output-format json"}}}' > "$tmp/nl.json"
+check "a newline in an env value does not replace the command" available "$(bash "$s/quota.sh" --fleet "$tmp/nl.json" | jq -r .providers.claudeAgent_b.status)"
+
+# an old-shaped file (keyed by CLI name, no env or auth command) still reads, with auth unknown
+reset
+out=$(Q)
+check "an old-shaped provider reads as before, driver defaulting to its key" 'claude unknown' \
+  "$(jq -r '.providers.claude | "\(.driver) \(.auth)"' <<<"$out")"
+check "env on a provider that sets none is left to the caller's own" available "$(jq -r .providers.claude.status <<<"$out")"
+
 finish
