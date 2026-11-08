@@ -39,7 +39,8 @@ skill's base directory.
    instance id, quota source and auth result, each provider marked
    `unavailable` with its `reason`, and every line of `warnings` (a reply that
    is no probe lands there; so does a Claude instance with no
-   `env.CLAUDE_CONFIG_DIR`, which each one needs when there are several).
+   `env.CLAUDE_CONFIG_DIR`: with none it reads the default account, so each
+   extra account needs its own).
 4. Ask the owner to confirm or adjust it, the `work_week` set to their own
    working days (the morning report and the retro follow it). After the yes,
    run it again with `--write` and the same `--probe` flags, then apply the

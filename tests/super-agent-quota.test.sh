@@ -150,6 +150,20 @@ reset; sa_account claude touch 0 "$claude_b"
 jq -n '{providers: {claudeAgent_b: {driver: "claude", env: {CLAUDE_CONFIG_DIR: "/acct/x\ntouch"}, quota_command: "claude -p \"/usage\" --output-format json"}}}' > "$tmp/nl.json"
 check "a newline in an env value does not replace the command" available "$(bash "$s/quota.sh" --fleet "$tmp/nl.json" | jq -r .providers.claudeAgent_b.status)"
 
+# a Claude provider reads its own account: a leading ~ in env is expanded, and no env means the default
+# account, not the caller's; Codex keeps the caller's environment
+sa_fake_install "$tmp/bin"; reset; sa_claude_auth other 1
+jq -n '{providers: {
+  claudeAgent: {driver: "claude", env: {CLAUDE_CONFIG_DIR: "~/x"}, quota_command: "claude -p \"/usage\" --output-format json", auth_command: "claude auth status"},
+  claudeAgent_b: {driver: "claude", quota_command: "claude -p \"/usage\" --output-format json", auth_command: "claude auth status"},
+  codex: {driver: "codex", quota_command: "codex app-server"}}}' > "$tmp/home.json"
+rm -f "$SA_FAKE/config-dirs"
+out=$(HOME=/h CLAUDE_CONFIG_DIR=/other bash "$s/quota.sh" --fleet "$tmp/home.json")
+check "each command sees its own config dir: HOME/x, none; Codex keeps the caller's" 'claude|/h/x claude|<unset> codex|/other' \
+  "$(LC_ALL=C sort -u "$SA_FAKE/config-dirs" | tr '\n' ' ' | sed 's/ $//')"
+check "the provider with no env passes its auth command under the default account" 'ok ok' \
+  "$(jq -r '.providers | "\(.claudeAgent.auth) \(.claudeAgent_b.auth)"' <<<"$out")"
+
 # an old-shaped file (keyed by CLI name, no env or auth command) still reads, with auth unknown
 reset
 out=$(Q)

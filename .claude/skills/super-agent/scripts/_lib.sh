@@ -20,6 +20,22 @@ sa_help() {
   exit 0
 }
 
+# sa_env_words <driver> <env json>: the words `env` takes to run one provider's
+# quota and auth commands, into $env_args. A leading `~` in a value is HOME, since
+# nothing else expands it and `claude` reads a literal `~/x` as a directory that
+# does not exist. A Claude provider with no CLAUDE_CONFIG_DIR gets it unset, so it
+# reads the default account and not the caller's; other drivers keep the caller's
+# environment. NUL-separated, so a value holding a newline stays one word and
+# never becomes the program `env` runs.
+sa_env_words() {
+  env_args=()
+  while IFS= read -r -d '' w; do env_args+=("$w"); done < <(jq -j --arg h "${HOME:-}" --arg d "$1" '
+    (. // {}) as $e
+    | (if $d == "claude" and ($e | has("CLAUDE_CONFIG_DIR") | not) then "-u\u0000CLAUDE_CONFIG_DIR\u0000" else empty end),
+      ($e | to_entries[] | "\(.key)=\(.value)" | sub("^(?<k>[^=]*)=~(?<r>/.*)?$"; "\(.k)=\($h)\(.r // "")")
+        | select(explode | any(. == 0) | not) | . + "\u0000")' <<<"$2")
+}
+
 # sa_flag_value <usage> <value>: a flag's value may be neither empty nor dash-led,
 # or the next flag is read as the value.
 sa_flag_value() { case $2 in -*|'') sa_tooling "$1" ;; esac; }

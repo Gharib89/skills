@@ -196,7 +196,7 @@ fi
 # The server exits on end of input before it answers request 2 (measured, codex
 # 0.166.0), so the requests are followed by a `sleep` that holds stdin open.
 codex_cmd="{ printf '%s\\n' '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"clientInfo\":{\"name\":\"super-agent\",\"version\":\"0\"}}}' '{\"jsonrpc\":\"2.0\",\"method\":\"initialized\"}' '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"account/rateLimits/read\"}' ; sleep 4; } | timeout 15 codex app-server"
-# env_of, run_quota and probe_instance (a T3 instance as a provider) live apart: the
+# run_quota and probe_instance (a T3 instance as a provider) live apart: the
 # functions read this script's variables and write $facts, $proposed and $warnings.
 source "$(dirname "${BASH_SOURCE[0]}")/setup.d/instances.sh" || { printf '{"error":"cannot source setup.d/instances.sh"}\n'; exit 2; }
 # provider: <name> <quota command> <jq test that the output holds a quota>
@@ -233,5 +233,5 @@ jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjso
   '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn, to_probe: $p,
     instances: [$rows[] | .providerInstanceId as $k | $m.providers[$k] as $v
       | {instance_id: $k, driver: $v.driver,
-         quota_source: (if ($v.env // {}) == {} then "the caller\u0027s own account" else ($v.env | to_entries | map("\(.key)=\(.value)") | join(" ")) end),
+         quota_source: (if ($v.env // {}) == {} then (if $v.driver == "claude" then "the default account" else "the caller\u0027s own account" end) else ($v.env | to_entries | map("\(.key)=\(.value)") | join(" ")) end),
          auth: $v.auth, auth_reason: $v.auth_reason, status: $v.status}]}'
