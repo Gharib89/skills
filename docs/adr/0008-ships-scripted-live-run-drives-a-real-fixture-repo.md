@@ -14,3 +14,8 @@ The host fake answers the n-th call to a function from a canned file and keeps n
 - The host fake plus a local bare origin: no network is needed, but there is no state, and the git seam described above is still missing.
 - Create and delete a real repo on every run: a clean slate each time, but deleting needs the `delete_repo` scope.
 - A standing GitHub fixture repo (chosen). Decided in the #608 grilling session on 2026-10-12.
+
+## Amended by #1100
+
+The scope grew to the failure modes the audit found untested: a criterion whose prescribed proof is unrelated to it (judged from the Run file, since the mechanics read only that a `met` line exists, ADR 0011), a red change that must stop before a PR, and two mechanic-level paths with no claude run (`merge` refusing `head-moved`, `run-file gate clean` holding a reviewer outage), because the fixture's profile names no reviewer and a live push race is impractical. Each path has its own cap measured from its own runs.
+

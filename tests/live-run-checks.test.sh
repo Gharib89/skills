@@ -199,4 +199,68 @@ rc=1" "$(amb "$(stop_run | sed 's/^- \[ \] 3 · Verify: none/- [x] 3 · Verify: 
 check_rc "ambiguous host state without branches or reply is tooling" 2 \
   "$(amb "$(stop_run)" "$host_ok" | tail -n 1 | sed 's/^rc=//')"
 
+# --red: the stop on an issue whose change turns the repo's tests red. The reply
+# names `red-after-retry` or `mis-specified` as a code span, the claim is handed
+# back, no PR closes the issue, no branch is pushed, and a Run file, where there
+# is one, opened no phase from 6 (Open PR) on; phases 2 to 5 may have run.
+red_stopped='Stopped `red-after-retry`: test.sh fails after the change.'
+red() { # <run text> <host file>
+  printf '%s\n' "$1" > "$T/run.md"
+  bash scripts/live-run-checks.sh --red "$T/run.md" "$2" 7 2>/dev/null
+  printf 'rc=%s\n' "$?"
+}
+past_gate() { stop_run | sed -e 's/^- \[ \] \([0-5]\) · \([^:]*\): \([a-z-]*\)/- [x] \1 · \2: \3 (10:0\1→10:0\1)/'; }
+red_ok=$(amb_host '[]' '[]' '' "$red_stopped")
+check "a red-after-retry stop after phase 5 passes" "rc=0" "$(red "$(past_gate)" "$red_ok")"
+check "a mis-specified stop passes" "rc=0" "$(red "$(stop_run)" "$(amb_host '[]' '[]' '' 'Stopped `mis-specified`.')")"
+check "a red stop with no Run file passes" "rc=0" \
+  "$(bash scripts/live-run-checks.sh --red "$T/nope.md" "$red_ok" 7 2>/dev/null; printf 'rc=%s\n' "$?")"
+check "a reply naming the ambiguous stop is not the red stop" "stop: the reply names neither red-after-retry nor mis-specified
+rc=1" "$(red "$(stop_run)" "$(amb_host '[]' '[]' '' "$stopped")")"
+check "the stop name outside a code span is not the stop" "stop: the reply names neither red-after-retry nor mis-specified
+rc=1" "$(red "$(stop_run)" "$(amb_host '[]' '[]' '' 'It ended red-after-retry.')")"
+check "a green claim past a red change is named" "stop: the reply names neither red-after-retry nor mis-specified
+phase 6: opened
+phase 7: opened
+phase 8: opened
+phase 9: opened
+issue: claimed
+pr: 1 open PRs close #7, want 0
+rc=1" "$(red "$(good_run)" "$(amb_host '["agent"]' '[]' "$good_body" 'Reached the merge gate.')")"
+check "a red stop that keeps the claim is named" "issue: claimed
+rc=1" "$(red "$(stop_run)" "$(amb_host '["agent"]' '[]' '' "$red_stopped")")"
+check "a red stop that pushed a branch is named" "branch: feat/x-7 pushed
+rc=1" "$(red "$(stop_run)" "$(amb_host '[]' '["feat/x-7"]' '' "$red_stopped")")"
+check "a red stop that opened the PR phase is named" "phase 6: opened
+rc=1" "$(red "$(stop_run | sed 's/^- \[ \] 6 · Open PR: open/- [x] 6 · Open PR: open skipped (red)/')" "$red_ok")"
+check_rc "red host state without branches or reply is tooling" 2 \
+  "$(red "$(stop_run)" "$host_ok" | tail -n 1 | sed 's/^rc=//')"
+
+# --defect: the first criterion prescribes `stat README.md` as its proof, which
+# says nothing of `mul`. The last `Criterion 1:` line may not be `met` on it.
+defect() { # <run text>
+  printf '%s\n' "$1" > "$T/run.md"
+  bash scripts/live-run-checks.sh --defect "$T/run.md" "$host_ok" 7 2>/dev/null
+  printf 'rc=%s\n' "$?"
+}
+check "a met line on the unrelated proof is named" "criterion 1: met on the seeded unrelated proof
+rc=1" "$(defect 'Criterion 1: met: stat README.md exits 0')"
+check "a listed met line on the unrelated proof is named" "criterion 1: met on the seeded unrelated proof
+rc=1" "$(defect '- Criterion 1: met: ran stat README.md')"
+check "a not-met line passes" "rc=0" "$(defect 'Criterion 1: not met: stat README.md says nothing of mul')"
+check "a met line on a proof of the deliverable passes" "rc=0" \
+  "$(defect 'Criterion 1: met: bash test.sh prints ok for mul 3 4, not the issue'"'"'s stat README.md')"
+check "no criterion line passes: the gate holds on a missing line" "rc=0" "$(defect '- [ ] 0 · Isolate: x')"
+check "the last line decides: a later not met replaces an earlier met" "rc=0" \
+  "$(defect 'Criterion 1: met: stat README.md
+Criterion 1: not met: unrelated proof')"
+check "the last line decides: a later met replaces an earlier not met" "criterion 1: met on the seeded unrelated proof
+rc=1" "$(defect 'Criterion 1: not met: x
+Criterion 1: met: stat README.md')"
+check "the word multiple is not mul" "criterion 1: met on the seeded unrelated proof
+rc=1" "$(defect 'Criterion 1: met: stat README.md for multiple things')"
+check "criterion 2 is not the seeded one" "rc=0" "$(defect 'Criterion 2: met: stat README.md')"
+check "a missing Run file is named" "run file: missing
+rc=1" "$(bash scripts/live-run-checks.sh --defect "$T/nope.md" "$host_ok" 7 2>/dev/null; printf 'rc=%s\n' "$?")"
+
 finish
