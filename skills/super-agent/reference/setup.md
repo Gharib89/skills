@@ -11,9 +11,12 @@ skill's base directory.
 ## Steps
 
 1. Call `orchestrator_capabilities` and save its answer to a file, then run
-   `scripts/setup.sh --propose --instances <file>`; pass `--instances <file>`
-   to every later `--propose` and `--write` too. Its `to_probe` lists each
-   reachable linked machine as `{machine, environment_id}`.
+   `scripts/setup.sh --propose --instances <file> --settings <settings>`;
+   pass both to every later `--propose` and `--write` too. `<settings>` is T3's
+   own `settings.json` in its userdata directory: a capabilities row has no
+   home path, so each Claude instance's account directory is read from it.
+   Its `to_probe` lists each reachable linked machine as `{machine,
+   environment_id}`.
 2. Launch one **probe thread** per `to_probe` row, all at once, with
    `t3_thread_launch`: `environmentId` set, `scratch: true`, no worktree, the
    cheapest tier. With a fleet file, take `modelSelection` from route

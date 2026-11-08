@@ -145,6 +145,11 @@ out=$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")
 check "a recorded failed auth stands even where the live command passes" 'failed Provider is not authenticated.' \
   "$(jq -r '.providers.claudeAgent_b | "\(.auth) \(.auth_reason)"' <<<"$out")"
 
+# an env value holding a newline stays one KEY=VALUE word: it never becomes the program `env` runs
+reset; sa_account claude touch 0 "$claude_b"
+jq -n '{providers: {claudeAgent_b: {driver: "claude", env: {CLAUDE_CONFIG_DIR: "/acct/x\ntouch"}, quota_command: "claude -p \"/usage\" --output-format json"}}}' > "$tmp/nl.json"
+check "a newline in an env value does not replace the command" available "$(bash "$s/quota.sh" --fleet "$tmp/nl.json" | jq -r .providers.claudeAgent_b.status)"
+
 # an old-shaped file (keyed by CLI name, no env or auth command) still reads, with auth unknown
 reset
 out=$(Q)

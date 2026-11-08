@@ -9,6 +9,8 @@ lists the fields; this file holds the rules behind them.
   later (default 90): a run awaiting its own subagent restarts.
 - `stall-window` is an entry at rest with no new run for `--stall-window`
   seconds (default 900).
+- It re-reads the ledger each poll, and skips an entry `reconcile` has not
+  observed yet (`unobserved`).
 - One watcher runs per ledger: a second start exits 1 with `running`, and the
   first is left alone.
 

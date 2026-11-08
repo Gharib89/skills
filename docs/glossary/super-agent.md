@@ -29,8 +29,8 @@ The owner's user-scope file, written by the super agent's setup step and carried
 _Avoid_: config, inventory, profile (a ship profile is per repo)
 
 **Provider instance**:
-One T3 provider the super agent may launch on, named by T3's instance id: two Claude accounts are two instances of one driver, Pi another. Each has its own quota and its own sign-in, so the fleet file keys its providers by instance id and routing picks the instance with the most weekly quota left, skipping one that is signed out.
-_Avoid_: account (an instance may share an account), provider (the driver), subscription
+One T3 provider the super agent may launch on, named by T3's instance id: two Claude accounts are two instances of one driver, Pi another. Each is signed in and read for quota under its own account directory, so the fleet file keys its providers by instance id and routing picks the instance with the most weekly quota left, skipping one that is signed out; two instances on one account read the same buckets.
+_Avoid_: account, provider (that is the driver), subscription
 
 **Slot**:
 One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling, less the slots it keeps for the owner's messages (`reserve`, 1 on the super agent's own machine); a launch still checks the machine's free memory and load before it takes a slot. A probe thread takes none.

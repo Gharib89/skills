@@ -17,12 +17,15 @@
 # `--merged` is whether the entry's PR merged (always false for a `triage` entry).
 # The script refuses a stage that is not `settled` or `closed`, so an open entry's
 # worktree is never touched, and the main checkout. A path git does not list as a
-# worktree of its repository is kept as `not a worktree`. Removal is `git worktree
+# worktree of its repository is kept as `not a worktree`, and one whose head is
+# not the ledger's branch (another branch, or detached) is kept, since its commits
+# are not the ones checked. Removal is `git worktree
 # remove <path>` run from the main checkout, then `git worktree prune`.
 #
 # stdout: {key, removed, kept, reason}: `removed` true when the worktree is gone;
 #         `kept` true when it stays on purpose, `reason` then `dirty`, `unpushed`,
-#         `not a worktree`, `branch unreadable` or `remove failed: <git's line>`;
+#         `not a worktree`, `head is not <branch>`, `branch unreadable` or
+#         `remove failed: <git's line>`;
 #         a refusal is removed false, kept false, and the reason it names
 # exit: 0 removed or kept · 1 refused (an open stage, the main checkout), or a key
 #       the ledger does not hold · 2 usage, or an unreadable ledger
@@ -46,7 +49,7 @@ while [ $# -gt 0 ]; do
       case $1 in --ledger) ledger=$2 ;; --key) key=$2 ;; --path) path=$2 ;; --branch) branch=$2 ;; --stage) stage=$2 ;; --kind) kind=$2 ;; --merged) merged=$2 ;; esac
       shift 2 ;;
     -*) fail "$usage" ;;
-    *) [ -z "$ledger" ] || [ -n "$key" ] && fail "$usage"; key=$1; shift ;;
+    *) [ -z "$key" ] || fail "$usage"; key=$1; shift ;;
   esac
 done
 if [ -n "$ledger" ]; then
@@ -76,8 +79,11 @@ if [ -z "$real" ] || [ -z "$listing" ] || ! grep -Fxq "$real" <<<"$listing"; the
 fi
 [ "$real" != "$mainwt" ] || { answer false false "refused: $path is the main checkout"; exit 1; }
 if [ -n "$(git -C "$real" status --porcelain 2>/dev/null </dev/null)" ]; then answer false true dirty; exit 0; fi
+# the ledger's branch is what the checks below read, so the worktree must be on it: any other head may hold commits they never see
+cur=$(git -C "$real" symbolic-ref -q --short HEAD 2>/dev/null </dev/null) || cur=''
+[ "$cur" = "$branch" ] || { answer false true "head is not $branch"; exit 0; }
 if [ "$merged" != true ]; then
-  if ! unpushed=$(git -C "$real" rev-list "$branch" --not --remotes 2>/dev/null </dev/null); then
+  if ! unpushed=$(git -C "$real" rev-list "refs/heads/$branch" --not --remotes 2>/dev/null </dev/null); then
     answer false true "branch unreadable"; exit 0
   fi
   [ -z "$unpushed" ] || { answer false true unpushed; exit 0; }

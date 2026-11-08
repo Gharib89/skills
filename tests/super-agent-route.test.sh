@@ -178,4 +178,24 @@ check "a Pi instance with no model for the tier cannot take it" 'null' "$(R --si
 quota 0.9 0.9
 check "an old-shaped file names its key as the instance" 'claude sonnet' "$(R --size M --quota "$tmp/q.json" | jq -r '"\(.instance_id) \(.model)"')"
 
+# --- the owner's yes: wanted_model and wanted_options are what to send for the raised tier ------------
+quotas "$(inst claudeAgent claude 0.3 ok)"
+res=$(R --size M --raise 1 --quota "$tmp/q.json")
+check "an ask names the raised tier's model and options beside the default's" 'true medium sonnet [{"id":"effort","value":"high"}] sonnet [{"id":"effort","value":"medium"}]' \
+  "$(jq -r '"\(.ask) \(.tier.effort) \(.wanted_model) \(.wanted_options | tostring) \(.model) \(.options | tostring)"' <<<"$res")"
+quotas "$(inst pi pi 0.3 ok "$(jq -cn --argjson a "$pi_models" --argjson b "$pi_buckets" '$a + $b | .buckets[0].remaining = 0.3')")"
+res=$(R --size L --raise 1 --quota "$tmp/q.json")
+check "on a Pi instance the raised tier maps to its own model id" 'pi antigravity/claude-sonnet-4-6 antigravity/claude-opus-4-6' \
+  "$(jq -r '"\(.instance_id) \(.model) \(.wanted_model)"' <<<"$res")"
+
+# --- a Claude text job reads the Claude instances, not a key named claude ----------------------------------
+agy_q='{"agy": {"driver": "agy", "buckets": [{"id": "3p-weekly", "group": "Claude and GPT models", "window": "weekly", "remaining": 0.9, "resets": "x"}]}}'
+job() { R --job text --claude --quota "$tmp/q.json" | jq -r '"\(.driver) \(.group)"'; }
+quotas "$(inst claudeAgent claude 0.3 ok)" "$agy_q"
+check "every Claude instance under 50%: the job overflows to agy's Claude group" "agy claude" "$(job)"
+quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst claudeAgent_b claude 0.8 ok)" "$agy_q"
+check "one Claude instance with room keeps the job on Claude Code" "claude null" "$(job)"
+quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst claudeAgent_b claude 0.8 failed)" "$agy_q"
+check "an instance that is signed out gives no room" "agy claude" "$(job)"
+
 finish

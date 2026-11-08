@@ -70,6 +70,22 @@ check "a Claude instance with no env beside another one is warned about" 'claude
   "$(jq -r '.warnings[] | select(startswith("claudeAgent:")) | .[0:23]' <<<"$out")"
 check "nothing was written" absent "$([ -e "$fleet" ] && echo present || echo absent)"
 
+# --- a home path from T3's settings file, for a row that carries none (measured: real rows have no homePath) ------
+inst_reset
+sa_instances "$tmp/inst-nohome.json" claudeAgent_b:claudeAgent
+printf '{"providerInstances":{"claudeAgent_b":{"driver":"claudeAgent","enabled":true,"config":{"homePath":"/acct/b"}},"pi":{"driver":"pi"}}}\n' > "$tmp/t3-settings.json"
+out=$(P --name laptop --instances "$tmp/inst-nohome.json" --settings "$tmp/t3-settings.json")
+check "the settings file's homePath becomes the instance's CLAUDE_CONFIG_DIR, and its account's quota is read" '{"CLAUDE_CONFIG_DIR":"/acct/b"} available' \
+  "$(jq -r '.fleet.providers.claudeAgent_b | "\(.env | tostring) \(.status)"' <<<"$out")"
+out=$(P --name laptop --instances "$tmp/inst-nohome.json" --settings "$tmp/none.json" 2>/dev/null); rc=$?
+check_rc "a settings file that is missing exits 2" 2 "$rc"
+# a home path holding a newline is one word of `env`'s arguments, never the program it runs
+sa_instances "$tmp/inst-nl.json" claudeAgent_b:claudeAgent
+printf '{"providerInstances":{"claudeAgent_b":{"config":{"homePath":"/acct/x\\ntouch"}}}}\n' > "$tmp/t3-nl.json"
+sa_account claude touch 0 "$claude_b"
+out=$(P --name laptop --instances "$tmp/inst-nl.json" --settings "$tmp/t3-nl.json")
+check "a newline in the home path does not replace the command that runs" available "$(jq -r '.fleet.providers.claudeAgent_b.status' <<<"$out")"
+
 # --write saves them, and a re-run keeps the owner's edits and refreshes what was probed
 inst_reset
 S --write --name laptop --instances "$tmp/inst.json" >/dev/null

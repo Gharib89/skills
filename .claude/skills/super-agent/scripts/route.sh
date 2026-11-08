@@ -25,17 +25,19 @@
 # quota file keyed `claude` routes as before, on the instance `claude`.
 # A text job goes to agy on its Gemini group. With --claude the job wants a
 # Claude model: it stays on Claude Code, and overflows to agy's Claude group
-# only when Claude Code's weekly bucket is under 50% and agy's Claude weekly
-# bucket is not, both known.
+# only when the best weekly bucket among the `claude` instances not signed out
+# is under 50% and agy's Claude weekly bucket is not, both known.
 #
 # stdout: with --size: {size, raise, default, wanted, tier, ask, reason, bucket,
-#         instance_id, model, options}, each tier a {model, effort}; `tier` is
+#         instance_id, model, options, wanted_model, wanted_options}, each tier a {model, effort}; `tier` is
 #         what to launch now and `ask` true when `wanted` needs the owner's yes
 #         first; `bucket` the weekly bucket read, {provider (the instance id),
 #         id, remaining}, null when unknown; `instance_id` the T3 instance to
 #         launch on, `model` the model id to send there (the tier's model on a
 #         Claude instance, the mapped one on a Pi instance) and `options` the
-#         `modelSelection` options for it; `reason` one line. With --job: {job,
+#         `modelSelection` options for it, `wanted_model` and `wanted_options` the
+#         same for `wanted` (what to send on the owner's yes); a Pi instance
+#         always thinks `high`; `reason` one line. With --job: {job,
 #         driver, group, model, reason}, `driver` `agy` or `claude`, `group` and
 #         `model` null for `claude`
 # exit: 0 a route, an unknown quota included · 2 usage, or a --quota file that
@@ -77,7 +79,8 @@ low=0.5
 if [ -n "$job" ]; then
   jq -c --argjson claude "$claude" --argjson low "$low" '
     def weekly($p; pred): [.providers[$p].buckets[]? | select(.window == "weekly" and pred)] | first | .remaining;
-    (weekly("claude"; .id == "week")) as $cc
+    ([.providers | to_entries[] | select((.value.driver // .key) == "claude" and .value.auth != "failed")
+      | [.value.buckets[]? | select(.window == "weekly" and .id == "week")] | first | .remaining] | max) as $cc
     | (weekly("agy"; (.group // "") | startswith("Claude"))) as $agyc
     | if ($claude | not) then {job: "text", driver: "agy", group: "gemini", model: "gemini-3.8-flash-medium", reason: "text jobs run on the agy quota"}
       elif $cc != null and $cc < $low and $agyc != null and $agyc >= $low
@@ -103,7 +106,9 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" '
   | (if $pick == null or $pick.bucket == null then null else {provider: $pick.key, id: $pick.bucket.id, remaining: $pick.bucket.remaining} end) as $bucket
   | ($w > $d and $bucket != null and $bucket.remaining < $low) as $ask
   | (if $w > $d and ($bucket == null or $ask) then $ladder[$d] else $ladder[$w] end) as $tier
-  | {size: $size, raise: $raise, default: $ladder[$d], wanted: $ladder[$w],
+  | def model($t): if $pick == null then null elif $pick.driver == "pi" then $pick.value.models[$t.model] else $t.model end;
+    def options($t): if $pick == null then null elif $pick.driver == "pi" then [{id: "thinking", value: "high"}] else [{id: "effort", value: $t.effort}] end;
+    {size: $size, raise: $raise, default: $ladder[$d], wanted: $ladder[$w],
      tier: $tier,
      ask: $ask,
      reason: (if $pick == null then
@@ -115,5 +120,7 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" '
        else "weekly at or above 50%: raised" end),
      bucket: $bucket,
      instance_id: ($pick.key // null),
-     model: (if $pick == null then null elif $pick.driver == "pi" then $pick.value.models[$tier.model] else $tier.model end),
-     options: (if $pick == null then null elif $pick.driver == "pi" then [{id: "thinking", value: "high"}] else [{id: "effort", value: $tier.effort}] end)}' "$quota" || sa_tooling "$quota: cannot be read"
+     model: model($tier),
+     options: options($tier),
+     wanted_model: model($ladder[$w]),
+     wanted_options: options($ladder[$w])}' "$quota" || sa_tooling "$quota: cannot be read"

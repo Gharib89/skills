@@ -7,6 +7,7 @@
 #
 #   setup (--propose | --write) [--fleet <file>] [--name <machine>]
 #         [--probe <environment id>=<reply file>]... [--instances <file>]
+#         [--settings <file>]
 #
 # --fleet defaults to `super-agent/fleet.json` under $XDG_CONFIG_HOME
 # (`~/.config` when unset), the user-scope path the owner keeps in their
@@ -32,6 +33,10 @@
 # nobody could have chosen them. A machine that is unreachable keeps its
 # previous facts and is probed on the next run that finds it reachable. The
 # file holds environment ids only, never a host, user or key.
+#
+# --settings names T3's own settings file: a row has no `homePath` (measured), but
+# `providerInstances.<id>.config.homePath` there is the Claude instance's account
+# directory, used for a row that carries none.
 #
 # --instances names the saved answer of the `orchestrator_capabilities` tool (the
 # whole answer, or its `providers` array): one row per T3 provider instance, each
@@ -68,10 +73,10 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: setup (--propose | --write) [--fleet <file>] [--name <machine>] [--probe <environment id>=<reply file>]... [--instances <file>]'
+usage='usage: setup (--propose | --write) [--fleet <file>] [--name <machine>] [--probe <environment id>=<reply file>]... [--instances <file>] [--settings <file>]'
 sa_help "$usage" "$@"
 fleet_file="${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json"
-name='' write=false mode='' replies='{}' instances_file=''
+name='' write=false mode='' replies='{}' instances_file='' settings_file=''
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet_file=$2; shift 2 ;;
@@ -79,6 +84,7 @@ while [ $# -gt 0 ]; do
     --probe) sa_flag_value "$usage" "${2:-}"; case $2 in *=?*) ;; *) sa_tooling "$usage" ;; esac
       replies=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$replies"); shift 2 ;;
     --instances) sa_flag_value "$usage" "${2:-}"; instances_file=$2; shift 2 ;;
+    --settings) sa_flag_value "$usage" "${2:-}"; settings_file=$2; shift 2 ;;
     --propose) mode=propose; shift ;;
     --write) mode=write write=true; shift ;;
     *) sa_tooling "$usage" ;;
@@ -92,6 +98,13 @@ if [ -n "$instances_file" ]; then
   rows=$(jq -c '(.providers // .) | if type == "array" then . else null end' "$instances_file")
   jq -e 'type == "array" and all(.[]; type == "object" and (.providerInstanceId | type) == "string" and (.driverKind | type) == "string")' <<<"$rows" >/dev/null 2>&1 \
     || sa_tooling "$instances_file: every row needs a providerInstanceId and a driverKind"
+  # a row carries no home path: T3's settings file holds it, at providerInstances.<id>.config.homePath
+  if [ -n "$settings_file" ]; then
+    [ -f "$settings_file" ] || sa_tooling "$settings_file: no such file"
+    jq -e '.providerInstances | type == "object"' "$settings_file" >/dev/null 2>&1 || sa_tooling "$settings_file: no providerInstances object"
+    rows=$(jq -c --slurpfile t "$settings_file" '[.[] | . as $r | ($t[0].providerInstances[$r.providerInstanceId].config.homePath // null) as $h
+      | if $r.homePath == null and ($h | type) == "string" then . + {homePath: $h} else . end]' <<<"$rows")
+  fi
   # enabled: T3 reports a disabled instance in `constraints`, there is no flag
   rows=$(jq -c '[.[] | select([.constraints[]? | strings | test("disabled"; "i")] | any | not)]' <<<"$rows")
 fi
@@ -183,25 +196,9 @@ fi
 # The server exits on end of input before it answers request 2 (measured, codex
 # 0.166.0), so the requests are followed by a `sleep` that holds stdin open.
 codex_cmd="{ printf '%s\\n' '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"clientInfo\":{\"name\":\"super-agent\",\"version\":\"0\"}}}' '{\"jsonrpc\":\"2.0\",\"method\":\"initialized\"}' '{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"account/rateLimits/read\"}' ; sleep 4; } | timeout 15 codex app-server"
-# env_of <env json>: the object as KEY=VALUE words in $env_args, for `env`
-env_of() { mapfile -t env_args < <(jq -r '(. // {}) | to_entries[] | "\(.key)=\(.value)"' <<<"$1"); }
-# run_quota <command> <jq test that the output holds a quota> <cli> <env json>: run a
-# quota command once under the instance's env into $q_status and $q_reason (JSON).
-run_quota() {
-  local out rc
-  q_status=available q_reason=null
-  if ! command -v "$3" >/dev/null; then
-    q_status=unavailable q_reason=$(jq -cn --arg p "$3" '"\($p) is not installed"')
-  else
-    env_of "$4"
-    out=$(env ${env_args[@]+"${env_args[@]}"} timeout 30 bash -c "$1" 2>/dev/null </dev/null); rc=$?
-    if [ "$rc" -ne 0 ]; then
-      q_status=unavailable q_reason=$(jq -cn --argjson r "$rc" '"quota command exited \($r)"')
-    elif ! jq -e -n "[inputs | $2] | any" <<<"$out" >/dev/null 2>&1; then
-      q_status=unavailable q_reason='"quota command printed no quota"'
-    fi
-  fi
-}
+# env_of, run_quota and probe_instance (a T3 instance as a provider) live apart: the
+# functions read this script's variables and write $facts, $proposed and $warnings.
+source "$(dirname "${BASH_SOURCE[0]}")/setup.d/instances.sh" || { printf '{"error":"cannot source setup.d/instances.sh"}\n'; exit 2; }
 # provider: <name> <quota command> <jq test that the output holds a quota>
 probe_provider() {
   local p=$1 cmd test=$3
@@ -214,44 +211,6 @@ probe_provider() {
 claude_cmd='claude -p "/usage" --output-format json' claude_test='(.result | type) == "string"'
 codex_test='.id == 2 and (.result.rateLimits | type) == "object"' agy_cmd='agy -p /usage --output-format json' agy_test='.status == "SUCCESS"'
 
-# One enabled T3 instance as a provider keyed by its instance id (see the header).
-probe_instance() { # <row json>
-  local row=$1 key drv cmd test cli authcmd env e t3auth='' reason=null auth=unknown extra='{}' n
-  key=$(jq -r .providerInstanceId <<<"$row")
-  drv=$(jq -r 'if .driverKind == "claudeAgent" then "claude" else .driverKind end' <<<"$row")
-  e=$(jq -c --arg k "$key" '.providers[$k] // {}' <<<"$existing")
-  cmd='' test='' cli='' authcmd=''
-  case $drv in
-    claude) cmd=$claude_cmd test=$claude_test cli=claude authcmd='claude auth status' ;;
-    codex) cmd=$codex_cmd test=$codex_test cli=codex ;;
-    pi) cmd=$agy_cmd test=$agy_test cli=agy
-      extra=$(jq -cn --argjson r "$row" '{route: false, models: ({sonnet: ([$r.models[]?.id | select(test("claude-sonnet"))] | first), opus: ([$r.models[]?.id | select(test("claude-opus"))] | first)} | with_entries(select(.value != null)))}') ;;
-  esac
-  cmd=$(jq -r --arg d "$cmd" '.quota_command // $d' <<<"$e") authcmd=$(jq -r --arg d "$authcmd" '.auth_command // $d' <<<"$e")
-  env=$(jq -c --argjson r "$row" '.env // (if $r.homePath != null and ($r.driverKind == "claudeAgent") then {CLAUDE_CONFIG_DIR: $r.homePath} else {} end)' <<<"$e")
-  if [ -z "$cmd" ]; then
-    q_status=unavailable q_reason=$(jq -cn --arg d "$drv" '"no quota reader for driver \($d)"')
-  else
-    run_quota "$cmd" "$test" "$cli" "$env"
-  fi
-  # T3's own verdict wins: a command that cannot tell the account apart would call a signed-out instance ok
-  t3auth=$(jq -r '[.constraints[]? | strings | select(test("not authenticated"; "i"))] | first // empty' <<<"$row")
-  if [ -n "$t3auth" ]; then auth=failed reason=$(jq -cn --arg r "$t3auth" '$r')
-  elif [ -n "$authcmd" ] && command -v "${authcmd%% *}" >/dev/null; then
-    env_of "$env"
-    if env ${env_args[@]+"${env_args[@]}"} timeout 15 bash -c "$authcmd" >/dev/null 2>&1 </dev/null; then auth=ok
-    else auth=failed reason=$(jq -cn --argjson r "$?" '"auth command exited \($r)"'); fi
-  fi
-  facts=$(jq -c --arg k "$key" --arg s "$q_status" --argjson r "$q_reason" --arg a "$auth" --argjson ar "$reason" \
-    '.providers[$k] = {status: $s, reason: $r, auth: $a, auth_reason: $ar}' <<<"$facts")
-  proposed=$(jq -c --arg k "$key" --arg d "$drv" --arg c "$cmd" --arg a "$authcmd" --argjson env "$env" --argjson x "$extra" \
-    '.providers[$k] = ({driver: $d, quota_command: (if $c == "" then null else $c end)}
-      + (if $a == "" then {} else {auth_command: $a} end) + (if $env == {} then {} else {env: $env} end) + $x)' <<<"$proposed")
-  n=$(jq -r --arg d "$drv" '[.[] | select((if .driverKind == "claudeAgent" then "claude" else .driverKind end) == $d)] | length' <<<"$rows")
-  if [ "$drv" = claude ] && [ "$n" -gt 1 ] && [ "$env" = '{}' ]; then
-    warn "$key: no env set, so its quota and auth read the account of the shell that runs these scripts: set env.CLAUDE_CONFIG_DIR in the fleet file"
-  fi
-}
 while IFS= read -r row; do [ -z "$row" ] || probe_instance "$row"; done < <(jq -c '.[]' <<<"$rows")
 # the CLI-named providers, for each driver no instance covers
 covered() { jq -e --arg d "$1" 'any(.[]; (if .driverKind == "claudeAgent" then "claude" else .driverKind end) == $d)' <<<"$rows" >/dev/null; }

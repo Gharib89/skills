@@ -35,9 +35,7 @@ directory.
 - `watch.sh` polls every open entry's thread and PR and exits on the first
   change: `pr-merged`, `pr-closed`, `pending-approval`, `run-finished`,
   `stall-window`, or `thread-mismatch`, `thread-unreadable`, `pr-unreadable`,
-  or `timeout`. It re-reads the ledger each poll, and skips an entry
-  `reconcile` has not observed yet (`unobserved`). Rules:
-  [watching](reference/watching.md).
+  or `timeout`. Rules: [watching](reference/watching.md).
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage (a merged PR is `merged` until its thread rests, then `settled`),
   keeps each entry's `stalls`, and prints one summary: `settled` (each with
@@ -57,7 +55,7 @@ directory.
 - `quota.sh --fleet <file>` reads each provider instance's quota and auth
   under its own account. A read that fails is `unknown`, not an error.
 - `brief.sh --fleet <file> --ledger <ledger>` prints `{brief, waivers,
-  allowed}`: `brief` is the whole standing launch brief.
+  allowed, rulings}`: `brief` is the whole standing launch brief.
 - `schedules.sh --fleet <file>` proposes the morning report and weekly
   retro-runs; it creates nothing (Schedules and lessons).
 - `route.sh` picks a launch's instance, model tier, `model` and `options` from
@@ -93,8 +91,8 @@ picks:
 
 1. Run `scripts/quota.sh --fleet <fleet>` here and save its stdout to a file.
    Read it fresh for each launch: buckets move between launches. Quota is per
-   provider instance (one account each), read here under that account, so
-   every machine draws on the same buckets (measured: remote probes saw the
+   provider instance, read here under its `env`, so every machine draws on
+   the same buckets (measured: remote probes saw the
    local weekly bucket); a remote machine is never extra quota, and a probe
    never reads quota.
 2. Run `scripts/route.sh --size <XS|S|M|L|XL> --quota <file>`, the size from
@@ -190,8 +188,9 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
      branch: "<type>/<slug>-<n>", startFromOrigin: true}`, the branch named
      the way `/ship` names its branches;
    - `modelSelection`: `{instanceId, model, options}`, verbatim from route's
-     `instance_id`, `model` and `options` (an array of `{id, value}`; a map is
-     rejected, measured);
+     `instance_id`, `model` and `options` (or `wanted_model` and
+     `wanted_options` after the owner's yes), an array of `{id, value}`, never
+     a map (rejected, measured);
    - `message`: the owner-skill invocation on its first line, then `brief`
      verbatim (The launch brief).
 2. **Record.** Read the thread's id and worktree path from the launch result,
@@ -265,7 +264,8 @@ escalation (Escalation).
 - Once a `settled` row's thread is settled, and for each `closed` row, run
   `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
   [reference/remote.md](reference/remote.md)). A `kept: true` result is one
-  chat line naming the key and `reason`, not an escalation.
+  chat line naming the key and `reason`, not an escalation; a refusal (exit
+  1) is one.
 - An entry whose `observed.pending` is above 0 holds a permission request:
   escalate it, since a held thread is not a stall.
 - `at_rest` with a merge-gate summary is not a stall: an allowed merge in

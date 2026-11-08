@@ -125,6 +125,19 @@ check_rc "the flag form refuses an open stage too" 1 "$rc"
 check_rc "flags with no --path exit 2" 2 "$(W remove --key k --branch b --stage settled --kind ship --merged true >/dev/null 2>&1; echo $?)"
 check "the script sources nothing, so it can travel to a machine with no checkout" 0 "$(grep -c '^source\|^\. ' "$s/worktree.sh")"
 
+# --- the worktree must be on the ledger's branch: any other head may hold commits nobody checked ---------
+add_wt other --push; entry other settled ship merged 13
+G -C "$repo/wt-other" checkout -q --detach
+G -C "$repo/wt-other" commit -q --allow-empty -m "detached work"
+out=$(W remove --ledger "$led" acme/w#13); rc=$?
+check_rc "a detached head is kept, exit 0" 0 "$rc"
+check "with the reason naming the branch it is not on" "head is not feat/other" "$(jq -r .reason <<<"$out")"
+check "and the directory is still there" yes "$(exists other)"
+
+# --- the key may come before --ledger ------------------------------------------------------------------
+add_wt order --push; entry order settled ship merged 14
+check "a key before --ledger removes the same" true "$(W remove acme/w#14 --ledger "$led" | jq -r .removed)"
+
 # --- nothing is ever forced ---------------------------------------------------------------------
 check "the script holds no --force and no branch delete" 0 "$(grep -cE -- '--force|branch -[dD]|branch --delete' "$s/worktree.sh")"
 
