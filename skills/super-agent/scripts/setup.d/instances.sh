@@ -3,7 +3,7 @@
 # Sourced by setup.sh: its helpers for the T3 provider instances (see setup.sh).
 # env_of <env json>: the object as KEY=VALUE words in $env_args, for `env`
 # NUL-separated, so a value holding a newline stays one word and never becomes the program `env` runs
-env_of() { env_args=(); while IFS= read -r -d '' kv; do env_args+=("$kv"); done < <(jq -j '(. // {}) | to_entries[] | "\(.key)=\(.value)" | select(contains("\u0000") | not) | . + "\u0000"' <<<"$1"); }
+env_of() { env_args=(); while IFS= read -r -d '' kv; do env_args+=("$kv"); done < <(jq -j '(. // {}) | to_entries[] | "\(.key)=\(.value)" | select(explode | any(. == 0) | not) | . + "\u0000"' <<<"$1"); }
 # run_quota <command> <jq test that the output holds a quota> <cli> <env json>: run a
 # quota command once under the instance's env into $q_status and $q_reason (JSON).
 run_quota() {

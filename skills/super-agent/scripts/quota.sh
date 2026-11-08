@@ -80,7 +80,7 @@ for name in ${names[@]+"${names[@]}"}; do
   cmd=$(jq -r '.quota_command // empty' <<<"$cfg")
   status=unknown reason='' buckets='[]'
   # NUL-separated, so a value holding a newline stays one KEY=VALUE word and never becomes the program `env` runs
-  envs=(); while IFS= read -r -d '' kv; do envs+=("$kv"); done < <(jq -j '(.env // {}) | to_entries[] | "\(.key)=\(.value)" | select(contains("\u0000") | not) | . + "\u0000"' <<<"$cfg")
+  envs=(); while IFS= read -r -d '' kv; do envs+=("$kv"); done < <(jq -j '(.env // {}) | to_entries[] | "\(.key)=\(.value)" | select(explode | any(. == 0) | not) | . + "\u0000"' <<<"$cfg")
   auth=unknown auth_reason='no auth command in the fleet file'
   auth_cmd=$(jq -r '.auth_command // empty' <<<"$cfg")
   if [ -n "$auth_cmd" ]; then
