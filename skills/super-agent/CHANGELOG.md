@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.1 (2026-11-09)
+
+### Bug Fixes
+
+- **super-agent**: Read a cursor instance's auth from its T3 row only
+  ([#1122](https://github.com/Gharib89/skills/pull/1122),
+  [`c6aed5a`](https://github.com/Gharib89/skills/commit/c6aed5a20936a31158fa4d64801add00e0035d6f))
+
+
 ## v0.10.0 (2026-11-09)
 
 ### Features
