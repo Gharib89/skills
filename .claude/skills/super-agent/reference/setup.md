@@ -39,7 +39,9 @@ skill's base directory.
    instance id, quota source and auth result, each provider marked
    `unavailable` with its `reason` (a `cursor` or `grok` instance is `unknown`,
    not `unavailable`: no CLI prints its usage, `grok usage` points to `/usage`
-   inside grok; its auth is read by grepping `agent models` or `grok models`),
+   inside grok; grok's auth is read by grepping `grok models`; a `cursor`
+   instance's is T3's row alone, empty `constraints` is `ok`, because `agent` on
+   PATH can be the Grok binary),
    and every line of `warnings` (a reply that
    is no probe lands there; so does a Claude instance with no
    `env.CLAUDE_CONFIG_DIR`: with none it reads the default account, so each

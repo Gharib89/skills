@@ -28,9 +28,10 @@ probe_instance() { # <row json>
   case $drv in
     claude) cmd=$claude_cmd test=$claude_test cli=claude authcmd='claude auth status' ;;
     codex) cmd=$codex_cmd test=$codex_test cli=codex ;;
-    # no plan-usage read exists for these (`grok usage` exits 1: run /usage inside grok); both CLIs print a
-    # signed-in or signed-out line and exit 0 either way, so auth greps it
-    cursor) authcmd="agent models 2>&1 | grep -q '^You are logged in'" ;;
+    # no plan-usage read exists for these (`grok usage` exits 1: run /usage inside grok); grok prints a
+    # signed-in or signed-out line and exits 0 either way, so auth greps it. Cursor gets no CLI check: `agent`
+    # on PATH is the Grok binary where Grok is installed, so its auth is T3's row alone (below)
+    cursor) ;;
     grok) authcmd="grok models 2>&1 | grep -q '^You are logged in'" ;;
     pi) cmd=$agy_cmd test=$agy_test cli=agy
       extra=$(jq -cn --argjson r "$row" '{route: false, models: ({sonnet: ([$r.models[]?.id | select(test("claude-sonnet"))] | first), opus: ([$r.models[]?.id | select(test("claude-opus"))] | first)} | with_entries(select(.value != null)))}') ;;
@@ -47,6 +48,8 @@ probe_instance() { # <row json>
   # T3's own verdict wins: a command that cannot tell the account apart would call a signed-out instance ok
   t3auth=$(jq -r '[.constraints[]? | strings | select(test("not authenticated"; "i"))] | first // empty' <<<"$row")
   if [ -n "$t3auth" ]; then auth=failed reason=$(jq -cn --arg r "$t3auth" '$r')
+  elif [ "$drv" = cursor ] && [ -z "$authcmd" ]; then
+    [ "$(jq '.constraints | length' <<<"$row")" -eq 0 ] && auth=ok
   elif [ -n "$authcmd" ] && command -v "${authcmd%% *}" >/dev/null; then
     sa_env_words "$drv" "$env"
     if env ${env_args[@]+"${env_args[@]}"} timeout 15 bash -c "$authcmd" >/dev/null 2>&1 </dev/null; then auth=ok
