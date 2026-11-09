@@ -25,7 +25,7 @@
 # would miss) and its `auth_checked` UTC time is under 24 h old. A command-sourced
 # failure, a legacy bare one (no source or date) and an expired T3 one are not
 # honored: the live command alone speaks, so a signed-back-in instance routes
-# again without a hand edit.
+# again without a hand edit. `SA_NOW` (an epoch) pins the clock for tests.
 #
 # stdout: {providers: {<instance id>: {driver, status, reason, auth, auth_reason,
 #         buckets}}}: `status` `available` or `unknown`, `reason` null or why;
@@ -92,7 +92,7 @@ for name in ${names[@]+"${names[@]}"}; do
     if env ${env_args[@]+"${env_args[@]}"} timeout 15 bash -c "$auth_cmd" >/dev/null 2>&1 </dev/null; then auth=ok auth_reason=''
     else auth=failed auth_reason="auth command exited $?"; fi
   fi
-  if jq -e '.auth == "failed" and .auth_source == "t3" and ((.auth_checked // "" | try fromdateiso8601 catch 0) > now - 86400)' <<<"$cfg" >/dev/null; then
+  if jq -e --argjson now "${SA_NOW:-null}" '.auth == "failed" and .auth_source == "t3" and ((.auth_checked // "" | try fromdateiso8601 catch 0) > ($now // now) - 86400)' <<<"$cfg" >/dev/null; then
     auth=failed auth_reason=$(jq -r '.auth_reason // "recorded as failed by setup"' <<<"$cfg")
   fi
   if [ -z "$cmd" ]; then

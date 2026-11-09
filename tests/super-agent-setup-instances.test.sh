@@ -74,6 +74,14 @@ check "a Claude instance with no env beside another one is warned about" 'claude
   "$(jq -r '.warnings[] | select(startswith("claudeAgent:")) | .[0:23]' <<<"$out")"
 check "nothing was written" absent "$([ -e "$fleet" ] && echo present || echo absent)"
 
+# an auth command that fails, with no T3 verdict, is recorded as command-sourced with a check time
+inst_reset
+sa_instances "$tmp/inst-cmd.json" claudeAgent_b:claudeAgent:home=/acct/b
+sa_claude_auth b 1
+out=$(P --name laptop --instances "$tmp/inst-cmd.json")
+check "a failing auth command is recorded failed, source command, with a UTC check time" 'failed command true' \
+  "$(jq -r '.fleet.providers.claudeAgent_b | "\(.auth) \(.auth_source) \(.auth_checked | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$"))"' <<<"$out")"
+
 # --- cursor and grok: no usage read, an explicit unknown quota; grok's auth from its CLI, cursor's from T3 -----------
 # measured 2026-11-09: `grok usage` exits 1 and says to run /usage in grok; `grok models` exits 0 either way and
 # prints "You are logged in with grok.com." or "You are not authenticated.", so grok auth greps that line. Cursor has
