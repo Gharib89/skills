@@ -138,12 +138,34 @@ check "a failing auth command is auth failed with its exit" 'failed auth command
 check "the other instance is untouched" ok "$(jq -r .providers.claudeAgent_b.auth <<<"$out")"
 check "the failed instance's quota is still read" available "$(jq -r .providers.claudeAgent.status <<<"$out")"
 
-# the verdict setup recorded from T3 holds where no command can tell the account apart
+# the verdict setup recorded from T3 holds where no command can tell the account apart, for 24 h
 reset; sa_account claude b 0 "$claude_b"
-jq '.providers.claudeAgent_b.auth = "failed" | .providers.claudeAgent_b.auth_reason = "Provider is not authenticated."' "$tmp/inst.json" > "$tmp/inst2.json"
-out=$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")
-check "a recorded failed auth stands even where the live command passes" 'failed Provider is not authenticated.' \
-  "$(jq -r '.providers.claudeAgent_b | "\(.auth) \(.auth_reason)"' <<<"$out")"
+now=$(date -u +%Y-%m-%dT%H:%M:%SZ) old=$(date -u -d '2 days ago' +%Y-%m-%dT%H:%M:%SZ)
+rec() { # <file> <source|-> <checked|-> : record failed on claudeAgent_b
+  jq --arg s "$2" --arg c "$3" '.providers.claudeAgent_b.auth = "failed" | .providers.claudeAgent_b.auth_reason = "Provider is not authenticated."
+    | if $s != "-" then .providers.claudeAgent_b.auth_source = $s else . end | if $c != "-" then .providers.claudeAgent_b.auth_checked = $c else . end' "$tmp/inst.json" > "$1"
+}
+authof() { jq -r '.providers.claudeAgent_b | "\(.auth) \(.auth_reason // "")"' <<<"$1"; }
+rec "$tmp/inst2.json" t3 "$now"
+check "a T3-sourced failure inside the window stands though the live command passes" 'failed Provider is not authenticated.' \
+  "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
+rec "$tmp/inst2.json" t3 "$old"
+check "the same T3-sourced failure past the window no longer reads failed" 'ok ' \
+  "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
+rec "$tmp/inst2.json" command "$now"
+check "a command-sourced recorded failure is cleared by a passing live command" 'ok ' \
+  "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
+rec "$tmp/inst2.json" - -
+check "a legacy bare recorded failure (no source, no date) is cleared by a passing live command" 'ok ' \
+  "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
+rec "$tmp/inst2.json" t3 -
+check "a T3-sourced failure with no date counts as expired" 'ok ' \
+  "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
+reset; sa_account claude b 0 "$claude_b"; sa_claude_auth b 1
+rec "$tmp/inst2.json" command "$now"
+check "a failing live command still reads failed over a stale record" 'failed auth command exited 1' \
+  "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
+reset; sa_account claude b 0 "$claude_b"
 
 # an env value holding a newline stays one KEY=VALUE word: it never becomes the program `env` runs
 reset; sa_account claude touch 0 "$claude_b"

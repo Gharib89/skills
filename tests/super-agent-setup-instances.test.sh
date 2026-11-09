@@ -56,6 +56,10 @@ check "the quota command and a Claude auth command are recorded" 'claude -p "/us
   "$(jq -r '.providers.claudeAgent_b | "\(.quota_command)|\(.auth_command)"' <<<"$f")"
 check "T3's own verdict marks the signed-out instance failed, with its reason" 'failed Provider is not authenticated.' \
   "$(jq -r '.providers.claudeAgent | "\(.auth) \(.auth_reason)"' <<<"$f")"
+check "T3's verdict is recorded with source t3 and a UTC check time" 't3 true' \
+  "$(jq -r '.providers.claudeAgent | "\(.auth_source) \(.auth_checked | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$"))"' <<<"$f")"
+check "an ok instance records no auth source or date" 'null null' \
+  "$(jq -r '.providers.claudeAgent_b | "\(.auth_source) \(.auth_checked)"' <<<"$f")"
 check "an instance whose auth command passes is ok, and its own account's quota was read" 'ok available' \
   "$(jq -r '.providers.claudeAgent_b | "\(.auth) \(.status)"' <<<"$f")"
 check "the auth command ran under the instance's account" 1 "$(grep -c '^claude auth status' "$SA_FAKE/calls")"
