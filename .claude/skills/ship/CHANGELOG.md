@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.56.0 (2026-11-09)
+
+### Features
+
+- **ship**: Collapse long PR body sections in details blocks on GitHub
+  ([#1127](https://github.com/Gharib89/skills/pull/1127),
+  [`229de1e`](https://github.com/Gharib89/skills/commit/229de1efa25a46d28572f92cfd0f53c1f1639ebb))
+
+
 ## v0.55.0 (2026-11-06)
 
 ### Features
