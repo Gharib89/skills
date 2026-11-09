@@ -136,7 +136,7 @@ FAKE
 #!/usr/bin/env bash
 cat "$SA_FAKE/probe/hostname"
 FAKE
-  for p in claude codex agy; do
+  for p in claude codex agy grok agent; do
     case " ${SA_FAKE_ABSENT:-} " in *" $p "*) continue ;; esac
     cat > "$1/$p" <<'FAKE'
 #!/usr/bin/env bash

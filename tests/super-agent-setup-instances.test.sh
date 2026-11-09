@@ -70,6 +70,23 @@ check "a Claude instance with no env beside another one is warned about" 'claude
   "$(jq -r '.warnings[] | select(startswith("claudeAgent:")) | .[0:23]' <<<"$out")"
 check "nothing was written" absent "$([ -e "$fleet" ] && echo present || echo absent)"
 
+# --- cursor and grok: no usage read, an explicit unknown quota and a measured auth -------------------------------
+# measured 2026-11-09: `grok usage` exits 1 and says to run /usage in grok; `grok models` and `agent models` exit 0
+# either way and print "You are logged in with grok.com." or "You are not authenticated.", so auth greps that line
+inst_reset
+sa_instances "$tmp/inst-cg.json" cursor:cursor grok:grok
+sa_provider grok 0 'You are logged in with grok.com.'; sa_provider agent 0 'You are not authenticated.'
+out=$(P --name laptop --instances "$tmp/inst-cg.json"); f=$(jq -c .fleet <<<"$out")
+check "cursor and grok are providers with no quota command" 'null null' "$(jq -r '"\(.providers.cursor.quota_command) \(.providers.grok.quota_command)"' <<<"$f")"
+check "their quota is an explicit unknown with a reason, not unavailable" 'unknown unknown no non-interactive usage read for driver grok' \
+  "$(jq -r '"\(.providers.cursor.status) \(.providers.grok.status) \(.providers.grok.reason)"' <<<"$f")"
+check "auth is measured by each CLI: grok signed in, cursor's agent signed out" 'ok failed' "$(jq -r '"\(.providers.grok.auth) \(.providers.cursor.auth)"' <<<"$f")"
+check "the auth commands are recorded for the fleet file" 'grok models 2>&1 | grep -q '"'^You are logged in'"'' "$(jq -r .providers.grok.auth_command <<<"$f")"
+check "the instance list carries both" 'cursor|unknown|failed grok|unknown|ok' "$(jq -r '[.instances[] | "\(.instance_id)|\(.status)|\(.auth)"] | join(" ")' <<<"$out")"
+sa_instances "$tmp/inst-cg2.json" grok:grok:unauth
+out=$(P --name laptop --instances "$tmp/inst-cg2.json")
+check "T3's own not-authenticated verdict still wins for grok" failed "$(jq -r .fleet.providers.grok.auth <<<"$out")"
+
 # --- each Claude instance reads its own account: ~ expanded, and no env means the default account ------------
 # measured 2026-11-08: a literal `~` in CLAUDE_CONFIG_DIR logs the CLI out, and a caller's own value leaks into
 # an instance that sets none; Codex keeps the caller's environment

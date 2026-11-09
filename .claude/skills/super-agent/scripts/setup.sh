@@ -62,7 +62,7 @@
 #         that failed (T3 environments, GitHub accounts, a reply that is no
 #         probe); `to_probe` one {machine, environment_id} per reachable linked
 #         machine no `--probe` covered; a provider whose quota command
-#         fails is `unavailable` with a `reason` in `fleet.providers`, not a
+#         fails is `unavailable` with a `reason` in `fleet.providers` (a `cursor` or `grok` one is `unknown`: no usage read exists), not a
 #         warning; `instances` one {instance_id, driver, quota_source, auth,
 #         auth_reason, status} per enabled instance
 # exit: 0 a proposal or a write, failed probes included · 2 usage, a fleet file
