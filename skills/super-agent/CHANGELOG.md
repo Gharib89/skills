@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.11.0 (2026-11-09)
+
+### Features
+
+- **super-agent**: Route cursor and grok only when allowed or named
+  ([#1129](https://github.com/Gharib89/skills/pull/1129),
+  [`3aca7cd`](https://github.com/Gharib89/skills/commit/3aca7cd817bcb75d79ea694ec1409a52e9696579))
+
+
 ## v0.10.1 (2026-11-09)
 
 ### Bug Fixes

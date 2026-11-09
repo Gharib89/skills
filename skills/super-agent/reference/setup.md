@@ -55,10 +55,14 @@ skill's base directory.
 
 ## Cursor and Grok
 
-No CLI prints their usage, so `route.sh` treats a signed-in `cursor` or `grok`
-instance as a last resort: picked only when no Claude or allowed Pi instance can
-launch, or when the owner names it (`--instance <id>`). A null `model` in its
-answer (also `wanted_model`, `options`) means omit that key from
+They are for side tasks (code review, focused research, probes), so an unnamed
+launch never picks one unless the owner allows it. No CLI prints their usage, so
+`route.sh` treats a signed-in `cursor` or `grok` instance whose fleet entry sets
+`route: true` as a last resort for any launch: picked only when no Claude or
+allowed Pi instance can launch. Without `route: true` it is off. The other way
+in is the owner naming it (`--instance <id>`), which routes to it with `route`
+unset. A null
+`model` in its answer (also `wanted_model`, `options`) means omit that key from
 `modelSelection` and launch on the instance's own default; map a tier to a
 model in the fleet file's `models` to choose one.
 
