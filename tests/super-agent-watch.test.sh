@@ -51,7 +51,16 @@ out=$(W --timeout 2); rc=$?
 check_rc "with no change it runs to its timeout and exits 0" 0 "$rc"
 check "and says it saw nothing" "null timeout" "$(event "$out")"
 check "naming what it watched" "$repo#5 $repo#6" "$(jq -r '.watching | join(" ")' <<<"$out")"
-check "it polled every thread more than once" 1 "$(( $(calls | grep -c '^t3 thread show t-5 ') > 1 ))"
+
+# Polling is proved by a change landing during its first sleep, with a timeout
+# far past it: a poll count inside a short timeout depends on how fast the
+# process starts, and one poll fits in 2 s on a loaded machine.
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5
+cp "$SA_FAKE/threads/t-5.json" "$tmp/idle.json"
+sa_thread t-5 running 1 0 /wt/5 feat/x-5
+printf 'cp "%s" "$SA_FAKE/threads/t-5.json"\n' "$tmp/idle.json" > "$SA_FAKE/on-sleep"
+check "it keeps polling: a change after its first sleep is reported" "$repo#5 run-finished" "$(event "$(W --timeout 60)")"
 
 # --- each change is an event ---------------------------------------------------
 fixture
