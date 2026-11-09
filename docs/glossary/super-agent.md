@@ -41,7 +41,7 @@ Choosing the machine a launch runs on: the super agent's own machine first, a GP
 _Avoid_: scheduling, load balancing
 
 **Claim**:
-The mark a super agent puts on a ticket before it launches one: the ticket assigned to the owner's account and a comment, first line `<!-- super-agent-claim machine=<key> thread=<id> -->`, naming the machine and the claiming thread. The earliest claim comment on an issue holds it, so another super agent skips the ticket. A claim older than the stale window (3 days by default) is **stale**: it is offered back to the owner and never taken over.
+The mark a super agent puts on a ticket before it launches one: a comment (never an assignment: `/ship` assigns through its own claim), first line `<!-- super-agent-claim machine=<key> thread=<id> -->`, naming the machine and the claiming thread. The earliest claim comment on an issue holds it, so another super agent skips the ticket. A claim older than the stale window (3 days by default) is **stale**: it is offered back to the owner and never taken over.
 _Avoid_: lock, lease, reservation
 
 **Active repos**:

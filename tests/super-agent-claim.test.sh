@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # super-agent's `claim`, driven through its command line over the fake `gh`
-# (tests/super-agent-fake.sh): a fresh claim assigns the ticket and posts a
-# claim comment naming the machine and thread, an existing claim is reported
+# (tests/super-agent-fake.sh): a fresh claim posts a
+# claim comment (and never assigns the ticket) naming the machine and thread, an existing claim is reported
 # with its age and never taken, a claim past the stale window is `stale`, the
 # same machine's claim is its own, two claims posted together resolve to the
 # earlier one, and --check writes nothing.
@@ -50,11 +50,11 @@ check "the answer is taken, naming machine and thread" '{"status":"taken","machi
   "$(jq -c '{status, machine: .claim.machine, thread: .claim.thread, age_s: .claim.age_s}' <<<"$out")"
 check "the claim comment names machine and thread on its first line" \
   '<!-- super-agent-claim machine=alpha thread=th-a -->' "$(jq -r '.[0].body | split("\n")[0]' "$SA_FAKE/gh/$(printf '%s' "$ep" | sed 's/[^A-Za-z0-9._-]/_/g')")"
-check "and the ticket is assigned to the signed-in account" 1 "$(grep -c 'POST repos/acme/widgets/issues/7/assignees -f assignees\[\]=octo' "$SA_FAKE/calls")"
+check "and the ticket is not assigned" 0 "$(grep -c assignees "$SA_FAKE/calls")"
 check "a second call finds the claim its own" own "$(C | jq -r .status)"
-check "and re-assigns, which repairs a claim whose assignment failed, but posts no second comment" '1 2' \
-  "$(grep -c 'POST repos/acme/widgets/issues/7/comments' "$SA_FAKE/calls") $(grep -c 'POST repos/acme/widgets/issues/7/assignees' "$SA_FAKE/calls")"
-check "--check on its own claim assigns nothing" 2 "$(C --check >/dev/null; grep -c 'POST repos/acme/widgets/issues/7/assignees' "$SA_FAKE/calls")"
+check "and posts no second comment and still assigns nothing" '1 0' \
+  "$(grep -c 'POST repos/acme/widgets/issues/7/comments' "$SA_FAKE/calls") $(grep -c assignees "$SA_FAKE/calls")"
+check "--check on its own claim assigns nothing" 0 "$(C --check >/dev/null; grep -c assignees "$SA_FAKE/calls")"
 
 # --- another machine's claim: reported with its age, never taken --------------------
 reset
