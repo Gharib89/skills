@@ -151,6 +151,10 @@ sa_observe() {
   if [ "$found" != "$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')" ]; then
     obs_kind='thread-mismatch' obs_detail=$found; return 1
   fi
+  # `sa_thread_only` set: the caller wants the thread alone, no PR read.
+  if [ -n "${sa_thread_only:-}" ]; then
+    obs=$(jq -c '{status: .thread.status, run_count: .thread.runCount, pending: .thread.pendingRequestCount}' <<<"$line"); return 0
+  fi
   # A one-off failed read, with the next one fine, was measured on 2026-11-06,
   # so the read is tried twice before the PR is called unreadable.
   for _ in 1 2; do

@@ -235,6 +235,32 @@ sa_thread t-9 running 1 0 /wt/9 triage/x-9
 sa_issue $repo 9 open ready-for-agent
 R >/dev/null
 check "a triage run still running is not settled by the label alone" running "$(stage 9)"
+# a grill waits on the owner: at rest, no needs-triage, needs-info set
+rm -f "$led"
+L add --repo $repo --number 9 --thread t-9 --worktree /wt/9 --branch triage/x-9 --kind triage >/dev/null
+sa_thread t-9 idle 1 0 /wt/9 triage/x-9
+sa_issue $repo 9 open needs-info
+R >/dev/null
+check "a triage run at rest on needs-info is no end" at-rest "$(stage 9)"
+sa_issue $repo 9 open ready-for-agent
+out=$(R)
+check "the same run once needs-info is gone settles" settled "$(stage 9)"
+
+# a settled triage entry whose thread runs again is reopened and reported
+rm -f "$SA_FAKE/calls"
+out=$(R)
+check "a settled triage entry with the same run count is not reported" "[]" "$(jq -c .woke <<<"$out")"
+check "and stays settled" settled "$(stage 9)"
+check "and costs no PR or issue call" "" "$(calls | grep '^gh ' || true)"
+sa_thread t-9 running 2 0 /wt/9 triage/x-9
+out=$(R)
+check "a settled triage thread that runs again is reported in woke" "$repo#9 t-9 triage" "$(jq -r '.woke[] | "\(.key) \(.thread) \(.kind)"' <<<"$out")"
+check "and its stage is running" running "$(stage 9)"
+check "and it counts as checked on the next reconcile" 1 "$(R | jq .checked)"
+sa_thread t-9 idle 3 0 /wt/9 triage/x-9
+out=$(R)
+check "the resumed run ending with the issue clear settles it again" settled "$(stage 9)"
+
 out=$(L add --repo $repo --number 11 --thread t-11 --worktree /wt/11 --branch b-11 --kind other 2>/dev/null); rc=$?
 check_rc "a kind outside ship and triage is a usage error" 2 "$rc"
 
