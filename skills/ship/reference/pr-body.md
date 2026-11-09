@@ -143,11 +143,11 @@ Write a wrapped section once, in the write that finishes it. Only that write
 carries the block: the `## Review` placeholder written at open and any interim
 write carry none. Review is finished at the phase-7 exit, and Verification at
 the write that carries its phase-3 results. A section write keeps the old
-section's `<details>` blocks verbatim below the new content, so a second write
-of a wrapped section leaves the first block behind. Where a finished wrapped
-section must change anyway, send the new file with no `<details>` block and add
-a `- Ship note: <what>` line under `## Needs attention` naming the stale block:
-the mechanic has no way to drop it yet.
+section's `<details>` blocks verbatim below the new content by default, so a
+plain second write of a wrapped section leaves the first block behind. Where a
+finished wrapped section must change anyway, rewrite it with
+`--section <name> --drop-records` and a body file carrying the whole new
+`<details>` block: the old blocks are dropped, so the section keeps one.
 
 ## Writing and reading it back
 
