@@ -14,7 +14,9 @@ source tests/super-agent-route-lib.sh
 
 # --- cursor and grok: no usage read, so a last resort (or the owner's pick), never ahead of a measured instance ----
 quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst grok grok null ok)"
-check "an unknown-quota grok instance is not picked while a Claude instance can launch" claudeAgent "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+check "an unallowed grok instance is not picked while a Claude instance can launch" claudeAgent "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst grok grok null ok '{"route": true}')"
+check "an allowed unknown-quota grok instance still loses to a Claude instance that can launch" claudeAgent "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
 quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst grok grok null ok '{"route": true}')" "$(inst cursor cursor null ok '{"route": true}')"
 res=$(R --size M --quota "$tmp/q.json")
 check "with every Claude instance signed out, the first signed-in last-resort instance launches, on its own default model" 'cursor null null' \
@@ -36,7 +38,6 @@ check "a named instance the quota file lacks is a null instance with the reason"
 quotas "$(inst claudeAgent claude 0.9 ok)" "$(inst grok grok null failed)"
 check "a named instance whose auth failed is a null instance" 'null' "$(R --size M --instance grok --quota "$tmp/q.json" | jq -r .instance_id)"
 check "a named instance at 0 weekly is a null instance" null "$( quotas "$(inst claudeAgent claude 0 ok)"; R --size M --instance claudeAgent --quota "$tmp/q.json" | jq -r .instance_id)"
-
 
 quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst grok grok null ok)" "$(inst cursor cursor null ok)"
 res=$(R --size M --quota "$tmp/q.json")

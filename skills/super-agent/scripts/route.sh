@@ -12,7 +12,8 @@
 # rung per stall or hard finding, and stops at the top. Each provider is a T3
 # provider instance, its key the instance id. A launch's candidates are the
 # `claude` instances plus the `pi`, `cursor` and `grok` instances the owner
-# allowed (`route: true`); a `pi` one also needs a `models` map the tier's `sonnet` and `opus` to a model id. One whose
+# allowed (`route: true`); a `pi` one also needs a `models` map giving the tier's
+# `sonnet` and `opus` a model id. One whose
 # `auth` is `failed`, or whose weekly bucket is at 0, is skipped; of the rest the
 # one with the most weekly quota left wins, an instance with no measured weekly
 # bucket after every measured one, and a tie goes to a `claude` instance, then
