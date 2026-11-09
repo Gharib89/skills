@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.57.0 (2026-11-09)
+
+### Features
+
+- **ship**: Update-pr-body --drop-records rewrites a wrapped section once more
+  ([#1130](https://github.com/Gharib89/skills/pull/1130),
+  [`abe43df`](https://github.com/Gharib89/skills/commit/abe43df67566109693fac2ebda8e2f9678103229))
+
+
 ## v0.56.0 (2026-11-09)
 
 ### Features
