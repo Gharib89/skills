@@ -39,9 +39,10 @@ directory.
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage (a merged PR is `merged` until its thread rests, then `settled`),
   keeps each entry's `stalls`, and prints one summary: `settled` (each with
-  its `kind`), `closed`, `stalled`, `at_rest`, `errors`, `entries`. A stall
-  adds 1 and a real step takes 1 off ([watching](reference/watching.md)). You
-  never set `stalls` by hand, except the reset below.
+  its `kind`), `closed`, `stalled`, `at_rest`, `woke`, `errors`, `entries`. A
+  stall adds 1 and a real step takes 1 off
+  ([watching](reference/watching.md)). You never set `stalls` by hand, except
+  the reset below.
 - `setup.sh` probes this machine, its linked T3 environments, the GitHub
   accounts and each provider's quota command, merges each `--probe` reply,
   and proposes the fleet file (below) with `--propose`, one provider per T3
@@ -256,8 +257,8 @@ escalation (Escalation).
   `t3_thread_organize` action `settle` on its id (and `environmentId`).
   Unmet: escalate, naming the gap. Of kind `triage`: confirm the issue now
   carries a ready label or the owner skill's other outcome, then settle it
-  the same way; there is no PR. A settled entry is no longer watched, so a
-  message to its thread goes unseen.
+  the same way; no PR. A settled entry is no longer watched, so a
+  message to its thread goes unseen (a triage one that reruns is `woke`).
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
 - `closed`: one chat line naming the ticket and the reason.
