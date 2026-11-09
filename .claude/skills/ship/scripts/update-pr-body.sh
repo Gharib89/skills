@@ -19,16 +19,16 @@
 #
 # A `<details>` block at column 0 is a `<details>` record (a folded changelog,
 # for example): its `## ` lines are not headings to either mode or to the
-# `sections` list, and a section write keeps every record in the old content,
-# verbatim, below the new content (`ship_inert` in _lib.sh). A body file ending
-# inside an open one is refused like an open fence.
+# `sections` list, and a section write by default keeps every record in the old
+# content, verbatim, below the new content (`ship_inert` in _lib.sh). A body
+# file ending inside an open one is refused like an open fence.
 #
 # `--drop-records` (with `--section` only, a usage error with `--preamble`): the
 # section's old records are not carried, so the body file's content is all the
 # section keeps. It is how a section whose body file carries its own `<details>`
 # block is rewritten a second time without the first block surviving beneath the
-# new one. Without it the carry is unchanged, which a phase-1 original kept in a
-# record needs.
+# new one. Without it the carry is unchanged, the same one `update-issue-body`
+# keeps for a phase-1 original in a record.
 #
 # `--preamble`: the body file is the whole preamble. A preamble is always there,
 # empty at the emptiest, so it is always replaced and the create path is unused.

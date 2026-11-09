@@ -147,12 +147,14 @@ section's `<details>` blocks verbatim below the new content by default, so a
 plain second write of a wrapped section leaves the first block behind. Where a
 finished wrapped section must change anyway, rewrite it with
 `--section <name> --drop-records` and a body file carrying the whole new
-`<details>` block: the old blocks are dropped, so the section keeps one.
+`<details>` block: every old block is dropped, so the body file must carry all
+the section keeps.
 
 ## Writing and reading it back
 
 `update-pr-body <pr> --section <name> --body-file <path>` replaces one section
-and writes its `## <name>` line itself, so the file holds the content alone.
+and writes its `## <name>` line itself, so the file holds the content alone;
+`--drop-records`, section mode only, skips carrying the old `<details>` blocks.
 `--preamble` replaces everything above the first heading, where the closing line
 sits, carrying the old closing line over when the new content lacks one; a body
 with no heading is preamble entire. A column-0 `<details>` block is a
