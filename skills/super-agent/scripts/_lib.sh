@@ -44,7 +44,8 @@ command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 
 # The stages an entry moves through. `launched` is an entry nothing has observed
 # yet; `merged` is a PR merged whose thread is still running, watched until it
-# rests; `settled` and `closed` end an entry and are never watched again.
+# rests; `settled` and `closed` end an entry and are never watched again, except a
+# settled `triage` entry, which `reconcile` re-reads for a new run (`woke`).
 # shellcheck disable=SC2034  # read by ledger.sh
 sa_stages='launched, running, at-rest, merged, settled, closed'
 

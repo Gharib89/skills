@@ -124,13 +124,14 @@ while IFS= read -r entry; do
     '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, kind: ($e.kind // "ship"), from: $e.stage, stage: $s, reason: $r, stalls: $n, observed: $o}]' <<<"$entries")
 done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open)' <<<"$doc")
 # A settled triage entry is read again, thread only: a grill that runs again
-# after its owner answers must not go unwatched. An unreadable thread is left
-# alone (a deleted one would otherwise error on every reconcile).
+# after its owner answers must not go unwatched. An entry settled with no
+# `observed` baseline has nothing to compare and is skipped, and an unreadable
+# thread is left alone (a deleted one would otherwise error on every reconcile).
 woke='[]'
 while IFS= read -r entry; do
   key=$(jq -r .key <<<"$entry")
   sa_thread_only=1 sa_observe "$entry" || continue
-  stage=$(jq -r 'if .status == "running" then "running" elif .run_count > ($e.observed.run_count // 0) then "at-rest" else "" end' --argjson e "$entry" <<<"$obs")
+  stage=$(jq -r 'if $e.observed.run_count == null then "" elif .status == "running" then "running" elif .run_count > $e.observed.run_count then "at-rest" else "" end' --argjson e "$entry" <<<"$obs")
   [ -n "$stage" ] || continue
   doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
     '.entries[$k] |= (.stage = $s | .observed += $o | .rest_since = null | .updated_at = $now)' <<<"$doc")

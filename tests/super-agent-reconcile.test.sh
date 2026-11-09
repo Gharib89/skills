@@ -261,6 +261,15 @@ sa_thread t-9 idle 3 0 /wt/9 triage/x-9
 out=$(R)
 check "the resumed run ending with the issue clear settles it again" settled "$(stage 9)"
 
+# a triage entry settled by hand has no baseline: nothing to compare, nothing woke
+rm -f "$led"
+L add --repo $repo --number 9 --thread t-9 --worktree /wt/9 --branch triage/x-9 --kind triage >/dev/null
+L set $repo#9 stage '"settled"' >/dev/null
+sa_thread t-9 idle 1 0 /wt/9 triage/x-9
+out=$(R)
+check "a settled triage entry with no baseline is not reported in woke" "[]" "$(jq -c .woke <<<"$out")"
+check "and stays settled" settled "$(stage 9)"
+
 out=$(L add --repo $repo --number 11 --thread t-11 --worktree /wt/11 --branch b-11 --kind other 2>/dev/null); rc=$?
 check_rc "a kind outside ship and triage is a usage error" 2 "$rc"
 
