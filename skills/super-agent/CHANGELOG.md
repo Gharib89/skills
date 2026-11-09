@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.0 (2026-11-09)
+
+### Features
+
+- **super-agent**: Route cursor and grok instances as a last resort
+  ([#1119](https://github.com/Gharib89/skills/pull/1119),
+  [`e7d54db`](https://github.com/Gharib89/skills/commit/e7d54db0878f12ec2e676918b98eb1a7f7841d30))
+
+
 ## v0.9.1 (2026-11-08)
 
 ### Bug Fixes
