@@ -8,7 +8,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 m=skills/ship/scripts/update-pr-body.sh
-usage='usage: update-pr-body <pr> (--section <name> | --preamble) --body-file <path>'
+usage='usage: update-pr-body <pr> (--section <name> [--drop-records] | --preamble) --body-file <path>'
 # A readable file, so only the flag under test is what refuses the call.
 body=$(mktemp); open_fence=$(mktemp); heading=$(mktemp)
 trap 'rm -f "$body" "$open_fence" "$heading"' EXIT
@@ -26,6 +26,11 @@ check "both address flags is the usage error" "$usage" \
 check_rc "both address flags is tooling" 2 "$(rc 7 --section Review --preamble --body-file "$body")"
 check "neither address flag is the usage error" "$usage" "$(err 7 --body-file "$body")"
 check_rc "neither address flag is tooling" 2 "$(rc 7 --body-file "$body")"
+
+# --drop-records drops a section's old records, and a preamble has none to drop.
+check "--drop-records with --preamble is the usage error" "$usage" \
+  "$(err 7 --preamble --drop-records --body-file "$body")"
+check_rc "--drop-records with --preamble is tooling" 2 "$(rc 7 --preamble --drop-records --body-file "$body")"
 
 # A flag where a flag's value belongs: without the guard `--preamble` is the
 # section name, so the call is accepted and the exclusion it breaks never fires.

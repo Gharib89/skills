@@ -57,7 +57,7 @@ help_case run-file      'usage: run-file init <issue|slug> [--scratchpad <dir>] 
 help_case select         'usage: select'
 help_case tooling        'usage: tooling [--install]'
 help_case update-issue-body 'usage: update-issue-body <issue> [--repo <owner>/<repo>] --section <name> --body-file <path>'
-help_case update-pr-body 'usage: update-pr-body <pr> (--section <name> | --preamble) --body-file <path>'
+help_case update-pr-body 'usage: update-pr-body <pr> (--section <name> [--drop-records] | --preamble) --body-file <path>'
 help_case update-pr-title 'usage: update-pr-title <pr> --title "<subject>"'
 
 # The block is the script's own header, comment marker stripped and indentation

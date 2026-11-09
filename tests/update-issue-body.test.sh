@@ -58,6 +58,16 @@ check_rc "a section created exits 0" 0 "$rc"
 check "and reports created" 'false true' "$(jq -r '[.replaced, .created] | @tsv' <<<"$out" | tr '\t' ' ')"
 check "at the end of the body" '["Fog","Decisions"]' "$(jq -c .sections <<<"$out")"
 
+# The issue-body write keeps the section surgery's default carry: it has no
+# --drop-records, so a record in the old section survives the rewrite. The
+# adapter below is the fake plus a capture of the body file it is handed.
+printf 'source "%s/tests/host-fake.sh"\nhost_issue_set_body() { cp "$2" "%s/written.md"; }\n' "$PWD" "$work" > "$work/capture-adapter.sh"
+reset
+jq -n '{body: "## Decisions\n\nold\n\n<details><summary>Original</summary>\n\nfirst\n\n</details>\n"}' > "$SHIP_FAKE/host_issue_body.1.json"
+SHIP_HOST_ADAPTER=$work/capture-adapter.sh run 7 --section Decisions --body-file "$file" >/dev/null
+check "a record in the old section is still carried" \
+  "1" "$(grep -c '<details>' "$work/written.md")"
+
 # The adapter's refusal carries its reason (an Azure DevOps description ship
 # did not write), and nothing is written.
 reset

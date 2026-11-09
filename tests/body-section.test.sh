@@ -525,4 +525,24 @@ for line in '<details' '<details open' '<detailsx>'; do
     "$(ship_body_replace_section "$body" Notes "$content")"
 done
 
+# A section whose body file carries its own record, written twice. Without the
+# `drop` argument the first record is carried below the second (the default the
+# phase-1 original relies on); with it one block is left.
+wrapped1=$(mktemp); wrapped2=$(mktemp)
+trap 'rm -f "$content" "$heading" "$other" "$crlf" "$wrapped1" "$wrapped2"' EXIT
+printf 'Round 1\n\n<details><summary>Round 1</summary>\n\nfirst\n\n</details>\n' > "$wrapped1"
+printf 'Round 2\n\n<details><summary>Round 2</summary>\n\nsecond\n\n</details>\n' > "$wrapped2"
+body=$(printf '## Review\n\nplaceholder\n\n## Notes\n\ntail\n')
+once=$(ship_body_replace_section "$body" Review "$wrapped1")
+check "the first wrapped write leaves one block" "1" "$(grep -c '<details>' <<<"$once")"
+check "a second wrapped write without the flag carries both blocks" "2" \
+  "$(ship_body_replace_section "$once" Review "$wrapped2" | grep -c '<details>')"
+check "an empty fourth argument is the default carry" "2" \
+  "$(ship_body_replace_section "$once" Review "$wrapped2" "" | grep -c '<details>')"
+twice=$(ship_body_replace_section "$once" Review "$wrapped2" drop)
+check "a second wrapped write with drop leaves one block" "1" "$(grep -c '<details>' <<<"$twice")"
+check "and it is the new one" "2" "$(grep -c 'Round 2' <<<"$twice")"
+check "and the old one is gone" "0" "$(grep -c 'Round 1' <<<"$twice")"
+check "and the next section survives" "1" "$(grep -c '^## Notes$' <<<"$twice")"
+
 finish
