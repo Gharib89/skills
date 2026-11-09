@@ -11,7 +11,10 @@
 # cleanup), a PR closed unmerged or a closed issue is `closed`, a running thread
 # is `running`, a thread at rest with the ticket undone is `at-rest`. A
 # `--kind triage` entry has no PR: it is `settled` when its thread has run and
-# is at rest and the issue no longer carries `needs-triage`. Settling the
+# is at rest and the issue carries neither `needs-triage` nor `needs-info` (a grill
+# waiting on the owner has the second). A settled `triage` entry is read again,
+# thread only: one whose run count grew, or that runs, goes back to `at-rest` or
+# `running` and is named in `woke`. Settling the
 # thread in T3 is the super agent's act, on each entry `settled` names, and it
 # never archives. It keeps each entry's stall count: +1 for a stall (a run that
 # completed with no merged PR and no merge-gate summary, counted once per run,
@@ -31,13 +34,14 @@
 # environment with no `--remote`, a missing file or one that is not the
 # thread's JSON is `thread-unreadable` for that environment's entries alone.
 #
-# stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, errors}:
+# stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, errors}:
 #         `entries` one {key, from, stage, stalls, observed} per open entry that
 #         was read; `stalled` one {key, thread, stalls, reason} per stall counted
 #         now, `reason` `run-completed` or `stall-window`;
 #         `settled` one {key, thread, worktree, kind} per entry that ended; `closed` one
 #         {key, thread, worktree, reason} (`pr-closed` or `issue-closed`);
-#         `at_rest` one {key, thread}; `errors` one {key, kind, detail}, `kind`
+#         `at_rest` one {key, thread}; `woke` one {key, thread, kind} per settled
+#         triage entry reopened now; `errors` one {key, kind, detail}, `kind`
 #         `thread-unreadable`, `thread-mismatch`, `pr-unreadable` or
 #         `issue-unreadable`; `checked` counts the open entries it looked at
 # exit: 0 a reconcile, errors in the answer included · 2 usage, an unreadable
@@ -83,7 +87,7 @@ while IFS= read -r entry; do
       elif [ "$(jq -r .status <<<"$obs")" = running ]; then stage=running
       elif [ "$(jq -r '.kind // "ship"' <<<"$entry")" = triage ] \
           && [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] \
-          && ! jq -e '[.labels[]?.name] | index("needs-triage")' <<<"$issue" >/dev/null; then stage=settled
+          && ! jq -e '[.labels[]?.name] | index("needs-triage") or index("needs-info")' <<<"$issue" >/dev/null; then stage=settled
       else stage=at-rest; fi ;;
   esac
   stall='' stalls=$(jq -r '.stalls // 0' <<<"$entry")
@@ -119,9 +123,23 @@ while IFS= read -r entry; do
   entries=$(jq -c --argjson e "$entry" --arg s "$stage" --arg r "$reason" --argjson o "$obs" --argjson n "$stalls" \
     '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, kind: ($e.kind // "ship"), from: $e.stage, stage: $s, reason: $r, stalls: $n, observed: $o}]' <<<"$entries")
 done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open)' <<<"$doc")
-[ "$checked" -eq 0 ] || sa_write "$ledger" "$doc"
+# A settled triage entry is read again, thread only: a grill that runs again
+# after its owner answers must not go unwatched. An entry settled with no
+# `observed` baseline has nothing to compare and is skipped, and an unreadable
+# thread is left alone (a deleted one would otherwise error on every reconcile).
+woke='[]'
+while IFS= read -r entry; do
+  key=$(jq -r .key <<<"$entry")
+  sa_thread_only=1 sa_observe "$entry" || continue
+  stage=$(jq -r 'if $e.observed.run_count == null then "" elif .status == "running" then "running" elif .run_count > $e.observed.run_count then "at-rest" else "" end' --argjson e "$entry" <<<"$obs")
+  [ -n "$stage" ] || continue
+  doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
+    '.entries[$k] |= (.stage = $s | .observed += $o | .rest_since = null | .updated_at = $now)' <<<"$doc")
+  woke=$(jq -c --argjson e "$entry" '. + [{key: $e.key, thread: $e.thread, kind: $e.kind}]' <<<"$woke")
+done < <(jq -c '.entries[] | select(.stage == "settled" and .kind == "triage")' <<<"$doc")
+[ "$checked" -eq 0 ] && [ "$woke" = '[]' ] || sa_write "$ledger" "$doc"
 
-jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" '
+jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" '
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
   {ledger: $l, checked: $n,
    entries: [$e[] | {key, from, stage, stalls, observed}],
@@ -129,4 +147,5 @@ jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson
    settled: pick("settled"; {key, thread, worktree, kind}),
    closed: pick("closed"; {key, thread, worktree, reason}),
    at_rest: pick("at-rest"; {key, thread}),
+   woke: $wk,
    errors: $errs}'
