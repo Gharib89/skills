@@ -76,4 +76,7 @@ would set), while a machine never probed takes the computed slots. An
 unreachable machine keeps its previous facts and is probed on the next setup
 that finds it reachable. An `unavailable` provider, or an instance whose
 `auth` is `failed`, is a fact to report, not an error: name it with its reason
-and carry on. Setup runs on Linux only (GNU `nproc`, `free`, `timeout`).
+and carry on. A recorded `failed` carries `auth_source` and `auth_checked`:
+`quota.sh` honors only a T3-sourced one under 24 h old, so an instance that
+signed back in routes again without a hand edit. Setup runs on Linux only
+(GNU `nproc`, `free`, `timeout`).

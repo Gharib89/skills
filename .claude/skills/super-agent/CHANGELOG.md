@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.13.0 (2026-11-09)
+
+### Features
+
+- **super-agent**: Expire a recorded auth failure instead of keeping it forever
+  ([#1135](https://github.com/Gharib89/skills/pull/1135),
+  [`093c069`](https://github.com/Gharib89/skills/commit/093c0699ac9b440eb9a167c700ccf2da9386d8a0))
+
+
 ## v0.12.1 (2026-11-09)
 
 ### Bug Fixes

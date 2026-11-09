@@ -20,7 +20,7 @@ run_quota() {
 }
 # One enabled T3 instance as a provider keyed by its instance id (see the header).
 probe_instance() { # <row json>
-  local row=$1 key drv cmd test cli authcmd env e t3auth='' reason=null auth=unknown extra='{}' n
+  local row=$1 key drv cmd test cli authcmd env e t3auth='' reason=null auth=unknown auth_source=null auth_checked=null extra='{}' n
   key=$(jq -r .providerInstanceId <<<"$row")
   drv=$(jq -r 'if .driverKind == "claudeAgent" then "claude" else .driverKind end' <<<"$row")
   e=$(jq -c --arg k "$key" '.providers[$k] // {}' <<<"$existing")
@@ -47,16 +47,17 @@ probe_instance() { # <row json>
   fi
   # T3's own verdict wins: a command that cannot tell the account apart would call a signed-out instance ok
   t3auth=$(jq -r '[.constraints[]? | strings | select(test("not authenticated"; "i"))] | first // empty' <<<"$row")
-  if [ -n "$t3auth" ]; then auth=failed reason=$(jq -cn --arg r "$t3auth" '$r')
+  if [ -n "$t3auth" ]; then auth=failed auth_source='"t3"' reason=$(jq -cn --arg r "$t3auth" '$r')
   elif [ "$drv" = cursor ] && [ -z "$authcmd" ]; then
     [ "$(jq '.constraints | length' <<<"$row")" -eq 0 ] && auth=ok
   elif [ -n "$authcmd" ] && command -v "${authcmd%% *}" >/dev/null; then
     sa_env_words "$drv" "$env"
     if env ${env_args[@]+"${env_args[@]}"} timeout 15 bash -c "$authcmd" >/dev/null 2>&1 </dev/null; then auth=ok
-    else auth=failed reason=$(jq -cn --argjson r "$?" '"auth command exited \($r)"'); fi
+    else auth=failed auth_source='"command"' reason=$(jq -cn --argjson r "$?" '"auth command exited \($r)"'); fi
   fi
-  facts=$(jq -c --arg k "$key" --arg s "$q_status" --argjson r "$q_reason" --arg a "$auth" --argjson ar "$reason" \
-    '.providers[$k] = {status: $s, reason: $r, auth: $a, auth_reason: $ar}' <<<"$facts")
+  [ "$auth" = failed ] && auth_checked=$(date -u '+"%Y-%m-%dT%H:%M:%SZ"')
+  facts=$(jq -c --arg k "$key" --arg s "$q_status" --argjson r "$q_reason" --arg a "$auth" --argjson ar "$reason" --argjson as "$auth_source" --argjson ac "$auth_checked" \
+    '.providers[$k] = {status: $s, reason: $r, auth: $a, auth_reason: $ar, auth_source: $as, auth_checked: $ac}' <<<"$facts")
   proposed=$(jq -c --arg k "$key" --arg d "$drv" --arg c "$cmd" --arg a "$authcmd" --argjson env "$env" --argjson x "$extra" \
     '.providers[$k] = ({driver: $d, quota_command: (if $c == "" then null else $c end)}
       + (if $a == "" then {} else {auth_command: $a} end) + (if $env == {} then {} else {env: $env} end) + $x)' <<<"$proposed")
