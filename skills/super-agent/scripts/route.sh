@@ -11,8 +11,8 @@
 # the second, L on the third, XL on the fourth. --raise (default 0) climbs one
 # rung per stall or hard finding, and stops at the top. Each provider is a T3
 # provider instance, its key the instance id. A launch's candidates are the
-# `claude` instances plus the `pi` instances the owner allowed (`route: true`)
-# whose `models` map the tier's `sonnet` and `opus` to a model id. One whose
+# `claude` instances plus the `pi`, `cursor` and `grok` instances the owner
+# allowed (`route: true`); a `pi` one also needs a `models` map the tier's `sonnet` and `opus` to a model id. One whose
 # `auth` is `failed`, or whose weekly bucket is at 0, is skipped; of the rest the
 # one with the most weekly quota left wins, an instance with no measured weekly
 # bucket after every measured one, and a tie goes to a `claude` instance, then
@@ -22,11 +22,13 @@
 # under 50% remaining; the tier to launch meanwhile is the default. A quota that
 # is unknown never asks: the tier is the default. A `cursor` or `grok` instance has
 # no non-interactive usage read (measured 2026-11-09), so its quota is always
-# unknown: it is a last resort, a candidate only when no `claude` or allowed `pi`
-# instance can launch, on the model the entry's `models` map gives the tier or
-# else its own default (`model` and `options` null). --instance <id> is the owner
-# naming an instance: only it is considered, a last-resort or unallowed `pi` one
-# included, and its auth and weekly bucket still disqualify it. With no candidate left,
+# unknown: it is a last resort, and one only the owner allowed (`route: true`, off
+# by default: they are for side tasks, not a full ship run), a candidate only when
+# no `claude` or allowed `pi` instance can launch, on the model the entry's
+# `models` map gives the tier or else its own default (`model` and `options` null).
+# --instance <id> is the owner naming an instance: only it is considered, an
+# unallowed `pi`, `cursor` or `grok` one included, and its auth and weekly bucket
+# still disqualify it. With no candidate left,
 # `instance_id` is null with the reason, for the caller to escalate. An old
 # quota file keyed `claude` routes as before, on the instance `claude`.
 # A text job goes to agy on its Gemini group. With --claude the job wants a
@@ -105,7 +107,7 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
     [.providers | to_entries[] | (.value.driver // .key) as $drv | . + {driver: $drv}
       | ($drv == "cursor" or $drv == "grok") as $lr
       | select(if $named != "" then .key == $named and ($drv == "claude" or $drv == "pi" or $lr)
-               else $drv == "claude" or ($drv == "pi" and .value.route == true) or $lr end)
+               else $drv == "claude" or (($drv == "pi" or $lr) and .value.route == true) end)
       | . + {lr: $lr, bucket: weekly(.)}
       | . + {skip: (if .value.auth == "failed" then "auth failed"
                     elif .bucket != null and .bucket.remaining == 0 then "weekly at 0"
@@ -124,7 +126,7 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
      ask: $ask,
      reason: (if $pick == null then
          "no instance can launch: " + (if $named != "" and ($cands | length) == 0 then "\($named) is not a routable instance in the quota read"
-           elif ($cands | length) == 0 then "no claude instance, and no pi instance the owner allowed, in the quota read"
+           elif ($cands | length) == 0 then "no claude instance, and no pi, cursor or grok instance the owner allowed, in the quota read"
            else ([$cands[] | "\(.key) \(.skip)"] | join(", ")) end)
        elif $pick.lr then (if $named != "" then "owner named the instance" else "no routable instance has a measured quota: last resort" end)
        elif $w == $d then "the default tier"
