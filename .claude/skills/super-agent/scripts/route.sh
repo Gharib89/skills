@@ -123,7 +123,7 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
      tier: $tier,
      ask: $ask,
      reason: (if $pick == null then
-         "no instance can launch: " + (if $named != "" and ($cands | length) == 0 then "\($named) is not in the quota read"
+         "no instance can launch: " + (if $named != "" and ($cands | length) == 0 then "\($named) is not a routable instance in the quota read"
            elif ($cands | length) == 0 then "no claude instance, and no pi instance the owner allowed, in the quota read"
            else ([$cands[] | "\(.key) \(.skip)"] | join(", ")) end)
        elif $pick.lr then (if $named != "" then "owner named the instance" else "no routable instance has a measured quota: last resort" end)

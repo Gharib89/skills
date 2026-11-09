@@ -193,7 +193,7 @@ quotas "$(inst claudeAgent claude 0.9 ok)" "$(inst grok grok null ok)"
 res=$(R --size M --instance grok --quota "$tmp/q.json")
 check "the owner naming the instance launches it though a Claude instance has room" 'grok owner named the instance' "$(jq -r '"\(.instance_id) \(.reason)"' <<<"$res")"
 check "a named Claude instance routes as usual, tier included" 'claudeAgent sonnet medium' "$(R --size M --instance claudeAgent --quota "$tmp/q.json" | jq -r '"\(.instance_id) \(.model) \(.tier.effort)"')"
-check "a named instance the quota file lacks is a null instance with the reason" 'null no instance can launch: nope is not in the quota read' \
+check "a named instance the quota file lacks is a null instance with the reason" 'null no instance can launch: nope is not a routable instance in the quota read' \
   "$(R --size M --instance nope --quota "$tmp/q.json" | jq -r '"\(.instance_id) \(.reason)"')"
 quotas "$(inst claudeAgent claude 0.9 ok)" "$(inst grok grok null failed)"
 check "a named instance whose auth failed is a null instance" 'null' "$(R --size M --instance grok --quota "$tmp/q.json" | jq -r .instance_id)"

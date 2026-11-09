@@ -81,7 +81,7 @@ check "cursor and grok are providers with no quota command" 'null null' "$(jq -r
 check "their quota is an explicit unknown with a reason, not unavailable" 'unknown unknown no non-interactive usage read for driver grok' \
   "$(jq -r '"\(.providers.cursor.status) \(.providers.grok.status) \(.providers.grok.reason)"' <<<"$f")"
 check "auth is measured by each CLI: grok signed in, cursor's agent signed out" 'ok failed' "$(jq -r '"\(.providers.grok.auth) \(.providers.cursor.auth)"' <<<"$f")"
-check "the auth commands are recorded for the fleet file" 'grok models 2>&1 | grep -q '"'^You are logged in'"'' "$(jq -r .providers.grok.auth_command <<<"$f")"
+check "the auth command is recorded for the fleet file: grok models, filtered for the signed-in line" true "$(jq -r '.providers.grok.auth_command | startswith("grok models") and contains("You are logged in")' <<<"$f")"
 check "the instance list carries both" 'cursor|unknown|failed grok|unknown|ok' "$(jq -r '[.instances[] | "\(.instance_id)|\(.status)|\(.auth)"] | join(" ")' <<<"$out")"
 sa_instances "$tmp/inst-cg2.json" grok:grok:unauth
 out=$(P --name laptop --instances "$tmp/inst-cg2.json")
