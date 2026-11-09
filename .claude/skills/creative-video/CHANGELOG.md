@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.20.0 (2026-11-09)
+
+### Features
+
+- **creative-video**: Move video skills to HyperFrames 0.9.26
+  ([#1137](https://github.com/Gharib89/skills/pull/1137),
+  [`4af1c73`](https://github.com/Gharib89/skills/commit/4af1c7392e29b0d22e9a5456b28c6abbebb15046))
+
+
 ## v0.19.0 (2026-11-08)
 
 ### Features
