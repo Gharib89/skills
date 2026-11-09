@@ -47,14 +47,15 @@ probe_instance() { # <row json>
   fi
   # T3's own verdict wins: a command that cannot tell the account apart would call a signed-out instance ok
   t3auth=$(jq -r '[.constraints[]? | strings | select(test("not authenticated"; "i"))] | first // empty' <<<"$row")
-  if [ -n "$t3auth" ]; then auth=failed auth_source='"t3"' auth_checked=$(date -u '+"%Y-%m-%dT%H:%M:%SZ"') reason=$(jq -cn --arg r "$t3auth" '$r')
+  if [ -n "$t3auth" ]; then auth=failed auth_source='"t3"' reason=$(jq -cn --arg r "$t3auth" '$r')
   elif [ "$drv" = cursor ] && [ -z "$authcmd" ]; then
     [ "$(jq '.constraints | length' <<<"$row")" -eq 0 ] && auth=ok
   elif [ -n "$authcmd" ] && command -v "${authcmd%% *}" >/dev/null; then
     sa_env_words "$drv" "$env"
     if env ${env_args[@]+"${env_args[@]}"} timeout 15 bash -c "$authcmd" >/dev/null 2>&1 </dev/null; then auth=ok
-    else auth=failed auth_source='"command"' auth_checked=$(date -u '+"%Y-%m-%dT%H:%M:%SZ"') reason=$(jq -cn --argjson r "$?" '"auth command exited \($r)"'); fi
+    else auth=failed auth_source='"command"' reason=$(jq -cn --argjson r "$?" '"auth command exited \($r)"'); fi
   fi
+  [ "$auth" = failed ] && auth_checked=$(date -u '+"%Y-%m-%dT%H:%M:%SZ"')
   facts=$(jq -c --arg k "$key" --arg s "$q_status" --argjson r "$q_reason" --arg a "$auth" --argjson ar "$reason" --argjson as "$auth_source" --argjson ac "$auth_checked" \
     '.providers[$k] = {status: $s, reason: $r, auth: $a, auth_reason: $ar, auth_source: $as, auth_checked: $ac}' <<<"$facts")
   proposed=$(jq -c --arg k "$key" --arg d "$drv" --arg c "$cmd" --arg a "$authcmd" --argjson env "$env" --argjson x "$extra" \

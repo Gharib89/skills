@@ -152,6 +152,13 @@ check "a T3-sourced failure inside the window stands though the live command pas
 rec "$tmp/inst2.json" t3 "$old"
 check "the same T3-sourced failure past the window no longer reads failed" 'ok ' \
   "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
+# the window's edges: just inside 24 h is honored, just past it is not
+rec "$tmp/inst2.json" t3 "$(date -u -d '1439 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
+check "a T3-sourced failure just under 24 h old stands" 'failed Provider is not authenticated.' \
+  "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
+rec "$tmp/inst2.json" t3 "$(date -u -d '1441 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
+check "a T3-sourced failure just over 24 h old is expired" 'ok ' \
+  "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
 rec "$tmp/inst2.json" command "$now"
 check "a command-sourced recorded failure is cleared by a passing live command" 'ok ' \
   "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
