@@ -50,7 +50,8 @@
 # `auth_command` (`claude auth status` for Claude), `status` and `reason` from
 # running the quota command under that `env`, and `auth` (`ok`, `failed`,
 # `unknown`) with `auth_reason`: T3's own verdict where its constraints give one,
-# else the auth command's exit. A `pi` instance also gets `route` false (the
+# else the auth command's exit; a `cursor` instance has no auth command (`agent`
+# can be the Grok binary), so empty constraints read `ok`. A `pi` instance also gets `route` false (the
 # owner's allowance to place a tier on it) and `models`, its `sonnet` and `opus`
 # agy model ids; its quota is agy's. The legacy CLI-named `claude` and `codex`
 # keys give way to instances of their drivers. The `agy` provider is still
