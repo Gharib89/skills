@@ -73,4 +73,23 @@ out2=$(ship_body_replace_section "$out" Review "$one")
 check "a later rewrite keeps the old block below the new content" "yes" "$(has "$out2" '<details>')"
 check "and keeps the headings" "$want" "$(ship_body_headings "$out2")"
 
+# The repo's body checker (the profile's Body-check:) accepts a body whose
+# Review and Verification sections carry a block. It reads `Closes #N` titles
+# through `gh`, so a `gh` that fails quietly goes first on PATH.
+T=$(mktemp -d); trap 'rm -rf "$T"; rm -f "$review" "$one"' EXIT
+mkdir "$T/bin"; printf '#!/bin/sh\nexit 127\n' > "$T/bin/gh"; chmod +x "$T/bin/gh"
+{
+  printf 'Closes #1\n\n'
+  grep '^## ' .github/pull_request_template.md | while IFS= read -r h; do
+    printf '%s\n\n' "$h"
+    case $h in
+      '## Change outline') printf 'Shape: none, mechanical (prose).\n\n' ;;
+      '## Review'|'## Verification') cat "$review"; printf '\n' ;;
+      *) printf 'text\n\n' ;;
+    esac
+  done
+} > "$T/body.md"
+PATH="$T/bin:$PATH" scripts/check-pr-body.sh "$T/body.md" >/dev/null 2>&1; rc=$?
+check_rc "the body checker accepts wrapped Review and Verification sections" 0 "$rc"
+
 finish
