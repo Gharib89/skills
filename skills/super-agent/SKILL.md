@@ -257,10 +257,11 @@ escalation (Escalation).
   `t3_thread_organize` action `settle` on its id (and `environmentId`).
   Unmet: escalate, naming the gap. Of kind `triage`: confirm the issue now
   carries a ready label or the owner skill's other outcome, then settle it
-  the same way; no PR. A settled entry is no longer watched, so a
-  message to its thread goes unseen (a triage one that reruns is `woke`).
+  the same way; no PR. A settled entry is unwatched: a message to its
+  thread goes unseen.
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
+- `woke`: a settled triage thread reran: say so.
 - `closed`: one chat line naming the ticket and the reason.
 - Once a `settled` row's thread is settled, and for each `closed` row, run
   `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
