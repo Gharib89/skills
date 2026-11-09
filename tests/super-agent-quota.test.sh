@@ -161,6 +161,9 @@ check "a T3-sourced failure 86399 s old stands" 'failed Provider is not authenti
 rec "$tmp/inst2.json" t3 "$(ts $((pin - 86400)))"
 check "a T3-sourced failure exactly 86400 s old is expired" 'ok ' \
   "$(authof "$(SA_NOW=$pin bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
+rec "$tmp/inst2.json" t3 "$now"
+check "a record that cannot be read is unknown, never a verdict" 'unknown could not read the recorded auth verdict' \
+  "$(authof "$(SA_NOW=notanumber bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"
 rec "$tmp/inst2.json" command "$now"
 check "a command-sourced recorded failure is cleared by a passing live command" 'ok ' \
   "$(authof "$(bash "$s/quota.sh" --fleet "$tmp/inst2.json")")"

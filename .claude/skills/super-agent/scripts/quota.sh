@@ -92,8 +92,11 @@ for name in ${names[@]+"${names[@]}"}; do
     if env ${env_args[@]+"${env_args[@]}"} timeout 15 bash -c "$auth_cmd" >/dev/null 2>&1 </dev/null; then auth=ok auth_reason=''
     else auth=failed auth_reason="auth command exited $?"; fi
   fi
-  if jq -e --argjson now "${SA_NOW:-null}" '.auth == "failed" and .auth_source == "t3" and ((.auth_checked // "" | try fromdateiso8601 catch 0) > ($now // now) - 86400)' <<<"$cfg" >/dev/null; then
+  jq -e --argjson now "${SA_NOW:-null}" '.auth == "failed" and .auth_source == "t3" and ((.auth_checked // "" | try fromdateiso8601 catch 0) > ($now // now) - 86400)' <<<"$cfg" >/dev/null
+  rec=$?
+  if [ "$rec" -eq 0 ]; then
     auth=failed auth_reason=$(jq -r '.auth_reason // "recorded as failed by setup"' <<<"$cfg")
+  elif [ "$rec" -ne 1 ]; then auth=unknown auth_reason='could not read the recorded auth verdict'
   fi
   if [ -z "$cmd" ]; then
     reason='no quota command in the fleet file'
