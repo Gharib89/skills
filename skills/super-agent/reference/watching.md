@@ -14,6 +14,15 @@ lists the fields; this file holds the rules behind them.
 - One watcher runs per ledger: a second start exits 1 with `running`, and the
   first is left alone.
 
+## Settling a triage entry
+
+- A `--kind triage` entry settles when its thread has run, is at rest, and the
+  issue carries neither `needs-triage` nor `needs-info`: a grill waiting on the
+  owner has `needs-info` and stays `at-rest`.
+- `reconcile` reads a settled triage entry's thread once more each run. A run
+  count above the settled one, or a running thread, reopens it (`woke`). The
+  watcher does not see a settled entry, so a `woke` shows at the next reconcile.
+
 ## Stalls
 
 - A stall (a completed run with no merged PR and no merge-gate summary, or a

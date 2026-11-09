@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.12.0 (2026-11-09)
+
+### Features
+
+- **super-agent**: Keep a grill entry watched past its first rest
+  ([#1131](https://github.com/Gharib89/skills/pull/1131),
+  [`24c6c06`](https://github.com/Gharib89/skills/commit/24c6c06b7c3639c6dbb8ed73f9131a4f7ec3a629))
+
+
 ## v0.11.0 (2026-11-09)
 
 ### Features

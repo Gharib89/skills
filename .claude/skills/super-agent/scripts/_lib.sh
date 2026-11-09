@@ -44,7 +44,8 @@ command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 
 # The stages an entry moves through. `launched` is an entry nothing has observed
 # yet; `merged` is a PR merged whose thread is still running, watched until it
-# rests; `settled` and `closed` end an entry and are never watched again.
+# rests; `settled` and `closed` end an entry and are never watched again, except a
+# settled `triage` entry, which `reconcile` re-reads for a new run (`woke`).
 # shellcheck disable=SC2034  # read by ledger.sh
 sa_stages='launched, running, at-rest, merged, settled, closed'
 
@@ -113,6 +114,8 @@ sa_remote_flag() {
 # returns 1 with $obs_kind (thread-unreadable, thread-mismatch, pr-unreadable)
 # and $obs_detail, a JSON object. `t3` prints its migration warning on stdout,
 # so the answer is the one line that opens a JSON object.
+# With `sa_thread_only` set it stops after the thread read: $obs is then only
+# {status, run_count, pending}, and the PR is not looked up.
 # shellcheck disable=SC2034  # obs, obs_kind and obs_detail are read by the callers
 sa_observe() {
   local thread worktree repo branch raw line found list pr env dir reason file
@@ -150,6 +153,10 @@ sa_observe() {
   found=$(jq -c '{thread: .thread.threadId, worktree: .thread.worktreePath}' <<<"$line")
   if [ "$found" != "$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')" ]; then
     obs_kind='thread-mismatch' obs_detail=$found; return 1
+  fi
+  # `sa_thread_only` set: the caller wants the thread alone, no PR read.
+  if [ -n "${sa_thread_only:-}" ]; then
+    obs=$(jq -c '{status: .thread.status, run_count: .thread.runCount, pending: .thread.pendingRequestCount}' <<<"$line"); return 0
   fi
   # A one-off failed read, with the next one fine, was measured on 2026-11-06,
   # so the read is tried twice before the PR is called unreadable.

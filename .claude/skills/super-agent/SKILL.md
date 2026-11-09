@@ -6,7 +6,7 @@ description: >-
   when running as the owner's pinned super agent thread in T3 Code, or when
   the owner names a ticket for it to take.
 metadata:
-  version: 0.11.0
+  version: 0.12.0
 ---
 
 # super-agent
@@ -39,9 +39,10 @@ directory.
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage (a merged PR is `merged` until its thread rests, then `settled`),
   keeps each entry's `stalls`, and prints one summary: `settled` (each with
-  its `kind`), `closed`, `stalled`, `at_rest`, `errors`, `entries`. A stall
-  adds 1 and a real step takes 1 off ([watching](reference/watching.md)). You
-  never set `stalls` by hand, except the reset below.
+  its `kind`), `closed`, `stalled`, `at_rest`, `woke`, `errors`, `entries`. A
+  stall adds 1 and a real step takes 1 off
+  ([watching](reference/watching.md)). You never set `stalls` by hand, except
+  the reset below.
 - `setup.sh` probes this machine, its linked T3 environments, the GitHub
   accounts and each provider's quota command, merges each `--probe` reply,
   and proposes the fleet file (below) with `--propose`, one provider per T3
@@ -139,9 +140,8 @@ host, user or key, and you use no SSH.
 
 ## Claims and intake
 
-A **claim** keeps two super agents off one ticket: a comment only, never an
-assignment (`/ship` assigns and stops on any assignee). Before every launch,
-run
+A **claim** keeps two super agents off one ticket: a comment, never an
+assignment (`/ship` assigns). Before every launch, run
 `scripts/claim.sh --repo <owner/name> --number <n> --machine <this machine's
 fleet key> --thread $T3CODE_THREAD_ID` (your own thread) and read `status`:
 
@@ -149,10 +149,10 @@ fleet key> --thread $T3CODE_THREAD_ID` (your own thread) and read `status`:
 - `claimed`: skip the ticket, and say in one chat line which machine holds it
   and its age.
 - `stale`: offer it back to the owner with the holder and age. On the owner's
-  go, the owner (or you) deletes that stale claim comment; rerun `claim.sh`,
+  go, the owner (or you) deletes that stale comment; rerun `claim.sh`,
   launch only on `taken`.
 
-A claim belongs to its holder: leave another machine's claim comment as it is,
+A claim belongs to its holder: leave another machine's claim as it is,
 except a stale one the owner told you to delete. Exit 2 (host refused a
 read or post) is an escalation.
 
@@ -258,10 +258,11 @@ escalation (Escalation).
   `t3_thread_organize` action `settle` on its id (and `environmentId`).
   Unmet: escalate, naming the gap. Of kind `triage`: confirm the issue now
   carries a ready label or the owner skill's other outcome, then settle it
-  the same way; there is no PR. A settled entry is no longer watched, so a
-  message to its thread goes unseen.
+  the same way; no PR. A settled entry is unwatched: a message to its
+  thread goes unseen.
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
+- `woke`: a settled triage thread reran: say so.
 - `closed`: one chat line naming the ticket and the reason.
 - Once a `settled` row's thread is settled, and for each `closed` row, run
   `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
