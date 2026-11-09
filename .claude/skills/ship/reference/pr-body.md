@@ -6,6 +6,7 @@
 - [The Change outline](#the-change-outline)
 - [Special things to note: the folded deviations](#special-things-to-note-the-folded-deviations)
 - [Needs attention: what the run left for someone](#needs-attention-what-the-run-left-for-someone)
+- [Collapsing long sections](#collapsing-long-sections)
 - [Writing and reading it back](#writing-and-reading-it-back)
 
 The body is written once at `open-pr` and rewritten a section at a time after
@@ -36,10 +37,12 @@ write into. Every variant carries:
 - **`## Needs attention`**: every issue the run filed or linked, every Ship
   defect it met and every Ship note.
 - **`## Verification`**: each applicable verification's phase-3 result and what
-  ran, or `None applicable: <reason>`.
+  ran, or `None applicable: <reason>`. Its long part is
+  [collapsed](#collapsing-long-sections) on GitHub.
 - **`## Review`**, one placeholder line per reviewer at open, filled at the
   phase-7 exit with its exit word, what its rounds found and what became of
-  the findings ([review-loop.md](review-loop.md#the-exit)).
+  the findings ([review-loop.md](review-loop.md#the-exit)). Its long part is
+  [collapsed](#collapsing-long-sections) on GitHub.
 - **The attribution footer**, where the environment provides one for pull
   request descriptions, in the body file `open-pr` is handed. The body **ends**
   with it, under a `## ` heading of its own that ship adds where no template
@@ -117,6 +120,27 @@ the run's files are gone. `None.` when there are none. An adjacent find appears
 here only once filed: a folded one goes under `## Special things to note`, and a
 noted one stays in the merge summary. It is written from the Run file's record,
 not the deviations log.
+
+## Collapsing long sections
+
+A reviewer reads the short human summary first, so the detail behind it folds
+away. The host is the profile's Host. On a GitHub host, the long part of
+`## Review` and `## Verification` goes inside a column-0 `<details>` block with
+a one-line `<summary>`. That block is a `<details>` record the mechanics
+already carry ([mechanics.md](mechanics.md#section-surgery)). The `## `
+heading, the exit word and any one-line entry stay outside the block, and the
+one-line-per-entry rule above still holds: short content, a
+`None applicable: <reason>` line or a one-line reviewer entry, is not wrapped.
+`## Why the change` and the Door line are never wrapped. On an Azure DevOps
+host, write no `<details>` block: it renders no HTML, as the Change outline
+notes.
+
+Write a wrapped section once, in the write that finishes it. A section write
+keeps the old section's `<details>` records verbatim below the new content, so a
+second write of an already wrapped section leaves the first block behind. Where
+a finished wrapped section must change anyway, send the new file with no
+`<details>` block and record the stale carried block as a `Ship note`: the
+mechanic has no way to drop it yet.
 
 ## Writing and reading it back
 
