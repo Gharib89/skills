@@ -113,6 +113,8 @@ sa_remote_flag() {
 # returns 1 with $obs_kind (thread-unreadable, thread-mismatch, pr-unreadable)
 # and $obs_detail, a JSON object. `t3` prints its migration warning on stdout,
 # so the answer is the one line that opens a JSON object.
+# With `sa_thread_only` set it stops after the thread read: $obs is then only
+# {status, run_count, pending}, and the PR is not looked up.
 # shellcheck disable=SC2034  # obs, obs_kind and obs_detail are read by the callers
 sa_observe() {
   local thread worktree repo branch raw line found list pr env dir reason file

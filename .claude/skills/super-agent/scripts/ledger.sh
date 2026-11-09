@@ -46,7 +46,7 @@
 # stage, never watched) that the morning report lists, and that `add` or
 # `unwait` removes. `--kind` is the owner skill the thread runs, `ship` (the
 # default) or `triage`: a `triage` entry has no PR, and `reconcile` settles it
-# when its run has completed and the issue no longer carries `needs-triage`.
+# when its run has completed and the issue carries neither `needs-triage` nor `needs-info`.
 #
 # stdout: `add` {ledger, key, entry}; `get` the entry; `list` {ledger, entries,
 #         rulings}, `entries` an array of entries (`--open` leaves out settled

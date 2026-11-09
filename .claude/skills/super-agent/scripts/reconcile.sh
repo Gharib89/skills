@@ -135,9 +135,8 @@ while IFS= read -r entry; do
   doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
     '.entries[$k] |= (.stage = $s | .observed += $o | .rest_since = null | .updated_at = $now)' <<<"$doc")
   woke=$(jq -c --argjson e "$entry" '. + [{key: $e.key, thread: $e.thread, kind: $e.kind}]' <<<"$woke")
-  checked=$((checked + 1))
 done < <(jq -c '.entries[] | select(.stage == "settled" and .kind == "triage")' <<<"$doc")
-[ "$checked" -eq 0 ] || sa_write "$ledger" "$doc"
+[ "$checked" -eq 0 ] && [ "$woke" = '[]' ] || sa_write "$ledger" "$doc"
 
 jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" '
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
