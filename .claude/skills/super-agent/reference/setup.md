@@ -37,7 +37,10 @@ skill's base directory.
    the thresholds, the `work_week` (weekday numbers in week order, 0 is
    Sunday; proposed Monday to Friday), each of `instances` with its driver,
    instance id, quota source and auth result, each provider marked
-   `unavailable` with its `reason`, and every line of `warnings` (a reply that
+   `unavailable` with its `reason` (a `cursor` or `grok` instance is `unknown`,
+   not `unavailable`: no CLI prints its usage, `grok usage` points to `/usage`
+   inside grok; its auth is read by grepping `agent models` or `grok models`),
+   and every line of `warnings` (a reply that
    is no probe lands there; so does a Claude instance with no
    `env.CLAUDE_CONFIG_DIR`: with none it reads the default account, so each
    extra account needs its own).
@@ -47,6 +50,15 @@ skill's base directory.
    owner's adjustments by editing the written file.
 5. Tell the owner to keep the fleet file in their dotfiles, so every machine a
    super agent may start on has it.
+
+## Cursor and Grok
+
+No CLI prints their usage, so `route.sh` treats a signed-in `cursor` or `grok`
+instance as a last resort: picked only when no Claude or allowed Pi instance can
+launch, or when the owner names it (`--instance <id>`). A null `model` in its
+answer (also `wanted_model`, `options`) means omit that key from
+`modelSelection` and launch on the instance's own default; map a tier to a
+model in the fleet file's `models` to choose one.
 
 ## Re-runs
 

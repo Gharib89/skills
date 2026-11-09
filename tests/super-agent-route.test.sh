@@ -174,6 +174,38 @@ check "with Claude unauthenticated, the Pi instance is the launch" pi "$(R --siz
 quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst pi pi 0.9 ok '{"route": true, "models": {"sonnet": "antigravity/claude-sonnet-4-6"}, "buckets": [{"id": "3p-weekly", "group": "Claude and GPT models", "window": "weekly", "remaining": 0.9, "resets": "x"}]}')"
 check "a Pi instance with no model for the tier cannot take it" 'null' "$(R --size XL --quota "$tmp/q.json" | jq -r .instance_id)"
 
+# --- cursor and grok: no usage read, so a last resort (or the owner's pick), never ahead of a measured instance ----
+quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst grok grok null ok)"
+check "an unknown-quota grok instance is not picked while a Claude instance can launch" claudeAgent "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst grok grok null ok)" "$(inst cursor cursor null ok)"
+res=$(R --size M --quota "$tmp/q.json")
+check "with every Claude instance signed out, the first signed-in last-resort instance launches, on its own default model" 'cursor null null' \
+  "$(jq -r '"\(.instance_id) \(.model) \(.options | tostring | if . == "null" then "null" else . end)"' <<<"$res")"
+check "and the reason names the last resort" 'no routable instance has a measured quota: last resort' "$(jq -r .reason <<<"$res")"
+quotas "$(inst claudeAgent claude 0 ok)" "$(inst grok grok null ok '{"models": {"sonnet": "grok-4.7"}}')"
+check "an exhausted Claude instance leaves the last resort, on the model the owner mapped for the tier" 'grok grok-4.7' "$(R --size M --quota "$tmp/q.json" | jq -r '"\(.instance_id) \(.model)"')"
+quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst grok grok null failed)" "$(inst cursor cursor null ok)"
+check "a last-resort instance whose auth failed is skipped" cursor "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst grok grok null failed)"
+res=$(R --size M --quota "$tmp/q.json")
+check "none signed in: a null instance, the reason naming each" 'null no instance can launch: claudeAgent auth failed, grok auth failed' "$(jq -r '"\(.instance_id) \(.reason)"' <<<"$res")"
+quotas "$(inst claudeAgent claude 0.9 ok)" "$(inst grok grok null ok)"
+res=$(R --size M --instance grok --quota "$tmp/q.json")
+check "the owner naming the instance launches it though a Claude instance has room" 'grok owner named the instance' "$(jq -r '"\(.instance_id) \(.reason)"' <<<"$res")"
+check "a named Claude instance routes as usual, tier included" 'claudeAgent sonnet medium' "$(R --size M --instance claudeAgent --quota "$tmp/q.json" | jq -r '"\(.instance_id) \(.model) \(.tier.effort)"')"
+check "a named instance the quota file lacks is a null instance with the reason" 'null no instance can launch: nope is not a routable instance in the quota read' \
+  "$(R --size M --instance nope --quota "$tmp/q.json" | jq -r '"\(.instance_id) \(.reason)"')"
+quotas "$(inst claudeAgent claude 0.9 ok)" "$(inst grok grok null failed)"
+check "a named instance whose auth failed is a null instance" 'null' "$(R --size M --instance grok --quota "$tmp/q.json" | jq -r .instance_id)"
+check "a named instance at 0 weekly is a null instance" null "$( quotas "$(inst claudeAgent claude 0 ok)"; R --size M --instance claudeAgent --quota "$tmp/q.json" | jq -r .instance_id)"
+
+
+refused "--job with --instance" --job text --instance grok --quota "$tmp/q.json"
+
+# a Codex instance is still never a launch candidate
+quotas "$(inst codex codex 0.9 ok)" "$(inst claudeAgent claude 0.9 failed)"
+check "a Codex instance is not routed, last resort or not" null "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+
 # an old-shaped quota file (keyed claude) routes as before, instance `claude`
 quota 0.9 0.9
 check "an old-shaped file names its key as the instance" 'claude sonnet' "$(R --size M --quota "$tmp/q.json" | jq -r '"\(.instance_id) \(.model)"')"

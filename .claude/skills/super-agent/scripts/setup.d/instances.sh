@@ -28,12 +28,18 @@ probe_instance() { # <row json>
   case $drv in
     claude) cmd=$claude_cmd test=$claude_test cli=claude authcmd='claude auth status' ;;
     codex) cmd=$codex_cmd test=$codex_test cli=codex ;;
+    # no plan-usage read exists for these (`grok usage` exits 1: run /usage inside grok); both CLIs print a
+    # signed-in or signed-out line and exit 0 either way, so auth greps it
+    cursor) authcmd="agent models 2>&1 | grep -q '^You are logged in'" ;;
+    grok) authcmd="grok models 2>&1 | grep -q '^You are logged in'" ;;
     pi) cmd=$agy_cmd test=$agy_test cli=agy
       extra=$(jq -cn --argjson r "$row" '{route: false, models: ({sonnet: ([$r.models[]?.id | select(test("claude-sonnet"))] | first), opus: ([$r.models[]?.id | select(test("claude-opus"))] | first)} | with_entries(select(.value != null)))}') ;;
   esac
   cmd=$(jq -r --arg d "$cmd" '.quota_command // $d' <<<"$e") authcmd=$(jq -r --arg d "$authcmd" '.auth_command // $d' <<<"$e")
   env=$(jq -c --argjson r "$row" '.env // (if $r.homePath != null and ($r.driverKind == "claudeAgent") then {CLAUDE_CONFIG_DIR: $r.homePath} else {} end)' <<<"$e")
-  if [ -z "$cmd" ]; then
+  if [ -z "$cmd" ] && { [ "$drv" = cursor ] || [ "$drv" = grok ]; }; then
+    q_status=unknown q_reason=$(jq -cn --arg d "$drv" '"no non-interactive usage read for driver \($d)"')
+  elif [ -z "$cmd" ]; then
     q_status=unavailable q_reason=$(jq -cn --arg d "$drv" '"no quota reader for driver \($d)"')
   else
     run_quota "$cmd" "$test" "$cli" "$env"
