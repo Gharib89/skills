@@ -56,6 +56,10 @@ check "the quota command and a Claude auth command are recorded" 'claude -p "/us
   "$(jq -r '.providers.claudeAgent_b | "\(.quota_command)|\(.auth_command)"' <<<"$f")"
 check "T3's own verdict marks the signed-out instance failed, with its reason" 'failed Provider is not authenticated.' \
   "$(jq -r '.providers.claudeAgent | "\(.auth) \(.auth_reason)"' <<<"$f")"
+check "T3's verdict is recorded with source t3 and a UTC check time" 't3 true' \
+  "$(jq -r '.providers.claudeAgent | "\(.auth_source) \(.auth_checked | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$"))"' <<<"$f")"
+check "an ok instance records no auth source or date" 'null null' \
+  "$(jq -r '.providers.claudeAgent_b | "\(.auth_source) \(.auth_checked)"' <<<"$f")"
 check "an instance whose auth command passes is ok, and its own account's quota was read" 'ok available' \
   "$(jq -r '.providers.claudeAgent_b | "\(.auth) \(.status)"' <<<"$f")"
 check "the auth command ran under the instance's account" 1 "$(grep -c '^claude auth status' "$SA_FAKE/calls")"
@@ -69,6 +73,14 @@ check "the proposal lists each instance with driver, quota source and auth resul
 check "a Claude instance with no env beside another one is warned about" 'claudeAgent: no env set' \
   "$(jq -r '.warnings[] | select(startswith("claudeAgent:")) | .[0:23]' <<<"$out")"
 check "nothing was written" absent "$([ -e "$fleet" ] && echo present || echo absent)"
+
+# an auth command that fails, with no T3 verdict, is recorded as command-sourced with a check time
+inst_reset
+sa_instances "$tmp/inst-cmd.json" claudeAgent_b:claudeAgent:home=/acct/b
+sa_claude_auth b 1
+out=$(P --name laptop --instances "$tmp/inst-cmd.json")
+check "a failing auth command is recorded failed, source command, with a UTC check time" 'failed command true' \
+  "$(jq -r '.fleet.providers.claudeAgent_b | "\(.auth) \(.auth_source) \(.auth_checked | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]{8}Z$"))"' <<<"$out")"
 
 # --- cursor and grok: no usage read, an explicit unknown quota; grok's auth from its CLI, cursor's from T3 -----------
 # measured 2026-11-09: `grok usage` exits 1 and says to run /usage in grok; `grok models` exits 0 either way and
