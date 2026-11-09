@@ -70,22 +70,29 @@ check "a Claude instance with no env beside another one is warned about" 'claude
   "$(jq -r '.warnings[] | select(startswith("claudeAgent:")) | .[0:23]' <<<"$out")"
 check "nothing was written" absent "$([ -e "$fleet" ] && echo present || echo absent)"
 
-# --- cursor and grok: no usage read, an explicit unknown quota and a measured auth -------------------------------
-# measured 2026-11-09: `grok usage` exits 1 and says to run /usage in grok; `grok models` and `agent models` exit 0
-# either way and print "You are logged in with grok.com." or "You are not authenticated.", so auth greps that line
+# --- cursor and grok: no usage read, an explicit unknown quota; grok's auth from its CLI, cursor's from T3 -----------
+# measured 2026-11-09: `grok usage` exits 1 and says to run /usage in grok; `grok models` exits 0 either way and
+# prints "You are logged in with grok.com." or "You are not authenticated.", so grok auth greps that line. Cursor has
+# no CLI of its own: `agent` on PATH is the Grok binary where Grok is installed (it printed the same grok.com line),
+# so cursor's auth is only T3's row: empty constraints are ok, a not-authenticated constraint is failed.
 inst_reset
 sa_instances "$tmp/inst-cg.json" cursor:cursor grok:grok
-sa_provider grok 0 'You are logged in with grok.com.'; sa_provider agent 0 'You are not authenticated.'
+sa_provider grok 0 'You are logged in with grok.com.'; sa_provider agent 0 'You are logged in with grok.com.'
 out=$(P --name laptop --instances "$tmp/inst-cg.json"); f=$(jq -c .fleet <<<"$out")
 check "cursor and grok are providers with no quota command" 'null null' "$(jq -r '"\(.providers.cursor.quota_command) \(.providers.grok.quota_command)"' <<<"$f")"
 check "their quota is an explicit unknown with a reason, not unavailable" 'unknown unknown no non-interactive usage read for driver grok' \
   "$(jq -r '"\(.providers.cursor.status) \(.providers.grok.status) \(.providers.grok.reason)"' <<<"$f")"
-check "auth is measured by each CLI: grok signed in, cursor's agent signed out" 'ok failed' "$(jq -r '"\(.providers.grok.auth) \(.providers.cursor.auth)"' <<<"$f")"
-check "the auth command is recorded for the fleet file: grok models, filtered for the signed-in line" true "$(jq -r '.providers.grok.auth_command | startswith("grok models") and contains("You are logged in")' <<<"$f")"
-check "the instance list carries both" 'cursor|unknown|failed grok|unknown|ok' "$(jq -r '[.instances[] | "\(.instance_id)|\(.status)|\(.auth)"] | join(" ")' <<<"$out")"
-sa_instances "$tmp/inst-cg2.json" grok:grok:unauth
+check "grok auth is measured by its CLI; a cursor row with empty constraints is ok" 'ok ok' "$(jq -r '"\(.providers.grok.auth) \(.providers.cursor.auth)"' <<<"$f")"
+check "no CLI ran for cursor: the fake agent recorded no call" 0 "$(grep -c '^agent ' "$SA_FAKE/calls")"
+check "the auth command is recorded for grok only: grok models, filtered for the signed-in line" 'true null' \
+  "$(jq -r '"\(.providers.grok.auth_command | startswith("grok models") and contains("You are logged in")) \(.providers.cursor.auth_command)"' <<<"$f")"
+check "the proposal's fleet file carries no auth_command for cursor" false "$(jq -r '.providers.cursor | has("auth_command")' <<<"$f")"
+check "the instance list carries both" 'cursor|unknown|ok grok|unknown|ok' "$(jq -r '[.instances[] | "\(.instance_id)|\(.status)|\(.auth)"] | join(" ")' <<<"$out")"
+sa_instances "$tmp/inst-cg2.json" grok:grok:unauth cursor:cursor:unauth
 out=$(P --name laptop --instances "$tmp/inst-cg2.json")
 check "T3's own not-authenticated verdict still wins for grok" failed "$(jq -r .fleet.providers.grok.auth <<<"$out")"
+check "a cursor row that is not authenticated reads failed with that reason, though agent prints a signed-in line" 'failed Provider is not authenticated.' \
+  "$(jq -r '.fleet.providers.cursor | "\(.auth) \(.auth_reason)"' <<<"$out")"
 
 # --- each Claude instance reads its own account: ~ expanded, and no env means the default account ------------
 # measured 2026-11-08: a literal `~` in CLAUDE_CONFIG_DIR logs the CLI out, and a caller's own value leaks into
