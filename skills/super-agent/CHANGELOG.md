@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.12.1 (2026-11-09)
+
+### Bug Fixes
+
+- **super-agent**: Claim by comment only, never assign the ticket
+  ([#1132](https://github.com/Gharib89/skills/pull/1132),
+  [`211b361`](https://github.com/Gharib89/skills/commit/211b361d2f0abb9c68acb73ea2779878cc04b8eb))
+
+
 ## v0.12.0 (2026-11-09)
 
 ### Features
