@@ -54,8 +54,9 @@ exceptions bound these rules.
   A ninth: `super-agent`'s `watch` and `reconcile` read a supervised ticket's
   PR list and issue with `gh api`, and its thread with the `t3` CLI, for the
   same reason: it composes no other skill, so no adapter is beside it; both
-  only read. Its `claim` posts and deletes its own claim comment and assigns the
-  ticket with `gh api`, and its `intake` reads the ready issues, the same way.
+  only read. Its `claim` posts and deletes its own claim comment with `gh api`
+  (it never assigns the ticket), and its `intake` reads the ready issues, the
+  same way.
   Its `setup` reads the machine's GitHub accounts with `gh auth
   status` and the linked environments with `t3 environment list`, the same way.
   A direct call made in two runs, where this run can see the other, is a

@@ -140,8 +140,8 @@ host, user or key, and you use no SSH.
 ## Claims and intake
 
 A **claim** keeps two super agents off one ticket: a comment only, never an
-assignment (`/ship` assigns, and its preflight stops on an assignee). Before
-every launch, run
+assignment (`/ship` assigns and stops on any assignee). Before every launch,
+run
 `scripts/claim.sh --repo <owner/name> --number <n> --machine <this machine's
 fleet key> --thread $T3CODE_THREAD_ID` (your own thread) and read `status`:
 
@@ -149,11 +149,11 @@ fleet key> --thread $T3CODE_THREAD_ID` (your own thread) and read `status`:
 - `claimed`: skip the ticket, and say in one chat line which machine holds it
   and its age.
 - `stale`: offer it back to the owner with the holder and age. On the owner's
-  go, delete that stale claim comment, rerun `claim.sh` and launch only on
-  `taken`.
+  go, the owner (or you) deletes that stale claim comment; rerun `claim.sh`,
+  launch only on `taken`.
 
 A claim belongs to its holder: leave another machine's claim comment as it is,
-except a stale one the owner told you to delete. Exit 2 (the host refused a
+except a stale one the owner told you to delete. Exit 2 (host refused a
 read or post) is an escalation.
 
 When the owner says "track <repo>" or "stop tracking <repo>", run

@@ -53,7 +53,8 @@ claimed_reasons() { ( cd "$work/repo" && PATH="$work/bin:$PATH" bash "$scripts/p
   | jq -c '[.reasons[] | select(startswith("already claimed"))]'; }
 
 claim
-check "claim.sh left a claim comment and no assignee" '[1,[]]' "$(jq -c '[length, .] | [.[0], '"$claimed_assignees"']' <<<"$claimed_comments")"
+check "claim.sh left one claim comment" 1 "$(jq length <<<"$claimed_comments")"
+check "and set no assignee" '[]' "$claimed_assignees"
 issue "$claimed_assignees" "$claimed_comments"
 check "a ticket claimed by claim.sh passes" '[]' "$(claimed_reasons)"
 issue '["other"]' '[]'
