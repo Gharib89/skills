@@ -110,6 +110,19 @@ out=$(mech 7 --section Review --body-file "$work/review" 2>/dev/null); rc=$?
 check_rc "a fenced Body-check example is not run" 0 "$rc"
 check "and the write goes through" yes "$(wrote)"
 
+# --drop-records reaches the section surgery: the old record is carried by
+# default and dropped with the flag. The adapter is the fake plus a capture of
+# the body file it is handed.
+profile 'Body-check: None.'
+printf 'source "%s/tests/host-fake.sh"\nhost_pr_set_body() { cp "$2" "%s/written.md"; }\n' "$PWD" "$work" > "$work/capture-adapter.sh"
+printf '{"number":7,"body":"## Review\\n\\nold\\n\\n<details><summary>Round 1</summary>\\n\\nfirst\\n\\n</details>\\n","head_sha":"x"}\n' > "$SHIP_FAKE/host_pr_get.1.json"
+printf 'new\n\n<details><summary>Round 2</summary>\n\nsecond\n\n</details>\n' > "$work/wrapped"
+SHIP_HOST_ADAPTER=$work/capture-adapter.sh mech 7 --section Review --body-file "$work/wrapped" >/dev/null 2>&1
+check "without the flag the old record is carried" 2 "$(grep -c '<details>' "$work/written.md")"
+SHIP_HOST_ADAPTER=$work/capture-adapter.sh mech 7 --section Review --drop-records --body-file "$work/wrapped" >/dev/null 2>&1
+check "with the flag one record is left" 1 "$(grep -c '<details>' "$work/written.md")"
+check "and it is the new one" 0 "$(grep -c 'Round 1' "$work/written.md")"
+
 # A profile that exists and cannot be read is tooling, not "no checker".
 profile 'Body-check: scripts/check-outline.sh'
 reset; pr_body 2
