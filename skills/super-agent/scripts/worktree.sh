@@ -14,7 +14,11 @@
 # second takes them as flags and reads no ledger: it is for an entry on a linked
 # machine (an `environment_id`), where the script text is sent to a scratch thread
 # there as `bash -s -- remove ...`, since that machine has no checkout of this repo.
-# `--merged` is whether the entry's PR merged (always false for a `triage` entry).
+# `--merged` is whether the entry's PR merged (always false for a `triage` entry). A
+# `ship` entry's PR merged when its stage is `settled` or its observed PR state is
+# `merged`: `reconcile` settles a ship entry only on a merged PR, while `observed`
+# can lag the stage, and the squash-merge deleted the remote branch, so reading
+# `observed` alone keeps a merged worktree as `unpushed`.
 # The script refuses a stage that is not `settled` or `closed`, so an open entry's
 # worktree is never touched, and the main checkout. A path git does not list as a
 # worktree of its repository is kept as `not a worktree`, and one whose head is
@@ -57,7 +61,7 @@ if [ -n "$ledger" ]; then
   [ -f "$ledger" ] || fail "$ledger: no such file"
   jq -e '(.entries | type) == "object"' "$ledger" >/dev/null 2>&1 || fail "$ledger: not a ledger"
   jq -e --arg k "$key" '.entries[$k]' "$ledger" >/dev/null || fail "$key is not in the ledger" 1
-  eval "$(jq -r --arg k "$key" '.entries[$k] | @sh "path=\(.worktree) branch=\(.branch) stage=\(.stage) kind=\(.kind // "ship") merged=\(if (.kind // "ship") == "ship" and .observed.pr.state == "merged" then "true" else "false" end)"' "$ledger")"
+  eval "$(jq -r --arg k "$key" '.entries[$k] | @sh "path=\(.worktree) branch=\(.branch) stage=\(.stage) kind=\(.kind // "ship") merged=\(if (.kind // "ship") == "ship" and (.stage == "settled" or .observed.pr.state == "merged") then "true" else "false" end)"' "$ledger")"
 else
   [ -n "$key" ] && [ -n "$path" ] && [ -n "$branch" ] && [ -n "$stage" ] && [ -n "$kind" ] || fail "$usage"
   case $merged in true|false) ;; *) fail "$usage" ;; esac

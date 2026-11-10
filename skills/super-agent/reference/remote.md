@@ -39,9 +39,9 @@ no file: it is found on GitHub by branch, the same from any machine.
    full text of `scripts/worktree.sh` with `bash -s -- remove --key <key>
    --path <worktree> --branch <branch> --stage <stage> --kind <kind> --merged
    <true|false>`, from the ledger entry (`merged` true only for a `ship` entry
-   whose observed PR state is merged), and reply with its one JSON line. Read
-   the reply, settle the scratch thread, and report a `kept` result as a local
-   one. Never SSH.
+   whose stage is `settled` or whose observed PR state is merged), and reply
+   with its one JSON line. Read the reply, settle the scratch thread, and
+   report a `kept` result as a local one. Never SSH.
 
 ## The reply file
 
