@@ -3,7 +3,8 @@
 # git repo as the fake worktree (tests/super-agent-fake.sh): a settled or closed
 # entry's clean worktree is removed and pruned with its branch left alone; a dirty
 # one, or one whose branch has commits on no remote and no merged PR, is kept with a
-# named reason and never forced; an open entry's worktree is never touched, and the
+# named reason and never forced (a settled ship entry counts as merged even when its
+# observed PR snapshot lags); an open entry's worktree is never touched, and the
 # main checkout and a path git does not list are refused.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
@@ -80,7 +81,7 @@ check "an untracked file is enough" dirty "$(W remove --ledger "$led" acme/w#4 |
 rm -f "$repo/wt-dirty/.gitignore"
 
 # --- unpushed commits with no merged PR keep the worktree -------------------------------------
-add_wt unpushed; entry unpushed settled ship closed 5
+add_wt unpushed; entry unpushed closed ship closed 5
 out=$(W remove --ledger "$led" acme/w#5)
 check "commits on no remote and no merged PR: kept as unpushed" 'false true unpushed' "$(jq -r '"\(.removed) \(.kept) \(.reason)"' <<<"$out")"
 check "the worktree and branch stand" 'yes yes' "$(exists unpushed) $(branch_exists unpushed)"
@@ -88,6 +89,22 @@ add_wt tri; entry tri settled triage none 6
 check "a triage entry has no PR, so unpushed commits keep it" unpushed "$(W remove --ledger "$led" acme/w#6 | jq -r .reason)"
 add_wt tri-pushed --push; entry tri-pushed settled triage none 7
 check "a triage entry whose commits are pushed is removed" true "$(W remove --ledger "$led" acme/w#7 | jq .removed)"
+
+# --- a settled ship entry is merged whatever its observed snapshot says (#1138) -----------------
+# squash-merge at the host deletes the remote branch, so the commits sit on no remote
+add_gone() { add_wt "$1" --push; G -C "$repo/wt-$1" push -q origin --delete "feat/$1" 2>/dev/null; }
+add_gone lag; entry lag settled ship open 20
+out=$(W remove --ledger "$led" acme/w#20)
+check "settled ship entry with a stale open snapshot: removed" 'true yes' "$(jq -r .removed <<<"$out") $(branch_exists lag)"
+add_gone closed-open; entry closed-open closed ship open 21
+check "a closed ship entry with an open snapshot and unpushed commits is kept" unpushed "$(W remove --ledger "$led" acme/w#21 | jq -r .reason)"
+add_gone closed-closed; entry closed-closed closed ship closed 22
+check "a closed ship entry with a closed snapshot and unpushed commits is kept" unpushed "$(W remove --ledger "$led" acme/w#22 | jq -r .reason)"
+add_gone tri-lag; entry tri-lag settled triage open 23
+check "a settled triage entry is never merged: unpushed commits keep it" unpushed "$(W remove --ledger "$led" acme/w#23 | jq -r .reason)"
+add_gone lag-dirty; entry lag-dirty settled ship open 24
+printf 'x\n' > "$repo/wt-lag-dirty/new.txt"
+check "a settled ship entry's dirty worktree is still kept" dirty "$(W remove --ledger "$led" acme/w#24 | jq -r .reason)"
 
 # --- an open entry's worktree is never touched --------------------------------------------------
 add_wt open --push; entry open launched ship open 8
