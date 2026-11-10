@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.13.1 (2026-11-10)
+
+### Bug Fixes
+
+- **super-agent**: Treat a settled ship entry as merged when removing its worktree
+  ([#1139](https://github.com/Gharib89/skills/pull/1139),
+  [`1e02c06`](https://github.com/Gharib89/skills/commit/1e02c06a021b875d9fe43982a934596b075c3b44))
+
+
 ## v0.13.0 (2026-11-09)
 
 ### Features

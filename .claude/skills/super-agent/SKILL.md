@@ -6,7 +6,7 @@ description: >-
   when running as the owner's pinned super agent thread in T3 Code, or when
   the owner names a ticket for it to take.
 metadata:
-  version: 0.13.0
+  version: 0.13.1
 ---
 
 # super-agent
