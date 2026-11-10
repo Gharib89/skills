@@ -3,7 +3,8 @@
 # git repo as the fake worktree (tests/super-agent-fake.sh): a settled or closed
 # entry's clean worktree is removed and pruned with its branch left alone; a dirty
 # one, or one whose branch has commits on no remote and no merged PR, is kept with a
-# named reason and never forced; an open entry's worktree is never touched, and the
+# named reason and never forced (a settled ship entry counts as merged even when its
+# observed PR snapshot lags); an open entry's worktree is never touched, and the
 # main checkout and a path git does not list are refused.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
