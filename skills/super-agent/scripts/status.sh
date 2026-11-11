@@ -59,9 +59,10 @@ now=$(jq -c "$sa_jq_norm"'
       + row("Running"; [.entries[] | select(.stage | IN("launched", "running", "at-rest")) | "\(link(.repo; .number)) \(state)"]; ", ")
       + row("Waiting"; [(.waiting // [])[] | .key | keylink]; ", ")),
      merged_keys: [$merged[].key],
-     unpushed: [(.needs // [])[] | select(.pushed != true) | {key, action, since}]}' <<<"$doc")
+     unpushed: [(.needs // [])[] | select(.pushed != true) | {key, action, since}]}' <<<"$doc") \
+  && [ -n "$now" ] || sa_tooling "$ledger: needs, waiting and entries are not the shapes status reads"
 
-printed=$(jq -c '.status.rows // {}' <<<"$doc")
+printed=$(jq -c '.status.rows // {}' <<<"$doc") || sa_tooling "$ledger: status is not an object"
 changed=$(jq -r --argjson p "$printed" '.rows != $p' <<<"$now")
 block=$(jq -r --argjson d "$digest" --argjson c "$changed" '
   if ($d or $c) then [("Needs you", "Merged", "Running", "Waiting") as $n | .rows[$n] // empty] | join("\n") else "" end' <<<"$now")
@@ -70,9 +71,9 @@ block=$(jq -r --argjson d "$digest" --argjson c "$changed" '
 # listed, so the row it printed leaving is no change: the stored rows are the
 # ones left after that.
 if [ "$digest" = true ]; then
-  doc=$(jq -c --argjson n "$now" '.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}' <<<"$doc")
+  doc=$(jq -c --argjson n "$now" '.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}' <<<"$doc") || sa_tooling "$ledger: status is not an object"
 else
-  doc=$(jq -c --argjson n "$now" '.status = {rows: $n.rows, merged_ack: (.status.merged_ack // [])}' <<<"$doc")
+  doc=$(jq -c --argjson n "$now" '.status = {rows: $n.rows, merged_ack: (.status.merged_ack // [])}' <<<"$doc") || sa_tooling "$ledger: status is not an object"
 fi
 if [ "$digest" = true ] || [ "$changed" = true ]; then sa_write "$ledger" "$doc"; fi
 

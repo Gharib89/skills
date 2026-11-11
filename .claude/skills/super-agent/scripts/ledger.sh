@@ -222,6 +222,7 @@ case $cmd in
     key=$1; sa_flag_value "$usage" "$3"; action=$3
     case $key in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
     case ${key##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
+    case $action in *$'\n'*) sa_tooling "an action is one line" ;; esac
     sa_read "$ledger"
     row=$(jq -cn --arg k "$key" --arg a "$action" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
       --argjson old "$(jq -c --arg k "$key" "$sa_jq_norm"'(.needs // []) | map(select((.key | norm_repo) == ($k | norm_repo))) | first // null' <<<"$doc")" \

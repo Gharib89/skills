@@ -131,7 +131,7 @@ Every launch runs where `place.sh` puts it:
      {load1, free_gb}}` from its reply to a file, and rerun with
      `--readings <file>`.
    - `waiting`: nothing fits now, and the ledger's `waiting` list already holds
-     the ticket. Say so in one chat line with its `reason`.
+     the ticket; the block's `Waiting` row says so.
 
 Place tries this machine first, skips an unreachable machine or one without
 the GPU or gh login asked for, and keeps each machine's `reserve` slot for the
@@ -227,8 +227,8 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
 4. **Wake.** The watcher's exit or the schedule wakes you. Both run the same
    step.
 5. **Reconcile.** Run `scripts/reconcile.sh --ledger <ledger>`, read its
-   summary, act on it (below), then start the watcher again while an entry is
-   open.
+   summary, act on it (below), run `scripts/status.sh` (Escalation format),
+   then start the watcher again while an entry is open.
 
 **No turn ends without a watcher running** while the ledger holds an open
 entry. A supervised thread finishing wakes nothing, and neither does its
@@ -266,7 +266,7 @@ escalation (Escalation).
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
 - `woke`: a settled triage thread reran: say so.
-- `closed`: one chat line naming the ticket and the reason.
+- `closed`: the block shows it.
 - Once a `settled` row's thread is settled, and for each `closed` row, run
   `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
   [reference/remote.md](reference/remote.md)). A `kept: true` result is one
@@ -334,8 +334,8 @@ Record each escalation as a need with `ledger.sh need`, the permission hold and
 the stall at 3 included. Steps and the digest form:
 [reference/status-block.md](reference/status-block.md).
 
-A held call's message names the thread, the held call and your
-recommendation. Record the owner's answer with
+A held call's need names the thread, the held call and your recommendation.
+Record the owner's answer with
 `scripts/ledger.sh --ledger <ledger> ruling <text> --allow <call>`, which dates
 it; pass `--allow` only when the answer lets that call run unheld in later
 briefs, so a deny is a ruling with no `--allow`, and `--brief` when every

@@ -83,10 +83,19 @@ check "its row joins the actions with semicolons" \
   "$(jq -r '.block | split("\n")[0]' <<<"$out")"
 L unneed Gharib89/skills#681 >/dev/null; L unneed Gharib89/skills#682 >/dev/null
 out=$(S)
-check "clearing the needs drops the row and reports the change" "true $(grep -c '^Needs' <<<"$(jq -r .block <<<"$out")")" "$(jq -r '.changed' <<<"$out") 0"
+check "clearing the needs drops the row and reports the change" "true 0" "$(jq -r .changed <<<"$out") $(jq -r .block <<<"$out" | grep -c '^Needs')"
 
 # --- a ledger status never reads GitHub, and a settled triage entry is no merge -
 add 800; L set Gharib89/skills#800 kind '"triage"' >/dev/null; stage 800 settled
 check "a settled triage entry is in no row" 0 "$(S --digest | jq -r .block | grep -c '#800')"
+
+# --- a ledger it cannot read is refused whole, never rewritten ------------------
+jq '.needs = [{"key": 5, "action": "x"}]' "$led" > "$tmp/bad.json"
+before=$(cat "$tmp/bad.json")
+out=$(bash "$s/status.sh" --ledger "$tmp/bad.json" --digest 2>/dev/null); rc=$?
+check_rc "a malformed need exits 2" 2 "$rc"
+check "and answers one JSON error" true "$(jq 'has("error")' <<<"$out")"
+check "and leaves the ledger as it was" "$before" "$(cat "$tmp/bad.json")"
+check_rc "a need action holding a newline exits 2" 2 "$(L need Gharib89/skills#9 --action $'a\nb' >/dev/null 2>&1; echo $?)"
 
 finish
