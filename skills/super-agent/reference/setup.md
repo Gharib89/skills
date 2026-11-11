@@ -86,9 +86,10 @@ each repo by `<owner/name>`, and an entry holds two optional keys:
 - `brief`: an array of text lines every launch brief for that repo carries.
 
 A machine entry takes the same `brief` array, carried by every launch placed on
-that machine. A launch brief prints the lines that match its repo and machine
-under `Lines for this repo and machine:`. A one-off ruling is scoped the same
-way: `ledger.sh ruling <text> --brief --repo <r> --machine <m>`.
+that machine. A launch brief prints the lines that match its repo and the
+machine it is placed on under `Lines for this repo and machine:`. A one-off
+ruling is scoped the same way:
+`ledger.sh ruling <text> --brief --repo <r> --machine <m>`.
 
 ## Re-runs
 

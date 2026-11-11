@@ -15,11 +15,13 @@
 #          [--worktree <path>] [--remote <environment id>=<dir>]...
 #
 # --machine is this machine's fleet key and --thread the super agent's own thread,
-# which `claim` records; --quota is the saved `quota` read of this wake. --area,
+# which `claim` records (the brief takes the placed machine,
+# `record.machine`, not this one); --quota is the saved `quota` read of this wake. --area,
 # --gpu, --account, --blocked-by, --readings and --exclude go to `place`,
 # --instance and --raise to `route`. --wanted answers a route's `ask`: `yes`
 # launches the wanted tier, `no` the default one. --note is a one-ticket brief
-# line. --out also writes the answer to a file, which `record` reads as --launch.
+# line. --out also writes the answer to a file, only when it launches; `record`
+# reads that file as --launch.
 # The ticket's Size label picks the tier (M when it has none, `size_source` says
 # so); `ready-for-agent` is a `ship` launch, `needs-triage` a `triage` one.
 # `record` reads the worktree from `t3 thread show` when --worktree is omitted
@@ -38,7 +40,8 @@
 #         reason), `no_instance` (route's reason), `need_reading` (place's
 #         machine and environment_id) or `waiting` (place's reason and
 #         considered, and the ledger now holds the waiting row).
-#         record: {key, entry, reconcile: {checked, errors}}
+#         record: {key, entry, reconcile: {checked, errors}}, or the ledger's {error}
+#         when it refused the entry
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
 #       file, a claim, issue or placement the host or a script refused
@@ -89,14 +92,15 @@ if [ "${1:-}" = record ]; then
   if [ -n "$rethread" ]; then
     # rethread keeps the entry's machine, so a thread on another machine sets it after.
     sub ledger --ledger "$ledger" rethread "$key" "${fields[@]}"
-    if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" set "$key" machine "\"$machine\""; fi
-    if [ "$rc" = 0 ]; then out=$(bash "$here/ledger.sh" --ledger "$ledger" get "$key" | jq -c '{entry: .}'); fi
+    if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" set "$key" machine "$(jq -cn --arg m "$machine" '$m')"; fi
+    if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" get "$key"; out=$(jq -c '{entry: .}' <<<"$out") || sa_tooling "cannot read entry $key"; fi
   else
     sub ledger --ledger "$ledger" add --repo "${key%#*}" --number "${key##*#}" --machine "$machine" "${fields[@]}"
   fi
   [ "$rc" = 0 ] || { printf '%s\n' "$out"; exit 1; }
   entry=$(jq -c .entry <<<"$out")
   sub reconcile --ledger "$ledger" ${remotes[@]+"${remotes[@]}"}
+  [ "$rc" = 0 ] && jq -e '.checked != null' >/dev/null <<<"$out" || sa_tooling "reconcile gave no answer"
   jq -cn --argjson e "$entry" --argjson r "$out" '{key: $e.key, entry: $e, reconcile: {checked: $r.checked, errors: $r.errors}}'
   exit 0
 fi
@@ -125,6 +129,8 @@ while [ $# -gt 0 ]; do
   shift 2
 done
 [ -n "$fleet" ] && [ -n "$ledger" ] && [ -n "$quota" ] && [ -n "$machine" ] && [ -n "$thread" ] || sa_tooling "$usage"
+# An answer that does not launch leaves no file, so a stale one is never recorded.
+[ -z "$outf" ] || rm -f "$outf"
 
 # answer <reason> <detail json>: no launch, exit 1
 answer() { jq -cn --arg k "$key" --arg r "$1" --argjson d "$2" '{key: $k, launch: false, reason: $r, detail: $d}'; exit 1; }

@@ -54,8 +54,9 @@ directory.
   provider per instance from `--instances <file>`; it takes `--fleet <file>` in
   place of `--ledger`, and writes only with `--write`.
 - `probe.sh --json` measures the machine it runs on and prints one JSON line.
-- `launch.sh` is a launch in one call, and its `record` form the entry after it
-  (The loop).
+- `launch.sh` prepares a launch in one call (claim, route, place, brief: the
+  `t3_thread_launch` arguments, which you send), and its `record` form writes
+  the entry after it (The loop).
 - `launch-check.sh` answers whether one machine takes a launch now: a free
   slot, load, RAM, no same-repo ticket in the way, the repo under its ship cap.
 - `place.sh` picks the machine a launch runs on (Placement).
@@ -114,7 +115,7 @@ Every launch runs where `place.sh` puts it, which `launch.sh` runs with the
 flags you pass it: `--gpu` for GPU work, `--account <login>` for the gh login
 the repo needs, one `--area <path>` per path the ticket touches (judged from
 the issue), one `--blocked-by <n>` per open blocker on GitHub, and
-`--exclude <machine>`. Read its answer:
+`--exclude <machine>`. Read launch's answer:
 
 - a launch: `record.machine` is where it runs. Its `args.environmentId` is
   absent for this machine and set for a remote one. When the ticket needs a CLI
@@ -148,8 +149,7 @@ key and `--thread` your own (`$T3CODE_THREAD_ID`), and answers its `status`:
 - `claimed`: skip the ticket, and say in one chat line which machine holds it
   and its age.
 - `stale`: offer it back to the owner with the holder and age. On the owner's
-  go, the owner (or you) deletes that stale comment; rerun launch, which
-  launches only on `taken`.
+  go, the owner (or you) deletes that stale comment; rerun launch.
 
 A claim belongs to its holder: leave another machine's claim as it is,
 except a stale one the owner told you to delete. Exit 2 (host refused a
@@ -173,9 +173,10 @@ launches nothing: a ticket launches when the owner names it, through the loop
 Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
 
 1. **Launch.** The owner names a ticket as `<owner/name>#<n>`. Run
-   `scripts/launch.sh <owner/name>#<n> --fleet <fleet> --ledger <ledger>
-   --quota <file> --machine <this machine's fleet key> --thread
-   $T3CODE_THREAD_ID --out <launch file>`, adding the flags the ticket needs
+   `scripts/launch.sh <owner/name>#<n> --fleet <fleet> --ledger <ledger> --quota
+   <file> --machine <this machine's fleet key> --thread $T3CODE_THREAD_ID --out
+   <launch file>`, `--quota` the read Routing saved this wake and `<launch
+   file>` one per ticket beside the ledger, adding the flags the ticket needs
    (Routing, Placement), `--note <text>` for a line only this ticket's thread
    should read, and `--raise <n>` on a raised launch. It reads the labels
    (`ready-for-agent` takes `/ship <n>`, `needs-triage` takes `/triage <n>`),
@@ -184,18 +185,21 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
    a `reason`: `claimed`, `stale`, `waiting`, `need_reading`, `ask`,
    `no_owner_skill` or `no_instance`. Act on the reason as Claims, Routing and
    Placement say; `no_owner_skill` and `no_instance` are escalations. On
-   `launch: true`, fill each name in `needs` and call `t3_thread_launch`, never
-   `delegate_task`: `delegate_task` runs only in your own project and refuses
-   another repo ("A local task runs in this thread's project", measured).
-   `projectId` is the repo's T3 project, from `t3_project_list` on the
-   environment `args.environmentId` names (this machine without one); with none
-   there, rerun launch with `--exclude <machine>`. Never link, unlink or clone a
-   project on any machine. Pass `args` as printed, `modelSelection.options` an
-   array of `{id, value}`, never a map (rejected, measured).
+   `launch: true`, add each name in `needs` to `args` (`projectId`: the repo's
+   T3 project, from `t3_project_list` on the environment `args.environmentId`
+   names, this machine without one), then call `t3_thread_launch` with `args`,
+   never `delegate_task`: it runs only in your own project and refuses another
+   repo ("A local task runs in this thread's project", measured). With no
+   project there, rerun launch with `--exclude <record.machine>` and every
+   earlier flag; ending at `waiting`, that is the no-project escalation:
+   `ledger.sh unwait <key>` and escalate. Never link, unlink or clone a project
+   on any machine.
 2. **Record.** Run `scripts/launch.sh record --launch <launch file> --thread
-   <id> --ledger <ledger>` with the thread id from the launch result, adding
-   `--worktree <path>` on a remote launch (read the path with `t3_thread_read`)
-   and each `--remote` Remote entries need. It writes the ledger entry, with
+   <id> --ledger <ledger>`, `<id>` the thread id `t3_thread_launch` returned.
+   On a remote launch, first save `t3_thread_read` of the new thread as its
+   reply file ([remote](reference/remote.md)), and add `--worktree <path>` from
+   it and one `--remote <environment id>=<dir>` per environment holding an open
+   remote entry, the new one included. It writes the ledger entry, with
    the fleet's machine key and the routed tier's model and effort, and runs the
    baseline reconcile `watch.sh` compares against: a thread that has not
    started yet reads as at rest, and a running watcher picks the entry up from
@@ -235,15 +239,9 @@ carries the ledger and summaries, never a supervised thread's transcript.
 
 ## The launch brief
 
-`launch.sh` generates the brief fresh for each launch, in `args.message` after
-the invocation line, so send it unedited. For a re-brief, run `scripts/brief.sh`
-with the same `--repo`, `--machine` and `--note`. It carries the **merge
-allowance** (merge on a clean `/ship` gate, nothing wider), the numbered
-**standing waivers**, the shared-machine lines (stop only your own processes by
-PID, run the heavy check under a per-repo lock and a memory cap), the owner's
-allowed calls, the rulings and fleet lines that match the launch's repo and
-machine, and the worktree, branch and last-message rules. Any hold outside them
-stops at the gate and comes to you as an escalation (Escalation).
+`launch.sh` generates the brief fresh into `args.message`: send it unedited. Its
+parts and the re-brief form:
+[reference/launch-brief.md](reference/launch-brief.md).
 
 ## Acting on the summary
 
@@ -273,13 +271,12 @@ stops at the gate and comes to you as an escalation (Escalation).
      run's `completed` does not mean the ticket is done.
   2. Re-brief the same thread: read its last messages first, then resend the
      launch brief with what it was missing.
-  3. Start a fresh thread on a raised tier: `launch.sh` with `--raise` set to
-     the rungs the entry's model and effort sit above its size default, plus
-     one, then `launch.sh record --rethread` to point the entry at the new
-     thread; the owner is asked only when route's `ask` is true (Routing).
-     Escalate
-     instead when the ticket's premise or scope, not the thread, is the
-     problem.
+  3. Start a fresh thread on a raised tier: run the loop's steps 1 and 2 again
+     with the first launch's flags plus `--raise` set to the rungs the entry's
+     model and effort sit above its size default, plus one, and `record
+     --rethread` to point the entry at the new thread. The owner is asked only
+     when route's `ask` is true (Routing). Escalate instead when the ticket's
+     premise or scope, not the thread, is the problem.
 
   A **hard finding** (a verified acceptance-criterion gap you send back to the
   thread) raises the same way as rung 3.

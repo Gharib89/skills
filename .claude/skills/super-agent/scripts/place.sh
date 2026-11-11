@@ -103,13 +103,14 @@ while IFS= read -r m; do
       '{machine: $m, environment_id: (if $l or $i == "" then null else $i end), local: $l}'); break
   fi
   note "$m" "refused:$(jq -r '.refused | join(",")' <<<"$res")"
-  # A conflict with the ticket's own repo follows it to every machine.
-  if jq -e '.refused | index("repo")' >/dev/null <<<"$res"; then
-    wait_reason="same repo: $(jq -r '.repo.conflicts | join(", ")' <<<"$res") is open and blocks or overlaps this ticket"; break
-  fi
-  # So does the repo's ship cap: the count is repo-wide, not the machine's.
+  # The repo's ship cap and a conflict with the ticket's own repo follow it to
+  # every machine; the cap is named first, since a ticket with no area also
+  # overlaps every open ticket of its repo.
   if jq -e '.refused | index("cap")' >/dev/null <<<"$res"; then
     wait_reason="ship cap: $(jq -r '.cap | "\(.open) of \(.max)"' <<<"$res") open tickets of $repo"; break
+  fi
+  if jq -e '.refused | index("repo")' >/dev/null <<<"$res"; then
+    wait_reason="same repo: $(jq -r '.repo.conflicts | join(", ")' <<<"$res") is open and blocks or overlaps this ticket"; break
   fi
 done < <(jq -r --arg own "$own" '.machines | keys as $k | ($k | map(select(. != $own))) as $rest | (if $k | index($own) then [$own] else [] end) + $rest | .[]' "$fleet")
 

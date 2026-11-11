@@ -203,7 +203,7 @@ case $cmd in
         *) sa_tooling "$usage" ;;
       esac
     done
-    { [ -z "$rrepo$rmachine" ] || $brief; } || sa_tooling "--repo and --machine scope a --brief ruling only"
+    { [ -z "$rrepo$rmachine" ] || [ "$brief" = true ]; } || sa_tooling "--repo and --machine scope a --brief ruling only"
     sa_read "$ledger"
     ruling=$(jq -cn --arg d "$(date -u +%F)" --arg t "$text" --argjson a "$allow" --argjson b "$brief" --arg r "$rrepo" --arg m "$rmachine" \
       '{date: $d, text: $t, allow: $a, brief: $b, repo: (if $r == "" then null else $r end), machine: (if $m == "" then null else $m end)}')

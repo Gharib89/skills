@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-# Print the standing part of a launch brief: what every supervised thread is
+# Print a launch brief: what every supervised thread is
 # told after its owner-skill invocation line, so the waivers reach it word for
 # word and no launch rewords them.
 #
 #   brief --fleet <file> --ledger <file> [--repo <owner/name>] [--machine <key>]
 #         [--note <text>]
+#
+# --repo and --machine (the fleet key of the machine the thread runs on) select
+# the scoped rulings and the fleet's `repos.<r>.brief` and `machines.<m>.brief`
+# lines; without them only unscoped rulings print and the lock line names
+# `<repo>`. --note adds one `Note for this ticket:` line.
 #
 # The waivers are the fleet file's `waivers`, each `condition` verbatim, and the
 # allowed calls are the ledger's `allowed` lines (the owner's dated rulings). The

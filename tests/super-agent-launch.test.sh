@@ -117,7 +117,7 @@ check_rc "it exits 1" 1 "$rc"
 check "and it posted no claim" 0 "$(grep -c -- '-X POST' "$SA_FAKE/calls")"
 
 issue 9 "Held elsewhere" ready-for-agent M
-sa_route "repos/$repo/issues/9/comments" "$(jq -cn '[{id: 5, created_at: "'"$(date -u -d "1 hour ago" +%FT%TZ)"'", user: {login: "octo"}, body: "<!-- super-agent-claim machine=other thread=th-o -->\nClaimed."}]')"  # clock-exception: a fresh claim comment must be younger than the stale window
+sa_route "repos/$repo/issues/9/comments" "$(jq -cn '[{id: 5, created_at: "2099-01-01T00:00:00Z", user: {login: "octo"}, body: "<!-- super-agent-claim machine=other thread=th-o -->\nClaimed."}]')"
 out=$(L 9)
 check "a fresh claim of another machine is claimed" '{"launch":false,"reason":"claimed","machine":"other"}' "$(jq -c '{launch, reason, machine: .detail.machine}' <<<"$out")"
 check "and no argument object is printed" false "$(jq 'has("args")' <<<"$out")"
@@ -135,6 +135,8 @@ check "the ledger entry for it carries the tier launched" '{"model":"opus","effo
 
 quota_with 0.8 failed
 check "no instance able to launch is no_instance, with route's reason" no_instance "$(L 7 | jq -r .reason)"
+echo stale > "$out_f"; L 7 --out "$out_f" >/dev/null
+check "an answer that does not launch removes a stale --out file" absent "$([ -e "$out_f" ] && echo present || echo absent)"
 quota_with 0.8
 
 # --- the per-repo cap: a launch over it is a waiting row -----------------------------
@@ -143,6 +145,7 @@ bash "$s/ledger.sh" --ledger "$led" add --repo $repo --number 2 --thread t2 --wo
 out=$(L 7 --area c); rc=$?
 check_rc "with the repo's two open tickets (ship and triage) at its cap of 2 the launch exits 1" 1 "$rc"
 check "it is waiting, the cap named in the reason" '{"reason":"waiting","why":"ship cap: 2 of 2 open tickets of acme/widgets"}' "$(jq -c '{reason, why: .detail.reason}' <<<"$out")"
+check "a launch with no area, which overlaps both, still names the cap first" "ship cap: 2 of 2 open tickets of acme/widgets" "$(L 7 | jq -r .detail.reason)"
 check "and the ledger holds the waiting row" 1 "$(bash "$s/ledger.sh" --ledger "$led" list | jq '[.waiting[] | select(.key == "acme/widgets#7")] | length')"
 check "a settled ticket does not count against the cap" ok \
   "$(bash "$s/ledger.sh" --ledger "$led" set "$repo#2" stage '"settled"' >/dev/null; L 7 --area c | jq -r 'if .launch then "ok" else .reason end')"
