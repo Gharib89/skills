@@ -18,8 +18,7 @@ ticket, in its own worktree on the machine **placement** picks. The
 script whose exit wakes you. You route and verify: the supervised thread
 implements, and its owner skill merges.
 
-The super agent's machine and its linked machines run Linux; its scripts may
-use GNU tools.
+The super agent's machine and its linked machines run Linux.
 
 ## The scripts
 
@@ -67,9 +66,8 @@ directory.
   <file>`), or the driver for a bounded text job (`--job text`, `--claude`).
 - `worktree.sh remove` removes a settled or closed entry's clean worktree,
   never forced, and keeps the branch.
-- `agy-job.sh` runs one bounded text job on agy from a disposable scratch
-  worktree of the repo, under a session-only allow list of harmless binaries,
-  and prints its response as JSON.
+- `agy-job.sh` runs one bounded text job on agy and prints its response as
+  JSON ([agy jobs](reference/agy-jobs.md)).
 - `claim.sh` claims one ticket for this machine and prints its `status`
   (`taken`, `own`, `claimed`, `stale`) and the holder's `claim` with `age_s`.
 - `track.sh --fleet <file> track|stop <owner/name>` edits the active repos and
