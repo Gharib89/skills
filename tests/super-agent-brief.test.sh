@@ -84,6 +84,7 @@ out=$(S); rc=$?
 check_rc "schedules exits 0" 0 "$rc"
 check "a morning report in this thread on weekdays at 08:00" 'this-thread fixed_time 08:00 [1,2,3,4,5]' \
   "$(jq -r '.morning | "\(.bind) \(.schedule.type) \(.schedule.timeOfDay) \(.schedule.weekdays | tojson)"' <<<"$out")"
+check "the morning prompt asks for the digest block" true "$(jq '.morning.prompt | contains("status.sh --digest")' <<<"$out")"
 check "one retro-run per active repo" "acme/widgets acme/gears" "$(jq -r '[.retro[].repo] | join(" ")' <<<"$out")"
 check "each weekly on Friday at 09:00 in the repo's project" 'repo-project 5 09:00 /retro-run' \
   "$(jq -r '.retro[0] | "\(.bind) \(.schedule.weekdays[0]) \(.schedule.timeOfDay) \(.prompt)"' <<<"$out")"

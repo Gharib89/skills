@@ -28,12 +28,14 @@ They live in `scripts/` under this skill's base directory, and each answers
 `$XDG_STATE_HOME` (`~/.local/state` when unset), your own machine's state
 directory.
 
-- `ledger.sh add|get|list|set|rethread|ruling|allowed|briefed|wait|unwait`
+- `ledger.sh add|get|list|set|rethread|ruling|allowed|briefed|wait|unwait|need|pushed|unneed`
   reads and writes the ledger; its `--ledger` comes first. A key is
   `<owner/name>#<n>`. `add --kind triage` records a `/triage` ticket, which has
   no PR (default `ship`). `list` also prints `waiting`, the tickets placement
   could not place. `ruling --brief` marks a ruling every launch brief carries;
-  `briefed` lists those.
+  `briefed` lists those. `need`, `pushed` and `unneed` keep the owner's open
+  needs.
+- `status.sh --ledger <ledger> [--digest]` prints the status block (Escalation).
 - `watch.sh` polls every open entry's thread and PR and exits on the first
   change: `pr-merged`, `pr-closed`, `pending-approval`, `run-finished`,
   `stall-window`, or `thread-mismatch`, `thread-unreadable`, `pr-unreadable`,
@@ -129,7 +131,7 @@ Every launch runs where `place.sh` puts it:
      {load1, free_gb}}` from its reply to a file, and rerun with
      `--readings <file>`.
    - `waiting`: nothing fits now, and the ledger's `waiting` list already holds
-     the ticket. Say so in one chat line with its `reason`.
+     the ticket; the block's `Waiting` row says so.
 
 Place tries this machine first, skips an unreachable machine or one without
 the GPU or gh login asked for, and keeps each machine's `reserve` slot for the
@@ -225,8 +227,8 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
 4. **Wake.** The watcher's exit or the schedule wakes you. Both run the same
    step.
 5. **Reconcile.** Run `scripts/reconcile.sh --ledger <ledger>`, read its
-   summary, act on it (below), then start the watcher again while an entry is
-   open.
+   summary, act on it (below), run `scripts/status.sh` (Escalation format),
+   then start the watcher again while an entry is open.
 
 **No turn ends without a watcher running** while the ledger holds an open
 entry. A supervised thread finishing wakes nothing, and neither does its
@@ -263,13 +265,12 @@ escalation (Escalation).
   thread goes unseen.
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
-- `woke`: a settled triage thread reran: say so.
-- `closed`: one chat line naming the ticket and the reason.
+- `woke`: a settled triage thread reran; `Running` shows it again.
+- `closed`: the PR closed unmerged; record a need naming the reason.
 - Once a `settled` row's thread is settled, and for each `closed` row, run
   `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
-  [reference/remote.md](reference/remote.md)). A `kept: true` result is one
-  chat line naming the key and `reason`, not an escalation; a refusal (exit
-  1) is one.
+  [reference/remote.md](reference/remote.md)). A `kept: true` result posts
+  nothing; a refusal (exit 1) is an escalation.
 - An entry whose `observed.pending` is above 0 holds a permission request:
   escalate it, since a held thread is not a stall.
 - `at_rest` with a merge-gate summary is not a stall: an allowed merge in
@@ -323,23 +324,17 @@ Placement `waiting` and a same-repo wait are not escalations.
 
 ### Escalation format
 
-These are the only forms the owner ever sees, and every escalation in this
-skill uses them, the permission hold and the stall at 3 included:
+The owner reads one thing: the **status block** `scripts/status.sh --ledger
+<ledger>` prints. Post it as printed, never rewrite it, and post nothing on a
+wake whose `block` is empty. Only a new need sends a push. A need names exactly
+one action, and a pick from fixed options (approve or deny a held call, a scope
+fork) also opens an AskUserQuestion dialog with the recommended option first.
+Record each escalation as a need with `ledger.sh need`, the permission hold and
+the stall at 3 included. Steps and the digest form:
+[reference/status-block.md](reference/status-block.md).
 
-- **Progress**: one or two plain lines, no heading, no push. A completed step
-  (merged, launched, settled) starts with `Done:`.
-- **Needs you**: the message starts with `> [!CAUTION]`, then the line
-  `> **NEEDS YOU:** <run>: <the one action>`, and names exactly one action.
-  Send one push notification (the PushNotification tool) naming the run and
-  that action. When the answer is a pick from fixed options (approve or deny a
-  held call, a scope fork), also open an AskUserQuestion dialog with the
-  recommended option first.
-
-No progress message uses the alert, so a message without it never needs the
-owner. One push per need, none for progress.
-
-A held call's message names the thread, the held call and your
-recommendation. Record the owner's answer with
+A held call's need names the thread, the held call and your recommendation.
+Record the owner's answer with
 `scripts/ledger.sh --ledger <ledger> ruling <text> --allow <call>`, which dates
 it; pass `--allow` only when the answer lets that call run unheld in later
 briefs, so a deny is a ruling with no `--allow`, and `--brief` when every

@@ -218,4 +218,27 @@ check "and a second says it had none" false "$(L unwait Gharib89/skills#30 | jq 
 check "a ledger written before waiting existed lists none" '[]' \
   "$(jq 'del(.waiting)' "$led" > "$tmp/old.json" && bash "$s/ledger.sh" --ledger "$tmp/old.json" list | jq -c .waiting)"
 
+# --- need: what only the owner can settle, one row per key ---------------------
+out=$(L need Gharib89/skills#681 --action "pick backfill or forward-only"); rc=$?
+check_rc "need exits 0" 0 "$rc"
+check "a new need is unpushed, with its action and the time" \
+  '{"key":"Gharib89/skills#681","action":"pick backfill or forward-only","pushed":false,"since":true}' \
+  "$(jq -c '.need | {key, action, pushed, since: (.since | test("^20[0-9-]+T[0-9:]+Z$"))}' <<<"$out")"
+check "list carries the open needs" '["Gharib89/skills#681"]' "$(L list | jq -c '[.needs[].key]')"
+since=$(L list | jq -r '.needs[0].since')
+check "pushed marks the push sent" true "$(L pushed gharib89/SKILLS#681 | jq .need.pushed)"
+out=$(L need Gharib89/skills#681 --action "pick backfill or forward-only")
+check "the same need again keeps its push and its time" "true $since" "$(jq -r '.need | "\(.pushed) \(.since)"' <<<"$out")"
+out=$(L need gharib89/skills#681 --action "approve the held merge")
+check "a new action under the key is a new unpushed need, one row" \
+  '[{"action":"approve the held merge","pushed":false}]' "$(L list | jq -c '[.needs[] | {action, pushed}]')"
+check_rc "a need with no action exits 2" 2 "$(L need Gharib89/skills#681 >/dev/null 2>&1; echo $?)"
+check_rc "a need on a key that is no repo and number exits 2" 2 "$(L need nope --action x >/dev/null 2>&1; echo $?)"
+check_rc "a need action holding a newline exits 2" 2 "$(L need Gharib89/skills#9 --action $'a\nb' >/dev/null 2>&1; echo $?)"
+check_rc "pushed on a key with no need exits 1" 1 "$(L pushed Gharib89/skills#1 >/dev/null 2>&1; echo $?)"
+check "unneed clears the need and says so" '{"key":"Gharib89/skills#681","removed":true}' "$(L unneed Gharib89/skills#681 | jq -c .)"
+check "and a second says it had none" false "$(L unneed Gharib89/skills#681 | jq .removed)"
+check "a ledger written before needs existed lists none" '[]' \
+  "$(jq 'del(.needs)' "$led" > "$tmp/old.json" && bash "$s/ledger.sh" --ledger "$tmp/old.json" list | jq -c .needs)"
+
 finish

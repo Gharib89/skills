@@ -17,6 +17,9 @@
 #   ledger --ledger <file> briefed
 #   ledger --ledger <file> wait <key> --reason <text>
 #   ledger --ledger <file> unwait <key>
+#   ledger --ledger <file> need <key> --action <text>
+#   ledger --ledger <file> pushed <key>
+#   ledger --ledger <file> unneed <key>
 #
 # A key is `<owner/name>#<number>`. `--ledger` comes first and names the file,
 # which a first `add` creates. `add` starts an entry at stage `launched`, stalls
@@ -47,6 +50,11 @@
 # `unwait` removes. `--kind` is the owner skill the thread runs, `ship` (the
 # default) or `triage`: a `triage` entry has no PR, and `reconcile` settles it
 # when its run has completed and the issue carries neither `needs-triage` nor `needs-info`.
+# A `need` is something only the owner can settle: one row in `needs` per key
+# (the entry, or a waiting ticket), its one action, `since` when and whether its
+# push went out. A repeat with the same action keeps `since` and `pushed`, a new
+# action is a new need. `pushed` marks the push sent, `unneed` clears the need;
+# `status` reads the rows.
 #
 # stdout: `add` {ledger, key, entry}; `get` the entry; `list` {ledger, entries,
 #         rulings}, `entries` an array of entries (`--open` leaves out settled
@@ -54,14 +62,16 @@
 #         {date, text, allow, brief}}; `allowed` {allowed: [{date, call, line}]};
 #         `briefed` {briefed: [{date, text}]}; `wait`
 #         {waiting: {key, repo, number, reason, since}}; `unwait` {key,
-#         removed}; `list` also holds `waiting`; any failure {error}
+#         removed}; `need` {need: {key, action, since, pushed}}; `pushed`
+#         {need}; `unneed` {key, removed}; `list` also holds `waiting` and
+#         `needs`; any failure {error}
 # exit: 0 ok · 1 the key is already in, or not in, the ledger, a stage outside
 #       the list, or an identity field · 2 usage, a value that is not JSON, an
 #       unreadable or wrong-shaped ledger, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>] [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief] | allowed | briefed | wait <key> --reason <text> | unwait <key>'
+usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>] [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--environment <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief] | allowed | briefed | wait <key> --reason <text> | unwait <key> | need <key> --action <text> | pushed <key> | unneed <key>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -115,7 +125,7 @@ case $cmd in
     case ${1:-} in --open) open=true; shift ;; esac
     [ $# -eq 0 ] || sa_tooling "$usage"
     sa_read "$ledger"
-    jq -c --arg l "$ledger" --argjson open "$open" "$sa_jq_open"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings, waiting: (.waiting // [])}' <<<"$doc" ;;
+    jq -c --arg l "$ledger" --argjson open "$open" "$sa_jq_open"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings, waiting: (.waiting // []), needs: (.needs // [])}' <<<"$doc" ;;
   set)
     [ $# -eq 3 ] || sa_tooling "$usage"
     key=$1 field=$2
@@ -206,6 +216,31 @@ case $cmd in
     sa_read "$ledger"
     had=$(jq -r --arg k "$1" "$sa_jq_norm"'[(.waiting // [])[] | select((.key | norm_repo) == ($k | norm_repo))] | length > 0' <<<"$doc")
     [ "$had" != true ] || sa_write "$ledger" "$(jq -c --arg k "$1" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' <<<"$doc")"
+    jq -cn --arg k "$1" --argjson r "$had" '{key: $k, removed: $r}' ;;
+  need)
+    [ $# -eq 3 ] && [ "$2" = --action ] || sa_tooling "$usage"
+    key=$1; sa_flag_value "$usage" "$3"; action=$3
+    case $key in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
+    case ${key##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
+    case $action in *$'\n'*) sa_tooling "an action is one line" ;; esac
+    sa_read "$ledger"
+    row=$(jq -cn --arg k "$key" --arg a "$action" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      --argjson old "$(jq -c --arg k "$key" "$sa_jq_norm"'(.needs // []) | map(select((.key | norm_repo) == ($k | norm_repo))) | first // null' <<<"$doc")" \
+      '(if $old != null and $old.action == $a then $old else {key: $k, action: $a, since: $now, pushed: false} end)')
+    sa_write "$ledger" "$(jq -c --arg k "$key" --argjson n "$row" "$sa_jq_norm"'.needs = ((.needs // []) | map(select((.key | norm_repo) != ($k | norm_repo))) + [$n])' <<<"$doc")"
+    jq -cn --argjson n "$row" '{need: $n}' ;;
+  pushed)
+    [ $# -eq 1 ] || sa_tooling "$usage"
+    sa_read "$ledger"
+    jq -e --arg k "$1" "$sa_jq_norm"'[(.needs // [])[] | select((.key | norm_repo) == ($k | norm_repo))] | length > 0' <<<"$doc" >/dev/null || sa_fail "$1 has no open need"
+    doc=$(jq -c --arg k "$1" "$sa_jq_norm"'.needs |= map(if (.key | norm_repo) == ($k | norm_repo) then .pushed = true else . end)' <<<"$doc")
+    sa_write "$ledger" "$doc"
+    jq -cn --argjson n "$(jq -c --arg k "$1" "$sa_jq_norm"'.needs[] | select((.key | norm_repo) == ($k | norm_repo))' <<<"$doc")" '{need: $n}' ;;
+  unneed)
+    [ $# -eq 1 ] || sa_tooling "$usage"
+    sa_read "$ledger"
+    had=$(jq -r --arg k "$1" "$sa_jq_norm"'[(.needs // [])[] | select((.key | norm_repo) == ($k | norm_repo))] | length > 0' <<<"$doc")
+    [ "$had" != true ] || sa_write "$ledger" "$(jq -c --arg k "$1" "$sa_jq_norm"'.needs = ((.needs // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' <<<"$doc")"
     jq -cn --arg k "$1" --argjson r "$had" '{key: $k, removed: $r}' ;;
   *) sa_tooling "$usage" ;;
 esac

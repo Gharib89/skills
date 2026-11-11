@@ -46,7 +46,7 @@ jq -cn --slurpfile f "$fleet" --arg m "$morning" --arg d "$day" '
   | (if $d == "" then $week[-1] else ($d | tonumber) end) as $d
   | {morning: {title: "Super agent morning report", bind: "this-thread",
      schedule: {type: "fixed_time", timeOfDay: $m, weekdays: $week},
-     prompt: "Morning report: run ledger.sh list, then reconcile, and write the owner one short report: each open ticket with its stage, what settled or closed since yesterday, anything waiting or escalated. Start the watcher only if none runs."},
+     prompt: "Morning report: run reconcile.sh, then status.sh --digest, and post its block as printed. Start the watcher only if none runs."},
    retro: [($f[0].active_repos // [])[] | {repo: ., title: "Retro run \(.)", bind: "repo-project",
      schedule: {type: "fixed_time", timeOfDay: "09:00", weekdays: [$d]},
      prompt: "/retro-run"}]}'
