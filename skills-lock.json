@@ -44,10 +44,10 @@
     },
     "find-docs": {
       "source": "upstash/context7",
-      "ref": "3131245817e9e40626d8f43ce85dabab09d4ff35",
+      "ref": "681554c5d3a688c67879d02d4f01d79ffd15df13",
       "sourceType": "github",
       "skillPath": "skills/find-docs/SKILL.md",
-      "computedHash": "e4a9a707d8e5d575d166a175f2fec66e0a13de46597f7dbc910c735ccf01bb93"
+      "computedHash": "2f042e7e9711a2a720b595083eb13c7f06380e6557f2eb689ce3182d4380e39d"
     },
     "grill-with-artifact": {
       "source": ".",
@@ -70,10 +70,10 @@
     },
     "hyperframes": {
       "source": "heygen-com/hyperframes",
-      "ref": "84799bdc59b18f6a3df6595d8a8d1ec03dfde673",
+      "ref": "3e04a59500cbbba8471976e76adee7d14bbe413b",
       "sourceType": "github",
       "skillPath": "skills/hyperframes/SKILL.md",
-      "computedHash": "efecc3d588e38d0ea2323f0860e431b6b1795dc2f9994ad795a0b0f86e397954"
+      "computedHash": "c0753c8f52fb243b63d5bba27f87636a94b1d5d974ccf23ad16bd6398dd52078"
     },
     "hyperframes-cli": {
       "source": "heygen-com/hyperframes",
@@ -84,10 +84,10 @@
     },
     "media-use": {
       "source": "heygen-com/hyperframes",
-      "ref": "84799bdc59b18f6a3df6595d8a8d1ec03dfde673",
+      "ref": "3e04a59500cbbba8471976e76adee7d14bbe413b",
       "sourceType": "github",
       "skillPath": "skills/media-use/SKILL.md",
-      "computedHash": "d8fa9fa1d252b307044a42152db81d1d84859e8fbccb125d2ebdcd3fa87a9aa9"
+      "computedHash": "4c2b052301a3a9404db1e9ed0adbca89a5c5d60bf69758c245cd1fd249160247"
     },
     "prototype": {
       "source": "mattpocock/skills",
