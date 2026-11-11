@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.13.2 (2026-11-11)
+
+### Bug Fixes
+
+- **super-agent**: Share repo and path normalisers, state the Linux target
+  ([#1154](https://github.com/Gharib89/skills/pull/1154),
+  [`873efe9`](https://github.com/Gharib89/skills/commit/873efe9cbd928fd49de98897ee0f5ebd9469b1bd))
+
+
 ## v0.13.1 (2026-11-10)
 
 ### Bug Fixes

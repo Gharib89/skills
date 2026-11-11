@@ -34,11 +34,11 @@ jq -e 'type == "object"' "$fleet" >/dev/null 2>&1 || sa_tooling "$fleet: not a J
 jq -e '(.active_repos // []) | type == "array" and all(type == "string")' "$fleet" >/dev/null \
   || sa_tooling "$fleet: active_repos must be an array of strings"
 
-new=$(jq -c --arg r "$repo" --arg a "$action" '
-  ($r | ascii_downcase) as $l
+new=$(jq -c --arg r "$repo" --arg a "$action" "$sa_jq_norm"'
+  ($r | norm_repo) as $l
   | (.active_repos // []) as $old
-  | .active_repos = (if $a == "track" then ($old + (if $old | map(ascii_downcase) | index($l) then [] else [$r] end))
-                     else ($old | map(select(ascii_downcase != $l))) end)' "$fleet")
+  | .active_repos = (if $a == "track" then ($old + (if $old | map(norm_repo) | index($l) then [] else [$r] end))
+                     else ($old | map(select(norm_repo != $l))) end)' "$fleet")
 changed=$(jq -n --slurpfile o "$fleet" --argjson n "$new" '($o[0].active_repos // []) != $n.active_repos')
 [ "$changed" = false ] || sa_write "$fleet" "$new"
 jq -cn --arg f "$fleet" --arg a "$action" --arg r "$repo" --argjson c "$changed" --argjson n "$new" \

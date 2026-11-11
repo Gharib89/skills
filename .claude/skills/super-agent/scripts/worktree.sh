@@ -35,8 +35,8 @@
 #       the ledger does not hold · 2 usage, or an unreadable ledger
 set -uo pipefail
 usage='usage: worktree remove --ledger <file> <key> | --key <key> --path <worktree> --branch <name> --stage <stage> --kind <ship|triage> --merged <true|false>'
-# Self-contained, since the script text travels to a machine with no checkout:
-# it cannot source _lib.sh.
+# The `--key` form is self-contained, since the script text travels to a machine
+# with no checkout: it cannot source _lib.sh. The `--ledger` form sources it.
 fail() { jq -cn --arg e "$1" '{error: $e}'; printf '%s\n' "$1" >&2; exit "${2:-2}"; }
 if [ "${1:-}" = --help ] && [ $# -eq 1 ]; then
   printf '%s\n' "$usage"
@@ -60,6 +60,10 @@ if [ -n "$ledger" ]; then
   [ -n "$key" ] && [ -z "$path$branch$stage$kind$merged" ] || fail "$usage"
   [ -f "$ledger" ] || fail "$ledger: no such file"
   jq -e '(.entries | type) == "object"' "$ledger" >/dev/null 2>&1 || fail "$ledger: not a ledger"
+  # The ledger form runs where the checkout is, so only it sources the shared
+  # normaliser; the `--key` form below stays self-contained.
+  source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || fail "cannot source _lib.sh"
+  key=$(sa_key "$(cat "$ledger")" "$key")
   jq -e --arg k "$key" '.entries[$k]' "$ledger" >/dev/null || fail "$key is not in the ledger" 1
   eval "$(jq -r --arg k "$key" '.entries[$k] | @sh "path=\(.worktree) branch=\(.branch) stage=\(.stage) kind=\(.kind // "ship") merged=\(if (.kind // "ship") == "ship" and (.stage == "settled" or .observed.pr.state == "merged") then "true" else "false" end)"' "$ledger")"
 else
