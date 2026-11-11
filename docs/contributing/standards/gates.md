@@ -71,6 +71,17 @@ do to pass.
   wraps joined: phase 4's instruction that each axis reads the Local gate's JSON
   and never runs the suite itself, and context discipline's `Read one reference
   file per call.`
+- A mechanic whose bare invocation is a real run carrying the header marker
+  `# contract: bare-run`, per the `contract` gate (the marker's form is in
+  [shell.md](shell.md)); every bare invocation the gate makes runs with an empty
+  home and empty XDG directories.
+- A test reading the current time with `date` only through a stub or under the
+  `# clock-exception: <reason>` marker, per the `clock` gate
+  (`scripts/clock-lint.sh`, the form in [tests.md](tests.md)).
+- A PR whose diff changes a skill's `description`, or a mechanic's usage line or
+  `stdout:` header under a non-`feat` title, carrying a `Grade:` line under
+  `## Special things to note`, per the `bump-guard` job's grade-statement step
+  (the line's form is in [release.md](release.md)).
 - Each mechanic's header synopsis naming the same flags and leading `<slots>`
   as its `--help` usage line, per the `contract` gate.
 - Every value-taking flag answering a leading-dash value (`--title --x`) with

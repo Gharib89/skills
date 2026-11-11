@@ -29,7 +29,7 @@ Gate notes (the test catalog, `prose-budget`, `version-lines`, `stray-files`, `s
 
 ## CI
 
-Legs: bump-guard: the PR title is a Conventional Commit of a type the release run reads, and a title implying a major bump carries the `major` label; the PR body carries every `##` heading of the PR template; its `## Change outline` holds a `diff` fence or a `Shape: none, mechanical (` line, the first `diff` fence is at most 15 lines, each root line in it carries a file path, and each call node one level under a root is a word of that root's file
+Legs: bump-guard: the PR title is a Conventional Commit of a type the release run reads, and a title implying a major bump carries the `major` label; the PR body carries every `##` heading of the PR template; its `## Change outline` holds a `diff` fence or a `Shape: none, mechanical (` line, the first `diff` fence is at most 15 lines, each root line in it carries a file path, and each call node one level under a root is a word of that root's file; a diff that changes a skill's `description`, or a mechanic's usage line or `stdout:` header under a non-`feat` title, carries a `Grade:` line under `## Special things to note`
 Legs: check-full: `scripts/check.sh full` exits 0 on the PR head
 No-checks legal: no, neither leg is path-filtered and both report on every PR
 Push policy: Default.

@@ -15,6 +15,12 @@ name: bump-guard
 # driven by `tests/pr-body-headings.test.sh`, and it reads the body from the event
 # rather than through `gh`.
 #
+# A third step holds a diff that can change the grade to say so: a changed skill
+# `description`, or a changed mechanic usage line or `stdout:` header under a
+# non-`feat` title, needs a `Grade:` line under `## Special things to note`.
+# `scripts/check-grade-statement.sh` is that rule, driven by
+# `tests/grade-statement.test.sh`.
+#
 # Not path-filtered, so it reports on every PR and is one of the profile's two
 # CI legs, beside `check-full`.
 
@@ -62,3 +68,13 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
           GH_TOKEN: ${{ github.token }}
         run: printf '%s\n' "$PR_BODY" | scripts/check-pr-body.sh
+
+      # Its own verdict, so a red title or heading check does not hide it. The
+      # diff counts from the base branch's tip, which the full history holds.
+      - name: Check a diff that can change the grade states it
+        if: ${{ !cancelled() }}
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: PR_BASE="origin/$BASE_REF" scripts/check-grade-statement.sh

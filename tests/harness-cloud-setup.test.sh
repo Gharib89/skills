@@ -135,13 +135,13 @@ s=$(hook_script docker "STEPS='$rows'")
 # either keeps the pipeline open.
 docker_run() { : > "$log"; out=$(cd "$fixture" && PATH="$bin:$PATH" TMPDIR=$fixture CLAUDE_CODE_REMOTE=true LOG=$log "$s" 2>&1 | grep '^harness cloud setup'); }
 rm -f "$log.up" "$log.img"
-start=$(date +%s)
+start=$(date +%s) # clock-exception: elapsed bound proving the setup does not wait on the daemon
 docker_run
 check "the first run starts dockerd and pulls the image" "harness cloud setup: ok
 dockerd
 pull hadolint/hadolint:v9.9.9@sha256:abc" "$out
 $(cat "$log")"
-check "without waiting on the daemon" yes "$([ $(( $(date +%s) - start )) -lt 10 ] && echo yes || echo no)"
+check "without waiting on the daemon" yes "$([ $(( $(date +%s) - start )) -lt 10 ] && echo yes || echo no)" # clock-exception: elapsed bound proving the setup does not wait on the daemon
 docker_run
 check "the second run is a no-op" "harness cloud setup: ok" "$out$(cat "$log")"
 rm -f "$log.up"

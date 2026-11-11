@@ -79,3 +79,11 @@ repos:
         entry: scripts/token-limit-check.sh
         language: system
         exclude: (^|/)(CHANGELOG\.md|[^/]*-lock\.json|[^/]*\.lock)$
+      # The tests standard's clock rule: a test reads the current time only
+      # through a date stub, or carries the clock-exception marker. The same
+      # script is the `clock` row of `full`; an edit hands it the test files.
+      - id: clock-lint
+        name: clock-lint
+        entry: scripts/clock-lint.sh
+        language: system
+        files: ^tests/.*\.sh$
