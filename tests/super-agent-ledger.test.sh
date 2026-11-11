@@ -234,6 +234,7 @@ check "a new action under the key is a new unpushed need, one row" \
   '[{"action":"approve the held merge","pushed":false}]' "$(L list | jq -c '[.needs[] | {action, pushed}]')"
 check_rc "a need with no action exits 2" 2 "$(L need Gharib89/skills#681 >/dev/null 2>&1; echo $?)"
 check_rc "a need on a key that is no repo and number exits 2" 2 "$(L need nope --action x >/dev/null 2>&1; echo $?)"
+check_rc "a need action holding a newline exits 2" 2 "$(L need Gharib89/skills#9 --action $'a\nb' >/dev/null 2>&1; echo $?)"
 check_rc "pushed on a key with no need exits 1" 1 "$(L pushed Gharib89/skills#1 >/dev/null 2>&1; echo $?)"
 check "unneed clears the need and says so" '{"key":"Gharib89/skills#681","removed":true}' "$(L unneed Gharib89/skills#681 | jq -c .)"
 check "and a second says it had none" false "$(L unneed Gharib89/skills#681 | jq .removed)"

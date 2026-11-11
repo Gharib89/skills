@@ -96,6 +96,5 @@ out=$(bash "$s/status.sh" --ledger "$tmp/bad.json" --digest 2>/dev/null); rc=$?
 check_rc "a malformed need exits 2" 2 "$rc"
 check "and answers one JSON error" true "$(jq 'has("error")' <<<"$out")"
 check "and leaves the ledger as it was" "$before" "$(cat "$tmp/bad.json")"
-check_rc "a need action holding a newline exits 2" 2 "$(L need Gharib89/skills#9 --action $'a\nb' >/dev/null 2>&1; echo $?)"
 
 finish
