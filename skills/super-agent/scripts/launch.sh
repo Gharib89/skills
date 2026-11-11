@@ -71,7 +71,7 @@ sub() {
 
 if [ "${1:-}" = record ]; then
   shift
-  launchf='' thread='' ledger='' worktree='' remotes=() rethread='' task='' tbranch='' trepo='' tmachine=local tenv=''
+  launchf='' thread='' ledger='' worktree='' remotes=() rethread='' task='' tbranch='' trepo='' tmachine='' tenv=''
   while [ $# -gt 0 ]; do
     case $1 in --rethread) rethread=1; shift; continue ;; esac
     sa_flag_value "$usage" "${2:-}"
@@ -91,6 +91,8 @@ if [ "${1:-}" = record ]; then
   if [ -n "$task" ]; then
     # a thread that is no ticket's: no launch answer, so the entry comes from the flags
     key="task:$task"
+    [ -z "$tenv" ] || [ -n "$tmachine" ] || sa_tooling "record --task: --environment needs --machine, or the slot lands on this machine"
+    tmachine=${tmachine:-local}
     if [ -z "$worktree" ] && [ -z "$tenv" ]; then
       raw=$(t3 thread show "$thread" --json 2>/dev/null </dev/null) \
         && worktree=$(grep '^{"' <<<"$raw" | tail -1 | jq -r '.thread.worktreePath // empty' 2>/dev/null) || worktree=''

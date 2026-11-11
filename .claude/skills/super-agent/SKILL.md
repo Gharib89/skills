@@ -164,10 +164,11 @@ record, watch, wake, reconcile. A thread that is no ticket's (a grill, a deploy,
 decks, a review: anything the owner asks you to launch) skips `launch.sh`'s
 claim, route and place, and takes `t3_thread_launch` directly; step 2 then
 records it with `launch.sh record --task <slug> --thread <id>` (`--branch` and
-`--repo` when it opens a PR you should wake on, `--environment` and `--worktree`
-on a linked machine). A thread the owner asks you to watch that you did not
-launch is `ledger.sh adopt` (`--task <slug>`, or `--repo` and `--number` for a
-ticket's thread), then the same steps.
+`--repo` when it opens a PR you should wake on; on a linked machine
+`--machine <key>` with `--environment`, and `--worktree`). A thread the
+owner asks you to watch that you did not launch is `ledger.sh adopt`
+(`--task <slug>`, or `--repo` and `--number` for a ticket's thread), then the
+same steps.
 
 1. **Launch.** The owner names a ticket as `<owner/name>#<n>`. Run
    `scripts/launch.sh <owner/name>#<n> --fleet <fleet> --ledger <ledger> --quota

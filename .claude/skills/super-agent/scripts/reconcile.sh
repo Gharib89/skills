@@ -172,8 +172,8 @@ if [ -n "$fleet" ] && [ -n "$batch_since" ]; then
       [ -n "$issue" ] || continue
       key="$repo#$(jq -r .number <<<"$issue")"
       if jq -e --arg k "$key" "$sa_jq_norm"'(.entries | keys | map(norm_repo)) + ((.waiting // []) | map(.key | norm_repo)) + ((.unqueued_offered // []) | map(norm_repo)) | index($k | norm_repo)' <<<"$doc" >/dev/null; then continue; fi
-      comments=$(gh api "repos/$repo/issues/$(jq -r .number <<<"$issue")/comments" 2>/dev/null </dev/null) || comments=''
-      if ! jq -e 'type == "array"' <<<"$comments" >/dev/null 2>&1; then
+      comments=$(gh api "repos/$repo/issues/$(jq -r .number <<<"$issue")/comments?per_page=100" 2>/dev/null </dev/null) || comments=''
+      if ! jq -e 'type == "array" and length < 100' <<<"$comments" >/dev/null 2>&1; then
         errors=$(jq -c --arg k "$key" '. + [{key: $k, kind: "claim-unreadable", detail: {key: $k}}]' <<<"$errors"); continue
       fi
       if jq -e 'any(.[]; (.body // "") | test("^<!-- super-agent-claim "))' <<<"$comments" >/dev/null; then continue; fi

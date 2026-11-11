@@ -38,11 +38,12 @@ out=$(L rethread task:grill-auth --thread t-g2 --worktree /wt/g2 --branch grill/
 check "rethread takes it to a fresh thread" "t-g2 launched" "$(jq -r '.entry | [.thread, .stage] | join(" ")' <<<"$out")"
 L add --task bare --thread t-b >/dev/null; rc=$?
 check_rc "a task may hold no worktree and no branch" 0 "$rc"
-for bad in "--task a/b" "--task grill --number 4" "--task grill --kind ship"; do
-  # shellcheck disable=SC2086
-  L add $bad --thread t >/dev/null 2>&1; rc=$?
-  check_rc "add $bad is a usage error" 2 "$rc"
-done
+L add --task a/b --thread t >/dev/null 2>&1; rc=$?
+check_rc "add --task a/b is a usage error" 2 "$rc"
+L add --task grill --number 4 --thread t >/dev/null 2>&1; rc=$?
+check_rc "add --task grill --number 4 is a usage error" 2 "$rc"
+L add --task grill --kind ship --thread t >/dev/null 2>&1; rc=$?
+check_rc "add --task grill --kind ship is a usage error" 2 "$rc"
 L add --repo $repo --number 9 --thread t --worktree w --branch b --kind task >/dev/null 2>&1; rc=$?
 check_rc "--kind task without --task is a usage error" 2 "$rc"
 out=$(L need task:grill-auth --action "answer the grill"); rc=$?
@@ -112,7 +113,10 @@ out=$(bash "$s/launch.sh" record --task grill-t --thread t-t2 --ledger "$led" --
 check_rc "recording an open task twice refuses" 1 "$rc"
 sa_thread t-e running 1 0 /wt/e x
 out=$(bash "$s/launch.sh" record --task remote-t --thread t-e --ledger "$led" --environment env-a 2>/dev/null); rc=$?
+check_rc "a remote task record with no machine is a usage error" 2 "$rc"
+out=$(bash "$s/launch.sh" record --task remote-t --thread t-e --ledger "$led" --environment env-a --machine m2 2>/dev/null); rc=$?
 check_rc "a remote task record needs no worktree" 0 "$rc"
+check "and carries its machine" m2 "$(L get task:remote-t | jq -r .machine)"
 check "and carries its environment" env-a "$(L get task:remote-t | jq -r .environment_id)"
 
 # --- unqueued: issues filed while a batch runs ----------------------------------------
@@ -132,10 +136,10 @@ sa_route "$issues" "$(jq -cn --arg e "$early" --arg l "$late" '[
   {number: 33, title: "claimed by a super agent", created_at: $l},
   {number: 34, title: "waiting for a machine", created_at: $l},
   {number: 35, title: "a task of a repo no entry names", created_at: $l}]')"
-sa_route "repos/$repo/issues/30/comments" '[{"body":"a human comment"}]'
-sa_route "repos/$repo/issues/33/comments" '[{"body":"<!-- super-agent-claim machine=ribo thread=x -->\nClaimed."}]'
-sa_route "repos/$repo/issues/34/comments" '[]'
-sa_route "repos/$repo/issues/35/comments" '[]'
+sa_route "repos/$repo/issues/30/comments?per_page=100" '[{"body":"a human comment"}]'
+sa_route "repos/$repo/issues/33/comments?per_page=100" '[{"body":"<!-- super-agent-claim machine=ribo thread=x -->\nClaimed."}]'
+sa_route "repos/$repo/issues/34/comments?per_page=100" '[]'
+sa_route "repos/$repo/issues/35/comments?per_page=100" '[]'
 L wait "$repo#34" --reason "no machine fits" >/dev/null
 L adopt --task other --thread t-o --worktree /wt/o --branch o/x >/dev/null
 sa_thread t-o running 1 0 /wt/o o/x
@@ -146,13 +150,18 @@ check "the ledger remembers what it offered" "$repo#30 $repo#35" "$(jq -r '.unqu
 out=$(R --fleet "$fleet")
 check "a later run leaves the offered ones out" "0" "$(jq '.unqueued | length' <<<"$out")"
 sa_route "$issues" "$(jq -cn --arg l "$late" '[{number: 36, title: "filed later", created_at: $l}]')"
-sa_route "repos/$repo/issues/36/comments" '[]'
+sa_route "repos/$repo/issues/36/comments?per_page=100" '[]'
 check "a new issue is offered on its own" "$repo#36" "$(R --fleet "$fleet" | jq -r '[.unqueued[].key] | join(" ")')"
 check "without --fleet it lists none" "0" "$(R | jq '.unqueued | length')"
-sa_route "repos/$repo/issues/37/comments" 'x'
+sa_route "repos/$repo/issues/37/comments?per_page=100" 'x'
 sa_route "$issues" "$(jq -cn --arg l "$late" '[{number: 37, title: "claim unreadable", created_at: $l}]')"
 out=$(R --fleet "$fleet")
 check "a claim read that fails is an error, and the issue is not offered" "0 $repo#37 claim-unreadable" \
+  "$(jq -r '[(.unqueued | length), .errors[0].key, .errors[0].kind] | join(" ")' <<<"$out")"
+sa_route "repos/$repo/issues/38/comments?per_page=100" "$(jq -cn '[range(100) | {body: "c"}]')"
+sa_route "$issues" "$(jq -cn --arg l "$late" '[{number: 38, title: "full page", created_at: $l}]')"
+out=$(R --fleet "$fleet")
+check "a full page of comments is an error, not an unclaimed issue" "0 $repo#38 claim-unreadable" \
   "$(jq -r '[(.unqueued | length), .errors[0].key, .errors[0].kind] | join(" ")' <<<"$out")"
 rm -f "$SA_FAKE/gh/$(printf '%s' "$issues" | sed 's/[^A-Za-z0-9._-]/_/g')"
 out=$(R --fleet "$fleet")
