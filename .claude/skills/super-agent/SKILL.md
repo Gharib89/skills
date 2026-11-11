@@ -265,13 +265,12 @@ escalation (Escalation).
   thread goes unseen.
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
-- `woke`: a settled triage thread reran: say so.
-- `closed`: the block shows it.
+- `woke`: a settled triage thread reran; `Running` shows it again.
+- `closed`: the PR closed unmerged; record a need naming the reason.
 - Once a `settled` row's thread is settled, and for each `closed` row, run
   `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
-  [reference/remote.md](reference/remote.md)). A `kept: true` result is one
-  chat line naming the key and `reason`, not an escalation; a refusal (exit
-  1) is one.
+  [reference/remote.md](reference/remote.md)). A `kept: true` result posts
+  nothing; a refusal (exit 1) is an escalation.
 - An entry whose `observed.pending` is above 0 holds a permission request:
   escalate it, since a held thread is not a stall.
 - `at_rest` with a merge-gate summary is not a stall: an allowed merge in
