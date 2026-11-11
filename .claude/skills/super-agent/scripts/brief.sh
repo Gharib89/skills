@@ -11,6 +11,9 @@
 # lines; without them only unscoped rulings print and the lock line names
 # `<repo>`. --note adds one `Note for this ticket:` line.
 #
+# The brief also carries the waiting line (`sa_waiting_line` in `_lib.sh`), the fixed
+# last line of a turn that ends only to wait on the run's own background work.
+#
 # The waivers are the fleet file's `waivers`, each `condition` verbatim, and the
 # allowed calls are the ledger's `allowed` lines (the owner's dated rulings). The
 # rulings the owner marked brief-bound (`ledger ruling --brief`) follow under
@@ -45,7 +48,7 @@ jq -e '((.repos // {}) | type == "object")
 allowed=$(bash "$(dirname "${BASH_SOURCE[0]}")/ledger.sh" --ledger "$ledger" allowed) || sa_tooling "cannot read the allowed calls from $ledger"
 briefed=$(bash "$(dirname "${BASH_SOURCE[0]}")/ledger.sh" --ledger "$ledger" briefed) || sa_tooling "cannot read the rulings from $ledger"
 
-jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" --arg repo "$repo" --arg machine "$machine" --arg note "$note" \
+jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" --arg repo "$repo" --arg machine "$machine" --arg note "$note" --arg wl "$sa_waiting_line" \
   "$sa_jq_norm"'
   ($f[0].waivers // []) as $w | $a.allowed as $al
   | [$r.briefed[] | select(((.repo // null) == null or (.repo | norm_repo) == ($repo | norm_repo))
@@ -64,6 +67,7 @@ jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" --ar
       (if ($rl | length) == 0 then empty else "Owner rulings:", ($rl[] | "  \(.date): \(.text)") end),
       (if ($fl | length) == 0 then empty else "Lines for this repo and machine:", ($fl[] | "  \(.)") end),
       (if $note == "" then empty else "Note for this ticket:", "  \($note)" end),
+      "A turn that ends only to wait on your own background work (a check, a CI wait, a subagent) ends with this line, word for word, as its last line: `\($wl)` The watcher reads it as still working and wakes the super agent for no stall until the stall window has passed. Your final message is the PR URL and the gate state below, never this line.",
       "Work in the worktree you start in, on the branch it holds, and make no other: the PR is found by that branch.",
       "End your last message with the PR URL and the gate state."
     ] | join("\n")),

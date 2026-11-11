@@ -27,7 +27,10 @@
 # merge-gate summary, or a PR opened since the last look), never below 0. The
 # entry holds `judged_run`, the last run counted, and `rest_since`, when its
 # rest began or its last stall was counted, which `watch` reads for its
-# `stall-window` event. A thread holding a permission request is neither. An entry whose thread, PR or issue cannot be read is reported in
+# `stall-window` event. A thread holding a permission request is neither. A thread
+# at rest whose last message ends on the waiting line (`sa_waiting_line`) inside the
+# stall window counts as running: no stall, and its stage as a running thread's;
+# past the window it is an ordinary rest. An entry whose thread, PR or issue cannot be read is reported in
 # `errors`, its `error` set to the kind (cleared by the next good read), and
 # left in its stage. The ledger is written once, atomically, after
 # the last entry. An entry with an `environment_id` lives on a linked machine,
@@ -51,8 +54,13 @@
 # holds. Each is listed once: the ledger keeps the keys it offered
 # (`unqueued_offered`), so a later run leaves them out. Nothing is launched.
 #
+# The wake's actions are printed, not derived from the lists above: an entry that
+# ends is marked `cleanup_owed` (a merged ship PR also `verify_owed`), and the rows
+# below stay in every answer until the super agent clears the field with
+# `ledger set <key> cleanup_owed false` (or `verify_owed false`).
+#
 # stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, ready,
-#         dropped, unqueued, errors}:
+#         dropped, unqueued, cleanup, verify, escalate, errors}:
 #         `entries` one {key, from, stage, stalls, observed} per open entry that
 #         was read; `stalled` one {key, thread, stalls, reason} per stall counted
 #         now, `reason` `run-completed` or `stall-window`;
@@ -61,7 +69,14 @@
 #         `ready` one {key, order, after, reason, since} per waiting row that can launch;
 #         `dropped` one {key, reason: `issue-closed`} per waiting row removed now;
 #         `unqueued` one {key, title, created_at} per issue offered now (`[]` without
-#         --fleet); `at_rest` one {key, thread}; `woke` one {key, thread, kind} per settled
+#         --fleet); `cleanup` one {key, thread, worktree, kind, stage, environment_id} per
+#         settled or closed entry still owing its cleanup (settle the thread, remove the
+#         worktree); `verify` one {key, repo, number, pr, stage} per merged ship PR whose
+#         criteria check is not recorded; `escalate` one {key, thread, reason, detail} per
+#         entry only the owner can unblock and with no open need: `permission-hold`
+#         (detail the pending count), `fault` (detail the error kind), `stall-cap` (an
+#         entry at rest at 3 stalls), `pr-closed` or `issue-closed` (until its cleanup is
+#         done); `at_rest` one {key, thread}; `woke` one {key, thread, kind} per settled
 #         triage entry reopened now; `errors` one {key, kind, detail}, `kind`
 #         `thread-unreadable`, `thread-mismatch`, `pr-unreadable`,
 #         `issue-unreadable` (a waiting row's issue or its blocker's too), or
@@ -93,7 +108,7 @@ done
 sa_read "$ledger"
 # A batch is running while an entry is open: it began when the earliest of them launched.
 batch_since=$(jq -r "$sa_jq_open"'[.entries[] | select(is_open) | .launched_at] | min // empty' <<<"$doc")
-now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+now_s=$(date -u +%s) now=$(date -u -d "@$now_s" +%Y-%m-%dT%H:%M:%SZ)
 checked=0 entries='[]' errors='[]' stalled='[]'
 fail() { # <kind> <detail>: record the error of the entry in $key
   errors=$(jq -c --arg k "$key" --arg kind "$1" --argjson d "$2" '. + [{key: $k, kind: $kind, detail: $d}]' <<<"$errors")
@@ -104,14 +119,16 @@ while IFS= read -r entry; do
   key=$(jq -r .key <<<"$entry")
   if ! sa_observe "$entry"; then fail "$obs_kind" "$obs_detail"; continue; fi
   stage='' reason=''
+  # running, or at rest on the waiting line inside the window: still working
+  active=$(jq -r --argjson w "$window" --argjson now "$now_s" "$sa_jq_active"'active($w; $now)' <<<"$obs")
   if [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ]; then
     # a task has no ticket: only its thread says whether it is done
-    if [ "$(jq -r .status <<<"$obs")" = running ]; then stage=running
+    if [ "$active" = true ]; then stage=running
     elif [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] && [ "$(jq -r .pending <<<"$obs")" -eq 0 ]; then stage=settled
     else stage=at-rest; fi
   else
     case $(jq -r .pr.state <<<"$obs") in
-      merged) if [ "$(jq -r .status <<<"$obs")" = running ]; then stage=merged; else stage=settled; fi ;;
+      merged) if [ "$active" = true ]; then stage=merged; else stage=settled; fi ;;
       closed) stage=closed reason=pr-closed ;;
       *)
         repo=$(jq -r .repo <<<"$entry") number=$(jq -r .number <<<"$entry")
@@ -120,7 +137,7 @@ while IFS= read -r entry; do
           fail issue-unreadable "$(jq -cn --arg r "$repo" --argjson n "$number" '{repo: $r, number: $n}')"; continue
         fi
         if [ "$(jq -r .state <<<"$issue")" = closed ]; then stage=closed reason=issue-closed
-        elif [ "$(jq -r .status <<<"$obs")" = running ]; then stage=running
+        elif [ "$active" = true ]; then stage=running
         elif [ "$(jq -r '.kind // "ship"' <<<"$entry")" = triage ] \
             && [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] \
             && ! jq -e '[.labels[]?.name] | index("needs-triage") or index("needs-info")' <<<"$issue" >/dev/null; then stage=settled
@@ -129,14 +146,14 @@ while IFS= read -r entry; do
   fi
   stall='' stalls=$(jq -r '.stalls // 0' <<<"$entry")
   case $stage in running|at-rest)
-    verdict=$(jq -cn --argjson e "$entry" --argjson n "$obs" --arg now "$now" --argjson w "$window" '
+    verdict=$(jq -cn --argjson e "$entry" --argjson n "$obs" --arg now "$now" --argjson w "$window" --argjson active "$active" '
       def down: if . > 0 then . - 1 else 0 end;
       ($now | fromdateiso8601) as $t
       | {stalls: ($e.stalls // 0), rest_since: $e.rest_since, judged_run: ($e.judged_run // 0), stall: null}
       | if $e.observed == null then .
         else
           (if $e.observed.pr.state == "none" and $n.pr.state == "open" then .stalls |= down else . end)
-          | if $n.status == "running" or $n.pending > 0 then .rest_since = null
+          | if $active or $n.pending > 0 then .rest_since = null
             elif $n.gate then
               (if $n.run_count > .judged_run then .stalls |= down | .judged_run = $n.run_count else . end) | .rest_since = null
             elif .stalls >= 3 then .judged_run = $n.run_count
@@ -151,8 +168,13 @@ while IFS= read -r entry; do
     doc=$(jq -c --arg k "$key" --argjson v "$verdict" \
       '.entries[$k] |= (.stalls = $v.stalls | .rest_since = $v.rest_since | .judged_run = $v.judged_run)' <<<"$doc") ;;
   esac
+  # an end owes the super agent its cleanup, and a merged ship PR a criteria check;
+  # each stays owed until the super agent clears it (`ledger set <key> <field> false`)
   doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
-    '.entries[$k] |= (.stage = $s | .observed = $o | .error = null | .updated_at = $now)' <<<"$doc")
+    '.entries[$k] |= (.stage = $s | .observed = $o | .error = null | .updated_at = $now
+      | if $s == "settled" or $s == "closed" then .cleanup_owed = true else . end
+      | if (.kind // "ship") == "ship" and ($s == "merged" or $s == "settled") and $o.pr.state == "merged" and .verify_owed == null
+        then .verify_owed = true else . end)' <<<"$doc")
   if [ -n "$stall" ]; then
     stalled=$(jq -c --arg k "$key" --arg t "$(jq -r .thread <<<"$entry")" --argjson n "$stalls" --arg r "$stall" \
       '. + [{key: $k, thread: $t, stalls: $n, reason: $r}]' <<<"$stalled")
@@ -227,8 +249,10 @@ done < <(jq -c "$sa_jq_waiting"'waiting_list[]' <<<"$doc")
 ready=$(jq -c 'map(del(.repo))' <<<"$ready")
 [ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] && [ "$dropped" = '[]' ] || sa_write "$ledger" "$doc"
 
-jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" '
+jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson d "$doc" '
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
+  def entries: [$d.entries[]?];
+  def needed($k): [($d.needs // [])[] | select((.key | ascii_downcase) == ($k | ascii_downcase))] | length > 0;
   {ledger: $l, checked: $n,
    entries: [$e[] | {key, from, stage, stalls, observed}],
    stalled: $st,
@@ -239,4 +263,17 @@ jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson
    ready: $rd,
    dropped: $dr,
    unqueued: $uq,
+   cleanup: [entries[] | select((.stage == "settled" or .stage == "closed") and .cleanup_owed == true)
+     | {key, thread, worktree, kind: (.kind // "ship"), stage, environment_id: (.environment_id // null)}],
+   verify: [entries[] | select((.kind // "ship") == "ship" and .verify_owed == true and (.stage == "merged" or .stage == "settled"))
+     | {key, repo, number, pr: .observed.pr.number, stage}],
+   escalate: [entries[] | select(needed(.key) | not)
+     | (if .stage == "settled" then null
+        elif .stage == "closed" then
+          (if .cleanup_owed == true then {reason: (if .observed.pr.state == "closed" then "pr-closed" else "issue-closed" end), detail: null} else null end)
+        elif (.observed.pending // 0) > 0 then {reason: "permission-hold", detail: .observed.pending}
+        elif .error != null then {reason: "fault", detail: .error}
+        elif .stage == "at-rest" and (.stalls // 0) >= 3 then {reason: "stall-cap", detail: .stalls}
+        else null end) as $r
+     | select($r != null) | {key, thread, reason: $r.reason, detail: $r.detail}],
    errors: $errs}'

@@ -116,22 +116,30 @@ load
 # change_of <observed> <snapshot>: the change from the baseline to the snapshot,
 # the PR's end first since it outranks a run that finished with it.
 change_of() {
-  jq -rn --argjson o "$1" --argjson n "$2" '
-    if $n.pr.state == "merged" and $o.pr.state != "merged" then "pr-merged"
+  jq -rn --argjson o "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(date -u +%s)" "$sa_jq_active"'
+    (($n.pr.merged_at // null) | if . == null then 0 else (try fromdateiso8601 catch 0) end) as $merged
+    # a merge with its thread still working is no wake yet: the thread resting
+    # or the bound passing is the one event (a remote thread is read only on a wake, so its status is stale)
+    | if $n.pr.state == "merged" and $o.pr.state != "merged" then
+        (if ($n.pr | has("checks") | not) and ($n | active($w; $now)) and $now - $merged < $w then empty else "pr-merged" end)
     elif $n.pr.state == "closed" and $o.pr.state != "closed" then "pr-closed"
     elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "none" then "pr-opened"
     elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "open" and $n.pr.checks == "done" and ($o.pr.checks != "done" or $o.pr.head != $n.pr.head) then "checks-finished"
     elif $n.pending > $o.pending then "pending-approval"
-    elif $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
+    elif ($n.waiting | not) and $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
     else empty end'
 }
 
 # stall_window_of <entry> <snapshot>: `stall-window` for an entry that has rested
-# past the window with nothing else to report.
+# past the window with nothing else to report. A rest on the waiting line is timed
+# from the thread's own last update, since no `run-finished` woke a reconcile to
+# stamp `rest_since`; a merged entry rests into `run-finished`, bar that one.
 stall_window_of() {
   jq -rn --argjson e "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(date -u +%s)" '
-    if $e.rest_since != null and $n.pr.state != "merged" and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
-       and $now - ($e.rest_since | fromdateiso8601) >= $w then "stall-window" else empty end'
+    ($e.rest_since | if . == null then null else fromdateiso8601 end) as $rs
+    | (if $n.waiting then ([$rs, $n.rest_at] | map(select(. != null)) | max) else $rs end) as $since
+    | if $since != null and ($n.pr.state != "merged" or $n.waiting) and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
+       and $now - $since >= $w then "stall-window" else empty end'
 }
 
 start=$SECONDS

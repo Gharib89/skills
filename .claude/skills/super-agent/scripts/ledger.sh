@@ -92,8 +92,8 @@
 #         {need}; `unneed` {key, removed}; `limit` {limit: {repo, reviewer,
 #         since}}; `unlimit` {repo, removed}; `list` also holds `waiting`,
 #         `needs` and `review_limits`; any failure {error}
-# exit: 0 ok · 1 the key is already in, or not in, the ledger, a stage outside
-#       the list, or an identity field · 2 usage, a value that is not JSON, an
+# exit: 0 ok · 1 the key is already in, or not in, the ledger, `stage`, or an
+#       identity field · 2 usage, a value that is not JSON, an
 #       unreadable or wrong-shaped ledger, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -173,11 +173,10 @@ case $cmd in
     [ $# -eq 3 ] || sa_tooling "$usage"
     key=$1 field=$2
     value=$(jq -c . <<<"$3" 2>/dev/null) && [ -n "$value" ] || sa_tooling "the value is not JSON: $3"
-    case $field in key|repo|number) sa_fail "$field is the entry's identity and cannot be set" ;; esac
-    if [ "$field" = stage ]; then
-      jq -ne --argjson v "$value" '$v | IN("launched", "running", "at-rest", "merged", "settled", "closed")' >/dev/null \
-        || sa_fail "stage must be one of $sa_stages"
-    fi
+    case $field in
+      key|repo|number) sa_fail "$field is the entry's identity and cannot be set" ;;
+      stage) sa_fail "stage is moved by reconcile only" ;;
+    esac
     sa_read "$ledger"
     key=$(sa_key "$doc" "$key")
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$key is not in the ledger"
@@ -216,7 +215,7 @@ case $cmd in
         | .instance_id = (if $inst == "" then null else $inst end)
         | .model = (if $m == "" then null else $m end) | .effort = (if $e == "" then null else $e end)
         | .stage = "launched" | .stalls = 0 | .observed = null | .error = null | .rest_since = null
-        | .judged_run = 0 | .kind = (if $kind == "" then .kind else $kind end) | .areas = ($areas // .areas)
+        | .judged_run = 0 | del(.cleanup_owed, .verify_owed) | .kind = (if $kind == "" then .kind else $kind end) | .areas = ($areas // .areas)
         | .launched_at = $now | .updated_at = $now)' <<<"$doc")
     sa_write "$ledger" "$doc"
     jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$(jq -c --arg k "$key" '.entries[$k]' <<<"$doc")" \

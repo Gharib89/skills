@@ -15,8 +15,34 @@ lists the fields; this file holds the rules behind them.
   branch: `pr-opened`, `checks-finished` (the checks on its head went from none
   or pending to done), `pr-merged` and `pr-closed`. Its thread fields stay the
   last reconcile's, so the thread's own finish is read on a wake.
+- A thread at rest whose last message ends on the waiting line
+  (`Waiting on my own background work.`, set by the launch brief) is still
+  working: it raises no `run-finished` event and gains no stall until the stall
+  window has passed since the thread rested (its `updatedAt`), then the rest
+  counts like any other. Reconcile reads it the same way, as `running`.
+- A PR that merges while its thread still runs (or waits on the line) raises
+  one `pr-merged` event, when the thread rests or `--stall-window` seconds have
+  passed since the merge, whichever comes first, not two. A remote entry's
+  `pr-merged` is not held: its thread read is stale.
 - One watcher runs per ledger: a second start exits 1 with `running`, and the
   first is left alone.
+
+## The wake's actions
+
+- `reconcile` marks an entry `cleanup_owed` when it settles or closes, and a
+  ship entry `verify_owed` when it first reaches `merged` or `settled` with a
+  merged PR. `cleanup`, `verify` and `escalate` list them, in every answer,
+  until the super agent clears the field (`ledger set <key> cleanup_owed false`)
+  or, for `escalate`, records a need. An entry settled before these fields
+  existed has neither, so it prints no row.
+- `escalate` gives one row per entry, the first of: a permission request
+  (`permission-hold`), a recorded error (`fault`), 3 stalls at rest
+  (`stall-cap`), a closed PR or issue still owing its cleanup (`pr-closed`,
+  `issue-closed`).
+- `pulse.sh` runs reconcile and reads the watcher's lock: a backstop turn that
+  finds the watcher alive and nothing to act on ends there.
+- `ledger set` refuses `stage`: only reconcile moves it. `rethread` clears both
+  owed fields with the rest of the entry's state.
 
 ## Settling a triage entry
 
