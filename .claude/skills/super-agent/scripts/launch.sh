@@ -97,7 +97,7 @@ if [ "${1:-}" = record ]; then
     if [ "$rc" = 0 ]; then
       sub ledger --ledger "$ledger" get "$key"
       [ "$rc" = 0 ] || sa_tooling "cannot read entry $key"
-      out=$(jq -c '{entry: .}' <<<"$out")
+      out=$(jq -c '{entry: .}' <<<"$out") || sa_tooling "cannot read entry $key"
     fi
   else
     sub ledger --ledger "$ledger" add --repo "${key%#*}" --number "${key##*#}" --machine "$machine" "${fields[@]}"
