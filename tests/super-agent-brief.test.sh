@@ -112,4 +112,43 @@ jq '.active_repos = []' "$fleet" > "$tmp/none.json"
 check "no active repos proposes no retro-run" '[]' "$(bash "$s/schedules.sh" --fleet "$tmp/none.json" | jq -c .retro)"
 check "the proposal holds no path" 0 "$(S | grep -c '/home/\|/tmp/')"
 
+
+# --- a launch's own brief: the rulings and fleet lines that match its repo and machine ------
+led2=$tmp/ledger2.json
+bash "$s/ledger.sh" --ledger "$led2" ruling "Everywhere ruling." --brief >/dev/null
+bash "$s/ledger.sh" --ledger "$led2" ruling "Widgets-only ruling." --brief --repo Acme/Widgets >/dev/null
+bash "$s/ledger.sh" --ledger "$led2" ruling "Gears-only ruling." --brief --repo acme/gears >/dev/null
+bash "$s/ledger.sh" --ledger "$led2" ruling "Box-only ruling." --brief --machine box >/dev/null
+bash "$s/ledger.sh" --ledger "$led2" ruling "Widgets on box ruling." --brief --repo acme/widgets --machine box >/dev/null
+check_rc "a repo scope without --brief exits 2" 2 "$(bash "$s/ledger.sh" --ledger "$led2" ruling "x" --repo acme/widgets >/dev/null 2>&1; echo $?)"
+check "the ledger keeps a ruling's scope" '{"repo":"Acme/Widgets","machine":null}' "$(bash "$s/ledger.sh" --ledger "$led2" briefed | jq -c '.briefed[1] | {repo, machine}')"
+jq '.repos = {"acme/widgets": {"brief": ["Widgets fleet line."]}, "acme/gears": {"brief": ["Gears fleet line."]}} | .machines = {"home": {"brief": ["Home fleet line."]}, "box": {"brief": ["Box fleet line."]}}' "$fleet" > "$tmp/lines.json"
+B2() { bash "$s/brief.sh" --fleet "$tmp/lines.json" --ledger "$led2" "$@"; }
+b=$(B2 | jq -r .brief)
+check "with no repo or machine only the unscoped ruling rides along, and no fleet line" '1 0' "$(grep -c 'Everywhere ruling' <<<"$b") $(grep -c 'fleet line' <<<"$b")"
+out=$(B2 --repo acme/widgets --machine home); b=$(jq -r .brief <<<"$out")
+check "for widgets on home: the unscoped and the widgets ruling, not the others" 'Everywhere ruling.|Widgets-only ruling.' \
+  "$(grep -oE 'Everywhere ruling\.|Widgets-only ruling\.|Gears-only ruling\.|Box-only ruling\.|Widgets on box ruling\.' <<<"$b" | paste -sd'|')"
+check "and the widgets and home fleet lines, repo first" 'Widgets fleet line.|Home fleet line.' "$(grep -oE '(Widgets|Home|Gears|Box) fleet line\.' <<<"$b" | paste -sd'|')"
+check "the counts say so" '{"rulings":2,"lines":2}' "$(jq -c '{rulings, lines}' <<<"$out")"
+b=$(B2 --repo ACME/Widgets --machine box | jq -r .brief)
+check "for widgets on box: the repo-and-machine ruling joins, matched without case" 'Everywhere ruling.|Widgets-only ruling.|Box-only ruling.|Widgets on box ruling.' \
+  "$(grep -oE 'Everywhere ruling\.|Widgets-only ruling\.|Gears-only ruling\.|Box-only ruling\.|Widgets on box ruling\.' <<<"$b" | paste -sd'|')"
+b=$(B2 --repo acme/widgets --machine home --note "Check the migration first." | jq -r .brief)
+check "a one-ticket note rides along under its heading" 'Note for this ticket: Check the migration first.' "$(grep -A1 '^Note for this ticket:' <<<"$b" | paste -sd' ' | sed 's/  */ /g')"
+check "without a note there is no heading" 0 "$(B2 --repo acme/widgets | jq -r .brief | grep -c 'Note for this ticket')"
+check "every brief carries the shared-machine lines: own PIDs only, a per-repo lock and a memory cap" '1 1 1 1' \
+  "$(grep -c 'by their PID' <<<"$b") $(grep -c 'never `pkill`' <<<"$b") $(grep -c 'flock /tmp/super-agent-acme-widgets.lock' <<<"$b") $(grep -c 'MemoryMax' <<<"$b")"
+check "two casings of one repo name one lock" "1 1" "$(B2 --repo Acme/Widgets | jq -r .brief | grep -c 'flock /tmp/super-agent-acme-widgets.lock') $(B2 --repo acme/widgets | jq -r .brief | grep -c 'flock /tmp/super-agent-acme-widgets.lock')"
+check "the closing line is still last" "End your last message with the PR URL and the gate state." "$(tail -1 <<<"$b")"
+
+# --- a wrong-shaped fleet brief is refused, never dropped ---------------------------
+jq '.repos = {"acme/widgets": {"brief": "one line"}}' "$fleet" > "$tmp/bad1.json"
+jq '.machines = {"home": {"brief": [1]}}' "$fleet" > "$tmp/bad2.json"
+jq '.repos = ["acme/widgets"]' "$fleet" > "$tmp/bad3.json"
+for f in bad1 bad2 bad3; do
+  out=$(bash "$s/brief.sh" --fleet "$tmp/$f.json" --ledger "$led2" --repo acme/widgets --machine home); rc=$?
+  check "a $f fleet exits 2 with a named error" "2 1" "$rc $(jq -r .error <<<"$out" | grep -c 'array of text lines')"
+done
+
 finish

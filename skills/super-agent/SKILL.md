@@ -32,15 +32,16 @@ directory.
   reads and writes the ledger; its `--ledger` comes first. A key is
   `<owner/name>#<n>`. `add --kind triage` records a `/triage` ticket, which has
   no PR (default `ship`). `list` also prints `waiting`, the tickets placement
-  could not place. `ruling --brief` marks a ruling every launch brief carries;
+  could not place. `ruling --brief` marks a ruling launch briefs carry, with
+  `--repo` or `--machine` to limit it to launches for that repo or machine;
   `briefed` lists those. `need`, `pushed` and `unneed` keep the owner's open
   needs.
 - `status.sh --ledger <ledger> [--quota <file>] [--digest]` prints the status
-  block (Escalation).
+  block.
 - `watch.sh` polls every open entry's thread and PR and exits on the first
   change: `pr-merged`, `pr-closed`, `pending-approval`, `run-finished`,
-  `stall-window`, or `thread-mismatch`, `thread-unreadable`, `pr-unreadable`,
-  or `timeout`. Rules: [watching](reference/watching.md).
+  `stall-window`, `thread-mismatch`, `thread-unreadable`, `pr-unreadable` or
+  `timeout`. Rules: [watching](reference/watching.md).
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage (a merged PR is `merged` until its thread rests, then `settled`),
   keeps each entry's `stalls`, and prints one summary: `settled` (each with
@@ -48,44 +49,42 @@ directory.
   stall adds 1 and a real step takes 1 off
   ([watching](reference/watching.md)). You never set `stalls` by hand, except
   the reset below.
-- `setup.sh` probes this machine, its linked T3 environments, the GitHub
-  accounts and each provider's quota command, merges each `--probe` reply,
-  and proposes the fleet file (below) with `--propose`, one provider per T3
-  provider instance from `--instances <file>`; it takes `--fleet <file>` in
+- `setup.sh` probes the machines, accounts and quota commands, merges each
+  `--probe` reply, and proposes the fleet file (below) with `--propose`, one
+  provider per instance from `--instances <file>`; it takes `--fleet <file>` in
   place of `--ledger`, and writes only with `--write`.
-- `probe.sh --json` measures the machine it runs on (cores, RAM, `free_gb`,
-  `load1`, GPU, `clis`, `gh_logins`) and prints one JSON line.
+- `probe.sh --json` measures the machine it runs on and prints one JSON line.
+- `launch.sh` prepares a launch in one call (claim, route, place, brief: the
+  `t3_thread_launch` arguments, which you send), and its `record` form writes
+  the entry after it (The loop).
 - `launch-check.sh` answers whether one machine takes a launch now: a free
-  slot, load, RAM, and no open same-repo ticket in the way.
+  slot, load, RAM, no same-repo ticket in the way, the repo under its ship cap.
 - `place.sh` picks the machine a launch runs on (Placement).
 - `quota.sh --fleet <file> [--save <file> --wake <id>]` reads each provider
-  instance's quota and auth under its own account. A read that fails is
-  `unknown`, not an error.
-- `brief.sh --fleet <file> --ledger <ledger>` prints `{brief, waivers,
-  allowed, rulings}`: `brief` is the whole standing launch brief.
+  instance's quota and auth. A read that fails is `unknown`, not an error.
+- `brief.sh --fleet <file> --ledger <ledger> [--repo <r>] [--machine <m>]
+  [--note <text>]` prints the launch brief as `brief`, with its parts.
 - `schedules.sh --fleet <file>` proposes the morning report and weekly
   retro-runs; it creates nothing (Schedules and lessons).
-- `route.sh` picks a launch's instance, model tier, `model` and `options` from
-  the issue's Size label and a saved quota read (`--size`, `--raise`, `--quota
-  <file>`), or the driver for a bounded text job (`--job text`, `--claude`).
+- `route.sh` picks a launch's instance, tier, `model` and `options` from the
+  Size label and a saved quota read, or the driver for a bounded text job
+  (`--job text`, `--claude`).
 - `worktree.sh remove` removes a settled or closed entry's clean worktree,
   never forced, and keeps the branch.
-- `agy-job.sh` runs one bounded text job on agy and prints its response as
-  JSON ([agy jobs](reference/agy-jobs.md)).
+- `agy-job.sh` runs one bounded text job on agy
+  ([agy jobs](reference/agy-jobs.md)).
 - `claim.sh` claims one ticket for this machine and prints its `status`
-  (`taken`, `own`, `claimed`, `stale`) and the holder's `claim` with `age_s`.
-- `track.sh --fleet <file> track|stop <owner/name>` edits the active repos and
-  prints the list as the file now holds it.
-- `intake.sh` builds the daily offer: `offer`, `held`, `claimed`, `stale` and
-  `errors` over the active repos. It writes nothing.
+  (`taken`, `own`, `claimed`, `stale`) and the holder's `claim`.
+- `track.sh --fleet <file> track|stop <owner/name>` edits the active repos.
+- `intake.sh` builds the daily offer over the active repos. It writes nothing.
 
 ## Setup
 
 The **fleet file** is `super-agent/fleet.json` under `$XDG_CONFIG_HOME`
 (`~/.config` when unset). The machines and their slots, the GitHub accounts,
-the active repos, the work week, the standing waivers and the provider quota
-commands come from the fleet file, never from this text: any step that needs a
-machine, account, repo or quota command reads it from the file.
+the active repos, their ship caps and brief lines, the work week, the standing
+waivers and the provider quota commands come from the fleet file, never from
+this text.
 
 When the fleet file is missing, or the owner asks for `/super-agent setup`,
 follow [reference/setup.md](reference/setup.md).
@@ -93,67 +92,64 @@ follow [reference/setup.md](reference/setup.md).
 ## Routing
 
 Every launch, a rethread included, runs on the instance and tier `route.sh`
-picks:
+picks, which `launch.sh` runs for you:
 
 1. Run `scripts/quota.sh --fleet <fleet> --save <file> --wake <id>` here, `<id>`
    made once per wake (the epoch). Every launch of the wake reuses the saved
-   read; the next wake's id reads again. Quota is per provider instance, read
-   under its `env`; a remote machine is never extra quota, and a probe never
-   reads it.
-2. Run `scripts/route.sh --size <XS|S|M|L|XL> --quota <file>`, the size from
-   the issue's Size label, with `--raise <n>` on a raised launch (the stall
-   ladder below). The ladder is Sonnet medium, Sonnet high, Opus high; XS, S
-   and M start on the first rung, L the second, XL the third.
-3. Launch `tier` on `instance_id`. When `ask` is true, `wanted` sits above the
-   default while the chosen instance's weekly bucket has under 50% remaining:
-   escalate first (Needs you, with an AskUserQuestion offering `wanted` and
+   read (`launch.sh --quota <file>`); the next wake's id reads again. Quota is
+   per provider instance; a remote machine is never extra quota.
+2. `route.sh` takes the size from the issue's Size label (M with none), with
+   `--raise <n>` on a raised launch (the stall ladder below). The ladder is
+   Sonnet medium, Sonnet high, Opus high; XS, S and M start on the first rung,
+   L the second, XL the third.
+3. When `ask` is true, `wanted` sits above the default while the chosen
+   instance's weekly bucket has under 50% remaining: launch answers `ask`, and
+   you escalate first (Needs you, with an AskUserQuestion offering `wanted` and
    `tier`, your recommendation first, naming `bucket` and `reason`), then
-   launch `wanted` on a yes and `tier` on a no. An unknown quota never asks.
-   A null `instance_id` (no usable instance) goes to Needs you with route's
-   `reason`.
+   rerun launch with `--wanted yes` or `--wanted no`. An unknown quota never
+   asks. `no_instance` goes to Needs you with route's `reason`.
 
 ## Placement
 
-Every launch runs where `place.sh` puts it:
+Every launch runs where `place.sh` puts it, which `launch.sh` runs with the
+flags you pass it: `--gpu` for GPU work, `--account <login>` for the gh login
+the repo needs, one `--area <path>` per path the ticket touches (judged from
+the issue), one `--blocked-by <n>` per open blocker on GitHub, and
+`--exclude <machine>`. Read launch's answer:
 
-1. Run `scripts/place.sh --fleet <fleet> --ledger <ledger> --repo
-   <owner/name> --number <n>`, with `--gpu` for GPU work, `--account <login>`
-   for the gh login the repo needs, one `--area <path>` per path the ticket
-   touches (judged from the issue), and one `--blocked-by <n>` per open
-   blocker on GitHub.
-2. Read its answer:
-   - `placed`: launch on `placed.machine`. Its `environment_id` is null for
-     this machine and set for a remote one. When the ticket needs a CLI (bun,
-     say), check that machine's `clis` in the fleet file first, and rerun with
-     `--exclude <machine>` when it lacks one.
-   - `need_reading`: the next candidate has no live reading. Run a probe thread
-     there ([setup](reference/setup.md#steps) step 2), save `{<machine>:
-     {load1, free_gb}}` from its reply to a file, and rerun with
-     `--readings <file>`.
-   - `waiting`: nothing fits now, and the ledger's `waiting` list already holds
-     the ticket; the block's `Waiting` row says so.
+- a launch: `record.machine` is where it runs. Its `args.environmentId` is
+  absent for this machine and set for a remote one. When the ticket needs a CLI
+  (bun, say), check that machine's `clis` in the fleet file first, and rerun
+  with `--exclude <machine>` when it lacks one.
+- `need_reading`: the next candidate has no live reading. Run a probe thread
+  there ([setup](reference/setup.md#steps) step 2), save `{<machine>:
+  {load1, free_gb}}` from its reply to a file, and rerun with
+  `--readings <file>`.
+- `waiting`: nothing fits now, and the ledger's `waiting` list already holds
+  the ticket; the block's `Waiting` row says so.
 
 Place tries this machine first, skips an unreachable machine or one without
 the GPU or gh login asked for, and keeps each machine's `reserve` slot for the
 owner's messages. Different repos run side by side; two tickets of one repo do
 only with no blocking edge and no overlapping areas, so a ticket with no
-`--area` waits for the other to finish. Reach a machine only through its T3
-environment id, and only one the owner already linked: the fleet file holds no
-host, user or key, and you use no SSH.
+`--area` waits for the other to finish. A repo runs at most its **ship cap**
+at once: the fleet file's `repos.<owner/name>.max_ships`, 3 when unset, counting
+every open ticket of the repo, ship and triage, on every machine; a launch over
+it waits, the cap named in its reason. Reach a machine only through its T3
+environment id the owner already linked: no host, user, key or SSH.
 
 ## Claims and intake
 
 A **claim** keeps two super agents off one ticket: a comment, never an
-assignment (`/ship` assigns). Before every launch, run
-`scripts/claim.sh --repo <owner/name> --number <n> --machine <this machine's
-fleet key> --thread $T3CODE_THREAD_ID` (your own thread) and read `status`:
+assignment (`/ship` assigns). `launch.sh` runs
+`scripts/claim.sh` before every launch, with `--machine` this machine's fleet
+key and `--thread` your own (`$T3CODE_THREAD_ID`), and answers its `status`:
 
-- `taken` or `own`: launch.
+- `taken` or `own`: it launches.
 - `claimed`: skip the ticket, and say in one chat line which machine holds it
   and its age.
 - `stale`: offer it back to the owner with the holder and age. On the owner's
-  go, the owner (or you) deletes that stale comment; rerun `claim.sh`,
-  launch only on `taken`.
+  go, the owner (or you) deletes that stale comment; rerun launch.
 
 A claim belongs to its holder: leave another machine's claim as it is,
 except a stale one the owner told you to delete. Exit 2 (host refused a
@@ -170,50 +166,47 @@ short list (key, title, the Size label from `labels`), give the `claimed` and
 `stale` counts with their holders, and report each `errors` row. An empty
 `repos` means no active repos: say so and suggest "track <repo>". The offer
 launches nothing: a ticket launches when the owner names it, through the loop
-(claim, route, place, launch).
+(launch, record).
 
 ## The loop
 
 Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
 
-1. **Launch.** The owner names a ticket as `<owner/name>#<n>`. Read its labels
-   with `gh issue view`, once for both reads: the owner-skill label and the
-   Size label. `ready-for-agent` takes `/ship <n>`, `needs-triage` takes
-   `/triage <n>`, anything else is an escalation (below). Claim it (Claims and
-   intake), then pick the instance and tier (Routing) and the machine
-   (Placement). Call `t3_thread_launch`, never `delegate_task`:
-   `delegate_task` runs only in your own project and refuses another repo ("A
-   local task runs in this thread's project", measured). Pass:
-   - `environmentId`: `placed.environment_id`, on a remote launch only;
-   - `projectId`: the repo's T3 project, from `t3_project_list` on that
-     environment. With none there, rerun place with `--exclude <machine>`.
-     Never link, unlink or clone a project on any machine;
-   - `title`: `<repo>#<n> <slug>`, `<repo>` the repo's short name;
-   - `workspaceStrategy`: `{type: "worktree", baseRef: <default branch>,
-     branch: "<type>/<slug>-<n>", startFromOrigin: true}`, the branch named
-     the way `/ship` names its branches;
-   - `modelSelection`: `{instanceId, model, options}`, verbatim from route's
-     `instance_id`, `model` and `options` (or `wanted_model` and
-     `wanted_options` after the owner's yes), an array of `{id, value}`, never
-     a map (rejected, measured);
-   - `message`: the owner-skill invocation on its first line, then `brief`
-     verbatim (The launch brief).
-2. **Record.** Read the thread's id and worktree path from the launch result,
-   or from `t3 thread show <id> --json` (`.thread.worktreePath`). Run
-   `scripts/ledger.sh --ledger <ledger> add --repo <owner/name>
-   --number <n> --thread <id> --worktree <path> --branch <branch>`, with
-   `--kind triage` for a `needs-triage` ticket, `--instance`, `--model` and
-   `--effort` set to what route launched, `--machine` the fleet
-   key place printed (never `local` for a remote), `--environment
-   <placed.environment_id>` on a remote launch, and each `--area` passed to
-   place (a triaged ticket now shipping takes `add`, never `rethread`, which
-   is rung 3's), then run
-   `scripts/reconcile.sh --ledger <ledger>` once and ignore its summary: it
-   gives the entry the baseline `watch.sh` compares against, and a thread that
-   has not started yet reads as at rest. A running watcher picks the entry up
-   from there. On the first wake, compare
-   `.thread.branch` from `t3 thread show` with the entry's branch: the PR is
-   found by branch, so when they differ, `ledger.sh set <key> branch <json>`.
+1. **Launch.** The owner names a ticket as `<owner/name>#<n>`. Run
+   `scripts/launch.sh <owner/name>#<n> --fleet <fleet> --ledger <ledger> --quota
+   <file> --machine <this machine's fleet key> --thread $T3CODE_THREAD_ID --out
+   <launch file>`, `--quota` the read Routing saved this wake and `<launch
+   file>` one per ticket beside the ledger, adding the flags the ticket needs
+   (Routing, Placement), `--note <text>` for a line only this ticket's thread
+   should read, and `--raise <n>` on a raised launch. It reads the labels
+   (`ready-for-agent` takes `/ship <n>`, `needs-triage` takes `/triage <n>`),
+   claims, routes, places and writes the brief, and prints `launch: true` with
+   `args`, the whole `t3_thread_launch` argument object, or `launch: false` with
+   a `reason`: `claimed`, `stale`, `waiting`, `need_reading`, `ask`,
+   `no_owner_skill` or `no_instance`. Act on the reason as Claims, Routing and
+   Placement say; `no_owner_skill` and `no_instance` are escalations. On
+   `launch: true`, add each name in `needs` to `args` (`projectId`: the repo's
+   T3 project, from `t3_project_list` on the environment `args.environmentId`
+   names, this machine without one), then call `t3_thread_launch` with `args`,
+   never `delegate_task`: it runs only in your own project and refuses another
+   repo ("A local task runs in this thread's project", measured). With no
+   project there, rerun launch with `--exclude <record.machine>` and every
+   earlier flag; ending at `waiting`, that is the no-project escalation:
+   `ledger.sh unwait <key>` and escalate. Never link, unlink or clone a project
+   on any machine.
+2. **Record.** Run `scripts/launch.sh record --launch <launch file> --thread
+   <id> --ledger <ledger>`, `<id>` the thread id `t3_thread_launch` returned.
+   On a remote launch, first save `t3_thread_read` of the new thread as its
+   reply file ([remote](reference/remote.md)), and add `--worktree <path>` from
+   it and one `--remote <environment id>=<dir>` per environment holding an open
+   remote entry, the new one included. It writes the ledger entry, with
+   the fleet's machine key and the routed tier's model and effort, and runs the
+   baseline reconcile `watch.sh` compares against: a thread that has not
+   started yet reads as at rest, and a running watcher picks the entry up from
+   there. A triaged ticket now shipping takes a new launch and record, never
+   `rethread`, which is rung 3's. On the first wake, compare `.thread.branch`
+   from `t3 thread show` with the entry's branch: the PR is found by branch,
+   so when they differ, `ledger.sh set <key> branch <json>`.
 3. **Watch.** Start `scripts/watch.sh --ledger <ledger> --timeout 7000`
    (seconds) with Bash `run_in_background: true` and `timeout: 7200000` (ms),
    then end your turn. Start it blindly: on exit 1 `running`, one already
@@ -246,13 +239,9 @@ carries the ledger and summaries, never a supervised thread's transcript.
 
 ## The launch brief
 
-Run `scripts/brief.sh --fleet <fleet> --ledger <ledger>` fresh for each
-launch, a re-brief included, and send its `brief` unedited, so the waivers and
-rulings reach the thread word for word. It carries the **merge allowance**
-(merge on a clean `/ship` gate, nothing wider), the **standing waivers**
-numbered, the owner's allowed calls, and the worktree, branch and last-message
-rules. Any hold outside them stops at the gate and comes to you as an
-escalation (Escalation).
+`launch.sh` generates the brief fresh into `args.message`: send it unedited. Its
+parts and the re-brief form:
+[reference/launch-brief.md](reference/launch-brief.md).
 
 ## Acting on the summary
 
@@ -282,12 +271,12 @@ escalation (Escalation).
      run's `completed` does not mean the ticket is done.
   2. Re-brief the same thread: read its last messages first, then resend the
      launch brief with what it was missing.
-  3. Start a fresh thread on a raised tier and point the entry at it with
-     `ledger.sh rethread`. Route it with `--raise` set to the rungs the
-     entry's model and effort sit above its size default, plus one; the
-     owner is asked only when route's `ask` is true (Routing). Escalate
-     instead when the ticket's premise or scope, not the thread, is the
-     problem.
+  3. Start a fresh thread on a raised tier: run the loop's steps 1 and 2 again
+     with the first launch's flags plus `--raise` set to the rungs the entry's
+     model and effort sit above its size default, plus one, and `record
+     --rethread` to point the entry at the new thread. The owner is asked only
+     when route's `ask` is true (Routing). Escalate instead when the ticket's
+     premise or scope, not the thread, is the problem.
 
   A **hard finding** (a verified acceptance-criterion gap you send back to the
   thread) raises the same way as rung 3.
@@ -338,8 +327,10 @@ A held call's need names the thread, the held call and your recommendation.
 Record the owner's answer with
 `scripts/ledger.sh --ledger <ledger> ruling <text> --allow <call>`, which dates
 it; pass `--allow` only when the answer lets that call run unheld in later
-briefs, so a deny is a ruling with no `--allow`, and `--brief` when every
-later brief must carry the ruling.
+briefs (a deny is a ruling with no `--allow`), and `--brief` when later briefs
+must carry the ruling, with `--repo` or `--machine` to limit it. A standing
+line for one repo or machine belongs in the fleet file
+([setup](reference/setup.md#fleet-brief-lines)).
 
 ## Agy jobs
 

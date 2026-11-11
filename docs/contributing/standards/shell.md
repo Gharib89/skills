@@ -59,6 +59,9 @@ exceptions bound these rules.
   same way.
   Its `setup` reads the machine's GitHub accounts with `gh auth
   status` and the linked environments with `t3 environment list`, the same way.
+  Its `launch` reads the ticket's labels and title and the repo's default
+  branch with `gh api`, and its `record` reads a thread's worktree with `t3
+  thread show`, the same way; both only read.
   A direct call made in two runs, where this run can see the other, is a
   candidate mechanic, raised as a Ship note.
 - **A host create posts once, through create-then-verify.** A 5xx can be the

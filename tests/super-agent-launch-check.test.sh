@@ -100,4 +100,27 @@ check "an edge to a ticket not open here refuses nothing" 0 "$(R --area docs --b
 bash "$s/ledger.sh" --ledger "$led" set Gharib89/skills#1 stage '"settled"' >/dev/null
 check "a settled ticket is out of the way" 0 "$(R --area skills/ship >/dev/null; echo $?)"
 
+
+# --- the repo's ship cap: every open ticket of the repo, ship and triage, on any machine ---
+rm -f "$led"
+K() { LC --machine box --load 1 --free-gb 8 --repo Gharib89/skills --area docs "$@"; }
+add Gharib89/skills 1 home --area a; add Gharib89/skills 2 home --area b --kind triage
+out=$(K); rc=$?
+check_rc "two open tickets of the repo are under the default cap of 3" 0 "$rc"
+check "the answer reports the count against the cap" '{"open":2,"max":3}' "$(jq -c .cap <<<"$out")"
+add Gharib89/skills 3 box --area c
+out=$(K); rc=$?
+check_rc "three open tickets (a triage one among them, one on another machine) refuse the fourth" 1 "$rc"
+check "the refusal is the cap, and only it" '["cap"]' "$(jq -c .refused <<<"$out")"
+check "another repo is not counted" 0 "$(LC --machine box --load 1 --free-gb 8 --repo Gharib89/other --area docs >/dev/null; echo $?)"
+check "a settled ticket stops counting" 0 "$(bash "$s/ledger.sh" --ledger "$led" set Gharib89/skills#3 stage '"settled"' >/dev/null; K >/dev/null; echo $?)"
+check "--key leaves its own entry out of the count" 0 "$(add Gharib89/skills 3 box --area c 2>/dev/null; K --key Gharib89/skills#3 >/dev/null; echo $?)"
+jq '.repos = {"gharib89/SKILLS": {"max_ships": 2}}' "$fleet" > "$tmp/capped.json"
+check "a repo's max_ships from the fleet file wins, its key matched without case" '["cap"]' \
+  "$(bash "$s/launch-check.sh" --fleet "$tmp/capped.json" --ledger "$led" --own home --machine box --load 1 --free-gb 8 --repo Gharib89/skills --area docs | jq -c .refused)"
+jq '.repos = {"Gharib89/skills": {"max_ships": 5}}' "$fleet" > "$tmp/capped.json"
+check "and a higher one lets the launch through" 0 "$(bash "$s/launch-check.sh" --fleet "$tmp/capped.json" --ledger "$led" --own home --machine box --load 1 --free-gb 8 --repo Gharib89/skills --area docs >/dev/null; echo $?)"
+jq '.repos = {"Gharib89/skills": {"max_ships": 0}}' "$fleet" > "$tmp/capped.json"
+check_rc "a max_ships that is not a whole number of 1 or more exits 2" 2 "$(bash "$s/launch-check.sh" --fleet "$tmp/capped.json" --ledger "$led" --own home --machine box --load 1 --free-gb 8 --repo Gharib89/skills >/dev/null 2>&1; echo $?)"
+
 finish

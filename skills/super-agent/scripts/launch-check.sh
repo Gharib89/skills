@@ -21,14 +21,18 @@
 # names the open blocker numbers read from GitHub) or its areas overlap this
 # one's: two paths overlap when one is the other or lies under it, and a ticket
 # with no areas, either side, overlaps everything, since nothing says the work
-# is apart. Different repos never refuse.
+# is apart. Different repos never refuse. With --repo, the repo's ship cap
+# refuses too: the fleet file's `repos.<owner/name>.max_ships` (3 when unset)
+# bounds the open tickets of that repo, ship and triage, on every machine
+# together, not counting --key's.
 #
 # --key names a ledger entry to leave out of the slot count and the repo
 # conflicts: a rethread of a ticket the ledger still holds.
 # stdout: {machine, ok, refused, slots: {used, ceiling}, load: {value, limit},
 #         free_gb: {value, floor}, repo: {conflicts}}: `refused` the checks that
-#         failed, each one of slots, load, ram, repo; `repo.conflicts` the keys
-#         of the open tickets in the way. A machine the fleet file lacks is
+#         failed, each one of slots, load, ram, repo, cap; `repo.conflicts` the keys
+#         of the open tickets in the way; `cap` {open, max} (open 0 with no
+#         --repo). A machine the fleet file lacks is
 #         {error}
 # exit: 0 the machine takes a launch · 1 it does not, or is not in the fleet
 #       file · 2 usage, or a fleet file or ledger that is unreadable
@@ -61,6 +65,8 @@ done
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file"
 jq -e '(.machines | type) == "object"' "$fleet" >/dev/null 2>&1 || sa_tooling "$fleet: not a fleet file (machines must be an object)"
 [ -n "$own" ] || own=$(hostname 2>/dev/null) || sa_tooling "cannot read this machine's name: pass --own"
+jq -e '[(.repos // {})[]? | .max_ships // 1 | type == "number" and . >= 1 and . == floor] | all' "$fleet" >/dev/null \
+  || sa_tooling "$fleet: every repos.<owner/name>.max_ships must be a whole number of 1 or more"
 jq -e --arg m "$machine" '.machines[$m] | type == "object"' "$fleet" >/dev/null || sa_fail "$machine is not in the fleet file"
 sa_read "$ledger"
 
@@ -80,13 +86,17 @@ out=$(jq -cn --slurpfile fleet "$fleet" --argjson doc "$doc" --arg m "$machine" 
           or ((.areas // []) as $theirs | ($theirs | length) == 0 or ($areas | length) == 0
               or ([$theirs[] as $t | $areas[] as $a | under($a; $t)] | any)))
       | .key]) as $conflicts
+  | ([($f.repos // {}) | to_entries[] | select((.key | norm_repo) == ($repo | norm_repo)) | .value.max_ships] | first // 3) as $max
+  | ([$open[] | select($repo != "" and ((.repo // "") | norm_repo) == ($repo | norm_repo))] | length) as $repoopen
   | ([(if $used < $ceiling then empty else "slots" end),
       (if $load < $limit then empty else "load" end),
       (if $free > $floor then empty else "ram" end),
-      (if ($conflicts | length) == 0 then empty else "repo" end)]) as $refused
+      (if ($conflicts | length) == 0 then empty else "repo" end),
+      (if $repo != "" and $repoopen >= $max then "cap" else empty end)]) as $refused
   | {machine: $m, ok: ($refused | length == 0), refused: $refused,
      slots: {used: $used, ceiling: $ceiling}, load: {value: $load, limit: $limit},
-     free_gb: {value: $free, floor: $floor}, repo: {conflicts: $conflicts}}') \
+     free_gb: {value: $free, floor: $floor}, repo: {conflicts: $conflicts},
+     cap: {open: $repoopen, max: $max}}') \
   || sa_tooling "$fleet or $ledger cannot be read"
 printf '%s\n' "$out"
 jq -e .ok >/dev/null <<<"$out"

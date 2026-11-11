@@ -29,7 +29,7 @@ A merge-gate hold the launch template waives in advance, with its condition writ
 _Avoid_: auto-merge, merge allowance (that is the launch permission to merge at all), exception
 
 **Fleet file**:
-The owner's user-scope file, written by the super agent's setup step and carried to every machine, that lists what the super agent may use: each linked machine with its capabilities and slot count, each provider instance with its quota read and auth result, the GitHub accounts, the active repos and the default standing waivers. The skill itself names none of these, so it stays the same for every owner.
+The owner's user-scope file, written by the super agent's setup step and carried to every machine, that lists what the super agent may use: each linked machine with its capabilities and slot count, each provider instance with its quota read and auth result, the GitHub accounts, the active repos (each with its ship cap and brief lines) and the default standing waivers. The skill itself names none of these, so it stays the same for every owner.
 _Avoid_: config, inventory, profile (a ship profile is per repo)
 
 **Provider instance**:
@@ -37,12 +37,16 @@ One T3 provider the super agent may launch on, named by T3's instance id: two Cl
 _Avoid_: account, provider (that is the driver), subscription
 
 **Slot**:
-One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling, less the slots it keeps for the owner's messages (`reserve`, 1 on the super agent's own machine); a launch still checks the machine's free memory and load before it takes a slot. A probe thread takes none.
+One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling, less the slots it keeps for the owner's messages (`reserve`, 1 on the super agent's own machine); a launch still checks the machine's free memory and load before it takes a slot. A probe thread takes none. A slot bounds a machine; the **ship cap** bounds a repo.
 _Avoid_: worker, lane, seat
 
 **Placement**:
-Choosing the machine a launch runs on: the super agent's own machine first, a GPU machine for GPU work, the next reachable linked machine that fits when one is down, and a row in the ledger's waiting list when none does. A machine is reached only through its T3 environment id, and only if the owner already linked it.
+Choosing the machine a launch runs on: the super agent's own machine first, a GPU machine for GPU work, the next reachable linked machine that fits when one is down, and a row in the ledger's waiting list when none does, a launch over its repo's ship cap included. A machine is reached only through its T3 environment id, and only if the owner already linked it.
 _Avoid_: scheduling, load balancing
+
+**Ship cap**:
+The most supervised threads one repo may have open at once, across every machine, set per repo in the fleet file as `max_ships` (3 when unset). It counts every open thread of the repo, ship and triage alike, so a launch over it becomes a waiting row naming the cap. Different from a slot, which is a machine's ceiling.
+_Avoid_: repo limit, concurrency limit, quota (that is a provider's)
 
 **Claim**:
 The mark a super agent puts on a ticket before it launches one: a comment (never an assignment: `/ship` assigns through its own claim), first line `<!-- super-agent-claim machine=<key> thread=<id> -->`, naming the machine and the claiming thread. The earliest claim comment on an issue holds it, so another super agent skips the ticket. A claim older than the stale window (3 days by default) is **stale**: it is offered back to the owner and never taken over.

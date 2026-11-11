@@ -21,9 +21,10 @@ no file: it is found on GitHub by branch, the same from any machine.
 
 ## Steps
 
-1. **Record.** On a remote launch, pass `--environment
-   <placed.environment_id>` to `ledger.sh add`. A `rethread` sets it
-   from its own `--environment`, and clears it when the flag is absent.
+1. **Record.** `launch.sh record` carries the launch's environment id onto the
+   entry (a `--rethread` too, clearing it for a thread on this machine). Before
+   it runs, save the new thread's read as its reply file (step 2) and pass
+   `--remote` (step 3): its baseline reconcile reads it.
 2. **Read.** Before each `reconcile.sh` run and each `watch.sh` start, read
    every open remote entry's thread with `t3_thread_read`, its
    `environmentId` the entry's `environment_id`, with a low `limit` and
