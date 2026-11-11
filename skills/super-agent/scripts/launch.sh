@@ -168,6 +168,7 @@ selection=$(jq -c --arg u "$use" '{instanceId: .instance_id}
 # 4. The placement.
 sub place --fleet "$fleet" --ledger "$ledger" --repo "$repo" --number "$number" --own "$machine" ${gpu:+"$gpu"} ${account:+--account "$account"} \
   ${readings:+--readings "$readings"} ${pargs[@]+"${pargs[@]}"}
+jq -e 'has("placed")' <<<"$out" >/dev/null 2>&1 || sa_tooling "place gave no answer"
 placed=$(jq -c .placed <<<"$out")
 if [ "$placed" = null ]; then
   jq -e '.need_reading != null' <<<"$out" >/dev/null && answer need_reading "$(jq -c .need_reading <<<"$out")"
@@ -182,7 +183,7 @@ raw=$(gh api "repos/$repo" 2>/dev/null </dev/null) && base=$(jq -r '.default_bra
 slug=$(jq -r '.title // ""' <<<"$issue" | sed 's/^[^:]*: *//' | tr 'A-Z' 'a-z' | sed 's/[^a-z0-9][^a-z0-9]*/-/g; s/^-//; s/-$//')
 if [ "${#slug}" -gt 32 ]; then slug=${slug:0:32}; slug=${slug%-*}; fi
 [ -n "$slug" ] || slug=ticket
-type=$(jq -r 'if index("bug") then "fix" elif index("documentation") then "docs" else "feat" end' <<<"$labels")
+type=$(jq -r 'if index("bug") then "fix" elif index("documentation") then "docs" elif index("refactor") then "refactor" elif index("chore") then "chore" else "feat" end' <<<"$labels")
 [ "$kind" = ship ] || type=triage
 branch="$type/$slug-$number"
 sub brief --fleet "$fleet" --ledger "$ledger" --repo "$repo" --machine "$pm" ${note:+--note "$note"}
@@ -202,6 +203,7 @@ answer_json=$(jq -cn --arg k "$key" --arg kind "$kind" --arg size "$size" --arg 
             + (if $placed.environment_id == null then {} else {environmentId: $placed.environment_id} end)),
      needs: ["projectId"],
      record: {key: $k, kind: $kind, machine: $placed.machine, environment_id: $placed.environment_id, instance_id: $route.instance_id,
-              model: $tier.model, effort: $tier.effort, areas: $areas, branch: $branch}}')
+              model: $tier.model, effort: $tier.effort, areas: $areas, branch: $branch}}') \
+  || sa_tooling "cannot build the launch answer"
 [ -z "$outf" ] || printf '%s\n' "$answer_json" > "$outf" || sa_tooling "cannot write $outf"
 printf '%s\n' "$answer_json"

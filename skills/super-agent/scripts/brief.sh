@@ -49,7 +49,7 @@ jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" --ar
       and ((.machine // null) == null or .machine == $machine))] as $rl
   | ([(($f[0].repos // {}) | to_entries[] | select(.key | norm_repo == ($repo | norm_repo)) | .value.brief // [])[]?,
       (($f[0].machines // {})[$machine].brief // [])[]?]) as $fl
-  | ($repo | split("/") | join("-")) as $lock
+  | ($repo | norm_repo | split("/") | join("-")) as $lock
   | {brief: ([
       "Merge allowance: merge when /ship'"'"'s merge gate is clean, nothing wider.",
       "Standing waivers, the only holds you may pass without stopping:",

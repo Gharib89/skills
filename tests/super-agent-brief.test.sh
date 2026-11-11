@@ -139,6 +139,7 @@ check "a one-ticket note rides along under its heading" 'Note for this ticket: C
 check "without a note there is no heading" 0 "$(B2 --repo acme/widgets | jq -r .brief | grep -c 'Note for this ticket')"
 check "every brief carries the shared-machine lines: own PIDs only, a per-repo lock and a memory cap" '1 1 1 1' \
   "$(grep -c 'by their PID' <<<"$b") $(grep -c 'never `pkill`' <<<"$b") $(grep -c 'flock /tmp/super-agent-acme-widgets.lock' <<<"$b") $(grep -c 'MemoryMax' <<<"$b")"
+check "two casings of one repo name one lock" "1 1" "$(B2 --repo Acme/Widgets | jq -r .brief | grep -c 'flock /tmp/super-agent-acme-widgets.lock') $(B2 --repo acme/widgets | jq -r .brief | grep -c 'flock /tmp/super-agent-acme-widgets.lock')"
 check "the closing line is still last" "End your last message with the PR URL and the gate state." "$(tail -1 <<<"$b")"
 
 finish

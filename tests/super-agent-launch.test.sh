@@ -88,6 +88,10 @@ check "the record block holds what the ledger will carry" \
 check "--out wrote the same answer" "$(jq -c . <<<"$out")" "$(jq -c . "$out_f")"
 check "the claim comment was posted" 1 "$(grep -c -- '-X POST' "$SA_FAKE/calls")"
 check "and nothing was assigned" 0 "$(grep -c 'assignees' "$SA_FAKE/calls")"
+issue 13 "widgets: tidy the pipeline" ready-for-agent S refactor
+check "a refactor ticket branches as refactor, the type its label names" "refactor/tidy-the-pipeline-13" "$(L 13 --area skills/widgets | jq -r .args.workspaceStrategy.branch)"
+issue 14 "widgets: bump a tool" ready-for-agent S chore
+check "a chore ticket branches as chore" "chore/bump-a-tool-14" "$(L 14 --area skills/widgets | jq -r .args.workspaceStrategy.branch)"
 
 # --- a triage ticket with no Size label ------------------------------------------
 issue 11 "Something is off" needs-triage
