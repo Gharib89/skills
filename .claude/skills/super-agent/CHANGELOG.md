@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.15.0 (2026-11-11)
+
+### Features
+
+- **super-agent**: Route by weekly weight with a 5 hour floor and a weekly reserve
+  ([#1158](https://github.com/Gharib89/skills/pull/1158),
+  [`85bf683`](https://github.com/Gharib89/skills/commit/85bf68392bc326c36688bc1f37d0933531f7bb47))
+
+
 ## v0.14.0 (2026-11-11)
 
 ### Features
