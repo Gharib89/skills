@@ -29,7 +29,9 @@
 #         `need_reading` {machine, environment_id} or null; `considered` one
 #         {machine, outcome} per candidate looked at, `outcome` skipped:<why>
 #         (excluded, no-environment, unreachable, unknown, no-gpu, account, unmeasured)
-#         or the refusals of `launch-check`
+#         or the refusals of `launch-check` (slots, load, ram, repo, cap); a `repo` or
+#         `cap` refusal ends the search with `waiting`, `reason` starting `same repo` or
+#         `ship cap`
 # exit: 0 an answer, any of the three · 2 usage, an unreadable fleet file or
 #       ledger, a launch-check that failed, a failed `t3 environment list` with
 #       nothing placed (nothing is recorded), or a ledger write that failed
@@ -104,6 +106,10 @@ while IFS= read -r m; do
   # A conflict with the ticket's own repo follows it to every machine.
   if jq -e '.refused | index("repo")' >/dev/null <<<"$res"; then
     wait_reason="same repo: $(jq -r '.repo.conflicts | join(", ")' <<<"$res") is open and blocks or overlaps this ticket"; break
+  fi
+  # So does the repo's ship cap: the count is repo-wide, not the machine's.
+  if jq -e '.refused | index("cap")' >/dev/null <<<"$res"; then
+    wait_reason="ship cap: $(jq -r '.cap | "\(.open) of \(.max)"' <<<"$res") open tickets of $repo"; break
   fi
 done < <(jq -r --arg own "$own" '.machines | keys as $k | ($k | map(select(. != $own))) as $rest | (if $k | index($own) then [$own] else [] end) + $rest | .[]' "$fleet")
 
