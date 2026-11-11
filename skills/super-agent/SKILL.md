@@ -18,6 +18,9 @@ ticket, in its own worktree on the machine **placement** picks. The
 script whose exit wakes you. You route and verify: the supervised thread
 implements, and its owner skill merges.
 
+The super agent's machine and its linked machines run Linux; its scripts may
+use GNU tools.
+
 ## The scripts
 
 They live in `scripts/` under this skill's base directory, and each answers

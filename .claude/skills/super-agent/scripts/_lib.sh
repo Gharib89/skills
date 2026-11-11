@@ -92,6 +92,18 @@ sa_window_flag() { case $2 in ''|0|*[!0-9]*) sa_tooling "$1" ;; esac; }
 # shellcheck disable=SC2034  # read by the scripts that source this file
 sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 
+# The one normaliser of each kind, as jq defs a script prepends to its filter.
+# `norm_repo` is for an `owner/name` and for a ledger key `owner/name#n`: the host
+# treats owner and name as case-insensitive, and the number has no case. `norm_path`
+# drops a leading `./` and trailing slashes, so `./skills/ship/` is `skills/ship`.
+# Compare the normal form on both sides; store and print the spelling as given.
+# shellcheck disable=SC2034  # read by the scripts that source this file
+sa_jq_norm='def norm_repo: ascii_downcase; def norm_path: sub("^(\\./)+"; "") | sub("/+$"; "");'
+
+# sa_key <ledger json> <key>: the key the ledger stores for <key>, whatever its
+# case, else <key> itself.
+sa_key() { jq -r --arg k "$2" "$sa_jq_norm"'(first(.entries | keys[] | select(norm_repo == ($k | norm_repo))) // $k)' <<<"$1"; }
+
 # `--remote <environment id>=<dir>`, repeatable: where the super agent saved its
 # reads of the threads on that linked machine, one `<thread id>.json` each. `t3
 # thread show` has no environment flag (measured 2026-11-06), so a remote entry

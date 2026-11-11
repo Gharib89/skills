@@ -103,7 +103,9 @@ exceptions bound these rules.
   machine running Bash 5. **Precedent for a mechanic comes from `skills/`
   alone**, whatever idiom a repo-local script uses. The `contract` gate fails on
   the four constructs named here; the rule is wider than the grep, so a Bash 4
-  feature it does not name is still a violation.
+  feature it does not name is still a violation. A skill that needs Linux-only
+  tools states its operating system in its `SKILL.md`, and the Bash syntax rule
+  still applies to it.
 - **Every executed script sets `-u` and `-o pipefail`.** A mechanic sets `set
   -uo pipefail` and no `-e`, so a failed step reaches the code that turns it
   into a JSON answer; a script with no such answer to give, such as the Cloud
