@@ -121,6 +121,22 @@ below lands as a minor
   take that number.** A patch-sized reword riding
   along with a `feat` is released minor, which is the cost of one subject, and
   splitting the PR to avoid it is not worth a second review cycle.
+- **Every title type cuts at least a patch.** The release run grades a type
+  outside `feat` and a breaking marker as a patch, so a `chore(<skill>):` title
+  on a diff that touches the skill's paths still releases it. Retitling `chore`
+  to `fix` moves only the changelog section, never the number, so "a `chore`
+  title releases nothing" is no review finding. What a title can under-state is
+  the grade the diff earns.
+- **A `Grade:` line states the grade where the diff can change it.** Under
+  `## Special things to note`, one line `Grade: <text>` for a diff that changes
+  a skill's `description` (the source `SKILL.md` only, a derived copy never
+  counts twice): whether a routing condition was added or dropped, whatever the
+  title's type. A diff that changes a mechanic's `usage=` line or its `stdout:`
+  header block under a title whose type is not `feat` carries one saying why the
+  change is a patch. The `bump-guard` job's grade-statement step
+  (`scripts/check-grade-statement.sh`) fails a PR owing the line without it and
+  names the file; with the line present it passes, because judging the grade
+  stays the reviewer's.
 - **Commit subjects** are conventional-commit prefixed and scoped to the skill:
   `fix(ship):`, `docs:`, `feat(setup-skills):`.
 - **Commit messages** carry no em dashes either. The `house-style` gate reads

@@ -78,6 +78,13 @@ exceptions bound these rules.
   arm, and use `jq -e` where the value decides the answer. Every instance is a
   silent pass: jq missing makes both sides of a comparison print nothing, and
   `cmp` of two empty outputs exits 0.
+- **A mechanic whose bare invocation is a real run declares it.** A mechanic
+  whose spec gives its flag a default (a default path) does not require the flag
+  to pass the `contract` gate's bare-invocation check: a header line reading
+  exactly `# contract: bare-run`, in its first 60 lines, exempts it where the
+  gate's list of eight no-positional mechanics does. The gate runs every
+  mechanic with an empty home and empty XDG directories, so a default path
+  cannot read the machine's own files.
 - **A mechanic's header is its contract.** The header comment of a mechanic or
   gate script lists its output keys and exit meanings, and each moves in the
   same hunk as the code that changes it. A header that drifted is what the next

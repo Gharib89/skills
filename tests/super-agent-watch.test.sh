@@ -141,13 +141,15 @@ check "a fault in the recheck look is reported, not the stale run-finished" "$re
   "$(event "$(bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 1 --timeout 5)")"
 
 # --- the stall window: at rest, with no new run, for too long ------------------
-old=$(date -u -d '2 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+# A fixed stamp: older than the 60 s window, younger than the 999999999 s one, so
+# neither case reads the clock.
+old=2020-01-01T00:00:00Z
 fixture
 sa_thread t-5 idle 1 0 /wt/5 feat/x-5
 bash "$s/ledger.sh" --ledger "$led" set "$repo#5" observed '{"status":"idle","run_count":1,"pending":0,"pr":{"number":null,"state":"none"},"gate":false}' >/dev/null
 bash "$s/ledger.sh" --ledger "$led" set "$repo#5" rest_since "\"$old\"" >/dev/null
 check "a thread at rest past the window is stall-window" "$repo#5 stall-window" "$(event "$(W --timeout 5 --stall-window 60)")"
-check "not before it" "null timeout" "$(event "$(W --timeout 2 --stall-window 86400)")"
+check "not before it" "null timeout" "$(event "$(W --timeout 2 --stall-window 999999999)")"
 bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stalls 3 >/dev/null
 check "an entry already at 3 stalls is escalated, so its window is quiet" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
 bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stalls 1 >/dev/null

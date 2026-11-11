@@ -72,7 +72,15 @@ index's clock exception bounds the clock rule below.
   controls.** A fixture whose result depends on the time of day is a defect
   rather than a flake, so put a `date` stub on PATH and assert against the time
   that stub returns. A fixture that hardcodes a late hour, or computes now plus
-  two minutes, goes red when the run crosses midnight.
+  two minutes, goes red when the run crosses midnight. The `clock` gate
+  (`scripts/clock-lint.sh`, a row of `full` and a hook on an edited test file)
+  fails a `date` call that reads the current time: one with no `-d`, or a `-d`
+  relative to now (`2 hours ago`). A conversion of a fixed time (`date -d
+  @<epoch>`) is no read, and neither is a file that defines a `date` stub. An
+  elapsed-time bound the clock exception allows carries the marker
+  `# clock-exception: <reason>` on its line, the reason required; a site that
+  cannot be fixed without changing a script under `skills/` carries it with that
+  reason.
 - **A test that makes a file unreadable skips under root.** `chmod 000` does not
   stop root from reading the file, and a Cloud sandbox runs as root, so guard
   the case on `[ "$(id -u)" -ne 0 ]` and report it skipped there rather than
