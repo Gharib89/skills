@@ -36,6 +36,10 @@ sa_env_words() {
         | select(explode | any(. == 0) | not) | . + "\u0000")' <<<"$2")
 }
 
+# sa_epoch: `SA_NOW` as a JSON number, null when unset or not a whole number, so
+# a bad test clock reads as the real one.
+sa_epoch() { case ${SA_NOW:-} in ''|*[!0-9]*) printf null ;; *) printf '%s' "$SA_NOW" ;; esac; }
+
 # sa_flag_value <usage> <value>: a flag's value may be neither empty nor dash-led,
 # or the next flag is read as the value.
 sa_flag_value() { case $2 in -*|'') sa_tooling "$1" ;; esac; }

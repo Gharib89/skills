@@ -60,7 +60,7 @@ probe_instance() { # <row json>
     '.providers[$k] = {status: $s, reason: $r, auth: $a, auth_reason: $ar, auth_source: $as, auth_checked: $ac}' <<<"$facts")
   proposed=$(jq -c --arg k "$key" --arg d "$drv" --arg c "$cmd" --arg a "$authcmd" --argjson env "$env" --argjson x "$extra" \
     '.providers[$k] = ({driver: $d, quota_command: (if $c == "" then null else $c end)}
-      + (if $a == "" then {} else {auth_command: $a} end) + (if $env == {} then {} else {env: $env} end) + $x)' <<<"$proposed")
+      + (if $a == "" then {} else {auth_command: $a} end) + (if $env == {} then {} else {env: $env} end) + {weekly_weight: 1} + $x)' <<<"$proposed")
   n=$(jq -r --arg d "$drv" '[.[] | select((if .driverKind == "claudeAgent" then "claude" else .driverKind end) == $d)] | length' <<<"$rows")
   if [ "$drv" = claude ] && [ "$n" -gt 1 ] && [ "$env" = '{}' ]; then
     warn "$key: no env set, so its quota and auth read the default account: set env.CLAUDE_CONFIG_DIR in the fleet file if it has its own"

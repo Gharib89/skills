@@ -62,8 +62,8 @@ check_rc "the same for a job" 2 "$(R --job text --claude --quota "$tmp/shape.jso
 
 # --- the Size label sets the starting tier -------------------------------------------
 quota 0.9 0.9
-check "XS starts on Sonnet low" "sonnet low ask=false" "$(R --size XS --quota "$tmp/q.json" | tier)"
-check "S starts on Sonnet low" "sonnet low ask=false" "$(R --size S --quota "$tmp/q.json" | tier)"
+check "XS starts on Sonnet medium, the lowest rung" "sonnet medium ask=false" "$(R --size XS --quota "$tmp/q.json" | tier)"
+check "S starts on Sonnet medium, the lowest rung" "sonnet medium ask=false" "$(R --size S --quota "$tmp/q.json" | tier)"
 check "M starts on Sonnet medium" "sonnet medium ask=false" "$(R --size M --quota "$tmp/q.json" | tier)"
 check "L starts on Sonnet high" "sonnet high ask=false" "$(R --size L --quota "$tmp/q.json" | tier)"
 check "XL starts on Opus high" "opus high ask=false" "$(R --size XL --quota "$tmp/q.json" | tier)"
@@ -72,7 +72,7 @@ check "the size and raise are echoed with the default" '{"size":"M","raise":0,"d
 
 # --- a raise climbs one step per stall or hard finding, and stops at the top ----------------
 check "a raise of 1 takes M to Sonnet high" "sonnet high ask=false" "$(R --size M --raise 1 --quota "$tmp/q.json" | tier)"
-check "a raise of 2 takes S to Sonnet high" "sonnet high ask=false" "$(R --size S --raise 2 --quota "$tmp/q.json" | tier)"
+check "a raise of 1 takes S to Sonnet high" "sonnet high ask=false" "$(R --size S --raise 1 --quota "$tmp/q.json" | tier)"
 check "a raise of 1 takes L to Opus high" "opus high ask=false" "$(R --size L --raise 1 --quota "$tmp/q.json" | tier)"
 check "a raise past the top stays on Opus high" "opus high ask=false" "$(R --size XL --raise 3 --quota "$tmp/q.json" | tier)"
 
@@ -197,5 +197,6 @@ quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst claudeAgent_b claude 0.8 ok)"
 check "one Claude instance with room keeps the job on Claude Code" "claude null" "$(job)"
 quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst claudeAgent_b claude 0.8 failed)" "$agy_q"
 check "an instance that is signed out gives no room" "agy claude" "$(job)"
+
 
 finish

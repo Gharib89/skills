@@ -46,6 +46,12 @@ skill's base directory.
    is no probe lands there; so does a Claude instance with no
    `env.CLAUDE_CONFIG_DIR`: with none it reads the default account, so each
    extra account needs its own).
+   Each provider carries `weekly_weight` 1 and the file `five_hour_floor` 0.1
+   and `weekly_reserve` 0.05. Ask the owner for each instance's weight: the
+   number of times larger its weekly quota is than their smallest instance's
+   (40% of a seat three times the size is more work than 60% of the small
+   one), and whether to change the floor and the reserve, fractions under
+   which route skips an instance.
 4. Ask the owner to confirm or adjust it, the `work_week` set to their own
    working days (the morning report and the retro follow it). After the yes,
    run it again with `--write` and the same `--probe` flags, then apply the
