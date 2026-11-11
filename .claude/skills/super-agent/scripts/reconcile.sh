@@ -44,7 +44,7 @@
 # file's `repos`, 3 without one, counting its open entries and the ready rows
 # ahead. A ready row is a candidate: `place` still decides the machine. A row
 # whose issue or blocker cannot be read stays, is not ready and is in `errors`,
-# its `detail.key` the issue that could not be read.
+# its `key` the waiting row and its `detail.key` the issue that could not be read.
 # With `--fleet`, it also lists `unqueued`: an open issue in one of the fleet
 # file's active repos, created since the earliest open entry launched (a batch is
 # running), that no ledger entry of any stage, no waiting row and no claim comment
@@ -201,12 +201,12 @@ fi
 # ready when its blocker merged and its repo has a free ship slot.
 ready='[]' dropped='[]'
 issue_read() { gh api "repos/$1/issues/$2" 2>/dev/null </dev/null; } # <owner/name> <number>
-unreadable() { errors=$(jq -c --arg k "$1" '. + [{key: $k, kind: "issue-unreadable", detail: {key: $k}}]' <<<"$errors"); }
+unreadable() { errors=$(jq -c --arg k "$1" --arg d "$2" '. + [{key: $k, kind: "issue-unreadable", detail: {key: $d}}]' <<<"$errors"); } # <row key> <the key that failed to read>
 while IFS= read -r row; do
   key=$(jq -r .key <<<"$row") repo=$(jq -r .repo <<<"$row")
   issue=$(issue_read "$repo" "$(jq -r .number <<<"$row")") || issue=''
   state=$(jq -r '.state // empty' <<<"$issue" 2>/dev/null)
-  if [ -z "$state" ]; then unreadable "$key"; continue; fi
+  if [ -z "$state" ]; then unreadable "$key" "$key"; continue; fi
   if [ "$state" = closed ]; then
     doc=$(jq -c --arg k "$key" "$sa_jq_norm"'.waiting |= map(select((.key | norm_repo) != ($k | norm_repo)))' <<<"$doc")
     dropped=$(jq -c --arg k "$key" '. + [{key: $k, reason: "issue-closed"}]' <<<"$dropped"); continue
@@ -215,7 +215,7 @@ while IFS= read -r row; do
   if [ -n "$after" ] && ! jq -e --arg k "$after" "$sa_jq_norm"'[.entries[] | select(.key | norm_repo == ($k | norm_repo)) | .stage] | any(IN("merged", "settled"))' <<<"$doc" >/dev/null; then
     blocker=$(issue_read "${after%#*}" "${after##*#}") || blocker=''
     bstate=$(jq -r '.state // empty' <<<"$blocker" 2>/dev/null)
-    if [ -z "$bstate" ]; then unreadable "$after"; continue; fi
+    if [ -z "$bstate" ]; then unreadable "$key" "$after"; continue; fi
     # A closed issue means merged unless it was closed as not planned.
     [ "$bstate" = closed ] && [ "$(jq -r '.state_reason // empty' <<<"$blocker")" != not_planned ] || continue
   fi
