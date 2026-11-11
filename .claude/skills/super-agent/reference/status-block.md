@@ -28,9 +28,10 @@ After `reconcile.sh`, run `scripts/status.sh --ledger <ledger>`:
 Record one when you escalate: `ledger.sh --ledger <ledger> need <key> --action
 <text>`, `<key>` the entry (or the waiting ticket) and `<text>` the one action.
 Clear it with `ledger.sh --ledger <ledger> unneed <key>` once the owner has
-answered, its ticket settles or closes, or its stall resets, since nothing else
-clears one. Repeating `need` with the same action keeps its time and its
-push, so a re-escalation never pushes twice.
+answered, its ticket settles, or its stall resets, since nothing else clears
+one. A `closed` ticket's need stays until the owner answers. Repeating `need`
+with the same action keeps its time and its push, so a re-escalation never
+pushes twice.
 
 ## The digest
 

@@ -22,7 +22,8 @@
 #         is open), `changed` true when a row differs from the last printed
 #         block, `unpushed` the open needs whose push has not gone out, each of
 #         which `ledger pushed` marks once sent
-# exit: 0 a block or none · 2 usage, or an unreadable or wrong-shaped ledger
+# exit: 0 a block or none · 2 usage, an unreadable or wrong-shaped ledger, or a
+#       write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
