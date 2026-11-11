@@ -23,7 +23,7 @@
     "creative-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "908da8a362e300d015c194a937405690ad856291db49a41fb9d742ff77f6f8d5"
+      "computedHash": "53cbf0003ab89a687dd0c0ab1689b05602b53b1ececa70a46670c5c7f0fde8eb"
     },
     "domain-modeling": {
       "source": "mattpocock/skills",
@@ -44,10 +44,10 @@
     },
     "find-docs": {
       "source": "upstash/context7",
-      "ref": "3131245817e9e40626d8f43ce85dabab09d4ff35",
+      "ref": "681554c5d3a688c67879d02d4f01d79ffd15df13",
       "sourceType": "github",
       "skillPath": "skills/find-docs/SKILL.md",
-      "computedHash": "e4a9a707d8e5d575d166a175f2fec66e0a13de46597f7dbc910c735ccf01bb93"
+      "computedHash": "2f042e7e9711a2a720b595083eb13c7f06380e6557f2eb689ce3182d4380e39d"
     },
     "grill-with-artifact": {
       "source": ".",
@@ -70,10 +70,10 @@
     },
     "hyperframes": {
       "source": "heygen-com/hyperframes",
-      "ref": "84799bdc59b18f6a3df6595d8a8d1ec03dfde673",
+      "ref": "3e04a59500cbbba8471976e76adee7d14bbe413b",
       "sourceType": "github",
       "skillPath": "skills/hyperframes/SKILL.md",
-      "computedHash": "efecc3d588e38d0ea2323f0860e431b6b1795dc2f9994ad795a0b0f86e397954"
+      "computedHash": "c0753c8f52fb243b63d5bba27f87636a94b1d5d974ccf23ad16bd6398dd52078"
     },
     "hyperframes-cli": {
       "source": "heygen-com/hyperframes",
@@ -84,10 +84,10 @@
     },
     "media-use": {
       "source": "heygen-com/hyperframes",
-      "ref": "84799bdc59b18f6a3df6595d8a8d1ec03dfde673",
+      "ref": "3e04a59500cbbba8471976e76adee7d14bbe413b",
       "sourceType": "github",
       "skillPath": "skills/media-use/SKILL.md",
-      "computedHash": "d8fa9fa1d252b307044a42152db81d1d84859e8fbccb125d2ebdcd3fa87a9aa9"
+      "computedHash": "4c2b052301a3a9404db1e9ed0adbca89a5c5d60bf69758c245cd1fd249160247"
     },
     "prototype": {
       "source": "mattpocock/skills",
@@ -130,17 +130,17 @@
     "setup-project": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "4397daf9eb7f119c04ccd6093b77e2d49f7a31d851e3ac244e834dc88432604c"
+      "computedHash": "65e5b94878052f556b8bfc466c8299a5cf74881bbe1fcbca727f7555d7aef511"
     },
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "976b1eea8edaed3ebfc98e42664dcec9a658a4932b8fa6f3fa73c8fada56501e"
+      "computedHash": "8c8b40cdac01b63f66ed00d9b5daebf075e494053a66a0de0aaa2b0ee7c6be5c"
     },
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "9a0bd51f4c8326fdfea05d2964b26e8e1a24b9d3af26c8c03892ace5f13d387d"
+      "computedHash": "596151c54726af73bf9d2d1c8f729f1f9224bd383c79fb99c112a11bc2010298"
     },
     "show-me": {
       "source": "humanlayer/skills",

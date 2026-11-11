@@ -20,6 +20,7 @@ const ENGINE = {
   "7ad2be96ea1cdf6c1c5d3da7f3be20584c3a9f25": "0.9.23",
   ad6f7858f649f44e16f21128a88992ea3c01dd74: "0.9.26",
   "84799bdc59b18f6a3df6595d8a8d1ec03dfde673": "0.9.33",
+  "3e04a59500cbbba8471976e76adee7d14bbe413b": "0.9.33",
 };
 
 const root = path.join(
@@ -72,7 +73,7 @@ test("a media-use lock ref apart from the hyperframes ref fails", () => {
   s.lock.skills["media-use"].ref = "0".repeat(40);
   assert.match(
     check(s.lock, s.pkg, s.pkgLock),
-    /media-use is locked at 0{40}, hyperframes at 84799bd/,
+    /media-use is locked at 0{40}, hyperframes at 3e04a59/,
   );
 });
 
@@ -82,7 +83,7 @@ test("a package.json pinning another version, or a caret range, fails", () => {
     s.pkg.dependencies.hyperframes = v;
     assert.equal(
       check(s.lock, s.pkg, s.pkgLock),
-      `package.json pins hyperframes ${v}, the ref 84799bdc59b18f6a3df6595d8a8d1ec03dfde673 carries 0.9.33`,
+      `package.json pins hyperframes ${v}, the ref 3e04a59500cbbba8471976e76adee7d14bbe413b carries 0.9.33`,
     );
   }
 });

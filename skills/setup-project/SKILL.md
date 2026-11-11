@@ -8,7 +8,7 @@ description: >-
   to catch a repo up.
 disable-model-invocation: true
 metadata:
-  version: 0.4.1
+  version: 0.5.0
   composes: mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa:setup-matt-pocock-skills
 ---
 
@@ -240,7 +240,7 @@ is handed to another session.
   npx skills add mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea --skill tdd --agent claude-code -y
   npx skills add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill writing-for-agents --agent claude-code -y
   npx skills add mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60 --skill triage --agent claude-code -y
-  npx skills add upstash/context7#3131245817e9e40626d8f43ce85dabab09d4ff35 --skill find-docs --agent claude-code -y
+  npx skills add upstash/context7#681554c5d3a688c67879d02d4f01d79ffd15df13 --skill find-docs --agent claude-code -y
   npx skills add humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c --skill show-me --agent claude-code -y
   ```
 

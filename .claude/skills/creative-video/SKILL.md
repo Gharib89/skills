@@ -8,7 +8,7 @@ description: >-
   checked or installed (`/creative-video setup`). A request for an "explainer
   video" goes to `explainer-video`.
 metadata:
-  version: 0.21.0
+  version: 0.22.0
 ---
 
 # creative-video
@@ -328,8 +328,8 @@ release this skill's `package.json` installs. Authoring needs both; when
 either is missing, ask once, then install it with:
 
 ```
-npx skills add heygen-com/hyperframes#84799bdc59b18f6a3df6595d8a8d1ec03dfde673 --skill hyperframes --agent claude-code -y
-npx skills add heygen-com/hyperframes#84799bdc59b18f6a3df6595d8a8d1ec03dfde673 --skill media-use --agent claude-code -y
+npx skills add heygen-com/hyperframes#3e04a59500cbbba8471976e76adee7d14bbe413b --skill hyperframes --agent claude-code -y
+npx skills add heygen-com/hyperframes#3e04a59500cbbba8471976e76adee7d14bbe413b --skill media-use --agent claude-code -y
 ```
 
 ## Voice
