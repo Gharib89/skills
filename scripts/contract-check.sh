@@ -66,6 +66,14 @@ command -v jq >/dev/null || { echo "jq not installed" >&2; exit 2; }
 
 rc=0
 
+# Every mechanic this script runs, a bare real run included, sees an empty home
+# and empty XDG directories, so a default path in one cannot read or write the
+# machine's own files: an unisolated run passed in CI and failed on a machine
+# whose fleet file was present (#1094).
+iso=$(mktemp -d) || { echo "cannot create a temp directory" >&2; exit 2; }
+trap 'rm -rf "$iso"' EXIT
+export HOME="$iso" XDG_CONFIG_HOME="$iso/config" XDG_STATE_HOME="$iso/state" XDG_DATA_HOME="$iso/data" XDG_CACHE_HOME="$iso/cache"
+
 # 1. No positional-parameter error expansion anywhere under the mechanics,
 # adapters included: `${2:?msg}` and `${2?msg}` both exit 1 with bash's
 # diagnostic on stderr and no JSON.
@@ -81,6 +89,21 @@ fi
 # one JSON object carrying an `error` key and exits 2. The eight listed here take
 # no positional, so a bare invocation of one is a real run, not a malformed one.
 takes_no_positional=" base-fresh select tooling list-prs prepare dropped-lines source-lock window "
+# A mechanic outside that list declares the same in its header, in its first 60
+# lines, with a line reading exactly `# contract: bare-run`: its bare invocation
+# is a real run (a default path, say), so it is exempt here and from check 4
+# beside the eight, which keep their entry. The marker is for a mechanic whose
+# spec gives its flag a default; the other way out is a required flag.
+for path in "$dir"/*.sh; do
+  m=$(basename "$path" .sh)
+  [ "$m" = _lib ] && continue
+  head=$(sed -n 1,60p "$path")
+  case "
+$head
+" in *"
+# contract: bare-run
+"*) takes_no_positional="$takes_no_positional$m " ;; esac
+done
 for path in "$dir"/*.sh; do
   m=$(basename "$path" .sh)
   [ "$m" = _lib ] && continue
@@ -171,7 +194,7 @@ done
 err=$(mktemp) || { echo "cannot create a temp file" >&2; exit 2; }
 nogit=$(mktemp -d) || { echo "cannot create a temp directory" >&2; exit 2; }
 work=$(mktemp -d) || { echo "cannot create a temp directory" >&2; exit 2; }
-trap 'rm -f "$err"; rm -rf "$nogit" "$work"' EXIT
+trap 'rm -f "$err"; rm -rf "$nogit" "$work" "$iso"' EXIT
 for path in "$dir"/*.sh; do
   m=$(basename "$path" .sh)
   [ "$m" = _lib ] && continue

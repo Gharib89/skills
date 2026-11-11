@@ -123,9 +123,9 @@ r=$(repo deadline "FULL_RUN='slow'
 FULL_ROWS='after|ok'")
 clock=$fixture/clock; mkdir -p "$clock"
 printf '#!/bin/sh\necho 1000\n' > "$clock/date"; chmod +x "$clock/date"
-start=$(date +%s)
+start=$(date +%s) # clock-exception: elapsed bound proving the deadline or concurrency held
 out=$(cd "$r" && CHECK_DEADLINE=1001 PATH="$clock:$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
-took=$(( $(date +%s) - start ))
+took=$(( $(date +%s) - start )) # clock-exception: elapsed bound proving the deadline or concurrency held
 check "the check running at the deadline is over-budget, one that finished beside it keeps its status" \
   '{"rung":"full","verdict":"over-budget","checks":{"runner":"over-budget","after":"pass"}}' "$out"
 check_rc "over budget exits 3" 3 "$rc"
@@ -138,9 +138,9 @@ stub nap 'sleep 2'
 r=$(repo concurrent "FULL_ROWS='one|nap
 two|nap
 three|ok'")
-start=$(date +%s)
+start=$(date +%s) # clock-exception: elapsed bound proving the deadline or concurrency held
 run "$r" full
-took=$(( $(date +%s) - start ))
+took=$(( $(date +%s) - start )) # clock-exception: elapsed bound proving the deadline or concurrency held
 check "two rows that each sleep 2 s run beside each other" yes "$([ "$took" -lt 4 ] && echo yes)"
 check "the keys keep the declared order, not the finishing order" \
   '{"rung":"full","verdict":"pass","checks":{"one":"pass","two":"pass","three":"pass"}}' "$out"
@@ -155,7 +155,7 @@ cloudless|bad
 later|ok'
 LOCAL_ONLY='cloudless'")
 mkdir -p "$r/api"
-out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 2 )) CLAUDE_CODE_REMOTE=true PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
+out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 2 )) CLAUDE_CODE_REMOTE=true PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$? # clock-exception: a deadline set relative to now, proving the run stops at it
 check "every status lands under its own row, in the declared order" \
   '{"rung":"full","verdict":"fail","checks":{"runner":"pass","typecheck:api":"over-budget","tests:api":"skipped","hang":"over-budget","broke":"fail","gone":"unavailable","cloudless":"skipped","later":"pass"}}' "$out"
 check_rc "and the failure decides the exit" 1 "$rc"
@@ -196,12 +196,12 @@ second 3" "$err"
 
 r=$(repo both "FULL_RUN='bad'
 FULL_ROWS='slow|slow'")
-out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 2 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
+out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 2 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$? # clock-exception: a deadline set relative to now, proving the run stops at it
 check_rc "a failure outranks an over-budget check" 1 "$rc"
 
 r=$(repo late "FULL_RUN='ok'
 FULL_ROWS='after|ok'")
-out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) - 1 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$?
+out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) - 1 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null); rc=$? # clock-exception: a deadline set relative to now, proving the run stops at it
 check "a check the deadline passed before it started is skipped, never blamed" \
   '{"rung":"full","verdict":"over-budget","checks":{"runner":"skipped","after":"skipped"}}' "$out"
 check_rc "and the rung is still over budget" 3 "$rc"
@@ -209,7 +209,7 @@ check_rc "and the rung is still over budget" 3 "$rc"
 # Twenty runs at once, each killed at its deadline: every one is over-budget,
 # never a fail, however the watchdog's own exit races the check's.
 r=$(repo race "FULL_RUN='slow'")
-d=$(( $(date +%s) + 1 ))
+d=$(( $(date +%s) + 1 )) # clock-exception: a deadline set relative to now, proving the run stops at it
 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
   (cd "$r" && CHECK_DEADLINE=$d PATH="$bin:$PATH" bash scripts/check.sh full > "$fixture/race.$i" 2>&1) &
 done
@@ -218,7 +218,7 @@ check "a check killed at the deadline is over-budget in every run" 0 \
   "$(cat "$fixture"/race.* | grep -vc '"verdict":"over-budget"' | tr -d ' ')"
 
 r=$(repo quiet "FULL_RUN='ok'")
-out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 30 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>"$fixture/err"); rc=$?
+out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 30 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>"$fixture/err"); rc=$? # clock-exception: a deadline set relative to now, proving the run stops at it
 check "a passing run under a deadline writes nothing to stderr" '' "$(cat "$fixture/err")"
 
 # A check that reads stdin gets none, so it cannot drain the row list the rung
@@ -230,7 +230,7 @@ mkdir -p "$r/api" "$r/web"
 run "$r" full
 check "a check reading stdin leaves every later member checked" \
   '{"rung":"full","verdict":"pass","checks":{"typecheck:api":"pass","typecheck:web":"pass"}}' "$out"
-out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 30 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null)
+out=$(cd "$r" && CHECK_DEADLINE=$(( $(date +%s) + 30 )) PATH="$bin:$PATH" bash scripts/check.sh full 2>/dev/null) # clock-exception: a deadline set relative to now, proving the run stops at it
 check "and the same under a deadline" \
   '{"rung":"full","verdict":"pass","checks":{"typecheck:api":"pass","typecheck:web":"pass"}}' "$out"
 

@@ -124,7 +124,7 @@ check "a thread of that id elsewhere is thread-mismatch" "$repo#5 thread-mismatc
 # --- the stall count -----------------------------------------------------------
 stalls() { jq -r --arg k "$repo#$1" '.entries[$k].stalls' "$led"; }
 stalled() { jq -r '[.stalled[] | "\(.key) \(.stalls) \(.reason)"] | join(",")' <<<"$1"; }
-old=$(date -u -d '2 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+old=2020-01-01T00:00:00Z # far past any --stall-window below: no clock read
 fixture
 R >/dev/null
 check "a first look is a baseline, never a stall" 0 "$(stalls 5)"
