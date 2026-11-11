@@ -193,6 +193,7 @@ check "an adopted ticket is a link with its mark" "yes" "$(grep -q '\[skills#12\
 check "a launched ticket carries no mark" "yes" "$(grep -q '\[skills#13\](https://github.com/Gharib89/skills/issues/13) launched' <<<"$block" && echo yes || echo no)"
 check "a task's need names its key, not a link" "yes" "$(grep -q '^Needs you (1): task:grill-auth answer the grill' <<<"$block" && echo yes || echo no)"
 L set task:grill-auth stage '"settled"' >/dev/null
-check "a settled task is no Merged row" "no" "$(S --digest | jq -r .block | grep -q '^Merged' && echo yes || echo no)"
+settled_block=$(S --digest | jq -r .block)
+check "a settled task is no Merged row" "no" "$(grep -q '^Merged' <<<"$settled_block" && echo yes || echo no)"
 
 finish

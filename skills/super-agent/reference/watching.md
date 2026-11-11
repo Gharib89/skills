@@ -36,10 +36,11 @@ lists the fields; this file holds the rules behind them.
 
 ## Unqueued issues
 
-- `reconcile --fleet <file>` lists an open issue in an active repo that was
-  created since the earliest open entry launched, and that no entry of any
-  stage, waiting row or `super-agent-claim` comment holds. Each is listed once
-  (the ledger keeps `unqueued_offered`) and launched only on the owner's go.
+- `reconcile --ledger <file> --fleet <file>` lists an open issue in an active
+  repo that was created since the earliest open entry launched, and that no
+  entry of any stage, waiting row or `super-agent-claim` comment holds. Each
+  is listed once (the ledger keeps `unqueued_offered`) and launched only on the
+  owner's go.
 
 ## Stalls
 
