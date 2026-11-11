@@ -15,7 +15,7 @@ s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin" "$tmp/tools" "$tmp/fake" "$tmp/remote"
-for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut find wc diff chmod; do
+for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut find wc diff chmod cp; do
   ln -s "$(command -v $t)" "$tmp/tools/$t" || exit 2
 done
 export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake
@@ -148,6 +148,11 @@ reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
 jq '.repos = {"acme/widgets": {"brief": "one line"}}' "$fleet" > "$tmp/badfleet.json"
 out=$(bash "$s/launch.sh" "$repo#7" --fleet "$tmp/badfleet.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>&1); rc=$?
 check "a fleet whose brief lines are mis-shaped exits 2, never launching with an empty brief" "2 false" "$rc $(jq -r 'has("args")' <<<"$out")"
+for stub in brief route; do
+  rm -rf "$tmp/stub"; cp -r "$s" "$tmp/stub"; printf 'exit 0\n' > "$tmp/stub/$stub.sh"
+  out=$(bash "$tmp/stub/launch.sh" "$repo#7" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>&1); rc=$?
+  check "a $stub that prints nothing exits 2 with a named error, never launching" "2 false $stub gave no answer" "$rc $(jq -r 'has("args")' <<<"$out") $(jq -r .error <<<"$out")"
+done
 reset
 
 # --- the per-repo cap: a launch over it is a waiting row -----------------------------
