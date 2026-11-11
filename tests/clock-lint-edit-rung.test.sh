@@ -28,12 +28,12 @@ edit() {
   out=$(cd "$r" && CLAUDE_CODE_REMOTE='' bash scripts/check.sh edit "$1" 2>&1); rc=$?
 }
 
-printf '#!/usr/bin/env bash\nnow=$(date +%%s)\n' > "$r/tests/reads.test.sh"
+printf '#!/usr/bin/env bash\ndate +%%s\n' > "$r/tests/reads.test.sh"
 edit tests/reads.test.sh
 check_rc "a test file reading the clock fails the edit rung" 1 "$rc"
 case $out in *"reads the current time"*) check "and the failure names the rule" 0 0 ;; *) check "and the failure names the rule" "output holds the rule" "$out" ;; esac
 
-printf '#!/usr/bin/env bash\nnow=$(date -u -d @1800000000 +%%s)\n' > "$r/tests/fixed.test.sh"
+printf '#!/usr/bin/env bash\ndate -u -d @1800000000 +%%s\n' > "$r/tests/fixed.test.sh"
 edit tests/fixed.test.sh
 check_rc "a test file converting a fixed time passes" 0 "$rc"
 # Exit 0 is also `skipped`, so the verdict tells a pass from a file the rung never read.
