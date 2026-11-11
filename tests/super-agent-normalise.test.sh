@@ -41,6 +41,10 @@ L wait acme/widgets#6 --reason r >/dev/null; L wait ACME/Widgets#6 --reason r2 >
 check "ledger wait: a repeat in another case is one row" 1 "$(L list | jq '.waiting | length')"
 check "ledger unwait: a mixed-case key removes it" true "$(L unwait ACME/WIDGETS#6 | jq .removed)"
 
+# --- worktree: the ledger form resolves a key in another case ------------------------
+out=$(bash "$s/worktree.sh" remove --ledger "$led" ACME/Widgets#5 2>/dev/null)
+check "worktree: a mixed-case ledger key finds the entry" acme/widgets#5 "$(jq -r .key <<<"$out")"
+
 # --- track: a mixed-case repo is the tracked one --------------------------------------
 check "track: tracking it in another case changes nothing" false "$(bash "$s/track.sh" --fleet "$fleet" track ACME/widgets | jq .changed)"
 check "track: stopping it in another case removes it" '[]' "$(bash "$s/track.sh" --fleet "$fleet" stop acme/WIDGETS | jq -c .active_repos)"
