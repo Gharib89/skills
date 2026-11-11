@@ -245,12 +245,17 @@ sa_github() {
   printf '{"hosts":{"github.com":[%s]}}\n' "${out%,}" > "$SA_FAKE/gh-auth.json"
 }
 
-# sa_thread <id> <status> <runCount> <pending> <worktree> <branch> [<last message>]
+# sa_thread <id> <status> <runCount> <pending> <worktree> <branch> [<last message> [<updatedAt>]]
+# `updatedAt` is when the thread last changed, which for a thread at rest is when
+# its run ended (measured 2026-11-12: two reads 3 s apart of a thread at rest
+# answer the same stamp). A test passes a fixed one, 2099 for "inside any window"
+# and 2020 for "past it", so none reads the clock.
 sa_thread() {
   jq -cn --arg id "$1" --arg s "$2" --argjson n "$3" --argjson p "$4" --arg w "$5" \
-    --arg b "$6" --arg m "${7:-}" \
-    '{thread: {threadId: $id, status: $s, runCount: $n, pendingRequestCount: $p,
-       worktreePath: $w, branch: $b, pullRequests: [], settled: false},
+    --arg b "$6" --arg m "${7:-}" --arg u "${8:-}" \
+    '{thread: ({threadId: $id, status: $s, runCount: $n, pendingRequestCount: $p,
+       worktreePath: $w, branch: $b, pullRequests: [], settled: false}
+       + (if $u == "" then {} else {updatedAt: $u} end)),
       messages: (if $m == "" then [] else [{role: "assistant", runId: "r", text: $m}] end)}' \
     > "$SA_FAKE/threads/$1.json"
 }
@@ -281,6 +286,14 @@ sa_pr() {
     none) body='[]' ;;
   esac
   sa_route "repos/$repo/pulls?head=${repo%%/*}:$(jq -rn --arg s "$branch" '$s | @uri')&state=all&sort=created&direction=desc&per_page=1" "$body"
+}
+
+# sa_pr_merged_at <owner/name> <branch> <iso time>: a merged PR that merged then
+sa_pr_merged_at() {
+  sa_pr "$1" "$2" merged
+  local f
+  f="$SA_FAKE/gh/$(printf '%s' "repos/$1/pulls?head=${1%%/*}:$(jq -rn --arg s "$2" '$s | @uri')&state=all&sort=created&direction=desc&per_page=1" | sed 's/[^A-Za-z0-9._-]/_/g')"
+  jq -c --arg t "$3" 'map(.merged_at = $t)' "$f" > "$f.new" && mv "$f.new" "$f"
 }
 
 # sa_checks <owner/name> <sha> <none|pending|done>: the check runs on a head commit

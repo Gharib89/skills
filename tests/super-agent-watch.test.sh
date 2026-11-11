@@ -87,7 +87,7 @@ sa_pr $repo feat/x-5 merged
 sa_thread t-5 idle 1 0 /wt/5 feat/x-5
 out=$(W --timeout 5)
 check "a merged PR is pr-merged, ahead of the run that finished with it" "$repo#5 pr-merged" "$(event "$out")"
-check "and the event carries the PR" '{"number":7,"state":"merged"}' "$(jq -c .observed.pr <<<"$out")"
+check "and the event carries the PR and when it merged" '{"number":7,"state":"merged","merged_at":"2026-11-06T10:00:00Z"}' "$(jq -c .observed.pr <<<"$out")"
 
 fixture
 sa_pr $repo feat/x-5 closed
@@ -275,5 +275,46 @@ echo 999999 > "$led.watch"
 out=$(W --timeout 1); rc=$?
 check_rc "a pid file of a dead watcher is taken over" 0 "$rc"
 check "and the lock is released at exit" "no" "$([ -f "$led.watch" ] && echo yes || echo no)"
+
+# --- a rest that ends on the waiting line is running until the window passes ---
+# The brief tells a run that ends a turn to wait on its own background work to
+# say so in a last line of this exact text. 2099 is inside any window, 2020 past
+# the 60 s one, so no case reads the clock.
+wl='Waiting on my own background work.'
+soon=2099-01-01T00:00:00Z
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $soon
+check "a thread at rest on the waiting line is no run-finished inside the window" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$(printf 'Checks started.\n\n%s\n' "$wl")" $soon
+check "prose above the line does not matter, only the last line" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $old
+check "past the window the rest is stall-window, not run-finished" "$repo#5 stall-window" "$(event "$(W --timeout 5 --stall-window 60)")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl more" $soon
+check "a last line that only starts with the waiting line is a finished run" "$repo#5 run-finished" "$(event "$(W --timeout 5 --stall-window 60)")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$(printf '%s\nPR: https://x/7\n' "$wl")" $soon
+check "the waiting line above another line is a finished run" "$repo#5 run-finished" "$(event "$(W --timeout 5 --stall-window 60)")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl"
+check "a thread with no update stamp cannot be timed, so its rest is run-finished" "$repo#5 run-finished" "$(event "$(W --timeout 5 --stall-window 60)")"
+bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stalls 3 >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $old
+check "an entry at 3 stalls stays quiet past the window too" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+
+# --- a PR merging while its thread runs raises one event ------------------------
+fixture
+sa_pr_merged_at $repo feat/x-5 $soon
+out=$(W --timeout 2 --stall-window 60)
+check "a merge inside the bound, thread still running, is no event" "null timeout" "$(event "$out")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5
+out=$(W --timeout 5 --stall-window 60)
+check "the thread resting is the one event, pr-merged" "$repo#5 pr-merged" "$(event "$out")"
+bash "$s/reconcile.sh" --ledger "$led" >/dev/null
+check "and the entry it settled raises no second one" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+fixture
+sa_pr_merged_at $repo feat/x-5 $old
+check "a merge past the bound is pr-merged though the thread still runs" "$repo#5 pr-merged" "$(event "$(W --timeout 5 --stall-window 60)")"
+fixture
+sa_pr_merged_at $repo feat/x-5 $soon
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $soon
+check "a merge with its thread waiting on the waiting line is no event inside the bound" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
 
 finish

@@ -124,11 +124,26 @@ sa_remote_flag() {
   sa_remote_dirs=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$sa_remote_dirs")
 }
 
+# The last line a supervised run writes when it ends a turn only to wait on its own
+# background work (a check, a CI wait, a subagent): the launch brief asks for it
+# word for word, and `sa_observe` reads it as `waiting`. A rest that ends on it is
+# running until the stall window passes, so it raises no `run-finished` and adds no
+# stall. Defined once here: `brief.sh` sends it and the observation matches it.
+sa_waiting_line='Waiting on my own background work.'
+
+# `active($w; $now)` for a snapshot (`$obs`): the thread is running, or at rest on
+# the waiting line for less than `$w` seconds (`rest_at`, the thread's last update,
+# is when its run ended). `waiting` is true only with a `rest_at` to time it by.
+# shellcheck disable=SC2034  # read by watch.sh and reconcile.sh
+sa_jq_active='def active($w; $now): .status == "running" or (.waiting == true and ($now - .rest_at) < $w);'
+
 # sa_observe <entry>: one look at an entry's thread (through the `t3` CLI, or for
 # an entry with an `environment_id` through its reply file) and
 # its PR (through `gh` REST) as a snapshot in $obs:
-# {status, run_count, pending, gate, pr: {number, state}}, `state` one of none,
-# open, merged, closed, and `gate` true when the thread's last assistant message
+# {status, run_count, pending, gate, waiting, rest_at, pr: {number, state}}, `state`
+# one of none, open, merged, closed (a merged PR adds its `merged_at`), `waiting`
+# true when the thread's last assistant message ends on `sa_waiting_line`, `rest_at`
+# the thread's `updatedAt` as an epoch (null when it has none), and `gate` true when the thread's last assistant message
 # is a ship merge-gate summary, which carries `ship <version>` as a word of its own and its `Unmet criteria` item (ship
 # prints the version in its first reply too, so the version alone is no summary). A thread is found by the id and worktree path the entry holds,
 # never by a process name, which once matched the wrong process. On failure it
@@ -182,10 +197,14 @@ sa_observe() {
     obs=$(jq -c '{status: .thread.status, run_count: .thread.runCount, pending: .thread.pendingRequestCount}' <<<"$line"); return 0
   fi
   sa_pr_of "$1" || return 1
-  obs=$(jq -c --argjson pr "$pr_obs" '{status: .thread.status, run_count: .thread.runCount,
-    pending: .thread.pendingRequestCount,
-    gate: ([.messages[]? | select(.role == "assistant")] | last | (.text // "") | (test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+") and test("Unmet criteria"))),
-    pr: $pr}' <<<"$line")
+  obs=$(jq -c --argjson pr "$pr_obs" --arg wl "$sa_waiting_line" '
+    (.thread.updatedAt | if type == "string" then (sub("[.][0-9]+Z$"; "Z") | try fromdateiso8601 catch null) else null end) as $rest
+    | ([.messages[]? | select(.role == "assistant")] | last | (.text // "")) as $text
+    | {status: .thread.status, run_count: .thread.runCount,
+       pending: .thread.pendingRequestCount,
+       gate: ($text | (test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+") and test("Unmet criteria"))),
+       waiting: ($rest != null and (($text | split("\n") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != "")) | last) == $wl)),
+       rest_at: $rest, pr: $pr}' <<<"$line")
 }
 
 # sa_pr_of <entry>: the entry's PR, found by its branch through `gh` REST, as
@@ -213,7 +232,8 @@ sa_pr_of() {
   pr=$(jq -c '.[0] // null' <<<"$list")
   pr_obs=$(jq -cn --argjson pr "$pr" 'if $pr == null then {number: null, state: "none"}
     else {number: $pr.number, state: (if $pr.merged_at != null then "merged"
-      elif $pr.state == "closed" then "closed" else "open" end)} end')
+      elif $pr.state == "closed" then "closed" else "open" end)}
+      + (if $pr.merged_at != null then {merged_at: $pr.merged_at} else {} end) end')
   [ -n "$(jq -r '.environment_id // empty' <<<"$1")" ] || return 0
   checks=none
   sha=$(jq -r '.head.sha // empty' <<<"$pr")

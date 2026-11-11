@@ -50,6 +50,9 @@ check "the merge allowance is stated" 1 "$(grep -c '^Merge allowance: merge when
 check "a hold outside them stops at the gate and is escalated" 1 "$(grep -c '^Any hold outside the merge allowance and these waivers stops at the gate' <<<"$brief")"
 check "harmless commands need no hold" 1 "$(grep -c '^Commands harmless to run' <<<"$brief")"
 check "the branch rule is there" 1 "$(grep -c '^Work in the worktree you start in, on the branch it holds' <<<"$brief")"
+wl='Waiting on my own background work.'
+check "the waiting line is there, word for word, for a turn that only waits on its own background work" 1 "$(grep -cF "ends with this line, word for word, as its last line: \`$wl\`" <<<"$brief")"
+check "and the final message is still the PR URL and gate state, never that line" 1 "$(grep -c 'never this line' <<<"$brief")"
 check "and the closing line" "End your last message with the PR URL and the gate state." "$(tail -1 <<<"$brief")"
 check "with no ruling there is no allowed-calls block" 0 "$(grep -c 'Calls the owner allowed' <<<"$brief")"
 
