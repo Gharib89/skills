@@ -23,6 +23,16 @@ T
 check_rc "a read of the current time fails" 1 "$rc"
 check "and the report names the file and line" "$fixture/reads-now.test.sh:1" "$(printf '%s' "$out" | cut -d: -f1,2)"
 
+lint reads-env-prefix <<'T'
+now=$(TZ=UTC date +%s)
+T
+check_rc "a read behind an environment assignment fails" 1 "$rc"
+lint env-prefix-text <<'T'
+x=$(echo date)
+grep TZ=UTC date_file
+T
+check_rc "date as an argument after an assignment is no read" 0 "$rc"
+
 lint reads-relative <<'T'
 old=$(date -u -d '2 hours ago' +%Y-%m-%dT%H:%M:%SZ)
 T

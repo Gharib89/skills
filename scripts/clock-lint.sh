@@ -44,6 +44,8 @@ for f in "$@"; do
       # Inside single quotes it is text, and `\$(` is text a later shell expands.
       q = p; gsub(/[^\047]/, "", q)
       if (length(q) % 2 == 1 || p ~ /\\\$\($/) return 0
+      # An environment assignment in front (`TZ=UTC date`) leaves it a command.
+      while (p ~ /(^|[ \t(`;|&{])[A-Za-z_][A-Za-z0-9_]*=[^ \t()`;|&]*[ \t]+$/) sub(/[A-Za-z_][A-Za-z0-9_]*=[^ \t()`;|&]*[ \t]+$/, "", p)
       sub(/[ \t]+$/, "", p)
       if (p == "") return 1
       if (p ~ /(\$\(|[(`;|&{!])$/) return 1
