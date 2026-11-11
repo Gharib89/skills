@@ -40,20 +40,6 @@ Each leg's triggers, what a red run means, and the two workflows that are not le
 
 Self-review cap: 3
 
-### codex
-
-Login: chatgpt-codex-connector[bot]
-Trigger: on-request
-Request: comment @codex review
-Workflow: native codex
-Cap: 2
-Resolve: resolve-thread
-Gating: no
-Fallback-for: None.
-Instructions: AGENTS.md
-
-Native Codex code review through the ChatGPT Codex Connector GitHub app, on the maintainer's ChatGPT subscription: no API key, no Actions workflow. This repo's primary reviewer, driven on every run and capped at two rounds; `claude` below is its fallback. The review rules Codex reads are the `## Code Review Rules` section of the root `AGENTS.md`. How a round answers, setup, disabling it and probe evidence: [ship-reviewers.md](ship-reviewers.md#codex).
-
 ### claude
 
 Login: claude[bot]
@@ -63,10 +49,24 @@ Workflow: .github/workflows/claude-review.yml
 Cap: 2
 Resolve: resolve-thread
 Gating: no
-Fallback-for: codex
+Fallback-for: None.
 Instructions: .github/copilot-instructions.md
 
-Claude Code on GitHub Actions, standing in for Codex when its round does not come: the subscription's Codex allowance spent, the connector down, a refusal. Driven only when `codex` exits `not reviewed`, is capped with findings, or stops `not landed`, and then for at most two rounds; on any other run it reports `not invoked: codex reviewed` and costs nothing. Each round is one formal review whose per-file findings are inline threads, resolved with `resolve-thread`; a finding that names no file stays on the review body and is answered with `comment-pr`, which leaves nothing to resolve. Why `Login:` is the app's, and how a round that dies or is cancelled reads: [ship-reviewers.md](ship-reviewers.md#claude).
+Claude Code on GitHub Actions. This repo's primary reviewer, driven on every run and capped at two rounds; `codex` below is its fallback. Each round is one formal review whose per-file findings are inline threads, resolved with `resolve-thread`; a finding that names no file stays on the review body and is answered with `comment-pr`, which leaves nothing to resolve. Why `Login:` is the app's, and how a round that dies or is cancelled reads: [ship-reviewers.md](ship-reviewers.md#claude).
+
+### codex
+
+Login: chatgpt-codex-connector[bot]
+Trigger: on-request
+Request: comment @codex review
+Workflow: native codex
+Cap: 1
+Resolve: resolve-thread
+Gating: no
+Fallback-for: claude
+Instructions: AGENTS.md
+
+Native Codex code review through the ChatGPT Codex Connector GitHub app, on the maintainer's ChatGPT subscription: no API key, no Actions workflow. Claude's fallback, because the maintainer's Codex allowance is low: driven only when `claude` exits `not reviewed`, is capped with findings, or stops `not landed`, and then for at most one round; on any other run it reports `not invoked: claude reviewed` and costs nothing. The review rules Codex reads are the `## Code Review Rules` section of the root `AGENTS.md`. How a round answers, setup, disabling it and probe evidence: [ship-reviewers.md](ship-reviewers.md#codex).
 
 ## Coding standards
 
