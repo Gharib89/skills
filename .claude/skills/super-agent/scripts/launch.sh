@@ -13,6 +13,9 @@
 #          [--note <text>] [--out <file>]
 #   launch record --launch <file> --thread <id> --ledger <file> [--rethread]
 #          [--worktree <path>] [--remote <environment id>=<dir>]...
+#   launch record --task <slug> --thread <id> --ledger <file> [--worktree <path>]
+#          [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>]
+#          [--remote <environment id>=<dir>]...
 #
 # --machine is this machine's fleet key and --thread the super agent's own thread,
 # which `claim` records (the brief takes the placed machine,
@@ -27,7 +30,13 @@
 # `record` reads the worktree from `t3 thread show` when --worktree is omitted
 # on a launch to this machine; a remote launch names it, and its --remote
 # files reach the reconcile. --rethread points the ticket's open entry at the
-# new thread (the stall ladder's rung 3) instead of adding one.
+# new thread (the stall ladder's rung 3) instead of adding one. Every thread the
+# super agent launches is recorded, whatever its kind: `record --task <slug>` is for
+# one that is no ticket's (a grill, a deploy, a review), from no launch answer, as a
+# `task` entry (`ledger`); `--worktree` is read from `t3 thread show` when omitted
+# and the thread is on this machine. `record` reads the entry back from the ledger
+# before it answers, and fails with `unrecorded launch` (exit 1) when neither
+# `--launch` nor `--task` names the entry to write or the ledger does not hold it.
 #
 # stdout: launch: {key, launch, ...}. `launch` true: {kind, size, size_source,
 #         claim (`taken` or `own`), args, needs, record}: `args` the
@@ -41,7 +50,7 @@
 #         machine and environment_id) or `waiting` (place's reason and
 #         considered, and the ledger now holds the waiting row).
 #         record: {key, entry, reconcile: {checked, errors}}, or the ledger's {error}
-#         when it refused the entry
+#         when it refused the entry, or {error: "unrecorded launch: ..."}
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
 #       file, a claim, issue or placement the host or a script refused, or a record
@@ -49,7 +58,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file> --machine <key> --thread <id> [--area <path>]... [--gpu] [--account <login>] [--blocked-by <n>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--readings <file>] [--exclude <key>]... [--note <text>] [--out <file>] | launch record --launch <file> --thread <id> --ledger <file> [--rethread] [--worktree <path>] [--remote <environment id>=<dir>]...'
+usage='usage: launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file> --machine <key> --thread <id> [--area <path>]... [--gpu] [--account <login>] [--blocked-by <n>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--readings <file>] [--exclude <key>]... [--note <text>] [--out <file>] | launch record (--launch <file> [--rethread] | --task <slug> [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>]) --thread <id> --ledger <file> [--worktree <path>] [--remote <environment id>=<dir>]...'
 sa_help "$usage" "$@"
 here=$(dirname "${BASH_SOURCE[0]}")
 # sub <script> <args>...: one script's answer in $out and its exit in $rc. Its exit 2
@@ -62,48 +71,70 @@ sub() {
 
 if [ "${1:-}" = record ]; then
   shift
-  launchf='' thread='' ledger='' worktree='' remotes=() rethread=''
+  launchf='' thread='' ledger='' worktree='' remotes=() rethread='' task='' tbranch='' trepo='' tmachine=local tenv=''
   while [ $# -gt 0 ]; do
     case $1 in --rethread) rethread=1; shift; continue ;; esac
     sa_flag_value "$usage" "${2:-}"
     case $1 in
       --launch) launchf=$2 ;; --thread) thread=$2 ;; --ledger) ledger=$2 ;; --worktree) worktree=$2 ;;
+      --task) task=$2 ;; --branch) tbranch=$2 ;; --repo) trepo=$2 ;; --machine) tmachine=$2 ;; --environment) tenv=$2 ;;
       --remote) sa_remote_flag "$usage" "$2"; remotes+=(--remote "$2") ;;
       *) sa_tooling "$usage" ;;
     esac
     shift 2
   done
-  [ -n "$launchf" ] && [ -n "$thread" ] && [ -n "$ledger" ] || sa_tooling "$usage"
-  jq -e '.launch == true and (.record | type) == "object"' "$launchf" >/dev/null 2>&1 || sa_tooling "$launchf: not a launch answer that launched"
-  rec=$(jq -c .record "$launchf")
-  env=$(jq -r '.environment_id // empty' <<<"$rec")
-  if [ -z "$worktree" ]; then
-    [ -z "$env" ] || sa_tooling "a launch on a linked machine needs --worktree"
-    raw=$(t3 thread show "$thread" --json 2>/dev/null </dev/null) || sa_tooling "cannot read thread $thread: pass --worktree"
-    worktree=$(grep '^{"' <<<"$raw" | tail -1 | jq -r '.thread.worktreePath // empty' 2>/dev/null)
-    [ -n "$worktree" ] || sa_tooling "thread $thread has no worktree path: pass --worktree"
+  [ -n "$thread" ] && [ -n "$ledger" ] || sa_tooling "$usage"
+  if [ -z "$launchf" ] && [ -z "$task" ]; then
+    jq -cn '{error: "unrecorded launch: name the entry to write, --launch <file> or --task <slug>"}'
+    printf '%s\n' "unrecorded launch: name the entry to write, --launch <file> or --task <slug>" >&2; exit 1
   fi
-  aflags=()
-  while IFS= read -r a; do aflags+=(--area "$a"); done < <(jq -r '.areas[]' <<<"$rec")
-  key=$(jq -r .key <<<"$rec")
-  fields=(--thread "$thread" --worktree "$worktree" --branch "$(jq -r .branch <<<"$rec")" --kind "$(jq -r .kind <<<"$rec")"
-    --instance "$(jq -r .instance_id <<<"$rec")" --model "$(jq -r .model <<<"$rec")" --effort "$(jq -r .effort <<<"$rec")"
-    ${env:+--environment "$env"} ${aflags[@]+"${aflags[@]}"})
-  machine=$(jq -r .machine <<<"$rec")
-  if [ -n "$rethread" ]; then
-    # rethread keeps the entry's machine, so a thread on another machine sets it after.
-    sub ledger --ledger "$ledger" rethread "$key" "${fields[@]}"
-    if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" set "$key" machine "$(jq -cn --arg m "$machine" '$m')"; fi
-    if [ "$rc" = 0 ]; then
-      sub ledger --ledger "$ledger" get "$key"
-      [ "$rc" = 0 ] || sa_tooling "cannot read entry $key"
-      out=$(jq -c '{entry: .}' <<<"$out") || sa_tooling "cannot read entry $key"
+  if [ -n "$task" ]; then
+    # a thread that is no ticket's: no launch answer, so the entry comes from the flags
+    key="task:$task"
+    if [ -z "$worktree" ] && [ -z "$tenv" ]; then
+      raw=$(t3 thread show "$thread" --json 2>/dev/null </dev/null) \
+        && worktree=$(grep '^{"' <<<"$raw" | tail -1 | jq -r '.thread.worktreePath // empty' 2>/dev/null) || worktree=''
     fi
+    sub ledger --ledger "$ledger" add --task "$task" --thread "$thread" --machine "$tmachine" ${worktree:+--worktree "$worktree"} \
+      ${tbranch:+--branch "$tbranch"} ${trepo:+--repo "$trepo"} ${tenv:+--environment "$tenv"}
   else
-    sub ledger --ledger "$ledger" add --repo "${key%#*}" --number "${key##*#}" --machine "$machine" "${fields[@]}"
+    jq -e '.launch == true and (.record | type) == "object"' "$launchf" >/dev/null 2>&1 || sa_tooling "$launchf: not a launch answer that launched"
+    rec=$(jq -c .record "$launchf")
+    env=$(jq -r '.environment_id // empty' <<<"$rec")
+    if [ -z "$worktree" ]; then
+      [ -z "$env" ] || sa_tooling "a launch on a linked machine needs --worktree"
+      raw=$(t3 thread show "$thread" --json 2>/dev/null </dev/null) || sa_tooling "cannot read thread $thread: pass --worktree"
+      worktree=$(grep '^{"' <<<"$raw" | tail -1 | jq -r '.thread.worktreePath // empty' 2>/dev/null)
+      [ -n "$worktree" ] || sa_tooling "thread $thread has no worktree path: pass --worktree"
+    fi
+    aflags=()
+    while IFS= read -r a; do aflags+=(--area "$a"); done < <(jq -r '.areas[]' <<<"$rec")
+    key=$(jq -r .key <<<"$rec")
+    fields=(--thread "$thread" --worktree "$worktree" --branch "$(jq -r .branch <<<"$rec")" --kind "$(jq -r .kind <<<"$rec")"
+      --instance "$(jq -r .instance_id <<<"$rec")" --model "$(jq -r .model <<<"$rec")" --effort "$(jq -r .effort <<<"$rec")"
+      ${env:+--environment "$env"} ${aflags[@]+"${aflags[@]}"})
+    machine=$(jq -r .machine <<<"$rec")
+    if [ -n "$rethread" ]; then
+      # rethread keeps the entry's machine, so a thread on another machine sets it after.
+      sub ledger --ledger "$ledger" rethread "$key" "${fields[@]}"
+      if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" set "$key" machine "$(jq -cn --arg m "$machine" '$m')"; fi
+      if [ "$rc" = 0 ]; then
+        sub ledger --ledger "$ledger" get "$key"
+        [ "$rc" = 0 ] || sa_tooling "cannot read entry $key"
+        out=$(jq -c '{entry: .}' <<<"$out") || sa_tooling "cannot read entry $key"
+      fi
+    else
+      sub ledger --ledger "$ledger" add --repo "${key%#*}" --number "${key##*#}" --machine "$machine" "${fields[@]}"
+    fi
   fi
   [ "$rc" = 0 ] || { printf '%s\n' "$out"; exit 1; }
   entry=$(jq -c .entry <<<"$out")
+  # The entry is read back: a launch is finished only once the ledger holds its thread.
+  sub ledger --ledger "$ledger" get "$key"
+  if [ "$rc" != 0 ] || [ "$(jq -r '.thread // empty' <<<"$out")" != "$thread" ]; then
+    jq -cn --arg k "$key" --arg t "$thread" '{error: "unrecorded launch: \($k) has no ledger entry for thread \($t)"}'
+    printf 'unrecorded launch: %s has no ledger entry for thread %s\n' "$key" "$thread" >&2; exit 1
+  fi
   sub reconcile --ledger "$ledger" ${remotes[@]+"${remotes[@]}"}
   [ "$rc" = 0 ] && jq -e '.checked != null' >/dev/null <<<"$out" || sa_tooling "reconcile gave no answer"
   jq -cn --argjson e "$entry" --argjson r "$out" '{key: $e.key, entry: $e, reconcile: {checked: $r.checked, errors: $r.errors}}'

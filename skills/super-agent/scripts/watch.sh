@@ -10,7 +10,8 @@
 # (default 30). A change is a difference from the entry's `observed` baseline,
 # which `reconcile` records: `pr-merged`, `pr-closed`, `pending-approval` (a
 # permission hold, which wakes nothing by itself), `run-finished`, and
-# `stall-window`. A run starting is no event. A run that finished is looked at
+# `stall-window`. A remote entry adds `pr-opened` and `checks-finished`. A run
+# starting is no event. A run that finished is looked at
 # again `--recheck` seconds later (default 90) and reported only if the thread
 # is still at rest, since a run that waits on its own background subagent starts
 # again within about a minute (measured 2026-11-06). `stall-window` is an entry
@@ -32,13 +33,15 @@
 # ledger: its pid is held in `<ledger>.watch`, and a second start exits 1 naming
 # the running one, so a backstop wake can start it blindly. Watch writes nothing
 # else, so an unreconciled change is reported again by the next watch. A remote
-# entry (an `environment_id`) is read as `reconcile` reads it, from its
-# `--remote` reply file, read again each poll: a file the super agent does not
-# refresh shows no new run, so a remote thread's own changes reach the watcher
-# only as fast as the files do, while its PR is read from GitHub each poll.
+# entry (an `environment_id`) is woken from GitHub alone, found by its branch: a
+# PR opening (`pr-opened`), the checks on its head commit finishing
+# (`checks-finished`), a merge and a close. Its thread is not read between wakes:
+# the baseline holds the thread `reconcile` read from the reply file on the last
+# wake, so a remote thread's own finish reaches the super agent through the
+# backstop schedule. `--remote` is accepted and unused here.
 #
 # stdout: {key, thread, event, observed} for a change, `observed` the snapshot
-#         {status, run_count, pending, gate, pr: {number, state}}; {key, thread,
+#         {status, run_count, pending, gate, pr: {number, state[, checks]}}; {key, thread,
 #         event, detail} for `thread-mismatch`, `thread-unreadable` and
 #         `pr-unreadable`; {key: null, thread: null, event: "timeout",
 #         watching, unobserved} once --timeout passes, `watching` the keys it
@@ -116,6 +119,8 @@ change_of() {
   jq -rn --argjson o "$1" --argjson n "$2" '
     if $n.pr.state == "merged" and $o.pr.state != "merged" then "pr-merged"
     elif $n.pr.state == "closed" and $o.pr.state != "closed" then "pr-closed"
+    elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "none" then "pr-opened"
+    elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "open" and $n.pr.checks == "done" and $o.pr.checks != "done" then "checks-finished"
     elif $n.pending > $o.pending then "pending-approval"
     elif $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
     else empty end'
@@ -135,7 +140,13 @@ while :; do
   while IFS= read -r entry; do
     key=$(jq -r .key <<<"$entry") thread=$(jq -r .thread <<<"$entry")
     read_ok=false event=''
-    if sa_observe "$entry"; then
+    if [ -n "$(jq -r '.environment_id // empty' <<<"$entry")" ]; then
+      # remote: GitHub only, over the thread fields of the last reconcile
+      if sa_pr_of "$entry"; then
+        read_ok=true obs=$(jq -c --argjson pr "$pr_obs" '.observed + {pr: $pr}' <<<"$entry")
+        event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs")
+      fi
+    elif sa_observe "$entry"; then
       read_ok=true
       event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs")
       if [ "$event" = run-finished ] && [ "$recheck" -gt 0 ]; then

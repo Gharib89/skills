@@ -9,7 +9,8 @@
 # Rows, in this order, an empty row left out: `Needs you` (the ledger's open
 # needs, each its one action), `Merged` (a ship entry whose PR merged and that no
 # digest has listed yet), `Running` (an open entry, read as at its merge gate, in
-# review, launched, running or at rest), `Waiting` (the waiting list, in its
+# review, launched, running or at rest; a `task` entry reads `task:<slug> (task)`
+# and an adopted one adds `(adopted)`), `Waiting` (the waiting list, in its
 # order), `Reviewer limit` (a repo whose hosted reviewer hit its usage limit: its
 # batch is merging on the fallback reviewer only, until `ledger unlimit`). A
 # Running ticket names the provider instance it launched on, where the ledger holds one.
@@ -60,7 +61,8 @@ fi
 now=$(jq -c "$sa_jq_norm"'
   def short: sub("^[^/]*/"; "");
   def link($repo; $n): "[\($repo | short)#\($n)](https://github.com/\($repo)/issues/\($n))";
-  def keylink: link(sub("#.*$"; ""); sub("^.*#"; ""));
+  def keylink: if startswith("task:") then . else link(sub("#.*$"; ""); sub("^.*#"; "")) end;
+  def tlabel: (if .kind == "task" then "\(.key) (task)" else link(.repo; .number) end) + (if .adopted == true then " (adopted)" else "" end);
   def row($name; $items; $sep): if ($items | length) == 0 then {} else {($name): "\($name) (\($items | length)): \($items | join($sep))"} end;
   def state: if .observed.gate == true then "at its merge gate"
     elif .observed.pr.state == "open" then "in review"
@@ -71,7 +73,7 @@ now=$(jq -c "$sa_jq_norm"'
       and (.key as $k | $ack | map(norm_repo) | index($k | norm_repo) | not))] as $merged
   | {rows: (row("Needs you"; [(.needs // [])[] | "\(.key | keylink) \(.action)"]; "; ")
       + row("Merged"; [$merged[] | "\(link(.repo; .number))" + (if .observed.pr.number then " PR [\(.observed.pr.number)](https://github.com/\(.repo)/pull/\(.observed.pr.number))" else "" end)]; ", ")
-      + row("Running"; [.entries[] | select(.stage | IN("launched", "running", "at-rest")) | "\(link(.repo; .number)) \(state)" + (if .instance_id then " on \(.instance_id)" else "" end)]; ", ")
+      + row("Running"; [.entries[] | select(.stage | IN("launched", "running", "at-rest")) | "\(tlabel) \(state)" + (if .instance_id then " on \(.instance_id)" else "" end)]; ", ")
       + row("Waiting"; [(.waiting // [])[] | .key | keylink]; ", ")
       + row("Reviewer limit"; [(.review_limits // [])[] | "\(.repo) merging on the fallback reviewer only (\(.reviewer) hit its usage limit at \(.since))"]; "; ")),
      merged_keys: [$merged[].key],

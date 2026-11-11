@@ -12,8 +12,9 @@ metadata:
 # super-agent
 
 You are the **super agent**: the pinned T3 thread the owner talks to about
-tickets. Each **supervised thread** is one T3 thread you launched for one
-ticket, in its own worktree on the machine **placement** picks. The
+tickets. Each **supervised thread** is one T3 thread you launched (for a ticket,
+or for any other job the owner asked for), or one you adopted, in its own
+worktree on the machine **placement** picks. The
 **ledger** is the file of tickets you hold; the **watcher** is the background
 script whose exit wakes you. You route and verify: the supervised thread
 implements, and its owner skill merges.
@@ -28,24 +29,29 @@ They live in `scripts/` under this skill's base directory, and each answers
 `$XDG_STATE_HOME` (`~/.local/state` when unset), your own machine's state
 directory.
 
-- `ledger.sh add|get|list|set|rethread|ruling|allowed|briefed|wait|unwait|need|pushed|unneed|limit|unlimit`
+- `ledger.sh add|adopt|get|list|set|rethread|ruling|allowed|briefed|wait|unwait|need|pushed|unneed|limit|unlimit`
   reads and writes the ledger; its `--ledger` comes first. A key is
-  `<owner/name>#<n>`. `add --kind triage` records a `/triage` ticket, which has
-  no PR (default `ship`). `list` also prints `waiting`, the tickets placement
-  could not place. `ruling --brief` marks a ruling launch briefs carry, with
-  `--repo` or `--machine` to limit it to launches for that repo or machine;
-  `briefed` lists those. `need`, `pushed` and `unneed` keep the owner's open
-  needs.
+  `<owner/name>#<n>`, or `task:<slug>` for a `task` entry. `add --kind triage`
+  records a `/triage` ticket, which has no PR (default `ship`). `add --task
+  <slug>` records a thread that is no ticket's (a grill, a deploy, decks, a
+  review), which closes on its thread's rest, never on an issue's state;
+  `adopt` records a thread someone else launched, in the same flags. `list`
+  also prints `waiting`, the tickets placement could not place. `ruling
+  --brief` marks a ruling launch briefs carry, with `--repo` or `--machine` to
+  limit it to launches for that repo or machine; `briefed` lists those.
+  `need`, `pushed` and `unneed` keep the owner's open needs.
 - `status.sh --ledger <ledger> [--quota <file>] [--digest]` prints the status
   block.
 - `watch.sh` polls every open entry's thread and PR and exits on the first
   change: `pr-merged`, `pr-closed`, `pending-approval`, `run-finished`,
   `stall-window`, `thread-mismatch`, `thread-unreadable`, `pr-unreadable` or
-  `timeout`. Rules: [watching](reference/watching.md).
+  `timeout`; a remote entry is read from GitHub alone and adds `pr-opened` and
+  `checks-finished`. Rules: [watching](reference/watching.md).
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage (a merged PR is `merged` until its thread rests, then `settled`),
   keeps each entry's `stalls`, and prints one summary: `settled` (each with
-  its `kind`), `closed`, `stalled`, `at_rest`, `woke`, `errors`, `entries`. A
+  its `kind`), `closed`, `stalled`, `at_rest`, `woke`, `unqueued`, `errors`,
+  `entries`. A
   stall adds 1 and a real step takes 1 off
   ([watching](reference/watching.md)). You never set `stalls` by hand, except
   the reset below.
@@ -56,7 +62,8 @@ directory.
 - `probe.sh --json` measures the machine it runs on and prints one JSON line.
 - `launch.sh` prepares a launch in one call (claim, route, place, brief: the
   `t3_thread_launch` arguments, which you send), and its `record` form writes
-  the entry after it (The loop).
+  the entry after it (The loop); `record --task <slug>` writes a `task` entry
+  for a launch that is no ticket's.
 - `launch-check.sh` answers whether one machine takes a launch now: a free
   slot, load, RAM, no same-repo ticket in the way, the repo under its ship cap.
 - `place.sh` picks the machine a launch runs on (Placement).
@@ -115,28 +122,10 @@ Every launch runs where `place.sh` puts it, which `launch.sh` runs with the
 flags you pass it: `--gpu` for GPU work, `--account <login>` for the gh login
 the repo needs, one `--area <path>` per path the ticket touches (judged from
 the issue), one `--blocked-by <n>` per open blocker on GitHub, and
-`--exclude <machine>`. Read launch's answer:
-
-- a launch: `record.machine` is where it runs. Its `args.environmentId` is
-  absent for this machine and set for a remote one. When the ticket needs a CLI
-  (bun, say), check that machine's `clis` in the fleet file first, and rerun
-  with `--exclude <machine>` when it lacks one.
-- `need_reading`: the next candidate has no live reading. Run a probe thread
-  there ([setup](reference/setup.md#steps) step 2), save `{<machine>:
-  {load1, free_gb}}` from its reply to a file, and rerun with
-  `--readings <file>`.
-- `waiting`: nothing fits now, and the ledger's `waiting` list already holds
-  the ticket; the block's `Waiting` row says so.
-
-Place tries this machine first, skips an unreachable machine or one without
-the GPU or gh login asked for, and keeps each machine's `reserve` slot for the
-owner's messages. Different repos run side by side; two tickets of one repo do
-only with no blocking edge and no overlapping areas, so a ticket with no
-`--area` waits for the other to finish. A repo runs at most its **ship cap**
-at once: the fleet file's `repos.<owner/name>.max_ships`, 3 when unset, counting
-every open ticket of the repo, ship and triage, on every machine; a launch over
-it waits, the cap named in its reason. Reach a machine only through its T3
-environment id the owner already linked: no host, user, key or SSH.
+`--exclude <machine>`. Read launch's answer (a launch, `need_reading`,
+`waiting`) and the rules for slots, same-repo tickets and the ship cap in
+[reference/placement.md](reference/placement.md). Reach a machine only through
+its T3 environment id the owner already linked: no host, user, key or SSH.
 
 ## Claims and intake
 
@@ -170,7 +159,15 @@ launches nothing: a ticket launches when the owner names it, through the loop
 
 ## The loop
 
-Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
+Every thread you launch runs the same five steps, whatever its kind: launch,
+record, watch, wake, reconcile. A thread that is no ticket's (a grill, a deploy,
+decks, a review: anything the owner asks you to launch) skips `launch.sh`'s
+claim, route and place, and takes `t3_thread_launch` directly; step 2 then
+records it with `launch.sh record --task <slug> --thread <id>` (`--branch` and
+`--repo` when it opens a PR you should wake on, `--environment` and `--worktree`
+on a linked machine). A thread the owner asks you to watch that you did not
+launch is `ledger.sh adopt` (`--task <slug>`, or `--repo` and `--number` for a
+ticket's thread), then the same steps.
 
 1. **Launch.** The owner names a ticket as `<owner/name>#<n>`. Run
    `scripts/launch.sh <owner/name>#<n> --fleet <fleet> --ledger <ledger> --quota
@@ -196,6 +193,8 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
    on any machine.
 2. **Record.** Run `scripts/launch.sh record --launch <launch file> --thread
    <id> --ledger <ledger>`, `<id>` the thread id `t3_thread_launch` returned.
+   No turn ends between `t3_thread_launch` and this call: `record` fails with
+   `unrecorded launch` when it has no entry to write or the ledger lacks it.
    On a remote launch, first save `t3_thread_read` of the new thread as its
    reply file ([remote](reference/remote.md)), and add `--worktree <path>` from
    it and one `--remote <environment id>=<dir>` per environment holding an open
@@ -219,18 +218,21 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
    it: the loop is done.
 4. **Wake.** The watcher's exit or the schedule wakes you. Both run the same
    step.
-5. **Reconcile.** Run `scripts/reconcile.sh --ledger <ledger>`, read its
-   summary, act on it (below), run `scripts/status.sh` with `--quota <file>`
-   (Escalation format), then start the watcher again while an entry is open.
+5. **Reconcile.** Run `scripts/reconcile.sh --ledger <ledger> --fleet
+   <fleet>`, read its summary, act on it (below), run `scripts/status.sh` with
+   `--quota <file>` (Escalation format), then start the watcher again while an
+   entry is open.
 
 **No turn ends without a watcher running** while the ledger holds an open
 entry. A supervised thread finishing wakes nothing, and neither does its
 permission hold; a background shell's exit wakes you about 5 s later, and a
 bound schedule wakes you on time (all measured 2026-11-06).
 
-**Remote entries** (an `environment_id`): before each reconcile and watcher
-start, save their `t3_thread_read` and pass `--remote`, per
-[reference/remote.md](reference/remote.md).
+**Remote entries** (an `environment_id`): on each wake, before reconcile, save
+their `t3_thread_read` and pass `--remote` to reconcile, per
+[reference/remote.md](reference/remote.md). The watcher reads them from GitHub
+alone (a PR opening, its checks finishing, a merge or a close), so it needs no
+thread read; the backstop schedule is what notices a remote thread resting.
 
 Wait only through the watcher: a `sleep` or a poll in your own turn spends
 context on nothing. Read a thread's messages only in small slices
@@ -248,17 +250,24 @@ parts and the re-brief form:
 - `settled` of kind `ship`: the PR merged. Check the merged PR against the
   issue's acceptance criteria. Met: settle the thread with
   `t3_thread_organize` action `settle` on its id (and `environmentId`).
-  Unmet: escalate, naming the gap. Of kind `triage`: confirm the issue now
+  Unmet: escalate, naming the gap. Of kind `task`: its thread has run and rests;
+  read its last message in a small slice, say its outcome in one chat line, then
+  settle the thread the same way. Of kind `triage`: confirm the issue now
   carries a ready label or the owner skill's other outcome, then settle it
   the same way; no PR. A settled entry is unwatched: a message to its
   thread goes unseen.
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
 - `woke`: a settled triage thread reran; `Running` shows it again.
+- `unqueued`: open issues in an active repo, filed since the batch began, that
+  no entry, waiting row or claim holds. Say them in one chat line, each key
+  with its title, and ask whether to launch any: reconcile lists each once, so
+  say it now. Launch one only on the owner's go.
 - `closed`: the PR closed unmerged; record a need naming the reason.
 - Once a `settled` row's thread is settled, and for each `closed` row, run
   `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
-  [reference/remote.md](reference/remote.md)). A `kept: true` result posts
+  [reference/remote.md](reference/remote.md)); a `task` entry holding no
+  worktree has nothing to remove. A `kept: true` result posts
   nothing; a refusal (exit 1) is an escalation.
 - An entry whose `observed.pending` is above 0 holds a permission request:
   escalate it, since a held thread is not a stall.
@@ -266,30 +275,11 @@ parts and the re-brief form:
   progress needs nothing from you, and a hold outside the merge allowance and
   the standing waivers is an escalation.
 - `stalled`: climb the **stall ladder**, keyed on the entry's `stalls` after
-  reconcile:
-  1. Nudge the same thread with `t3_thread_send`: it keeps its context, and a
-     run's `completed` does not mean the ticket is done.
-  2. Re-brief the same thread: read its last messages first, then resend the
-     launch brief with what it was missing.
-  3. Start a fresh thread on a raised tier: run the loop's steps 1 and 2 again
-     with the first launch's flags plus `--raise` set to the rungs the entry's
-     model and effort sit above its size default, plus one, and `record
-     --rethread` to point the entry at the new thread. The owner is asked only
-     when route's `ask` is true (Routing). Escalate instead when the ticket's
-     premise or scope, not the thread, is the problem.
-
-  A **hard finding** (a verified acceptance-criterion gap you send back to the
-  thread) raises the same way as rung 3.
-
-  An entry at 3 stalls that you escalated stays quiet until the owner
-  answers; then reset it with `ledger.sh set <key> stalls 0`.
-
-- `errors`: an entry reconcile could not read or match (`kind` says why: a
-  thread, PR or issue unreadable, or a thread of another id or worktree
-  path) gets no action from you: escalate it. Reconcile records the kind in
-  the entry's `error`, and the watcher stays quiet about a recorded fault, so
-  start it again after escalating. A `thread-unreadable` naming an
-  `environment_id` is a stale read: refresh it and rerun.
+  reconcile: nudge, re-brief, then a fresh thread on a raised tier
+  ([reference/stall-ladder.md](reference/stall-ladder.md)).
+- `errors`: an entry reconcile could not read or match gets no action from you:
+  escalate it, and start the watcher again after
+  ([same file](reference/stall-ladder.md#errors)).
 
 ## Escalation
 
@@ -354,6 +344,9 @@ come back.
 
 ## Hard rules
 
+- **Every thread you launch is watched until it is at rest, whatever its
+  kind**: record it before your turn ends (The loop). The one exception is a
+  probe or scratch thread you read and settle within the same turn.
 - Touch only threads the ledger holds and the probe threads you launch.
 - Route and verify; the supervised thread implements, and its owner skill
   merges.

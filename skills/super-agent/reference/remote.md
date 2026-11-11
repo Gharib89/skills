@@ -5,7 +5,7 @@
 - [Why a reply file](#why-a-reply-file)
 - [Steps](#steps)
 - [The reply file](#the-reply-file)
-- [Refreshing mid-watch](#refreshing-mid-watch)
+- [Between wakes](#between-wakes)
 - [Errors](#errors)
 
 `scripts/` is under this skill's base directory. A **remote entry** is a
@@ -16,8 +16,10 @@ ledger entry with an `environment_id`: its thread runs on a linked machine.
 `t3 thread show` has no environment flag (measured 2026-11-06), so the
 scripts cannot read a remote thread themselves. You can: `t3_thread_read`
 takes an `environmentId`. You save that read to a **reply file**, and
-`reconcile.sh` and `watch.sh` read the file in place of the CLI. The PR needs
-no file: it is found on GitHub by branch, the same from any machine.
+`reconcile.sh` reads the file in place of the CLI. The PR needs no file: it is
+found on GitHub by branch, the same from any machine, and `watch.sh` wakes a
+remote entry from GitHub alone: a PR opening on its branch (`pr-opened`), the
+checks on its head commit finishing (`checks-finished`), a merge and a close.
 
 ## Steps
 
@@ -25,13 +27,14 @@ no file: it is found on GitHub by branch, the same from any machine.
    entry (a `--rethread` too, clearing it for a thread on this machine). Before
    it runs, save the new thread's read as its reply file (step 2) and pass
    `--remote` (step 3): its baseline reconcile reads it.
-2. **Read.** Before each `reconcile.sh` run and each `watch.sh` start, read
-   every open remote entry's thread with `t3_thread_read`, its
+2. **Read.** On each wake, before `reconcile.sh`, read every open remote
+   entry's thread with `t3_thread_read`, its
    `environmentId` the entry's `environment_id`, with a low `limit` and
    `maxCharsPerItem`. Write each read to `<dir>/<thread id>.json`, one `<dir>`
    per environment, under your own scratch or state directory.
-3. **Pass.** Give `reconcile.sh` and `watch.sh` one `--remote <environment
-   id>=<dir>` per environment that holds an open entry.
+3. **Pass.** Give `reconcile.sh` one `--remote <environment id>=<dir>` per
+   environment that holds an open entry. `watch.sh` takes none: it reads no
+   reply file.
 4. **Settle.** Settle a remote thread with `t3_thread_organize` action
    `settle`, passing its `environmentId`.
 5. **Remove the worktree.** Launch a scratch thread on the entry's
@@ -59,15 +62,15 @@ those types. `threadId` and `worktreePath` must match the ledger entry, or the
 entry reads as `thread-mismatch`. `messages` needs only the last assistant
 message: the merge-gate summary is read from its `text`.
 
-## Refreshing mid-watch
+## Between wakes
 
-`watch.sh` re-reads the reply files every poll, but they change only when you
-rewrite them. A remote thread's own changes (a finished run, a permission
-hold, a new run) reach a running watcher only as fast as you refresh its file;
-its PR merging or closing is read from GitHub each poll and wakes you on time.
-So on every wake, the backstop schedule included, refresh the files before
-reconciling. To catch a remote change sooner, rewrite the files while the
-watcher runs, or stop it and start it again after a fresh read.
+`watch.sh` reads no reply file. It wakes a remote entry from GitHub alone: a PR
+opening on the entry's branch, the checks on its head finishing, a merge or a
+close. A remote thread's own changes (a finished run, a permission hold, a new
+run) are read only on a wake, when you refresh the files and reconcile, and the
+backstop schedule is the wake that catches a remote thread that rested with no
+PR event. A remote `task` entry with no `--branch` has no GitHub event at all,
+so only that schedule notices it. Never SSH to look sooner.
 
 ## Errors
 

@@ -56,7 +56,10 @@ exceptions bound these rules.
   same reason: it composes no other skill, so no adapter is beside it; both
   only read. Its `claim` posts and deletes its own claim comment with `gh api`
   (it never assigns the ticket), and its `intake` reads the ready issues, the
-  same way.
+  same way. Its `watch` and `reconcile` also read a remote entry's PR checks
+  (`commits/<sha>/check-runs`), `reconcile --fleet` reads a repo's open issues
+  and their comments, and `launch record --task` reads the thread with `t3
+  thread show`; all only read.
   Its `setup` reads the machine's GitHub accounts with `gh auth
   status` and the linked environments with `t3 environment list`, the same way.
   Its `launch` reads the ticket's labels and title and the repo's default

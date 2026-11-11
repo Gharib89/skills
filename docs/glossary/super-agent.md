@@ -5,19 +5,19 @@ The one agent the owner talks to about every open ticket in every repo: a pinned
 _Avoid_: router, orchestrator, chief of staff, dispatcher
 
 **Supervised thread**:
-One T3 thread the super agent launched for one ticket, in its own worktree on whichever machine runs it, recorded as an entry of the ledger. The super agent touches no thread the ledger does not hold.
+One T3 thread the super agent launched, in its own worktree on whichever machine runs it, recorded as an entry of the ledger: for a ticket (kind `ship` or `triage`) or for any other job the owner asked for (kind **task**: a grill, a deploy, decks, a review). A thread someone else launched that the owner asks it to watch is **adopted**, with the same entry. Every one is watched until it is at rest, whatever its kind; the super agent touches no thread the ledger does not hold, except the probe threads it launches.
 _Avoid_: worker, worker thread, child thread, held thread
 
 **Ledger**:
-The super agent's JSON file in the state directory, one entry per ticket it holds, with the ticket's supervised thread, model, stage and stall count, plus the owner's standing rulings, each dated. It is how a compacted or restarted super agent still knows what it owns; GitHub stays the record for issues, blocking edges and PRs.
+The super agent's JSON file in the state directory, one entry per supervised thread it holds (a ticket's, keyed by issue, or a task's, keyed `task:<slug>` and closed on its thread's rest, never on an issue's state; an adopted entry marked as such), with the thread, model, stage and stall count, plus the owner's standing rulings, each dated. It is how a compacted or restarted super agent still knows what it owns; GitHub stays the record for issues, blocking edges and PRs.
 _Avoid_: board, roster (that is drive-session's), wiki, memory
 
 **Status block**:
-The one report the owner reads, printed by the super agent's status script from the ledger alone and posted as printed: the rows `Needs you`, `Merged`, `Running` and `Waiting`, an empty row left out, each ticket a link. A wake that changed no row posts none, and only a new open need sends a push; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
+The one report the owner reads, printed by the super agent's status script from the ledger alone and posted as printed: the rows `Needs you`, `Merged`, `Running` and `Waiting`, an empty row left out, each ticket a link and each task or adopted entry marked as one. A wake that changed no row posts none, and only a new open need sends a push; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
 _Avoid_: report (prose written fresh on each wake), summary, dashboard
 
 **Watcher**:
-The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
+The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent; a thread on a linked machine is woken from GitHub alone (its PR opening, its checks finishing, a merge or a close) and read itself only on a wake. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
 _Avoid_: watchdog, poller, monitor
 
 **Stall**:
@@ -59,6 +59,10 @@ _Avoid_: watchlist, subscriptions
 **Daily offer**:
 The list of open `ready-for-agent` issues in the active repos that no ledger entry or other machine's claim holds, which the super agent shows the owner once a day. It writes nothing; a ticket launches only on the owner's go.
 _Avoid_: digest, auto-pickup, queue
+
+**Unqueued issue**:
+An open issue in an active repo, created since a batch began, that no ledger entry, waiting row or claim holds: a follow-up a run opened, say. Reconcile lists each once and the super agent offers it to the owner; it launches only on the owner's go.
+_Avoid_: backlog, orphan issue
 
 **Probe thread**:
 A scratch thread the super agent launches on a linked machine to run the fixed probe there (cores, RAM, GPU, provider CLIs, gh logins) and reply with one JSON line, which setup merges into the fleet file. It is settled once its reply is read and is no ledger entry.

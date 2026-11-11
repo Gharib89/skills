@@ -10,7 +10,9 @@
 fields. The block is rows `Needs you`, `Merged`, `Running`, `Waiting` and
 `Reviewer limit`, one line each, an empty row left out, `Needs you` first; each
 ticket is a link, and a `Running` ticket names the provider instance it
-launched on. A posted block ends with one `Quota <instance>` line per provider
+launched on. A `task` entry (a thread that is no ticket's) reads
+`task:<slug> (task)`, and an adopted entry of either kind adds `(adopted)`. A
+posted block ends with one `Quota <instance>` line per provider
 instance, its weekly and 5 hour remaining or `unknown`.
 
 ## Every wake
