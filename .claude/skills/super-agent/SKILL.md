@@ -227,8 +227,8 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
 4. **Wake.** The watcher's exit or the schedule wakes you. Both run the same
    step.
 5. **Reconcile.** Run `scripts/reconcile.sh --ledger <ledger>`, read its
-   summary, act on it (below), run `scripts/status.sh` (Escalation format),
-   then start the watcher again while an entry is open.
+   summary, act on it (below), run `scripts/status.sh` with `--quota <file>`
+   (Escalation format), then start the watcher again while an entry is open.
 
 **No turn ends without a watcher running** while the ledger holds an open
 entry. A supervised thread finishing wakes nothing, and neither does its
@@ -325,10 +325,11 @@ Placement `waiting` and a same-repo wait are not escalations.
 ### Escalation format
 
 The owner reads one thing: the **status block** `scripts/status.sh --ledger
-<ledger>` prints. Post it as printed, never rewrite it, and post nothing on a
-wake whose `block` is empty. Only a new need sends a push. A need names exactly
-one action, and a pick from fixed options (approve or deny a held call, a scope
-fork) also opens an AskUserQuestion dialog with the recommended option first.
+<ledger> --quota <file>` prints. Post it as printed, never rewrite it, and
+post nothing on a wake whose `block` is empty. Only a new need sends a push.
+A need names exactly one action, and a pick from fixed options (approve or deny
+a held call, a scope fork) also opens an AskUserQuestion dialog with the
+recommended option first.
 Record each escalation as a need with `ledger.sh need`, the permission hold and
 the stall at 3 included. Steps and the digest form:
 [reference/status-block.md](reference/status-block.md).

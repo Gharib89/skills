@@ -125,7 +125,8 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
                else $drv == "claude" or (($drv == "pi" or $lr) and .value.route == true) end)
       | . + {lr: $lr, bucket: weekly(.), fivehour: ([.value.buckets[]? | select(.window == "5h")] | first)}
       | . + {skip: (if .value.auth == "failed" then "auth failed"
-                    elif .bucket != null and (.bucket.remaining == 0 or .bucket.remaining < $res) then "weekly under the weekly reserve \($res)"
+                    elif .bucket != null and .bucket.remaining == 0 then "weekly at 0"
+                    elif .bucket != null and .bucket.remaining < $res then "weekly under the weekly reserve \($res)"
                     elif $drv == "claude" and .fivehour != null and .fivehour.remaining < $f5 then "5 hour bucket under the 5 hour floor \($f5)"
                     elif $drv == "pi" and ([$models[] as $m | (.value.models[$m] // null)] | any(. == null)) then "no model for the tier"
                     else null end)}] as $cands
