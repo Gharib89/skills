@@ -88,6 +88,7 @@ if [ "${1:-}" = record ]; then
     jq -cn '{error: "unrecorded launch: name the entry to write, --launch <file> or --task <slug>"}'
     printf '%s\n' "unrecorded launch: name the entry to write, --launch <file> or --task <slug>" >&2; exit 1
   fi
+  [ -z "$launchf" ] || [ -z "$task" ] || sa_tooling "record: --launch and --task are two ways to name the entry, give one"
   if [ -n "$task" ]; then
     # a thread that is no ticket's: no launch answer, so the entry comes from the flags
     key="task:$task"

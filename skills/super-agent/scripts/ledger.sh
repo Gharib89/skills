@@ -102,7 +102,7 @@ cmd=${1:-}; [ $# -gt 0 ] && shift
 
 case $cmd in
   add|adopt)
-    repo='' number='' thread='' worktree='' branch='' machine=local environment='' instance='' model='' effort='' areas='[]' kind='' task='' adopted=false
+    repo='' number='' thread='' worktree='' branch='' machine='' environment='' instance='' model='' effort='' areas='[]' kind='' task='' adopted=false
     [ "$cmd" != adopt ] || adopted=true
     while [ $# -gt 0 ]; do
       case $1 in
@@ -124,6 +124,9 @@ case $cmd in
       shift 2
     done
     [ -n "$thread" ] || sa_tooling "$usage"
+    # a task on a linked machine counts against that machine's slots, so it names it
+    [ -z "$task" ] || [ -z "$environment" ] || [ -n "$machine" ] || sa_tooling "$usage"
+    machine=${machine:-local}
     if [ -n "$task" ]; then
       # a task is no ticket: no number, and --kind would name an owner skill it does not run
       [ -z "$kind$number" ] || sa_tooling "$usage"

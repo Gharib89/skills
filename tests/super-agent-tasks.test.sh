@@ -38,6 +38,10 @@ out=$(L rethread task:grill-auth --thread t-g2 --worktree /wt/g2 --branch grill/
 check "rethread takes it to a fresh thread" "t-g2 launched" "$(jq -r '.entry | [.thread, .stage] | join(" ")' <<<"$out")"
 L add --task bare --thread t-b >/dev/null; rc=$?
 check_rc "a task may hold no worktree and no branch" 0 "$rc"
+L add --task e --thread t --environment env-a >/dev/null 2>&1; rc=$?
+check_rc "a task on an environment with no machine is a usage error" 2 "$rc"
+L add --task e --thread t --environment env-a --machine m2 >/dev/null 2>&1; rc=$?
+check_rc "and with a machine it records" 0 "$rc"
 L add --task a/b --thread t >/dev/null 2>&1; rc=$?
 check_rc "add --task a/b is a usage error" 2 "$rc"
 L add --task grill --number 4 --thread t >/dev/null 2>&1; rc=$?
@@ -112,6 +116,8 @@ check "the entry is in the ledger" t-t "$(L get task:grill-t | jq -r .thread)"
 out=$(bash "$s/launch.sh" record --task grill-t --thread t-t2 --ledger "$led" --worktree /wt/t 2>/dev/null); rc=$?
 check_rc "recording an open task twice refuses" 1 "$rc"
 sa_thread t-e running 1 0 /wt/e x
+out=$(bash "$s/launch.sh" record --task remote-t --launch /dev/null --thread t-e --ledger "$led" 2>/dev/null); rc=$?
+check_rc "record --launch with --task is a usage error" 2 "$rc"
 out=$(bash "$s/launch.sh" record --task remote-t --thread t-e --ledger "$led" --environment env-a 2>/dev/null); rc=$?
 check_rc "a remote task record with no machine is a usage error" 2 "$rc"
 out=$(bash "$s/launch.sh" record --task remote-t --thread t-e --ledger "$led" --environment env-a --machine m2 2>/dev/null); rc=$?
