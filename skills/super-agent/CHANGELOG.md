@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.14.0 (2026-11-11)
+
+### Features
+
+- **super-agent**: Status block printed by a script, silent when nothing changed
+  ([#1157](https://github.com/Gharib89/skills/pull/1157),
+  [`b1c1cfc`](https://github.com/Gharib89/skills/commit/b1c1cfc14d94068b0df427dbe061267700c1930e))
+
+
 ## v0.13.2 (2026-11-11)
 
 ### Bug Fixes
