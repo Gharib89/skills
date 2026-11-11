@@ -12,6 +12,10 @@ _Avoid_: worker, worker thread, child thread, held thread
 The super agent's JSON file in the state directory, one entry per ticket it holds, with the ticket's supervised thread, model, stage and stall count, plus the owner's standing rulings, each dated. It is how a compacted or restarted super agent still knows what it owns; GitHub stays the record for issues, blocking edges and PRs.
 _Avoid_: board, roster (that is drive-session's), wiki, memory
 
+**Status block**:
+The one report the owner reads, printed by the super agent's status script from the ledger alone and posted as printed: the rows `Needs you`, `Merged`, `Running` and `Waiting`, an empty row left out, each ticket a link. A wake that changed no row posts none, and only a new open need sends a push; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
+_Avoid_: report (prose written fresh on each wake), summary, dashboard
+
 **Watcher**:
 The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
 _Avoid_: watchdog, poller, monitor

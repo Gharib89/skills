@@ -28,12 +28,14 @@ They live in `scripts/` under this skill's base directory, and each answers
 `$XDG_STATE_HOME` (`~/.local/state` when unset), your own machine's state
 directory.
 
-- `ledger.sh add|get|list|set|rethread|ruling|allowed|briefed|wait|unwait`
+- `ledger.sh add|get|list|set|rethread|ruling|allowed|briefed|wait|unwait|need|pushed|unneed`
   reads and writes the ledger; its `--ledger` comes first. A key is
   `<owner/name>#<n>`. `add --kind triage` records a `/triage` ticket, which has
   no PR (default `ship`). `list` also prints `waiting`, the tickets placement
   could not place. `ruling --brief` marks a ruling every launch brief carries;
-  `briefed` lists those.
+  `briefed` lists those. `need`, `pushed` and `unneed` keep the owner's open
+  needs.
+- `status.sh --ledger <ledger> [--digest]` prints the status block (Escalation).
 - `watch.sh` polls every open entry's thread and PR and exits on the first
   change: `pr-merged`, `pr-closed`, `pending-approval`, `run-finished`,
   `stall-window`, or `thread-mismatch`, `thread-unreadable`, `pr-unreadable`,
@@ -323,20 +325,14 @@ Placement `waiting` and a same-repo wait are not escalations.
 
 ### Escalation format
 
-These are the only forms the owner ever sees, and every escalation in this
-skill uses them, the permission hold and the stall at 3 included:
-
-- **Progress**: one or two plain lines, no heading, no push. A completed step
-  (merged, launched, settled) starts with `Done:`.
-- **Needs you**: the message starts with `> [!CAUTION]`, then the line
-  `> **NEEDS YOU:** <run>: <the one action>`, and names exactly one action.
-  Send one push notification (the PushNotification tool) naming the run and
-  that action. When the answer is a pick from fixed options (approve or deny a
-  held call, a scope fork), also open an AskUserQuestion dialog with the
-  recommended option first.
-
-No progress message uses the alert, so a message without it never needs the
-owner. One push per need, none for progress.
+The owner reads one thing: the **status block** `scripts/status.sh --ledger
+<ledger>` prints. Post it as printed, never rewrite it, and post nothing on a
+wake whose `block` is empty. Only a new need sends a push. A need names exactly
+one action, and a pick from fixed options (approve or deny a held call, a scope
+fork) also opens an AskUserQuestion dialog with the recommended option first.
+Record each escalation as a need with `ledger.sh need`, the permission hold and
+the stall at 3 included. Steps and the digest form:
+[reference/status-block.md](reference/status-block.md).
 
 A held call's message names the thread, the held call and your
 recommendation. Record the owner's answer with
