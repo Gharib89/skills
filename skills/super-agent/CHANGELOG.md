@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.17.0 (2026-11-11)
+
+### Features
+
+- **super-agent**: Watch every launched thread to rest
+  ([#1161](https://github.com/Gharib89/skills/pull/1161),
+  [`6c42952`](https://github.com/Gharib89/skills/commit/6c4295282194d0a9a26e8212d6379803478bdfaf))
+
+
 ## v0.16.0 (2026-11-11)
 
 ### Features
