@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.16.0 (2026-11-11)
+
+### Features
+
+- **super-agent**: One launch script and a record step, a per-repo ship cap and scoped brief lines
+  ([#1160](https://github.com/Gharib89/skills/pull/1160),
+  [`dbcdbb2`](https://github.com/Gharib89/skills/commit/dbcdbb2de61316128e2ea9c71e90bb3c8763f7c4))
+
+
 ## v0.15.0 (2026-11-11)
 
 ### Features
