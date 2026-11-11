@@ -28,14 +28,15 @@ They live in `scripts/` under this skill's base directory, and each answers
 `$XDG_STATE_HOME` (`~/.local/state` when unset), your own machine's state
 directory.
 
-- `ledger.sh add|get|list|set|rethread|ruling|allowed|briefed|wait|unwait|need|pushed|unneed`
+- `ledger.sh add|get|list|set|rethread|ruling|allowed|briefed|wait|unwait|need|pushed|unneed|limit|unlimit`
   reads and writes the ledger; its `--ledger` comes first. A key is
   `<owner/name>#<n>`. `add --kind triage` records a `/triage` ticket, which has
   no PR (default `ship`). `list` also prints `waiting`, the tickets placement
   could not place. `ruling --brief` marks a ruling every launch brief carries;
   `briefed` lists those. `need`, `pushed` and `unneed` keep the owner's open
   needs.
-- `status.sh --ledger <ledger> [--digest]` prints the status block (Escalation).
+- `status.sh --ledger <ledger> [--quota <file>] [--digest]` prints the status
+  block (Escalation).
 - `watch.sh` polls every open entry's thread and PR and exits on the first
   change: `pr-merged`, `pr-closed`, `pending-approval`, `run-finished`,
   `stall-window`, or `thread-mismatch`, `thread-unreadable`, `pr-unreadable`,
@@ -57,8 +58,9 @@ directory.
 - `launch-check.sh` answers whether one machine takes a launch now: a free
   slot, load, RAM, and no open same-repo ticket in the way.
 - `place.sh` picks the machine a launch runs on (Placement).
-- `quota.sh --fleet <file>` reads each provider instance's quota and auth
-  under its own account. A read that fails is `unknown`, not an error.
+- `quota.sh --fleet <file> [--save <file> --wake <id>]` reads each provider
+  instance's quota and auth under its own account. A read that fails is
+  `unknown`, not an error.
 - `brief.sh --fleet <file> --ledger <ledger>` prints `{brief, waivers,
   allowed, rulings}`: `brief` is the whole standing launch brief.
 - `schedules.sh --fleet <file>` proposes the morning report and weekly
@@ -93,17 +95,15 @@ follow [reference/setup.md](reference/setup.md).
 Every launch, a rethread included, runs on the instance and tier `route.sh`
 picks:
 
-1. Run `scripts/quota.sh --fleet <fleet>` here and save its stdout to a file.
-   Read it fresh for each launch: buckets move between launches. Quota is per
-   provider instance, read here under its `env`, so every machine draws on
-   the same buckets (measured: remote probes saw the
-   local weekly bucket); a remote machine is never extra quota, and a probe
-   never reads quota.
+1. Run `scripts/quota.sh --fleet <fleet> --save <file> --wake <id>` here, `<id>`
+   made once per wake (the epoch). Every launch of the wake reuses the saved
+   read; the next wake's id reads again. Quota is per provider instance, read
+   under its `env`; a remote machine is never extra quota, and a probe never
+   reads it.
 2. Run `scripts/route.sh --size <XS|S|M|L|XL> --quota <file>`, the size from
    the issue's Size label, with `--raise <n>` on a raised launch (the stall
-   ladder below). The ladder is Sonnet low, Sonnet medium, Sonnet high, Opus
-   high; XS and S start on the first rung, M the second, L the third, XL the
-   fourth.
+   ladder below). The ladder is Sonnet medium, Sonnet high, Opus high; XS, S
+   and M start on the first rung, L the second, XL the third.
 3. Launch `tier` on `instance_id`. When `ask` is true, `wanted` sits above the
    default while the chosen instance's weekly bucket has under 50% remaining:
    escalate first (Needs you, with an AskUserQuestion offering `wanted` and
@@ -202,8 +202,8 @@ Every ticket runs the same five steps: launch, record, watch, wake, reconcile.
    or from `t3 thread show <id> --json` (`.thread.worktreePath`). Run
    `scripts/ledger.sh --ledger <ledger> add --repo <owner/name>
    --number <n> --thread <id> --worktree <path> --branch <branch>`, with
-   `--kind triage` for a `needs-triage` ticket, `--model` and `--effort` set to
-   the tier launched, `--machine` the fleet
+   `--kind triage` for a `needs-triage` ticket, `--instance`, `--model` and
+   `--effort` set to what route launched, `--machine` the fleet
    key place printed (never `local` for a remote), `--environment
    <placed.environment_id>` on a remote launch, and each `--area` passed to
    place (a triaged ticket now shipping takes `add`, never `rethread`, which

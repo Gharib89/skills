@@ -33,7 +33,7 @@ The owner's user-scope file, written by the super agent's setup step and carried
 _Avoid_: config, inventory, profile (a ship profile is per repo)
 
 **Provider instance**:
-One T3 provider the super agent may launch on, named by T3's instance id: two Claude accounts are two instances of one driver, Pi another. Each is signed in and read for quota under its own account directory, so the fleet file keys its providers by instance id and routing picks the instance with the most weekly quota left, skipping one that is signed out; two instances on one account read the same buckets.
+One T3 provider the super agent may launch on, named by T3's instance id: two Claude accounts are two instances of one driver, Pi another. Each is signed in and read for quota under its own account directory, so the fleet file keys its providers by instance id and routing picks the instance with the most weekly headroom, skipping one that is signed out; two instances on one account read the same buckets. An instance's **weekly weight** (a number, default 1, the owner's) says how many times larger its weekly quota is than another's, so headroom is its weekly remaining times that weight: 40% of a seat three times the size outranks 60% of the small one. Two fractions in the fleet file set the **floors**: a `claude` instance whose 5 hour bucket is under the 5 hour floor, or whose weekly bucket is under the weekly reserve, is skipped, and the route's reason names which.
 _Avoid_: account, provider (that is the driver), subscription
 
 **Slot**:

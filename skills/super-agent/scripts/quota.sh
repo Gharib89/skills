@@ -4,7 +4,7 @@
 # spent: Claude's `/usage` print, Codex's app-server `account/rateLimits/read`
 # and agy's `/usage` JSON are all free reads.
 #
-#   quota --fleet <file>
+#   quota --fleet <file> [--save <file> --wake <id>]
 #
 # --fleet is required, as every script's file is, so a bare call reads nothing
 # off the machine's own config. A fleet-file provider is a T3 provider instance,
@@ -26,13 +26,23 @@
 # failure, a legacy bare one (no source or date) and an expired T3 one are not
 # honored: the live command alone speaks, so a signed-back-in instance routes
 # again without a hand edit. `SA_NOW` (an epoch) pins the clock for tests.
+# Quota is read once per wake: with --save <file> and --wake <id> a read whose
+# saved file holds that wake id is printed as saved, with no command run, and a
+# new wake id reads again and replaces the file. The caller makes one id per
+# wake, so every launch of that wake routes on the same read.
+# The fleet file's `weekly_weight` (a number above 0) on a provider entry is
+# carried to that provider's answer, and its top-level `five_hour_floor` and
+# `weekly_reserve` (fractions 0 to 1) to `floors`, for `route` to rank and skip by.
 #
-# stdout: {providers: {<instance id>: {driver, status, reason, auth, auth_reason,
+# stdout: {read_at, wake, floors, providers: {<instance id>: {driver, status, reason, auth, auth_reason,
 #         buckets}}}: `status` `available` or `unknown`, `reason` null or why;
 #         `auth` `ok`, `failed` or `unknown`, `auth_reason` null or why;
 #         `buckets` one {id, window, remaining, resets} per bucket, `window` `5h`
 #         or `weekly`, `remaining` a fraction 0 to 1 (agy's buckets add `group`),
-#         `resets` the provider's own reset time as text. Claude's ids are
+#         `resets` the provider's own reset time as text; a provider also
+#         holds `weekly_weight` when the fleet entry sets one; `floors` is
+#         {five_hour, weekly_reserve}, a key only where the file sets it;
+#         `read_at` the UTC time of the read, `wake` the --wake id or null. Claude's ids are
 #         `session`, `week` (all models) and `week-<model>`; Codex's are `session`
 #         and `week`; agy's are its own bucket ids
 # exit: 0 a read, unknown providers included · 2 usage, or a fleet file that is
@@ -40,19 +50,27 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: quota --fleet <file>'
+usage='usage: quota --fleet <file> [--save <file> --wake <id>]'
 sa_help "$usage" "$@"
-fleet_file=''
+fleet_file='' save='' wake=''
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet_file=$2; shift 2 ;;
+    --save) sa_flag_value "$usage" "${2:-}"; save=$2; shift 2 ;;
+    --wake) sa_flag_value "$usage" "${2:-}"; wake=$2; shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
 done
 [ -n "$fleet_file" ] || sa_tooling "$usage"
+{ [ -n "$save" ] && [ -n "$wake" ]; } || { [ -z "$save" ] && [ -z "$wake" ]; } || sa_tooling "$usage"
+if [ -n "$save" ] && [ -f "$save" ] && jq -e --arg w "$wake" '.wake == $w' "$save" >/dev/null 2>&1; then
+  jq -c . "$save"; exit 0
+fi
 [ -f "$fleet_file" ] || sa_tooling "$fleet_file: no such file, run setup"
 jq -e . "$fleet_file" >/dev/null 2>&1 || sa_tooling "$fleet_file: not JSON"
 jq -e '((.providers // {}) | type) == "object"' "$fleet_file" >/dev/null || sa_tooling "$fleet_file: providers must be an object"
+jq -e '[.providers[]? | objects | .weekly_weight // 1 | type == "number" and . > 0] | all' "$fleet_file" >/dev/null || sa_tooling "$fleet_file: every weekly_weight must be a number above 0"
+jq -e '[.five_hour_floor, .weekly_reserve | select(. != null) | type == "number" and . >= 0 and . <= 1] | all' "$fleet_file" >/dev/null || sa_tooling "$fleet_file: five_hour_floor and weekly_reserve must be fractions 0 to 1"
 
 # Each parser reads the command's stdout and prints the bucket array, or nothing
 # when the output holds no quota.
@@ -115,8 +133,14 @@ for name in ${names[@]+"${names[@]}"}; do
       else [ -n "$reason" ] || reason='quota command printed no quota'; fi
     fi
   fi
-  out=$(jq -c --arg n "$name" --arg d "$driver" --arg s "$status" --arg r "$reason" --arg a "$auth" --arg ar "$auth_reason" --argjson b "$buckets" \
+  out=$(jq -c --arg n "$name" --arg d "$driver" --arg s "$status" --arg r "$reason" --arg a "$auth" --arg ar "$auth_reason" --argjson b "$buckets" --argjson w "$(jq -c '.weekly_weight // null' <<<"$cfg")" \
     '.[$n] = {driver: $d, status: $s, reason: (if $r == "" then null else $r end),
-      auth: $a, auth_reason: (if $ar == "" then null else $ar end), buckets: $b}' <<<"$out")
+      auth: $a, auth_reason: (if $ar == "" then null else $ar end), buckets: $b}
+      + (if $w == null then {} else {weekly_weight: $w} end)' <<<"$out")
 done
-jq -cn --argjson p "$out" '{providers: $p}'
+result=$(jq -cn --argjson p "$out" --argjson now "$(sa_epoch)" --arg w "$wake" \
+  --slurpfile f "$fleet_file" '{read_at: (($now // now) | strftime("%Y-%m-%dT%H:%M:%SZ")), wake: (if $w == "" then null else $w end),
+    floors: ({five_hour: $f[0].five_hour_floor, weekly_reserve: $f[0].weekly_reserve} | with_entries(select(.value != null))),
+    providers: $p}')
+[ -z "$save" ] || sa_write "$save" "$result"
+printf '%s\n' "$result"

@@ -206,4 +206,35 @@ check "an old-shaped provider reads as before, driver defaulting to its key" 'cl
   "$(jq -r '.providers.claude | "\(.driver) \(.auth)"' <<<"$out")"
 check "env on a provider that sets none is left to the caller's own" available "$(jq -r .providers.claude.status <<<"$out")"
 
+# --- the fleet file's weekly_weight and floors ride the read; a read is saved per wake --------------
+reset
+jq -n '{five_hour_floor: 0.2, weekly_reserve: 0.1, providers: {
+  big: {driver: "claude", weekly_weight: 3, quota_command: "claude -p \"/usage\" --output-format json"},
+  small: {driver: "claude", quota_command: "claude -p \"/usage\" --output-format json"}}}' > "$tmp/w.json"
+out=$(bash "$s/quota.sh" --fleet "$tmp/w.json")
+check "a provider's weekly_weight is carried to its answer, none where the entry sets none" '3 null' \
+  "$(jq -r '.providers | "\(.big.weekly_weight) \(.small.weekly_weight)"' <<<"$out")"
+check "the fleet file's floors are carried as floors" '{"five_hour":0.2,"weekly_reserve":0.1}' "$(jq -c .floors <<<"$out")"
+check "a fleet file with neither carries empty floors" '{}' "$(Q | jq -c .floors)"
+jq -n '{providers: {big: {driver: "claude", weekly_weight: 0, quota_command: "x"}}}' > "$tmp/bw.json"
+check_rc "a weekly_weight of 0 exits 2" 2 "$(bash "$s/quota.sh" --fleet "$tmp/bw.json" >/dev/null 2>&1; echo $?)"
+jq -n '{weekly_reserve: 1.5, providers: {}}' > "$tmp/bw.json"
+check_rc "a floor above 1 exits 2" 2 "$(bash "$s/quota.sh" --fleet "$tmp/bw.json" >/dev/null 2>&1; echo $?)"
+check_rc "--save without --wake exits 2" 2 "$(bash "$s/quota.sh" --fleet "$fleet" --save "$tmp/sv.json" >/dev/null 2>&1; echo $?)"
+check_rc "--wake without --save exits 2" 2 "$(bash "$s/quota.sh" --fleet "$fleet" --wake w1 >/dev/null 2>&1; echo $?)"
+
+reset
+SQ() { SA_NOW=$1 bash "$s/quota.sh" --fleet "$fleet" --save "$tmp/sv.json" --wake "$2"; }
+t1=1793979000 t2=1793979600
+out1=$(SQ $t1 wake-1)
+check "a read takes its time from the clock" "$(date -u -d "@$t1" +%Y-%m-%dT%H:%M:%SZ) wake-1" "$(jq -r '"\(.read_at) \(.wake)"' <<<"$out1")"
+sa_provider claude 0 "$(jq -cn '{type:"result", is_error:false, result:"Current session: 90% used · resets x\nCurrent week (all models): 90% used · resets y"}')"
+out2=$(SQ $t2 wake-1)
+check "a second launch of the same wake gets the saved read, later clock or not" "$out1" "$out2"
+check "though the provider now reports less" 0.45 "$(jq -r '.providers.claude.buckets[] | select(.id == "week") | .remaining' <<<"$out2")"
+out3=$(SQ $t2 wake-2)
+check "the next wake reads again" "0.1 $(date -u -d "@$t2" +%Y-%m-%dT%H:%M:%SZ) wake-2" \
+  "$(jq -r '"\(.providers.claude.buckets[] | select(.id == "week") | .remaining) \(.read_at) \(.wake)"' <<<"$out3")"
+check "and replaces the saved file" wake-2 "$(jq -r .wake "$tmp/sv.json")"
+
 finish

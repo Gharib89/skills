@@ -6,18 +6,24 @@
 #   route --size <XS|S|M|L|XL> [--raise <n>] [--instance <id>] --quota <file>
 #   route --job text [--claude] --quota <file>
 #
-# --quota is a file holding `quota`'s output. The tier ladder is Sonnet low,
-# Sonnet medium, Sonnet high, Opus high; XS and S start on the first rung, M on
-# the second, L on the third, XL on the fourth. --raise (default 0) climbs one
-# rung per stall or hard finding, and stops at the top. Each provider is a T3
+# --quota is a file holding `quota`'s output. The tier ladder is Sonnet medium,
+# Sonnet high, Opus high (medium is the lowest effort a ship launch gets, owner
+# ruling 2026-11-11); XS, S and M start on the first rung, L on the second, XL on
+# the third. --raise (default 0) climbs one rung per stall or hard finding, and
+# stops at the top. Each provider is a T3
 # provider instance, its key the instance id. A launch's candidates are the
 # `claude` instances plus the `pi`, `cursor` and `grok` instances the owner
 # allowed (`route: true`); a `pi` one also needs a `models` map giving the tier's
 # `sonnet` and `opus` a model id. One whose
-# `auth` is `failed`, or whose weekly bucket is at 0, is skipped; of the rest the
-# one with the most weekly quota left wins, an instance with no measured weekly
-# bucket after every measured one, and a tie goes to a `claude` instance, then
-# to the first id. A Claude instance's weekly bucket is its `week`, a Pi
+# `auth` is `failed`, whose weekly bucket is at 0 or under the weekly reserve, or
+# (a `claude` instance) whose 5 hour bucket is under the 5 hour floor, is skipped.
+# The floor and the reserve are fractions the quota read carries from the fleet
+# file (`floors.five_hour`, default 0.1; `floors.weekly_reserve`, default 0.05).
+# Of the rest the one with the most weekly headroom wins, its weekly remaining
+# times its `weekly_weight` (default 1, the quota read carries it from the fleet
+# entry: 40% of a seat three times the size is more work than 60% of one), an
+# instance with no measured weekly bucket after every measured one, and a tie goes
+# to a `claude` instance, then to the first id. A Claude instance's weekly bucket is its `week`, a Pi
 # instance's the weekly bucket of agy's Claude group. A tier above the default
 # is a question for the owner only when the chosen instance's weekly bucket has
 # under 50% remaining; the tier to launch meanwhile is the default. A quota that
@@ -30,7 +36,8 @@
 # --instance <id> is the owner naming an instance: only it is considered, an
 # unallowed `pi`, `cursor` or `grok` one included, and its auth and weekly bucket
 # still disqualify it. With no candidate left,
-# `instance_id` is null with the reason, for the caller to escalate. An old
+# `instance_id` is null with the reason, for the caller to escalate. Each instance
+# skipped on a floor or the reserve is named in `reason`, also when another wins. An old
 # quota file keyed `claude` routes as before, on the instance `claude`.
 # A text job goes to agy on its Gemini group. With --claude the job wants a
 # Claude model: it stays on Claude Code, and overflows to agy's Claude group
@@ -46,7 +53,8 @@
 #         Claude instance, the mapped one on a Pi instance) and `options` the
 #         `modelSelection` options for it, `wanted_model` and `wanted_options` the
 #         same for `wanted` (what to send on the owner's yes); a Pi instance
-#         always thinks `high`; `reason` one line. With --job: {job,
+#         always thinks `high`; `reason` one line, naming each instance skipped
+#         on the 5 hour floor or the weekly reserve. With --job: {job,
 #         driver, group, model, reason}, `driver` `agy` or `claude`, `group` and
 #         `model` null for `claude`
 # exit: 0 a route, an unknown quota included · 2 usage, or a --quota file that
@@ -83,6 +91,10 @@ jq -e . "$quota" >/dev/null 2>&1 || sa_tooling "$quota: not JSON"
 jq -e '(.providers | type) == "object"' "$quota" >/dev/null || sa_tooling "$quota: providers must be an object"
 jq -e '[.providers[]? | .buckets[]? | .remaining | type] | all(. == "number")' "$quota" >/dev/null \
   || sa_tooling "$quota: every bucket's remaining must be a number"
+jq -e '[.providers[]? | .weekly_weight // 1 | type == "number" and . > 0] | all' "$quota" >/dev/null \
+  || sa_tooling "$quota: every weekly_weight must be a number above 0"
+jq -e '[.floors[]?] | all(type == "number" and . >= 0 and . <= 1)' "$quota" >/dev/null \
+  || sa_tooling "$quota: every floor must be a fraction 0 to 1"
 
 # low: the weekly remaining below which a bucket counts as low
 low=0.5
@@ -99,9 +111,11 @@ if [ -n "$job" ]; then
   exit 0
 fi
 jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg named "$named" '
-  [{model: "sonnet", effort: "low"}, {model: "sonnet", effort: "medium"}, {model: "sonnet", effort: "high"}, {model: "opus", effort: "high"}] as $ladder
-  | ({XS: 0, S: 0, M: 1, L: 2, XL: 3}[$size]) as $d
-  | ([$d + $raise, 3] | min) as $w
+  [{model: "sonnet", effort: "medium"}, {model: "sonnet", effort: "high"}, {model: "opus", effort: "high"}] as $ladder
+  | ({XS: 0, S: 0, M: 0, L: 1, XL: 2}[$size]) as $d
+  | ([$d + $raise, 2] | min) as $w
+  | (.floors.five_hour // 0.1) as $f5
+  | (.floors.weekly_reserve // 0.05) as $res
   | ([$ladder[$d].model, $ladder[$w].model] | unique) as $models
   | def weekly($e): [$e.value.buckets[]? | select(.window == "weekly"
       and (if $e.driver == "pi" then ((.group // "") | startswith("Claude")) else .id == "week" end))] | first;
@@ -109,15 +123,17 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
       | ($drv == "cursor" or $drv == "grok") as $lr
       | select(if $named != "" then .key == $named and ($drv == "claude" or $drv == "pi" or $lr)
                else $drv == "claude" or (($drv == "pi" or $lr) and .value.route == true) end)
-      | . + {lr: $lr, bucket: weekly(.)}
+      | . + {lr: $lr, bucket: weekly(.), fivehour: ([.value.buckets[]? | select(.window == "5h")] | first)}
       | . + {skip: (if .value.auth == "failed" then "auth failed"
-                    elif .bucket != null and .bucket.remaining == 0 then "weekly at 0"
+                    elif .bucket != null and (.bucket.remaining == 0 or .bucket.remaining < $res) then "weekly under the weekly reserve \($res)"
+                    elif $drv == "claude" and .fivehour != null and .fivehour.remaining < $f5 then "5 hour bucket under the 5 hour floor \($f5)"
                     elif $drv == "pi" and ([$models[] as $m | (.value.models[$m] // null)] | any(. == null)) then "no model for the tier"
                     else null end)}] as $cands
   | ([$cands[] | select(.skip == null)] as $ok
       | (if ($ok | any(.lr | not)) then [$ok[] | select(.lr | not)] else $ok end)
-      | sort_by([(if .bucket == null then 1 else 0 end), -(.bucket.remaining // 0), (if .driver == "claude" then 0 else 1 end), .key]) | first) as $pick
+      | sort_by([(if .bucket == null then 1 else 0 end), -((.bucket.remaining // 0) * (.value.weekly_weight // 1)), (if .driver == "claude" then 0 else 1 end), .key]) | first) as $pick
   | (if $pick == null or $pick.bucket == null then null else {provider: $pick.key, id: $pick.bucket.id, remaining: $pick.bucket.remaining} end) as $bucket
+  | ([$cands[] | select(.skip != null and (.skip | test("floor|reserve"))) | "\(.key) \(.skip)"] | join(", ")) as $floored
   | ($w > $d and $bucket != null and $bucket.remaining < $low) as $ask
   | (if $w > $d and ($bucket == null or $ask) then $ladder[$d] else $ladder[$w] end) as $tier
   | def model($t): if $pick == null then null elif $pick.lr then ($pick.value.models[$t.model] // null) elif $pick.driver == "pi" then $pick.value.models[$t.model] else $t.model end;
@@ -125,7 +141,7 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
     {size: $size, raise: $raise, default: $ladder[$d], wanted: $ladder[$w],
      tier: $tier,
      ask: $ask,
-     reason: (if $pick == null then
+     reason: ((if $pick == null then
          "no instance can launch: " + (if $named != "" and ($cands | length) == 0 then "\($named) is not a routable instance in the quota read"
            elif ($cands | length) == 0 then "no claude instance, and no pi, cursor or grok instance the owner allowed, in the quota read"
            else ([$cands[] | "\(.key) \(.skip)"] | join(", ")) end)
@@ -133,7 +149,8 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
        elif $w == $d then "the default tier"
        elif $bucket == null then "quota unknown: default tier"
        elif $ask then "weekly under 50%: the owner decides the raise"
-       else "weekly at or above 50%: raised" end),
+       else "weekly at or above 50%: raised" end)
+       + (if $pick != null and $floored != "" then " (skipped: \($floored))" else "" end)),
      bucket: $bucket,
      instance_id: ($pick.key // null),
      model: model($tier),

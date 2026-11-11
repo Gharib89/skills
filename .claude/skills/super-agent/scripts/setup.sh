@@ -53,6 +53,11 @@
 # else the auth command's exit, recorded with `auth_source` (`t3` or `command`) and
 # `auth_checked` (UTC time), which `quota.sh` reads. A `cursor` instance has no
 # auth command (`agent` can be the Grok binary), so empty constraints read `ok`.
+# Every provider also gets `weekly_weight` 1 (how many times larger its weekly
+# quota counts when `route` ranks instances: the owner sets a number) and the file
+# `five_hour_floor` 0.1 and `weekly_reserve` 0.05 (fractions under which `route`
+# skips an instance); a re-run keeps the owner's values, the instances answer
+# carries each `weekly_weight`.
 # A `pi` instance also gets `route` false (the
 # owner's allowance to place a tier on it) and `models`, its `sonnet` and `opus`
 # agy model ids; its quota is agy's. The legacy CLI-named `claude` and `codex`
@@ -120,6 +125,8 @@ if [ -f "$fleet_file" ]; then
     elif ((.machines // {}) | type) != "object" then "machines must be an object"
     elif ((.providers // {}) | type) != "object" then "providers must be an object"
     elif ([(.providers // {})[] | objects | .quota_command | select(. != null and type != "string")] | length) > 0 then "quota_command must be a string"
+    elif ([(.providers // {})[] | objects | .weekly_weight // 1 | select(type != "number" or . <= 0)] | length) > 0 then "weekly_weight must be a number above 0"
+    elif ([.five_hour_floor, .weekly_reserve | select(. != null) | select(type != "number" or . < 0 or . > 1)] | length) > 0 then "five_hour_floor and weekly_reserve must be fractions 0 to 1"
     elif ((.waivers // []) | type) != "array" then "waivers must be an array"
     elif ((.active_repos // []) | type) != "array" then "active_repos must be an array"
     elif ((if .work_week == null then [1] else .work_week end) | type == "array" and length > 0 and length == (unique | length) and all(type == "number" and . >= 0 and . <= 6 and . == floor)) | not then "work_week must be a non-empty list of distinct weekday numbers 0 to 6"
@@ -148,7 +155,7 @@ local_m=$(jq -c "$machine_jq"' machine(.; $f; {reserve: 1})' --argjson f "$floor
 ! jq -e .gpu_failed >/dev/null <<<"$probe_out" || warn "nvidia-smi failed: gpu left as the file has it"
 facts=$(jq -cn --arg n "$name" --argjson m "$local_m" '{machines: {($n): $m.facts}}')
 proposed=$(jq -cn --arg n "$name" --argjson m "$local_m" --argjson f "$floor_gb" \
-  '{machines: {($n): $m.proposal}, thread_ram_floor_gb: $f, active_repos: [], work_week: [1,2,3,4,5],
+  '{machines: {($n): $m.proposal}, thread_ram_floor_gb: $f, active_repos: [], work_week: [1,2,3,4,5], five_hour_floor: 0.1, weekly_reserve: 0.05,
     waivers: [
       {id: "codex-usage-limit", condition: "Codex answers a review request with a usage-limit notice: drive the fallback reviewer and record Codex as not landed; do not hold the merge gate for it."},
       {id: "offline-live-e2e", condition: "A live end-to-end proof needs a real T3 server or other machines: prove it through the scripts over fake CLIs and say so in the PR body."},
@@ -236,5 +243,6 @@ jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjso
   '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn, to_probe: $p,
     instances: [$rows[] | .providerInstanceId as $k | $m.providers[$k] as $v
       | {instance_id: $k, driver: $v.driver,
+         weekly_weight: ($v.weekly_weight // 1),
          quota_source: (if ($v.env // {}) == {} then (if $v.driver == "claude" then "the default account" else "the caller\u0027s own account" end) else ($v.env | to_entries | map("\(.key)=\(.value)") | join(" ")) end),
          auth: $v.auth, auth_reason: $v.auth_reason, status: $v.status}]}'

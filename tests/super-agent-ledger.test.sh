@@ -241,4 +241,29 @@ check "and a second says it had none" false "$(L unneed Gharib89/skills#681 | jq
 check "a ledger written before needs existed lists none" '[]' \
   "$(jq 'del(.needs)' "$led" > "$tmp/old.json" && bash "$s/ledger.sh" --ledger "$tmp/old.json" list | jq -c .needs)"
 
+# --- the provider instance a thread launched on ---------------------------------------------------
+L add --repo Gharib89/skills --number 1144 --thread t1 --worktree /w --branch b --instance claude_big >/dev/null
+check "add records the provider instance" claude_big "$(L get Gharib89/skills#1144 | jq -r .instance_id)"
+L add --repo Gharib89/skills --number 1145 --thread t2 --worktree /w2 --branch b2 >/dev/null
+check "an entry added with none holds null" null "$(L get Gharib89/skills#1145 | jq -r .instance_id)"
+L rethread Gharib89/skills#1144 --thread t3 --worktree /w --branch b --instance claude_small >/dev/null
+check "rethread points the entry at the new instance" claude_small "$(L get Gharib89/skills#1144 | jq -r .instance_id)"
+L rethread Gharib89/skills#1144 --thread t4 --worktree /w --branch b >/dev/null
+check "and one rethread with none clears it, as it does the model" null "$(L get Gharib89/skills#1144 | jq -r .instance_id)"
+
+# --- a hosted reviewer's usage-limit notice: the first one per repo is the record -------------------
+t1=1793979000 t2=1793979600
+LM() { SA_NOW=$1 bash "$s/ledger.sh" --ledger "$led" "${@:2}"; }
+check "a ledger with no notice lists none" '[]' "$(L list | jq -c .review_limits)"
+check "limit records the reviewer and the time of the notice" '{"repo":"Gharib89/skills","reviewer":"claude","since":"'"$(date -u -d "@$t1" +%Y-%m-%dT%H:%M:%SZ)"'"}' \
+  "$(LM $t1 limit Gharib89/skills --reviewer claude | jq -c .limit)"
+check "a later notice for the repo keeps the first one's time" "$(date -u -d "@$t1" +%Y-%m-%dT%H:%M:%SZ)" \
+  "$(LM $t2 limit gharib89/Skills --reviewer claude | jq -r .limit.since)"
+check "and the repo holds one row, whatever the case" 1 "$(L list | jq '.review_limits | length')"
+check_rc "a limit with no reviewer exits 2" 2 "$(L limit Gharib89/skills >/dev/null 2>&1; echo $?)"
+check_rc "a limit on a name with no owner exits 2" 2 "$(L limit skills --reviewer claude >/dev/null 2>&1; echo $?)"
+check "unlimit clears it and says so" '{"repo":"Gharib89/skills","removed":true}' "$(L unlimit Gharib89/skills | jq -c .)"
+check "and a second says it had none" false "$(L unlimit Gharib89/skills | jq .removed)"
+check "after the clear a new notice is a new record" "$(date -u -d "@$t2" +%Y-%m-%dT%H:%M:%SZ)" "$(LM $t2 limit Gharib89/skills --reviewer claude | jq -r .limit.since)"
+
 finish

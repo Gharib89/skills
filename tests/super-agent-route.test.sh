@@ -62,8 +62,8 @@ check_rc "the same for a job" 2 "$(R --job text --claude --quota "$tmp/shape.jso
 
 # --- the Size label sets the starting tier -------------------------------------------
 quota 0.9 0.9
-check "XS starts on Sonnet low" "sonnet low ask=false" "$(R --size XS --quota "$tmp/q.json" | tier)"
-check "S starts on Sonnet low" "sonnet low ask=false" "$(R --size S --quota "$tmp/q.json" | tier)"
+check "XS starts on Sonnet medium, the lowest rung" "sonnet medium ask=false" "$(R --size XS --quota "$tmp/q.json" | tier)"
+check "S starts on Sonnet medium, the lowest rung" "sonnet medium ask=false" "$(R --size S --quota "$tmp/q.json" | tier)"
 check "M starts on Sonnet medium" "sonnet medium ask=false" "$(R --size M --quota "$tmp/q.json" | tier)"
 check "L starts on Sonnet high" "sonnet high ask=false" "$(R --size L --quota "$tmp/q.json" | tier)"
 check "XL starts on Opus high" "opus high ask=false" "$(R --size XL --quota "$tmp/q.json" | tier)"
@@ -72,7 +72,7 @@ check "the size and raise are echoed with the default" '{"size":"M","raise":0,"d
 
 # --- a raise climbs one step per stall or hard finding, and stops at the top ----------------
 check "a raise of 1 takes M to Sonnet high" "sonnet high ask=false" "$(R --size M --raise 1 --quota "$tmp/q.json" | tier)"
-check "a raise of 2 takes S to Sonnet high" "sonnet high ask=false" "$(R --size S --raise 2 --quota "$tmp/q.json" | tier)"
+check "a raise of 1 takes S to Sonnet high" "sonnet high ask=false" "$(R --size S --raise 1 --quota "$tmp/q.json" | tier)"
 check "a raise of 1 takes L to Opus high" "opus high ask=false" "$(R --size L --raise 1 --quota "$tmp/q.json" | tier)"
 check "a raise past the top stays on Opus high" "opus high ask=false" "$(R --size XL --raise 3 --quota "$tmp/q.json" | tier)"
 
@@ -139,7 +139,7 @@ check "a measured bucket beats an unmeasured one" claudeAgent_b "$(R --size M --
 quotas "$(inst claudeAgent claude 0.9 failed)" "$(inst claudeAgent_b claude 0 ok)"
 res=$(R --size M --raise 1 --quota "$tmp/q.json"); rc=$?
 check_rc "no instance left still answers, exit 0" 0 "$rc"
-check "with a null instance and the reason, for the caller to escalate" 'null no instance can launch: claudeAgent auth failed, claudeAgent_b weekly at 0' \
+check "with a null instance and the reason, for the caller to escalate" 'null no instance can launch: claudeAgent auth failed, claudeAgent_b weekly under the weekly reserve 0.05' \
   "$(jq -r '"\(.instance_id) \(.reason)"' <<<"$res")"
 check "and the default tier, no ask" "sonnet medium ask=false" "$(tier <<<"$res")"
 
@@ -199,3 +199,45 @@ quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst claudeAgent_b claude 0.8 fail
 check "an instance that is signed out gives no room" "agy claude" "$(job)"
 
 finish
+
+# --- weekly headroom: the weekly remaining times the entry's weekly_weight --------------------------
+w() { jq -r '"\(.instance_id) \(.reason)"'; }
+quotas "$(inst big claude 0.4 ok '{"weekly_weight":3}')" "$(inst small claude 0.6 ok)"
+check "weight 3 at 0.4 outranks weight 1 at 0.6" big "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst big claude 0.4 ok '{"weekly_weight":1}')" "$(inst small claude 0.6 ok)"
+check "equal weights rank by the fraction, as before" small "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst big claude 0.4 ok)" "$(inst small claude 0.6 ok)"
+check "no weight at all is weight 1" small "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst big claude 0.4 ok '{"weekly_weight":0}')"
+res=$(R --size M --quota "$tmp/q.json" 2>&1); rc=$?
+check_rc "a weight of 0 is refused" 2 "$rc"
+check "by name" "$tmp/q.json: every weekly_weight must be a number above 0" "$(jq -r .error <<<"$res")"
+quotas "$(inst a claude 0.4 ok)"; jq '. + {floors: {five_hour: 2}}' "$tmp/q.json" > "$tmp/q2.json"
+check_rc "a floor above 1 is refused" 2 "$(R --size M --quota "$tmp/q2.json" >/dev/null 2>&1; echo $?)"
+
+# --- the 5 hour floor and the weekly reserve ---------------------------------------------------------
+b5() { jq -cn --argjson s "$1" --argjson w "$2" '{buckets: [{id: "session", window: "5h", remaining: $s, resets: "x"}, {id: "week", window: "weekly", remaining: $w, resets: "x"}]}'; }
+quotas "$(inst a claude 0.9 ok "$(b5 0.05 0.9)")" "$(inst b claude 0.3 ok "$(b5 0.8 0.3)")"
+res=$(R --size M --quota "$tmp/q.json")
+check "an instance under the 5 hour floor (default 0.1) is skipped, the other wins" b "$(jq -r .instance_id <<<"$res")"
+check "and the reason names the 5 hour floor and the instance" "b the default tier (skipped: a 5 hour bucket under the 5 hour floor 0.1)" "$(jq -r '"\(.instance_id) \(.reason)"' <<<"$res")"
+quotas "$(inst a claude 0.9 ok "$(b5 0.1 0.9)")"
+check "a 5 hour bucket exactly at the floor is not under it" a "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst a claude 0.9 ok "$(b5 0.3 0.9)")"; jq '. + {floors: {five_hour: 0.5}}' "$tmp/q.json" > "$tmp/q2.json"
+res=$(R --size M --quota "$tmp/q2.json")
+check "the fleet file's floor replaces the default" "null no instance can launch: a 5 hour bucket under the 5 hour floor 0.5" "$(w <<<"$res")"
+quotas "$(inst a claude 0.04 ok "$(b5 0.9 0.04)")" "$(inst b claude 0.3 ok "$(b5 0.8 0.3)")"
+res=$(R --size M --quota "$tmp/q.json")
+check "an instance under the weekly reserve (default 0.05) is skipped and the reason names it" "b the default tier (skipped: a weekly under the weekly reserve 0.05)" "$(w <<<"$res")"
+quotas "$(inst a claude 0.04 ok "$(b5 0.9 0.04)")"; jq '. + {floors: {weekly_reserve: 0.02}}' "$tmp/q.json" > "$tmp/q2.json"
+check "the fleet file's reserve replaces the default" a "$(R --size M --quota "$tmp/q2.json" | jq -r .instance_id)"
+quotas "$(inst a claude 0.04 ok "$(b5 0.05 0.04)")" "$(inst b claude 0.9 ok "$(b5 0.01 0.9)")"
+res=$(R --size M --quota "$tmp/q.json"); rc=$?
+check_rc "every candidate skipped still answers, exit 0" 0 "$rc"
+check "with no instance and both reasons" "null no instance can launch: a weekly under the weekly reserve 0.05, b 5 hour bucket under the 5 hour floor 0.1" "$(w <<<"$res")"
+check "and the default tier, no ask" "sonnet medium ask=false" "$(tier <<<"$res")"
+quotas "$(inst a claude null ok '{"buckets":[]}')" "$(inst b claude 0.5 ok "$(b5 0.5 0.5)")"
+check "an instance with no measured bucket is never skipped on a floor" b "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+unknown
+res=$(R --size M --raise 1 --quota "$tmp/q.json")
+check "an unknown quota still routes and never asks" "claude sonnet medium ask=false" "$(jq -r '"\(.instance_id) \(.tier.model) \(.tier.effort) ask=\(.ask)"' <<<"$res")"

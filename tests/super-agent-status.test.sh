@@ -97,4 +97,41 @@ check_rc "a malformed need exits 2" 2 "$rc"
 check "and answers one JSON error" true "$(jq 'has("error")' <<<"$out")"
 check "and leaves the ledger as it was" "$before" "$(cat "$tmp/bad.json")"
 
+# --- the Running row names the provider instance, one line per instance gives its quota ------------
+: > "$led"; rm -f "$led"
+add 900; add 901
+L set Gharib89/skills#900 instance_id '"claude_big"' >/dev/null
+check "a Running ticket with an instance names it; one with none does not" \
+  "Running (2): [skills#900]($u/issues/900) launched on claude_big, [skills#901]($u/issues/901) launched" "$(S | jq -r .block)"
+q=$tmp/quota.json
+jq -cn '{providers: {
+  claude_big: {driver: "claude", buckets: [{id: "session", window: "5h", remaining: 0.9, resets: "x"}, {id: "week", window: "weekly", remaining: 0.4, resets: "x"}]},
+  claude_small: {driver: "claude", status: "unknown", buckets: []}}}' > "$q"
+check "a digest ends with one Quota line per instance, unknown where nothing was read" \
+  "Quota claude_big: weekly 40%, 5 hour 90%
+Quota claude_small: weekly unknown, 5 hour unknown" "$(S --quota "$q" --digest | jq -r .block | grep '^Quota')"
+jq '.providers.claude_big.buckets[1].remaining = 0.35' "$q" > "$tmp/q2.json"
+out=$(S --quota "$tmp/q2.json")
+check "a changed quota figure alone posts no block" 'false ' "$(jq -r '"\(.changed) \(.block)"' <<<"$out")"
+add 902
+out=$(S --quota "$tmp/q2.json")
+check "a changed row posts, with the current figures" "Quota claude_big: weekly 35%, 5 hour 90%" "$(jq -r .block <<<"$out" | grep '^Quota claude_big')"
+check "without --quota the block holds no Quota line" 0 "$(S --digest | jq -r .block | grep -c '^Quota')"
+check_rc "a --quota file that is not a quota read exits 2" 2 "$(echo '[]' > "$tmp/nq.json"; S --quota "$tmp/nq.json" >/dev/null 2>&1; echo $?)"
+
+# --- a hosted reviewer at its usage limit: the repo's batch is on the fallback reviewer ---------------
+check "with no record the block says nothing of it" 0 "$(S --digest | jq -r .block | grep -c 'Reviewer limit')"
+SA_NOW=1793979000 L limit Gharib89/skills --reviewer claude >/dev/null
+out=$(S)
+check "a new record changes a row" true "$(jq .changed <<<"$out")"
+check "and the block says the repo's batch merges on the fallback reviewer only, with the time" \
+  "Reviewer limit (1): Gharib89/skills merging on the fallback reviewer only (claude hit its usage limit at $(date -u -d @1793979000 +%Y-%m-%dT%H:%M:%SZ))" \
+  "$(jq -r .block <<<"$out" | grep '^Reviewer limit')"
+check "an open record alone posts no block the next run" 'false ' "$(S | jq -r '"\(.changed) \(.block)"')"
+check "a digest keeps saying it" 1 "$(S --digest | jq -r .block | grep -c '^Reviewer limit')"
+L unlimit Gharib89/skills >/dev/null
+out=$(S)
+check "clearing the record changes the rows" true "$(jq .changed <<<"$out")"
+check "and the block no longer says it" 0 "$(S --digest | jq -r .block | grep -c 'Reviewer limit')"
+
 finish
