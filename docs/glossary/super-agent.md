@@ -12,6 +12,10 @@ _Avoid_: worker, worker thread, child thread, held thread
 The super agent's JSON file in the state directory, one entry per supervised thread it holds (a ticket's, keyed by issue, or a task's, keyed `task:<slug>` and closed on its thread's rest, never on an issue's state; an adopted entry marked as such), with the thread, model, stage and stall count, plus the owner's standing rulings, each dated. It is how a compacted or restarted super agent still knows what it owns; GitHub stays the record for issues, blocking edges and PRs.
 _Avoid_: board, roster (that is drive-session's), wiki, memory
 
+**Waiting list**:
+The ledger's `waiting` rows, in order: the owner's queue. A row is a ticket with no thread yet, either one placement could not place (a machine or the ship cap was in the way) or one the owner queued; it may carry an order and an `--after` blocker, another ticket's key that must merge first, which is the ledger's own and adds no blocking edge on GitHub. Reconcile prints its `ready` rows (blocker merged, repo under its ship cap), drops a row whose issue closed, and the super agent launches the `ready` ones. The owner's word "queue" means this list.
+_Avoid_: backlog, pending list, a queue kept in a scratch file
+
 **Status block**:
 The one report the owner reads, printed by the super agent's status script from the ledger alone and posted as printed: the rows `Needs you`, `Merged`, `Running` and `Waiting`, an empty row left out, each ticket a link and each task or adopted entry marked as one. A wake that changed no row posts none, and only a new open need sends a push; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
 _Avoid_: report (prose written fresh on each wake), summary, dashboard

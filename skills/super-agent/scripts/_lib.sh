@@ -104,6 +104,12 @@ sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 # shellcheck disable=SC2034  # read by the scripts that source this file
 sa_jq_norm='def norm_repo: ascii_downcase; def norm_path: sub("^(\\./)+"; "") | sub("/+$"; "");'
 
+# The waiting list in the owner's order: rows with an `order` first, lowest
+# first, then the rest by `since`. `sort_by` is stable, so rows that tie keep the
+# order they were written in. Applied to the ledger: `waiting_list`.
+# shellcheck disable=SC2034  # read by ledger.sh, reconcile.sh and status.sh
+sa_jq_waiting='def waiting_list: (.waiting // []) | sort_by([(.order // 1e18), .since]);'
+
 # sa_key <ledger json> <key>: the key the ledger stores for <key>, whatever its
 # case, else <key> itself.
 sa_key() { jq -r --arg k "$2" "$sa_jq_norm"'(first(.entries | keys[] | select(norm_repo == ($k | norm_repo))) // $k)' <<<"$1"; }

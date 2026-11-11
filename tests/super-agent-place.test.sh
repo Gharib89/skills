@@ -127,6 +127,9 @@ check "each refusal is named" 'refused:load refused:load refused:ram' "$(jq -r '
 check "a machine the fleet holds with no environment id cannot be launched on" \
   '{"machine":"zghost","outcome":"skipped:no-environment"}' "$(jq -c '.considered[] | select(.machine == "zghost")' <<<"$out")"
 check "and the ledger holds it as waiting" 'Gharib89/skills#7' "$(jq -r '.waiting[0].key' "$led")"
+# the row placement wrote is on the owner's queue: reconcile lists it ready, for place to try again
+sa_issue Gharib89/skills 7 open
+check "reconcile lists a row placement wrote as ready" '["Gharib89/skills#7"]' "$(bash "$s/reconcile.sh" --ledger "$led" | jq -c '[.ready[].key]')"
 
 # A finished triage can wait for capacity before its ship launch.
 reset
