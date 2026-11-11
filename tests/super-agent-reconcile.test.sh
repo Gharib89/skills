@@ -354,6 +354,8 @@ check "a blocker closed as not planned keeps its row waiting" false "$(jq --arg 
 printf '{"repos":{"Gharib89/skills":{"max_ships":"two"}}}\n' > "$tmp/badfleet.json"
 out=$(R --fleet "$tmp/badfleet.json" 2>/dev/null); rc=$?
 check_rc "a max_ships that is no whole number exits 2" 2 "$rc"
+printf '{"repos":{"Gharib89/skills":{"max_ships":0}}}\n' > "$tmp/badfleet.json"
+check_rc "a max_ships of 0 exits 2" 2 "$(R --fleet "$tmp/badfleet.json" >/dev/null 2>&1; echo $?)"
 check "and names the field" true "$(jq -r '.error | contains("max_ships")' <<<"$out")"
 
 # a ledger with waiting rows and no open entry is still read
