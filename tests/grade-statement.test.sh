@@ -9,7 +9,6 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
-n=0
 
 # <case> <setup command run in the branch before its commit>: a repo whose
 # `main` holds a skill and a mechanic, and whose `pr` branch holds the change
@@ -101,7 +100,7 @@ grade "$r" 'feat(new): add' "$without_line"
 check_rc "a new skill's description needs the line" 1 "$rc"
 
 # Tooling.
-out=$(PR_ROOT=$r PR_TITLE='fix: x' PR_BODY= bash scripts/check-grade-statement.sh 2>/dev/null); rc=$?
+out=$(PR_ROOT=$r PR_TITLE='fix: x' PR_BODY='' bash scripts/check-grade-statement.sh 2>/dev/null); rc=$?
 check_rc "no base ref is tooling, exit 2" 2 "$rc"
 
 finish
