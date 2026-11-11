@@ -83,7 +83,7 @@ bash "$s/ledger.sh" --ledger "$led" add --repo acme/widgets --number 1 --thread 
 out=$(I)
 check "an open ledger entry is held, not offered" '{"held":["acme/widgets#1"],"offer":["acme/widgets#3","acme/gadgets#9"]}' \
   "$(jq -c '{held, offer: [.offer[].key]}' <<<"$out")"
-bash "$s/ledger.sh" --ledger "$led" set acme/widgets#1 stage '"settled"' >/dev/null
+sa_stage "$led" acme/widgets#1 settled
 check "a settled entry is no hold" '["acme/widgets#1","acme/widgets#3","acme/gadgets#9"]' "$(I | jq -c '[.offer[].key]')"
 bash "$s/ledger.sh" --ledger "$led" add --repo Acme/Gadgets --number 9 --thread t-9 --worktree /wt/9 --branch b-9 >/dev/null
 check "a ledger key in another case still holds the ticket" '["acme/gadgets#9"]' "$(I | jq -c .held)"

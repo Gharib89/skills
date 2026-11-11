@@ -30,7 +30,7 @@ fixture() {
     sa_thread "t-$n" running 1 0 "/wt/$n" "feat/x-$n"
     sa_pr $repo "feat/x-$n" none
   done
-  [ "${1:-}" = settled ] && bash "$s/ledger.sh" --ledger "$led" set "$repo#6" stage '"settled"' >/dev/null
+  [ "${1:-}" = settled ] && sa_stage "$led" "$repo#6" settled
   return 0
 }
 event() { jq -r '[(.key // "null"), .event] | join(" ")' <<<"$1"; }
@@ -212,7 +212,7 @@ sa_thread t-6 running 1 0 /wt/6 feat/x-6
 check "a different fault than the recorded one is reported" "$repo#5 thread-unreadable" "$(event "$(W --timeout 5)")"
 
 fixture
-for n in 5 6; do bash "$s/ledger.sh" --ledger "$led" set "$repo#$n" stage '"closed"' >/dev/null; done
+for n in 5 6; do sa_stage "$led" "$repo#$n" closed; done
 out=$(W --timeout 2 2>/dev/null); rc=$?
 check_rc "a ledger with nothing open exits 1" 1 "$rc"
 check "and says so" "no open entry in the ledger $led" "$(jq -r .error <<<"$out")"
@@ -226,7 +226,7 @@ check "watch leaves the ledger as it found it" "$before" "$(cat "$led")"
 
 # --- a merged entry is watched until its thread rests --------------------------
 fixture
-bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stage '"merged"' >/dev/null
+sa_stage "$led" "$repo#5" merged
 bash "$s/ledger.sh" --ledger "$led" set "$repo#5" observed '{"status":"running","run_count":1,"pending":0,"pr":{"number":7,"state":"merged"}}' >/dev/null
 sa_pr $repo feat/x-5 merged
 out=$(W --timeout 2)
@@ -237,7 +237,7 @@ check "its thread coming to rest is run-finished" "$repo#5 run-finished" "$(even
 
 # --- an entry added while a watcher runs is watched ----------------------------
 fixture
-bash "$s/ledger.sh" --ledger "$led" set "$repo#6" stage '"settled"' >/dev/null
+sa_stage "$led" "$repo#6" settled
 cat > "$SA_FAKE/on-sleep" <<EOS
 bash "$s/ledger.sh" --ledger "$led" add --repo $repo --number 7 --thread t-7 --worktree /wt/7 --branch feat/x-7 >/dev/null
 bash "$s/ledger.sh" --ledger "$led" set "$repo#7" observed '$base' >/dev/null

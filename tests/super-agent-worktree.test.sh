@@ -34,7 +34,7 @@ add_wt() {
 # entry <name> <stage> [<kind>] [<pr state>]: a ledger entry for that worktree
 entry() {
   bash "$s/ledger.sh" --ledger "$led" add --repo acme/w --number "${5:-1}" --thread t --worktree "$repo/wt-$1" --branch "feat/$1" --kind "${3:-ship}" >/dev/null
-  bash "$s/ledger.sh" --ledger "$led" set "acme/w#${5:-1}" stage "\"$2\"" >/dev/null
+  sa_stage "$led" "acme/w#${5:-1}" "$2"
   bash "$s/ledger.sh" --ledger "$led" set "acme/w#${5:-1}" observed "{\"pr\":{\"state\":\"${4:-merged}\",\"number\":7}}" >/dev/null
 }
 exists() { [ -d "$repo/wt-$1" ] && echo yes || echo no; }
@@ -109,7 +109,7 @@ check "a settled ship entry's dirty worktree is still kept" dirty "$(W remove --
 # --- an open entry's worktree is never touched --------------------------------------------------
 add_wt open --push; entry open launched ship open 8
 for st in launched running at-rest merged; do
-  bash "$s/ledger.sh" --ledger "$led" set acme/w#8 stage "\"$st\"" >/dev/null
+  sa_stage "$led" acme/w#8 "$st"
   out=$(W remove --ledger "$led" acme/w#8); rc=$?
   check_rc "stage $st is refused, exit 1" 1 "$rc"
   check "stage $st: removed false, kept false, named" 'false false' "$(jq -r '"\(.removed) \(.kept)"' <<<"$out")"
@@ -118,12 +118,12 @@ done
 
 # --- refusals: the main checkout, and a path git does not list ------------------------------
 bash "$s/ledger.sh" --ledger "$led" add --repo acme/w --number 9 --thread t --worktree "$main" --branch main >/dev/null
-bash "$s/ledger.sh" --ledger "$led" set acme/w#9 stage '"settled"' >/dev/null
+sa_stage "$led" acme/w#9 settled
 out=$(W remove --ledger "$led" acme/w#9); rc=$?
 check_rc "the main checkout is refused, exit 1" 1 "$rc"
 check "named, and still there" 'false false yes' "$(jq -r '"\(.removed) \(.kept)"' <<<"$out") $([ -d "$main/.git" ] && echo yes)"
 bash "$s/ledger.sh" --ledger "$led" add --repo acme/w --number 10 --thread t --worktree "$tmp/nowhere" --branch gone >/dev/null
-bash "$s/ledger.sh" --ledger "$led" set acme/w#10 stage '"settled"' >/dev/null
+sa_stage "$led" acme/w#10 settled
 check "a path that is no worktree is kept as not a worktree" 'false true not a worktree' "$(W remove --ledger "$led" acme/w#10 | jq -r '"\(.removed) \(.kept) \(.reason)"')"
 mkdir -p "$tmp/plain"
 bash "$s/ledger.sh" --ledger "$led" set acme/w#10 worktree "\"$tmp/plain\"" >/dev/null

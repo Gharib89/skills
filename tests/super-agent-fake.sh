@@ -178,8 +178,12 @@ sa_load() { printf '%s\n' "$1" > "$SA_FAKE/probe/load"; printf '%s\n' "$2" > "$S
 # sa_finished_triage <ledger> <repo> <number>: an earlier triage run to relaunch
 sa_finished_triage() {
   bash skills/super-agent/scripts/ledger.sh --ledger "$1" add --repo "$2" --number "$3" --thread old --worktree /old --branch old --kind triage >/dev/null
-  bash skills/super-agent/scripts/ledger.sh --ledger "$1" set "$2#$3" stage '"closed"' >/dev/null
+  sa_stage "$1" "$2#$3" closed
 }
+
+# sa_stage <ledger> <key> <stage>: put an entry in a stage the way `reconcile` does.
+# `ledger set` refuses `stage`, so a fixture writes the file.
+sa_stage() { jq -c --arg k "$2" --arg s "$3" '.entries[$k].stage = $s' "$1" > "$1.new" && mv "$1.new" "$1"; }
 
 # sa_gpu_failing: a machine whose `nvidia-smi` is there and fails, as after a driver mismatch
 sa_gpu_failing() {

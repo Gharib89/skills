@@ -5,6 +5,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
+source tests/super-agent-fake.sh
 
 s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
@@ -79,17 +80,21 @@ check "--brief composes with --allow" 'a call true' "$(L ruling both --allow "a 
 out=$(L ruling "x" --allow 2>/dev/null); rc=$?
 check_rc "--allow with no call exits 2" 2 "$rc"
 
-# --- set: one field, the stage a closed list ------------------------------------
-out=$(L set Gharib89/skills#6 stage '"running"'); rc=$?
-check_rc "set stage exits 0" 0 "$rc"
-check "set answers the key, field and value" '{"key":"Gharib89/skills#6","field":"stage","value":"running"}' \
-  "$(jq -c '{key, field, value}' <<<"$out")"
-check "the change is in the file" running "$(jq -r '.entries["Gharib89/skills#6"].stage' "$led")"
+# --- set: one field, never the stage -----------------------------------------------
+out=$(L set Gharib89/skills#6 stage '"running"' 2>/dev/null); rc=$?
+check_rc "set refuses stage, whatever the value, and exits 1" 1 "$rc"
+check "and says reconcile moves it" "stage is moved by reconcile only" "$(jq -r .error <<<"$out")"
 out=$(L set Gharib89/skills#6 stage '"asleep"' 2>/dev/null); rc=$?
-check_rc "a stage outside the list exits 1" 1 "$rc"
-check "and names the list" "stage must be one of launched, running, at-rest, merged, settled, closed" "$(jq -r .error <<<"$out")"
-check "the refused stage left the entry alone" running "$(jq -r '.entries["Gharib89/skills#6"].stage' "$led")"
-L set Gharib89/skills#5 stage '"settled"' >/dev/null
+check_rc "a stage outside the list is refused the same way" 1 "$rc"
+check "the refused stage left the entry alone" launched "$(jq -r '.entries["Gharib89/skills#6"].stage' "$led")"
+L set Gharib89/skills#6 stalls 0 >/dev/null; rc=$?
+check_rc "the stalls reset still works" 0 "$rc"
+out=$(L set Gharib89/skills#6 branch '"feat/fixed-6"'); rc=$?
+check_rc "so does the branch correction" 0 "$rc"
+check "set answers the key, field and value" '{"key":"Gharib89/skills#6","field":"branch","value":"feat/fixed-6"}' \
+  "$(jq -c '{key, field, value}' <<<"$out")"
+check "the change is in the file" feat/fixed-6 "$(jq -r '.entries["Gharib89/skills#6"].branch' "$led")"
+sa_stage "$led" Gharib89/skills#5 settled
 check "list --open leaves settled entries out" "Gharib89/skills#6 Gharib89/skills#7" \
   "$(L list --open | jq -r '[.entries[].key] | join(" ")')"
 L set Gharib89/skills#6 model null >/dev/null; rc=$?
@@ -101,7 +106,7 @@ out=$(L set Gharib89/skills#6 stalls 'not json' 2>/dev/null); rc=$?
 check_rc "a value that is not JSON exits 2" 2 "$rc"
 out=$(L set Gharib89/skills#6 repo '"x/y"' 2>/dev/null); rc=$?
 check_rc "an entry's identity is not settable" 1 "$rc"
-out=$(L set Gharib89/skills#99 stage '"running"' 2>/dev/null); rc=$?
+out=$(L set Gharib89/skills#99 branch '"x"' 2>/dev/null); rc=$?
 check_rc "set on a key the ledger lacks exits 1" 1 "$rc"
 
 # --- atomic writes: a temp file beside the ledger, then a rename ----------------
@@ -177,7 +182,7 @@ out=$(LR add --repo Gharib89/skills --number 12 --thread t-s --worktree /wt/s --
 check_rc "add over an open entry exits 1" 1 "$rc"
 check "and keeps the open entry" "t-t triage" "$(LR get Gharib89/skills#12 | jq -r '"\(.thread) \(.kind)"')"
 for st in settled closed; do
-  LR set Gharib89/skills#12 stage "\"$st\"" >/dev/null
+  sa_stage "$tmp/re.json" Gharib89/skills#12 "$st"
   out=$(LR add --repo Gharib89/skills --number 12 --thread "t-$st" --worktree /wt/s --branch ship-12 --kind ship --area skills/x --model m --effort high); rc=$?
   check_rc "add over a $st entry exits 0" 0 "$rc"
   check "and replaces it with a fresh ship entry ($st)" "t-$st ship launched 0 null m high [\"skills/x\"]" \
