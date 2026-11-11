@@ -55,7 +55,7 @@
 # that could not be placed is `wait`ed: a row in `waiting` (no thread, no
 # stage, never watched) that the morning report lists, and that `add` or
 # `unwait` removes. The waiting list is also the owner's queue: a row takes an
-# `--order` (a whole number, lowest first, 0 allowed; rows with none follow the
+# `--order` (a whole number of up to 9 digits, lowest first, 0 allowed; rows with none follow the
 # ordered ones, oldest first) and an `--after <key>` blocker, another ticket that
 # must merge first, which `reconcile` reads into its `ready` rows. A repeat
 # `wait` keeps the order and blocker it is not given anew. `--kind` is the owner skill the thread runs, `ship` (the
@@ -254,7 +254,7 @@ case $cmd in
     while [ $# -gt 0 ]; do
       case $1 in
         --reason) sa_flag_value "$usage" "${2:-}"; reason=$2 ;;
-        --order) sa_flag_value "$usage" "${2:-}"; case $2 in ''|*[!0-9]*) sa_tooling "$usage" ;; esac; order=$2 ;;
+        --order) sa_flag_value "$usage" "${2:-}"; case $2 in ''|*[!0-9]*|??????????*) sa_tooling "$usage" ;; esac; order=$2 ;;
         --after) sa_flag_value "$usage" "${2:-}"; after=$2 ;;
         *) sa_tooling "$usage" ;;
       esac
@@ -265,7 +265,6 @@ case $cmd in
       case $k in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
       case ${k##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
     done
-    [ "$(jq -rn --arg a "$after" --arg k "$key" "$sa_jq_norm"'($a | norm_repo) == ($k | norm_repo)')" = false ] || sa_tooling "$usage"
     sa_read "$ledger"
     jq -e --arg k "$(sa_key "$doc" "$key")" '.entries[$k] | . != null and (.stage != "settled" and .stage != "closed")' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
     # A repeat keeps the first `since` (how long it has waited is the report's

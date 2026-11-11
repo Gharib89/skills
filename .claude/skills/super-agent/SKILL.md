@@ -33,9 +33,9 @@ directory.
 - `ledger.sh add|adopt|get|list|set|rethread|ruling|allowed|briefed|wait|unwait|need|pushed|unneed|limit|unlimit`
   reads and writes the ledger; its `--ledger` comes first. A key is
   `<owner/name>#<n>`, or `task:<slug>` for a `task` entry. `add --kind triage`
-  records a `/triage` ticket, which has no PR (default `ship`). `add --task
-  <slug>` records a thread that is no ticket's (a grill, a deploy, a review),
-  closed on its thread's rest; `adopt` records a thread someone else launched,
+  records a `/triage` ticket, no PR. `add --task
+  <slug>` records a thread that is no ticket's (a grill, a review), closed on
+  its thread's rest; `adopt` records a thread someone else launched,
   in the same flags. `list` prints `waiting` in order. Its `--help` holds
   `ruling --brief` and `need`.
 - `status.sh --ledger <ledger> [--quota <file>] [--digest]` prints the status
@@ -56,7 +56,7 @@ directory.
   `--probe` reply, and proposes the fleet file (below) with `--propose`, one
   provider per instance from `--instances <file>`; it takes `--fleet <file>` in
   place of `--ledger`, and writes only with `--write`.
-- `probe.sh --json` measures this machine in one JSON line.
+- `probe.sh --json` measures this machine.
 - `launch.sh` prepares a launch in one call (claim, route, place, brief: the
   `t3_thread_launch` arguments, which you send), and its `record` form writes
   the entry after it (The loop); `record --task <slug>` writes a `task` entry
@@ -125,8 +125,9 @@ its T3 environment id the owner already linked: no host, user, key or SSH.
 
 ## The waiting list
 
-The owner's "queue" is the ledger's waiting list: "add N to the queue" and
-"ship M after N" are `wait` rows, and you launch reconcile's `ready` rows
+The owner's "queue" is the ledger's waiting list: "add N to the queue" is
+`ledger.sh wait <key> --reason queued`, "ship M after N" is `wait <M> --after
+<N>` (full keys); launch reconcile's `ready` rows
 ([rules](reference/waiting-list.md)).
 
 ## Claims and intake
@@ -342,9 +343,9 @@ repos, to propose it to the owner as a global rule.
 ## After a restart or compaction
 
 `scripts/ledger.sh --ledger <ledger> list --open` is what you own. Run
-`scripts/reconcile.sh --ledger <ledger>` and start the watcher before
-anything else. Then read `list`'s `waiting` rows (the queue): `ready` ones
-launch, the rest get a place rerun when a machine could have come back.
+`scripts/reconcile.sh --ledger <ledger> --fleet <fleet>` and start the watcher
+before anything else. Launch its `ready` rows (the queue); `list`'s other
+`waiting` rows get a place rerun when a machine could have come back.
 
 ## Hard rules
 

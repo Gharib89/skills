@@ -334,6 +334,28 @@ check "a waiting row whose issue cannot be read is reported and kept" "$repo#11 
 check "and is not ready" false "$(jq --arg k "$repo#11" '[.ready[].key] | index($k) != null' <<<"$out")"
 rm -f "$SA_FAKE/gh-fail"
 
+# a blocker that cannot be read: the row stays, the error names the blocker
+queue
+L wait $repo#15 --reason r --after $repo#98 >/dev/null
+sa_gh_fail "/issues/98" 2
+out=$(R --fleet "$fleet")
+check "a waiting row whose blocker cannot be read is reported by the blocker's key" "$repo#98 issue-unreadable" "$(jq -r '.errors[] | select(.key == "'"$repo#98"'") | "\(.key) \(.kind)"' <<<"$out")"
+check "and is not ready" false "$(jq --arg k "$repo#15" '[.ready[].key] | index($k) != null' <<<"$out")"
+rm -f "$SA_FAKE/gh-fail"
+# a blocker closed as not planned never merged
+sa_issue $repo 97 closed
+f="$SA_FAKE/gh/$(printf '%s' "repos/$repo/issues/97" | sed 's/[^A-Za-z0-9._-]/_/g')"
+jq -c '. + {state_reason: "not_planned"}' "$f" > "$f.new" && mv "$f.new" "$f"
+L wait $repo#15 --reason r --after $repo#97 >/dev/null
+out=$(R)
+check "a blocker closed as not planned keeps its row waiting" false "$(jq --arg k "$repo#15" '[.ready[].key] | index($k) != null' <<<"$out")"
+
+# a fleet file with a max_ships that is no whole number is refused by name
+printf '{"repos":{"Gharib89/skills":{"max_ships":"two"}}}\n' > "$tmp/badfleet.json"
+out=$(R --fleet "$tmp/badfleet.json" 2>/dev/null); rc=$?
+check_rc "a max_ships that is no whole number exits 2" 2 "$rc"
+check "and names the field" true "$(jq -r '.error | contains("max_ships")' <<<"$out")"
+
 # a ledger with waiting rows and no open entry is still read
 rm -f "$led"
 sa_issue $repo 20 open; sa_issue $repo 21 closed

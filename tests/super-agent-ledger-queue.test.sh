@@ -30,7 +30,8 @@ L wait Gharib89/skills#43 --reason "first now" --order 0 >/dev/null
 check "a repeat with --order replaces it, and 0 is first" Gharib89/skills#43 "$(L list | jq -r '.waiting[0].key')"
 check_rc "an order that is no whole number exits 2" 2 "$(L wait Gharib89/skills#45 --reason r --order x >/dev/null 2>&1; echo $?)"
 check_rc "a blocker that is no repo and number exits 2" 2 "$(L wait Gharib89/skills#45 --reason r --after nope >/dev/null 2>&1; echo $?)"
-check_rc "a row cannot wait on itself" 2 "$(L wait Gharib89/skills#45 --reason r --after Gharib89/skills#45 >/dev/null 2>&1; echo $?)"
-for n in 41 42 43 44; do L unwait Gharib89/skills#$n >/dev/null; done
+check "the largest order, 9 digits, is taken and sorts before an unordered row" true "$(L wait Gharib89/skills#45 --reason r >/dev/null; L wait Gharib89/skills#46 --reason r --order 999999999 >/dev/null; L list | jq '[.waiting[].key] | index("Gharib89/skills#46") < index("Gharib89/skills#45")')"
+check_rc "an order of 10 digits exits 2" 2 "$(L wait Gharib89/skills#47 --reason r --order 1000000000 >/dev/null 2>&1; echo $?)"
+for n in 41 42 43 44 45 46; do L unwait Gharib89/skills#$n >/dev/null; done
 
 finish

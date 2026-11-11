@@ -40,17 +40,19 @@
 # issue closed is dropped from the ledger and named in `dropped`, and the rows
 # that could launch now are `ready`, in the list's order: no `--after` blocker or
 # a blocker that merged (its entry `merged` or `settled`, or, with no such entry,
-# its issue closed), and the repo under its ship cap, `max_ships` in the fleet
+# its issue closed and not as not planned), and the repo under its ship cap, `max_ships` in the fleet
 # file's `repos`, 3 without one, counting its open entries and the ready rows
 # ahead. A ready row is a candidate: `place` still decides the machine. A row
-# whose issue or blocker cannot be read stays, is not ready and is in `errors`.
+# whose issue or blocker cannot be read stays, is not ready and is in `errors`,
+# its `detail.key` the issue that could not be read.
 # With `--fleet`, it also lists `unqueued`: an open issue in one of the fleet
 # file's active repos, created since the earliest open entry launched (a batch is
 # running), that no ledger entry of any stage, no waiting row and no claim comment
 # holds. Each is listed once: the ledger keeps the keys it offered
 # (`unqueued_offered`), so a later run leaves them out. Nothing is launched.
 #
-# stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, errors}:
+# stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, ready,
+#         dropped, unqueued, errors}:
 #         `entries` one {key, from, stage, stalls, observed} per open entry that
 #         was read; `stalled` one {key, thread, stalls, reason} per stall counted
 #         now, `reason` `run-completed` or `stall-window`;
@@ -84,6 +86,9 @@ done
 [ -n "$ledger" ] || sa_tooling "$usage"
 [ -z "$fleet" ] || jq -e '((.active_repos // []) | type == "array" and all(type == "string"))' "$fleet" >/dev/null 2>&1 \
   || sa_tooling "$fleet: not JSON, or active_repos is not an array of strings"
+
+[ -z "$fleet" ] || jq -e '[(.repos // {})[]? | .max_ships // 1 | type == "number" and . >= 1 and . == floor] | all' "$fleet" >/dev/null 2>&1 \
+  || sa_tooling "$fleet: every repos.<owner/name>.max_ships must be a whole number of 1 or more"
 
 sa_read "$ledger"
 # A batch is running while an entry is open: it began when the earliest of them launched.
@@ -195,26 +200,24 @@ fi
 # The waiting list: the owner's queue. A closed issue drops its row; a row is
 # ready when its blocker merged and its repo has a free ship slot.
 ready='[]' dropped='[]'
-issue_state() { gh api "repos/$1/issues/$2" 2>/dev/null </dev/null | jq -er .state; } # <owner/name> <number>
+issue_read() { gh api "repos/$1/issues/$2" 2>/dev/null </dev/null; } # <owner/name> <number>
+unreadable() { errors=$(jq -c --arg k "$1" '. + [{key: $k, kind: "issue-unreadable", detail: {key: $k}}]' <<<"$errors"); }
 while IFS= read -r row; do
   key=$(jq -r .key <<<"$row") repo=$(jq -r .repo <<<"$row")
-  state=$(issue_state "$repo" "$(jq -r .number <<<"$row")") || state=''
-  if [ -z "$state" ]; then
-    errors=$(jq -c --arg k "$key" '. + [{key: $k, kind: "issue-unreadable", detail: {key: $k}}]' <<<"$errors"); continue
-  fi
+  issue=$(issue_read "$repo" "$(jq -r .number <<<"$row")") || issue=''
+  state=$(jq -r '.state // empty' <<<"$issue" 2>/dev/null)
+  if [ -z "$state" ]; then unreadable "$key"; continue; fi
   if [ "$state" = closed ]; then
     doc=$(jq -c --arg k "$key" "$sa_jq_norm"'.waiting |= map(select((.key | norm_repo) != ($k | norm_repo)))' <<<"$doc")
     dropped=$(jq -c --arg k "$key" '. + [{key: $k, reason: "issue-closed"}]' <<<"$dropped"); continue
   fi
   after=$(jq -r '.after // empty' <<<"$row")
-  if [ -n "$after" ]; then
-    if ! jq -e --arg k "$after" "$sa_jq_norm"'[.entries[] | select(.key | norm_repo == ($k | norm_repo)) | .stage] | any(IN("merged", "settled"))' <<<"$doc" >/dev/null; then
-      bstate=$(issue_state "${after%#*}" "${after##*#}") || bstate=''
-      if [ -z "$bstate" ]; then
-        errors=$(jq -c --arg k "$key" '. + [{key: $k, kind: "issue-unreadable", detail: {key: $k}}]' <<<"$errors"); continue
-      fi
-      [ "$bstate" = closed ] || continue
-    fi
+  if [ -n "$after" ] && ! jq -e --arg k "$after" "$sa_jq_norm"'[.entries[] | select(.key | norm_repo == ($k | norm_repo)) | .stage] | any(IN("merged", "settled"))' <<<"$doc" >/dev/null; then
+    blocker=$(issue_read "${after%#*}" "${after##*#}") || blocker=''
+    bstate=$(jq -r '.state // empty' <<<"$blocker" 2>/dev/null)
+    if [ -z "$bstate" ]; then unreadable "$after"; continue; fi
+    # A closed issue means merged unless it was closed as not planned.
+    [ "$bstate" = closed ] && [ "$(jq -r '.state_reason // empty' <<<"$blocker")" != not_planned ] || continue
   fi
   max=$([ -z "$fleet" ] || jq -r --arg r "$repo" "$sa_jq_norm"'[(.repos // {}) | to_entries[] | select(.key | norm_repo == ($r | norm_repo)) | .value.max_ships] | first // empty' "$fleet")
   used=$(jq -r --arg r "$repo" --argjson ready "$ready" "$sa_jq_open$sa_jq_norm"'[.entries[] | select(is_open and ((.repo // "") | norm_repo) == ($r | norm_repo))] | length + ([$ready[] | select(.repo | norm_repo == ($r | norm_repo))] | length)' <<<"$doc")
