@@ -44,7 +44,8 @@
 #         when it refused the entry
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
-#       file, a claim, issue or placement the host or a script refused
+#       file, a claim, issue or placement the host or a script refused, or a record
+#       whose reconcile failed after the entry was written (do not record again)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -93,7 +94,11 @@ if [ "${1:-}" = record ]; then
     # rethread keeps the entry's machine, so a thread on another machine sets it after.
     sub ledger --ledger "$ledger" rethread "$key" "${fields[@]}"
     if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" set "$key" machine "$(jq -cn --arg m "$machine" '$m')"; fi
-    if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" get "$key"; out=$(jq -c '{entry: .}' <<<"$out") || sa_tooling "cannot read entry $key"; fi
+    if [ "$rc" = 0 ]; then
+      sub ledger --ledger "$ledger" get "$key"
+      [ "$rc" = 0 ] || sa_tooling "cannot read entry $key"
+      out=$(jq -c '{entry: .}' <<<"$out")
+    fi
   else
     sub ledger --ledger "$ledger" add --repo "${key%#*}" --number "${key##*#}" --machine "$machine" "${fields[@]}"
   fi
