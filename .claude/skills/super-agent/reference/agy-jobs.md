@@ -14,7 +14,8 @@ reading) goes to agy rather than a supervised thread:
 1. Run `scripts/route.sh --job text --quota <file>` on a fresh quota read,
    with `--claude` when the job wants a Claude model. `driver: claude` keeps
    the job on Claude Code; `driver: agy` names the `model` to pass.
-2. Run `scripts/agy-job.sh --repo <dir> --task <text> --model <model>`, with
+2. Run `scripts/agy-job.sh --repo <dir> --task <text> --model <model>` (it
+   works in a disposable scratch worktree of the repo), with
    Bash `run_in_background: true` when it may run long. Read only `response`
    (or `error`) from its JSON.
 3. Exit 1 with `denied` filled means the job needed a binary the allow list

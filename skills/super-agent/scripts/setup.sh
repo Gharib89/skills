@@ -72,7 +72,7 @@
 #       that is not JSON or has a field of the wrong shape, a machine probe
 #       (hostname, nproc, free, uptime) that failed, or a write that failed
 #
-# Linux only: the machine probes are GNU `nproc`, `free` and `timeout`.
+# Linux only: see the operating system line in SKILL.md.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 

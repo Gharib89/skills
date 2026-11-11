@@ -91,7 +91,8 @@ case $cmd in
     [ -n "$repo" ] && [ -n "$thread" ] && [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage"
     key="$repo#$number"
     sa_read "$ledger"
-    jq -e --arg k "$key" '.entries[$k] and (.entries[$k].stage | IN("settled", "closed") | not)' <<<"$doc" >/dev/null && sa_fail "$key is already in the ledger"
+    old=$(sa_key "$doc" "$key")
+    jq -e --arg k "$old" '.entries[$k] and (.entries[$k].stage | IN("settled", "closed") | not)' <<<"$doc" >/dev/null && sa_fail "$key is already in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "$number" --arg t "$thread" \
       --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg env "$environment" --arg model "$model" \
@@ -101,13 +102,14 @@ case $cmd in
         model: (if $model == "" then null else $model end),
         effort: (if $effort == "" then null else $effort end),
         stage: "launched", stalls: 0, observed: null, launched_at: $now, updated_at: $now}')
-    sa_write "$ledger" "$(jq -c --arg k "$key" --argjson e "$entry" '.entries[$k] = $e | .waiting = ((.waiting // []) | map(select(.key != $k)))' <<<"$doc")"
+    sa_write "$ledger" "$(jq -c --arg k "$key" --arg old "$old" --argjson e "$entry" "$sa_jq_norm"'del(.entries[$old]) | .entries[$k] = $e | .waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' <<<"$doc")"
     jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$entry" '{ledger: $l, key: $k, entry: $e}' ;;
   get)
     [ $# -eq 1 ] || sa_tooling "$usage"
     sa_read "$ledger"
-    jq -e --arg k "$1" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$1 is not in the ledger"
-    jq -c --arg k "$1" '.entries[$k]' <<<"$doc" ;;
+    key=$(sa_key "$doc" "$1")
+    jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$1 is not in the ledger"
+    jq -c --arg k "$key" '.entries[$k]' <<<"$doc" ;;
   list)
     open=false
     case ${1:-} in --open) open=true; shift ;; esac
@@ -124,6 +126,7 @@ case $cmd in
         || sa_fail "stage must be one of $sa_stages"
     fi
     sa_read "$ledger"
+    key=$(sa_key "$doc" "$key")
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$key is not in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     sa_write "$ledger" "$(jq -c --arg k "$key" --arg f "$field" --argjson v "$value" --arg now "$now" \
@@ -148,6 +151,7 @@ case $cmd in
     done
     [ -n "$thread" ] && [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage"
     sa_read "$ledger"
+    key=$(sa_key "$doc" "$key")
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$key is not in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     doc=$(jq -c --arg k "$key" --arg t "$thread" --arg w "$worktree" --arg b "$branch" --arg m "$model" \
@@ -190,18 +194,18 @@ case $cmd in
     case $key in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
     case ${key##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
     sa_read "$ledger"
-    jq -e --arg k "$key" '.entries[$k] | . != null and (.stage != "settled" and .stage != "closed")' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
+    jq -e --arg k "$(sa_key "$doc" "$key")" '.entries[$k] | . != null and (.stage != "settled" and .stage != "closed")' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
     # A repeat keeps the first `since`: how long it has waited is the report's point.
     row=$(jq -cn --arg k "$key" --arg r "${key%#*}" --argjson n "${key##*#}" --arg why "$reason" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      --argjson old "$(jq -c --arg k "$key" '(.waiting // []) | map(select(.key == $k)) | first // null' <<<"$doc")" \
+      --argjson old "$(jq -c --arg k "$key" "$sa_jq_norm"'(.waiting // []) | map(select((.key | norm_repo) == ($k | norm_repo))) | first // null' <<<"$doc")" \
       '{key: $k, repo: $r, number: $n, reason: $why, since: ($old.since // $now)}')
-    sa_write "$ledger" "$(jq -c --arg k "$key" --argjson w "$row" '.waiting = ((.waiting // []) | map(select(.key != $k)) + [$w])' <<<"$doc")"
+    sa_write "$ledger" "$(jq -c --arg k "$key" --argjson w "$row" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))) + [$w])' <<<"$doc")"
     jq -cn --argjson w "$row" '{waiting: $w}' ;;
   unwait)
     [ $# -eq 1 ] || sa_tooling "$usage"
     sa_read "$ledger"
-    had=$(jq -r --arg k "$1" '[(.waiting // [])[] | select(.key == $k)] | length > 0' <<<"$doc")
-    [ "$had" != true ] || sa_write "$ledger" "$(jq -c --arg k "$1" '.waiting = ((.waiting // []) | map(select(.key != $k)))' <<<"$doc")"
+    had=$(jq -r --arg k "$1" "$sa_jq_norm"'[(.waiting // [])[] | select((.key | norm_repo) == ($k | norm_repo))] | length > 0' <<<"$doc")
+    [ "$had" != true ] || sa_write "$ledger" "$(jq -c --arg k "$1" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' <<<"$doc")"
     jq -cn --arg k "$1" --argjson r "$had" '{key: $k, removed: $r}' ;;
   *) sa_tooling "$usage" ;;
 esac

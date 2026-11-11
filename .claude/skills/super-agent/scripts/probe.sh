@@ -17,7 +17,7 @@
 #         holds for github.com, [] with none. A failure is {error}
 # exit: 0 a probe · 2 `jq` missing, or `nproc`, `free` or `uptime` failed
 #
-# Linux only: GNU `nproc` and `free`.
+# Linux only: see the operating system line in SKILL.md.
 set -uo pipefail
 usage='usage: probe --json'
 fail() { printf '{"error":"%s"}\n' "$1"; printf '%s\n' "$1" >&2; exit 2; }
