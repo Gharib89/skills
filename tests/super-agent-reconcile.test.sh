@@ -51,7 +51,7 @@ check "one JSON object is the whole answer" 1 "$(jq -s length <<<"$out")"
 check "it checked both entries" 2 "$(jq .checked <<<"$out")"
 check "a running thread moves its entry from launched to running" "launched>running launched>running" \
   "$(jq -r '[.entries[] | "\(.from)>\(.stage)"] | join(" ")' <<<"$out")"
-check "the baseline is in the ledger" '{"status":"running","run_count":1,"pending":0,"gate":false,"pr":{"number":null,"state":"none"}}' \
+check "the baseline is in the ledger" '{"status":"running","run_count":1,"pending":0,"gate":false,"waiting":false,"rest_at":null,"pr":{"number":null,"state":"none"}}' \
   "$(jq -c --arg k "$repo#5" '.entries[$k].observed' "$led")"
 check "so a watch after it sees nothing" "null timeout" \
   "$(bash "$s/watch.sh" --ledger "$led" --interval 1 --timeout 2 | jq -r '[(.key // "null"), .event] | join(" ")')"
