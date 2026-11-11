@@ -39,6 +39,18 @@ ts() { date -u -d "@$1" +%Y-%m-%dT%H:%M:%SZ; }
 T
 check_rc "a conversion of a fixed epoch passes" 0 "$rc"
 
+lint fixed-variable <<'T'
+now=$(ts "$pin")
+a=$(date -u -d "$now" +%s)
+b=$(date -d "${last_seen}" +%s)
+T
+check_rc "a conversion of a variable, whatever its name, passes" 0 "$rc"
+
+lint relative-word <<'T'
+x=$(date -d "now" +%s)
+T
+check_rc "a relative word that is the whole value still fails" 1 "$rc"
+
 lint fixed-literal <<'T'
 day=$(date -u -d 2026-11-10 +%s)
 T

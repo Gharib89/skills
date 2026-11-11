@@ -71,6 +71,7 @@ rc=0
 # machine's own files: an unisolated run passed in CI and failed on a machine
 # whose fleet file was present (#1094).
 iso=$(mktemp -d) || { echo "cannot create a temp directory" >&2; exit 2; }
+trap 'rm -rf "$iso"' EXIT
 export HOME="$iso" XDG_CONFIG_HOME="$iso/config" XDG_STATE_HOME="$iso/state" XDG_DATA_HOME="$iso/data" XDG_CACHE_HOME="$iso/cache"
 
 # 1. No positional-parameter error expansion anywhere under the mechanics,

@@ -71,7 +71,10 @@ for f in "$@"; do
         if (args ~ /\$[@*]/) continue
         reads = 1
         if (args ~ /(^|[ \t])(-[A-Za-z]*d|--date|-r|--reference)([ \t=]|$)/) {
-          reads = (args ~ /(ago|now|today|yesterday|tomorrow|next|last|hence)/)
+          # The name of a variable is no word of the date: `-d "$now"` converts a time
+          # the test already holds.
+          rel = args; gsub(/\$\{[^}]*\}|\$[A-Za-z_][A-Za-z0-9_]*/, "", rel)
+          reads = (rel ~ /(^|[^A-Za-z0-9_])(ago|now|today|yesterday|tomorrow|next|last|hence)([^A-Za-z0-9_]|$)/)
         }
         if (reads && !mark && !stub) printf "%s:%d: reads the current time with date; put a date stub on PATH, or mark an elapsed-time bound with a trailing `# clock-exception: <reason>`\n", FILENAME, NR
       }
