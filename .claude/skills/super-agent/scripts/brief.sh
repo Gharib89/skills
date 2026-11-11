@@ -39,6 +39,9 @@ done
 [ -n "$fleet" ] && [ -n "$ledger" ] || sa_tooling "$usage"
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file, run setup"
 jq -e '((.waivers // []) | type) == "array"' "$fleet" >/dev/null 2>&1 || sa_tooling "$fleet: not a fleet file (waivers must be an array)"
+jq -e '((.repos // {}) | type == "object")
+  and ([(.repos // {})[]?.brief, (.machines // {})[]?.brief] | all(. == null or (type == "array" and all(type == "string"))))' "$fleet" >/dev/null 2>&1 \
+  || sa_tooling "$fleet: repos must be an object, and each brief under repos and machines an array of text lines"
 allowed=$(bash "$(dirname "${BASH_SOURCE[0]}")/ledger.sh" --ledger "$ledger" allowed) || sa_tooling "cannot read the allowed calls from $ledger"
 briefed=$(bash "$(dirname "${BASH_SOURCE[0]}")/ledger.sh" --ledger "$ledger" briefed) || sa_tooling "cannot read the rulings from $ledger"
 

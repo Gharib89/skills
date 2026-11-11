@@ -143,6 +143,13 @@ echo stale > "$out_f"; L 7 --out "$out_f" >/dev/null
 check "an answer that does not launch removes a stale --out file" absent "$([ -e "$out_f" ] && echo present || echo absent)"
 quota_with 0.8
 
+# --- a brief that cannot be built is no launch --------------------------------------
+reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+jq '.repos = {"acme/widgets": {"brief": "one line"}}' "$fleet" > "$tmp/badfleet.json"
+out=$(bash "$s/launch.sh" "$repo#7" --fleet "$tmp/badfleet.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>&1); rc=$?
+check "a fleet whose brief lines are mis-shaped exits 2, never launching with an empty brief" "2 false" "$rc $(jq -r 'has("args")' <<<"$out")"
+reset
+
 # --- the per-repo cap: a launch over it is a waiting row -----------------------------
 bash "$s/ledger.sh" --ledger "$led" add --repo $repo --number 1 --thread t1 --worktree /w/1 --branch b1 --machine home --area a >/dev/null
 bash "$s/ledger.sh" --ledger "$led" add --repo $repo --number 2 --thread t2 --worktree /w/2 --branch b2 --machine home --area b --kind triage >/dev/null

@@ -83,7 +83,9 @@ each repo by `<owner/name>`, and an entry holds two optional keys:
   tickets of the repo run at once, counting every open one, ship and triage, on
   every machine. 3 when unset. A launch over it waits, the cap in its reason; a
   value that is not a whole number at least 1 is a tooling error.
-- `brief`: an array of text lines every launch brief for that repo carries.
+- `brief`: an array of text lines every launch brief for that repo carries. A
+  `brief` that is not an array of text, or a `repos` that is not an object, is
+  a tooling error.
 
 A machine entry takes the same `brief` array, carried by every launch placed on
 that machine. A launch brief prints the lines that match its repo and the

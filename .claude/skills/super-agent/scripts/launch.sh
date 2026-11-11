@@ -156,6 +156,7 @@ claim=$(jq -r .status <<<"$out")
 
 # 3. The route.
 sub route --size "$size" --quota "$quota" ${raise:+--raise "$raise"} ${named:+--instance "$named"}
+[ "$rc" = 0 ] && jq -e 'type == "object"' <<<"$out" >/dev/null 2>&1 || sa_tooling "route gave no answer"
 route=$out
 jq -e '.instance_id != null' <<<"$route" >/dev/null || answer no_instance "$(jq -c '{reason}' <<<"$route")"
 ask=$(jq -r .ask <<<"$route")
@@ -187,7 +188,7 @@ type=$(jq -r 'if index("bug") then "fix" elif index("documentation") then "docs"
 [ "$kind" = ship ] || type=triage
 branch="$type/$slug-$number"
 sub brief --fleet "$fleet" --ledger "$ledger" --repo "$repo" --machine "$pm" ${note:+--note "$note"}
-brief=$(jq -r .brief <<<"$out")
+[ "$rc" = 0 ] && brief=$(jq -er '.brief | select(type == "string" and length > 0)' <<<"$out" 2>/dev/null) || sa_tooling "brief gave no answer"
 
 # `record` is what the ledger entry carries: the fleet's machine key and the
 # routed tier's model and effort, one spelling each.

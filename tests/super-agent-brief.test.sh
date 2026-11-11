@@ -142,4 +142,13 @@ check "every brief carries the shared-machine lines: own PIDs only, a per-repo l
 check "two casings of one repo name one lock" "1 1" "$(B2 --repo Acme/Widgets | jq -r .brief | grep -c 'flock /tmp/super-agent-acme-widgets.lock') $(B2 --repo acme/widgets | jq -r .brief | grep -c 'flock /tmp/super-agent-acme-widgets.lock')"
 check "the closing line is still last" "End your last message with the PR URL and the gate state." "$(tail -1 <<<"$b")"
 
+# --- a wrong-shaped fleet brief is refused, never dropped ---------------------------
+jq '.repos = {"acme/widgets": {"brief": "one line"}}' "$fleet" > "$tmp/bad1.json"
+jq '.machines = {"home": {"brief": [1]}}' "$fleet" > "$tmp/bad2.json"
+jq '.repos = ["acme/widgets"]' "$fleet" > "$tmp/bad3.json"
+for f in bad1 bad2 bad3; do
+  out=$(bash "$s/brief.sh" --fleet "$tmp/$f.json" --ledger "$led2" --repo acme/widgets --machine home); rc=$?
+  check "a $f fleet exits 2 with a named error" "2 1" "$rc $(jq -r .error <<<"$out" | grep -c 'array of text lines')"
+done
+
 finish
