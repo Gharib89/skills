@@ -82,7 +82,7 @@ printed=$(jq -c '.status.rows // {}' <<<"$doc") || sa_tooling "$ledger: status i
 changed=$(jq -r --argjson p "$printed" '.rows != $p' <<<"$now")
 block=$(jq -r --argjson d "$digest" --argjson c "$changed" --argjson q "$qdoc" '
   def pct: if . == null then "unknown" else "\((. * 100) | round)%" end;
-  def bucket($p; $w): [$p.buckets[]? | select(if $w == "5h" then .window == "5h" else .window == "weekly" and (.id == "week" or $p.driver != "claude") end)] | first | .remaining;
+  def bucket($p; $w): [$p.buckets[]? | select(if $w == "5h" then .window == "5h" else .window == "weekly" and (if $p.driver == "claude" then .id == "week" elif $p.driver == "pi" then ((.group // "") | startswith("Claude")) else true end) end)] | first | .remaining;
   ([("Needs you", "Merged", "Running", "Waiting", "Reviewer limit") as $n | .rows[$n] // empty]) as $rows
   | ([($q.providers // {}) | to_entries[] | "Quota \(.key): weekly \(bucket(.value; "weekly") | pct), 5 hour \(bucket(.value; "5h") | pct)"]) as $qlines
   | if ($d or $c) and ($rows | length) > 0 then ($rows + $qlines) | join("\n") else "" end' <<<"$now") \

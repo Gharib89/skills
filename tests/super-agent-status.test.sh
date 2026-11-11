@@ -112,6 +112,9 @@ check "a digest ends with one Quota line per instance, unknown where nothing was
 Quota claude_small: weekly unknown, 5 hour unknown" "$(S --quota "$q" --digest | jq -r .block | grep '^Quota')"
 jq '.providers.claude_big.buckets[1].remaining = 0.35' "$q" > "$tmp/q2.json"
 out=$(S --quota "$tmp/q2.json")
+jq -cn '{providers: {pi_one: {driver: "pi", buckets: [{id: "g", group: "Gemini", window: "weekly", remaining: 0.9, resets: "x"}, {id: "c", group: "Claude", window: "weekly", remaining: 0.2, resets: "x"}]}}}' > "$tmp/qpi.json"
+check "a pi instance's Quota line reads its Claude group bucket, as route does" \
+  "Quota pi_one: weekly 20%, 5 hour unknown" "$(S --quota "$tmp/qpi.json" --digest | jq -r .block | grep '^Quota')"
 check "a changed quota figure alone posts no block" 'false ' "$(jq -r '"\(.changed) \(.block)"' <<<"$out")"
 add 902
 out=$(S --quota "$tmp/q2.json")

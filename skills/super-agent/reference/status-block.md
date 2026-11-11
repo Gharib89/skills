@@ -16,8 +16,8 @@ instance, its weekly and 5 hour remaining or `unknown`.
 ## Every wake
 
 After `reconcile.sh`, run `scripts/status.sh --ledger <ledger> --quota <file>`,
-`<file>` the wake's saved quota read (Routing; read it with `quota.sh --save
-<file> --wake <id>` if no launch did):
+`<file>` the wake's saved quota read (Routing; read it with `quota.sh --fleet
+<fleet> --save <file> --wake <id>` if no launch did):
 
 - `block` empty: post nothing, no prose either. A block is empty when no row
   changed (`changed` false) and no digest was asked.
