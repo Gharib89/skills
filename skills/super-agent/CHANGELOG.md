@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.18.0 (2026-11-11)
+
+### Features
+
+- **super-agent**: An ordered waiting list with blockers, and ready rows from reconcile
+  ([#1166](https://github.com/Gharib89/skills/pull/1166),
+  [`8097dc4`](https://github.com/Gharib89/skills/commit/8097dc45492af9c799d5cc285979934faa3093b6))
+
+
 ## v0.17.0 (2026-11-11)
 
 ### Features
