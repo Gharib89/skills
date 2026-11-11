@@ -19,7 +19,7 @@ fi
 fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 r=$fixture/repo
 mkdir -p "$r/scripts" "$r/tests"
-cp scripts/check.sh scripts/clock-lint.sh "$r/scripts/"
+cp scripts/check.sh scripts/clock-lint.sh scripts/token-limit-check.sh "$r/scripts/"
 cp .pre-commit-config.yaml "$r/"
 git -C "$r" init -q
 
