@@ -75,7 +75,7 @@ out=$(jq -cn --slurpfile fleet "$fleet" --argjson doc "$doc" --arg m "$machine" 
   | (($mm.slots // 1) - ($mm.reserve // 0)) as $ceiling
   | ($mm.max_load // $mm.cores // 0) as $limit
   | ($f.thread_ram_floor_gb // 4) as $floor
-  | ([$open[] | select($repo != "" and (.repo | norm_repo) == ($repo | norm_repo))
+  | ([$open[] | select($repo != "" and ((.repo // "") | norm_repo) == ($repo | norm_repo))
       | select((.number as $n | $blockers | index($n)) != null
           or ((.areas // []) as $theirs | ($theirs | length) == 0 or ($areas | length) == 0
               or ([$theirs[] as $t | $areas[] as $a | under($a; $t)] | any)))

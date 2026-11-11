@@ -12,7 +12,7 @@ tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin" "$tmp/tools" "$tmp/fake"
 for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut find wc diff chmod; do
-  ln -s "$(command -v $t)" "$tmp/tools/$t" || exit 2
+  ln -s "$(command -v "$t")" "$tmp/tools/$t" || exit 2
 done
 export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake
 sa_fake_install "$tmp/bin"
@@ -24,15 +24,17 @@ L add --repo acme/widgets --number 5 --thread t5 --worktree /wt/5 --branch b5 --
 
 # --- launch-check: repo name and area path ---------------------------------------
 for spelling in "acme/widgets skills/ship" "ACME/Widgets skills/ship" "acme/widgets ./skills/ship/" "Acme/WIDGETS skills/ship//"; do
-  set -- $spelling
-  check "launch-check: $spelling conflicts with the open ticket" '["acme/widgets#5"]' "$(LC --repo "$1" --area "$2" | jq -c .repo.conflicts)"
+  read -r repo area <<<"$spelling"
+  check "launch-check: $spelling conflicts with the open ticket" '["acme/widgets#5"]' "$(LC --repo "$repo" --area "$area" | jq -c .repo.conflicts)"
 done
 check "launch-check: a mixed-case repo with an apart area is free" '[]' "$(LC --repo ACME/Widgets --area docs/ | jq -c .repo.conflicts)"
 check "launch-check: --key in another case leaves the ticket's own entry out" '[]' "$(LC --repo acme/widgets --key ACME/Widgets#5 --area skills/ship | jq -c .repo.conflicts)"
 
 # --- ledger: a key in another case names the same entry ----------------------------
 check "ledger get: a mixed-case key finds the entry" acme/widgets#5 "$(L get ACME/Widgets#5 | jq -r .key)"
-check_rc "ledger add: a mixed-case key is already in the ledger" 1 "$(L add --repo Acme/Widgets --number 5 --thread t --worktree /w --branch b >/dev/null 2>&1; echo $?)"
+out=$(L add --repo Acme/Widgets --number 5 --thread t --worktree /w --branch b 2>/dev/null); rc=$?
+check_rc "ledger add: a mixed-case key is already in the ledger" 1 "$rc"
+check "and the refusal says so" "Acme/Widgets#5 is already in the ledger" "$(jq -r .error <<<"$out")"
 L set ACME/WIDGETS#5 stage '"running"' >/dev/null
 check "ledger set: a mixed-case key writes the entry" running "$(L get acme/widgets#5 | jq -r .stage)"
 L wait acme/widgets#6 --reason r >/dev/null; L wait ACME/Widgets#6 --reason r2 >/dev/null
