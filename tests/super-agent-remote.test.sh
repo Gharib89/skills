@@ -118,6 +118,12 @@ sa_checks $repo sha6 "done"
 out=$(W --timeout 5)
 check "the checks on its head finishing wake watch" "$repo#6 checks-finished" "$(jq -r '[.key, .event] | join(" ")' <<<"$out")"
 R "${remote_args[@]}" >/dev/null
+sa_pr_head $repo feat/x-6 open sha6b; sa_checks $repo sha6b pending
+R "${remote_args[@]}" >/dev/null
+sa_checks $repo sha6b "done"
+out=$(W --timeout 5)
+check "a new head whose checks finish wakes watch again" "$repo#6 checks-finished" "$(jq -r '[.key, .event] | join(" ")' <<<"$out")"
+R "${remote_args[@]}" >/dev/null
 sa_pr_head $repo feat/x-6 merged sha6
 out=$(W --timeout 5)
 check "a merge wakes watch" "$repo#6 pr-merged" "$(jq -r '[.key, .event] | join(" ")' <<<"$out")"

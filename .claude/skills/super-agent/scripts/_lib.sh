@@ -219,5 +219,5 @@ sa_pr_of() {
     fi
     checks=$(jq -r 'if (.check_runs | length) == 0 then "none" elif any(.check_runs[]; .status != "completed") then "pending" else "done" end' <<<"$runs")
   fi
-  pr_obs=$(jq -c --arg c "$checks" '. + {checks: $c}' <<<"$pr_obs")
+  pr_obs=$(jq -c --arg c "$checks" --arg h "$sha" '. + {checks: $c, head: $h}' <<<"$pr_obs")
 }

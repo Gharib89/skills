@@ -41,7 +41,7 @@
 # backstop schedule. `--remote` is accepted and unused here.
 #
 # stdout: {key, thread, event, observed} for a change, `observed` the snapshot
-#         {status, run_count, pending, gate, pr: {number, state[, checks]}}; {key, thread,
+#         {status, run_count, pending, gate, pr: {number, state[, checks, head]}}; {key, thread,
 #         event, detail} for `thread-mismatch`, `thread-unreadable` and
 #         `pr-unreadable`; {key: null, thread: null, event: "timeout",
 #         watching, unobserved} once --timeout passes, `watching` the keys it
@@ -120,7 +120,7 @@ change_of() {
     if $n.pr.state == "merged" and $o.pr.state != "merged" then "pr-merged"
     elif $n.pr.state == "closed" and $o.pr.state != "closed" then "pr-closed"
     elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "none" then "pr-opened"
-    elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "open" and $n.pr.checks == "done" and $o.pr.checks != "done" then "checks-finished"
+    elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "open" and $n.pr.checks == "done" and ($o.pr.checks != "done" or $o.pr.head != $n.pr.head) then "checks-finished"
     elif $n.pending > $o.pending then "pending-approval"
     elif $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
     else empty end'
