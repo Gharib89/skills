@@ -125,10 +125,9 @@ its T3 environment id the owner already linked: no host, user, key or SSH.
 
 ## The waiting list
 
-The owner's "queue" is the ledger's waiting list: "add N to the queue" is
-`ledger.sh wait <key> --reason queued`, "ship M after N" is `wait <M> --after
-<N>` (full keys); launch reconcile's `ready` rows
-([rules](reference/waiting-list.md)).
+The owner's "queue" is the waiting list: "add N to the queue" is `ledger.sh
+wait <key> --reason queued`, "ship M after N" adds `--after <N>` (full keys);
+launch reconcile's `ready` rows ([rules](reference/waiting-list.md)).
 
 ## Claims and intake
 
