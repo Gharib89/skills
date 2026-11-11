@@ -134,9 +134,8 @@ sa_remote_flag() {
 # {status, run_count, pending}, and the PR is not looked up.
 # shellcheck disable=SC2034  # obs, obs_kind and obs_detail are read by the callers
 sa_observe() {
-  local thread worktree repo branch raw line found list pr env dir reason file
-  thread=$(jq -r .thread <<<"$1") worktree=$(jq -r .worktree <<<"$1")
-  repo=$(jq -r .repo <<<"$1") branch=$(jq -r .branch <<<"$1")
+  local thread worktree raw line found env dir reason file
+  thread=$(jq -r .thread <<<"$1") worktree=$(jq -r '.worktree // ""' <<<"$1")
   obs_detail=$(jq -cn --arg t "$thread" '{thread: $t}')
   env=$(jq -r '.environment_id // empty' <<<"$1") reason='' file=''
   if [ -n "$env" ]; then
@@ -167,13 +166,34 @@ sa_observe() {
     return 1
   fi
   found=$(jq -c '{thread: .thread.threadId, worktree: .thread.worktreePath}' <<<"$line")
-  if [ "$found" != "$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')" ]; then
+  want=$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')
+  # a `task` entry may hold no worktree: the thread id alone is matched
+  [ -n "$worktree" ] || { found=$(jq -c '{thread}' <<<"$found"); want=$(jq -cn --arg t "$thread" '{thread: $t}'); }
+  if [ "$found" != "$want" ]; then
     obs_kind='thread-mismatch' obs_detail=$found; return 1
   fi
   # `sa_thread_only` set: the caller wants the thread alone, no PR read.
   if [ -n "${sa_thread_only:-}" ]; then
     obs=$(jq -c '{status: .thread.status, run_count: .thread.runCount, pending: .thread.pendingRequestCount}' <<<"$line"); return 0
   fi
+  sa_pr_of "$1" || return 1
+  obs=$(jq -c --argjson pr "$pr_obs" '{status: .thread.status, run_count: .thread.runCount,
+    pending: .thread.pendingRequestCount,
+    gate: ([.messages[]? | select(.role == "assistant")] | last | (.text // "") | (test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+") and test("Unmet criteria"))),
+    pr: $pr}' <<<"$line")
+}
+
+# sa_pr_of <entry>: the entry's PR, found by its branch through `gh` REST, as
+# {number, state} in $pr_obs, `state` one of none, open, merged, closed. An entry
+# with no repo or no branch (a `task` entry) has no PR: state none. A remote entry
+# (an `environment_id`) also carries `checks` for its head commit, `none` (no check
+# run yet), `pending` or `done`, since `watch` wakes a remote entry on GitHub alone.
+# On failure it returns 1 with $obs_kind `pr-unreadable` and $obs_detail.
+# shellcheck disable=SC2034  # pr_obs, obs_kind and obs_detail are read by the callers
+sa_pr_of() {
+  local repo branch list pr sha runs checks
+  repo=$(jq -r '.repo // ""' <<<"$1") branch=$(jq -r '.branch // ""' <<<"$1")
+  if [ -z "$repo" ] || [ -z "$branch" ]; then pr_obs='{"number":null,"state":"none"}'; return 0; fi
   # A one-off failed read, with the next one fine, was measured on 2026-11-06,
   # so the read is tried twice before the PR is called unreadable.
   for _ in 1 2; do
@@ -186,10 +206,18 @@ sa_observe() {
     obs_kind='pr-unreadable' obs_detail=$(jq -cn --arg r "$repo" --arg b "$branch" '{repo: $r, branch: $b}'); return 1
   fi
   pr=$(jq -c '.[0] // null' <<<"$list")
-  obs=$(jq -c --argjson pr "$pr" '{status: .thread.status, run_count: .thread.runCount,
-    pending: .thread.pendingRequestCount,
-    gate: ([.messages[]? | select(.role == "assistant")] | last | (.text // "") | (test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+") and test("Unmet criteria"))),
-    pr: (if $pr == null then {number: null, state: "none"}
-         else {number: $pr.number, state: (if $pr.merged_at != null then "merged"
-           elif $pr.state == "closed" then "closed" else "open" end)} end)}' <<<"$line")
+  pr_obs=$(jq -cn --argjson pr "$pr" 'if $pr == null then {number: null, state: "none"}
+    else {number: $pr.number, state: (if $pr.merged_at != null then "merged"
+      elif $pr.state == "closed" then "closed" else "open" end)} end')
+  [ -n "$(jq -r '.environment_id // empty' <<<"$1")" ] || return 0
+  checks=none
+  sha=$(jq -r '.head.sha // empty' <<<"$pr")
+  if [ "$(jq -r .state <<<"$pr_obs")" = open ] && [ -n "$sha" ]; then
+    runs=$(gh api "repos/$repo/commits/$sha/check-runs?per_page=100" 2>/dev/null </dev/null) || runs=''
+    if ! jq -e '(.check_runs | type) == "array"' <<<"$runs" >/dev/null 2>&1; then
+      obs_kind='pr-unreadable' obs_detail=$(jq -cn --arg r "$repo" --arg s "$sha" '{repo: $r, checks_of: $s}'); return 1
+    fi
+    checks=$(jq -r 'if (.check_runs | length) == 0 then "none" elif any(.check_runs[]; .status != "completed") then "pending" else "done" end' <<<"$runs")
+  fi
+  pr_obs=$(jq -c --arg c "$checks" --arg h "$sha" '. + {checks: $c, head: $h}' <<<"$pr_obs")
 }

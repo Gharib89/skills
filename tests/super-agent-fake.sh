@@ -279,6 +279,25 @@ sa_pr() {
   sa_route "repos/$repo/pulls?head=${repo%%/*}:$(jq -rn --arg s "$branch" '$s | @uri')&state=all&sort=created&direction=desc&per_page=1" "$body"
 }
 
+# sa_checks <owner/name> <sha> <none|pending|done>: the check runs on a head commit
+sa_checks() {
+  local body
+  case $3 in
+    none) body='{"total_count":0,"check_runs":[]}' ;;
+    pending) body='{"total_count":2,"check_runs":[{"status":"completed"},{"status":"in_progress"}]}' ;;
+    done) body='{"total_count":2,"check_runs":[{"status":"completed"},{"status":"completed"}]}' ;;
+  esac
+  sa_route "repos/$1/commits/$2/check-runs?per_page=100" "$body"
+}
+
+# sa_pr_head <owner/name> <branch> <open|merged|closed|none> <sha>: sa_pr, its PR at a head commit
+sa_pr_head() {
+  sa_pr "$1" "$2" "$3"
+  local f
+  f="$SA_FAKE/gh/$(printf '%s' "repos/$1/pulls?head=${1%%/*}:$(jq -rn --arg s "$2" '$s | @uri')&state=all&sort=created&direction=desc&per_page=1" | sed 's/[^A-Za-z0-9._-]/_/g')"
+  jq -c --arg s "$4" 'map(.head = {sha: $s})' "$f" > "$f.new" && mv "$f.new" "$f"
+}
+
 sa_issue() { # <owner/name> <number> <open|closed> [<label>...]
   local r=$1 n=$2 st=$3; shift 3
   sa_route "repos/$r/issues/$n" "$(jq -cn --argjson n "$n" --arg s "$st" '{number: $n, state: $s, labels: ($ARGS.positional | map({name: .}))}' --args "$@")"

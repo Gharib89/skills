@@ -3,6 +3,7 @@
 # the super agent judges from one JSON answer and not from child transcripts.
 #
 #   reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]...
+#             [--fleet <file>]
 #
 # Looks at every open entry's thread and PR (the same look `watch` takes),
 # writes it into the entry as `observed`, the baseline the next `watch`
@@ -14,7 +15,9 @@
 # is at rest and the issue carries neither `needs-triage` nor `needs-info` (a grill
 # waiting on the owner has the second). A settled `triage` entry is read again,
 # thread only: one whose run count grew, or that runs, goes back to `at-rest` or
-# `running` and is named in `woke`. Settling the
+# `running` and is named in `woke`. A `--kind task` entry has no ticket: it is
+# `running` while its thread runs and `settled` once the thread has run and is at
+# rest, whatever any issue or PR says. Settling the
 # thread in T3 is the super agent's act, on each entry `settled` names, and it
 # never archives. It keeps each entry's stall count: +1 for a stall (a run that
 # completed with no merged PR and no merge-gate summary, counted once per run,
@@ -33,6 +36,11 @@
 # `t3_thread_read`, and matched by id and worktree path like a local one. An
 # environment with no `--remote`, a missing file or one that is not the
 # thread's JSON is `thread-unreadable` for that environment's entries alone.
+# With `--fleet`, it also lists `unqueued`: an open issue in one of the fleet
+# file's active repos, created since the earliest open entry launched (a batch is
+# running), that no ledger entry of any stage, no waiting row and no claim comment
+# holds. Each is listed once: the ledger keeps the keys it offered
+# (`unqueued_offered`), so a later run leaves them out. Nothing is launched.
 #
 # stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, errors}:
 #         `entries` one {key, from, stage, stalls, observed} per open entry that
@@ -40,20 +48,23 @@
 #         now, `reason` `run-completed` or `stall-window`;
 #         `settled` one {key, thread, worktree, kind} per entry that ended; `closed` one
 #         {key, thread, worktree, reason} (`pr-closed` or `issue-closed`);
-#         `at_rest` one {key, thread}; `woke` one {key, thread, kind} per settled
+#         `unqueued` one {key, title, created_at} per issue offered now (`[]` without
+#         --fleet); `at_rest` one {key, thread}; `woke` one {key, thread, kind} per settled
 #         triage entry reopened now; `errors` one {key, kind, detail}, `kind`
-#         `thread-unreadable`, `thread-mismatch`, `pr-unreadable` or
-#         `issue-unreadable`; `checked` counts the open entries it looked at
+#         `thread-unreadable`, `thread-mismatch`, `pr-unreadable`,
+#         `issue-unreadable` (or `claim-unreadable`, `repo-unreadable` for an
+#         `unqueued` read); `checked` counts the open entries it looked at
 # exit: 0 a reconcile, errors in the answer included · 2 usage, an unreadable
 #       ledger, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]...'
+usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>]'
 sa_help "$usage" "$@"
-ledger='' window=$sa_stall_window
+ledger='' window=$sa_stall_window fleet=''
 while [ $# -gt 0 ]; do
   case $1 in
+    --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2 ;;
     --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
     --stall-window) sa_flag_value "$usage" "${2:-}"; sa_window_flag "$usage" "$2"; window=$2; shift 2 ;;
@@ -61,8 +72,12 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$ledger" ] || sa_tooling "$usage"
+[ -z "$fleet" ] || jq -e '((.active_repos // []) | type == "array" and all(type == "string"))' "$fleet" >/dev/null 2>&1 \
+  || sa_tooling "$fleet: not JSON, or active_repos is not an array of strings"
 
 sa_read "$ledger"
+# A batch is running while an entry is open: it began when the earliest of them launched.
+batch_since=$(jq -r "$sa_jq_open"'[.entries[] | select(is_open) | .launched_at] | min // empty' <<<"$doc")
 now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 checked=0 entries='[]' errors='[]' stalled='[]'
 fail() { # <kind> <detail>: record the error of the entry in $key
@@ -74,22 +89,29 @@ while IFS= read -r entry; do
   key=$(jq -r .key <<<"$entry")
   if ! sa_observe "$entry"; then fail "$obs_kind" "$obs_detail"; continue; fi
   stage='' reason=''
-  case $(jq -r .pr.state <<<"$obs") in
-    merged) if [ "$(jq -r .status <<<"$obs")" = running ]; then stage=merged; else stage=settled; fi ;;
-    closed) stage=closed reason=pr-closed ;;
-    *)
-      repo=$(jq -r .repo <<<"$entry") number=$(jq -r .number <<<"$entry")
-      issue=$(gh api "repos/$repo/issues/$number" 2>/dev/null </dev/null) || issue=''
-      if ! jq -e '.state' <<<"$issue" >/dev/null 2>&1; then
-        fail issue-unreadable "$(jq -cn --arg r "$repo" --argjson n "$number" '{repo: $r, number: $n}')"; continue
-      fi
-      if [ "$(jq -r .state <<<"$issue")" = closed ]; then stage=closed reason=issue-closed
-      elif [ "$(jq -r .status <<<"$obs")" = running ]; then stage=running
-      elif [ "$(jq -r '.kind // "ship"' <<<"$entry")" = triage ] \
-          && [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] \
-          && ! jq -e '[.labels[]?.name] | index("needs-triage") or index("needs-info")' <<<"$issue" >/dev/null; then stage=settled
-      else stage=at-rest; fi ;;
-  esac
+  if [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ]; then
+    # a task has no ticket: only its thread says whether it is done
+    if [ "$(jq -r .status <<<"$obs")" = running ]; then stage=running
+    elif [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] && [ "$(jq -r .pending <<<"$obs")" -eq 0 ]; then stage=settled
+    else stage=at-rest; fi
+  else
+    case $(jq -r .pr.state <<<"$obs") in
+      merged) if [ "$(jq -r .status <<<"$obs")" = running ]; then stage=merged; else stage=settled; fi ;;
+      closed) stage=closed reason=pr-closed ;;
+      *)
+        repo=$(jq -r .repo <<<"$entry") number=$(jq -r .number <<<"$entry")
+        issue=$(gh api "repos/$repo/issues/$number" 2>/dev/null </dev/null) || issue=''
+        if ! jq -e '.state' <<<"$issue" >/dev/null 2>&1; then
+          fail issue-unreadable "$(jq -cn --arg r "$repo" --argjson n "$number" '{repo: $r, number: $n}')"; continue
+        fi
+        if [ "$(jq -r .state <<<"$issue")" = closed ]; then stage=closed reason=issue-closed
+        elif [ "$(jq -r .status <<<"$obs")" = running ]; then stage=running
+        elif [ "$(jq -r '.kind // "ship"' <<<"$entry")" = triage ] \
+            && [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] \
+            && ! jq -e '[.labels[]?.name] | index("needs-triage") or index("needs-info")' <<<"$issue" >/dev/null; then stage=settled
+        else stage=at-rest; fi ;;
+    esac
+  fi
   stall='' stalls=$(jq -r '.stalls // 0' <<<"$entry")
   case $stage in running|at-rest)
     verdict=$(jq -cn --argjson e "$entry" --argjson n "$obs" --arg now "$now" --argjson w "$window" '
@@ -137,9 +159,32 @@ while IFS= read -r entry; do
     '.entries[$k] |= (.stage = $s | .observed += $o | .rest_since = null | .updated_at = $now)' <<<"$doc")
   woke=$(jq -c --argjson e "$entry" '. + [{key: $e.key, thread: $e.thread, kind: $e.kind}]' <<<"$woke")
 done < <(jq -c '.entries[] | select(.stage == "settled" and .kind == "triage")' <<<"$doc")
-[ "$checked" -eq 0 ] && [ "$woke" = '[]' ] || sa_write "$ledger" "$doc"
+# Issues filed while a batch runs that nothing holds: offered once, then remembered.
+unqueued='[]'
+if [ -n "$fleet" ] && [ -n "$batch_since" ]; then
+  while IFS= read -r repo; do
+    [ -n "$repo" ] || continue
+    raw=$(gh api "repos/$repo/issues?state=open&sort=created&direction=desc&per_page=100" 2>/dev/null </dev/null) || raw=''
+    if ! jq -e 'type == "array"' <<<"$raw" >/dev/null 2>&1; then
+      errors=$(jq -c --arg r "$repo" '. + [{key: $r, kind: "repo-unreadable", detail: {repo: $r}}]' <<<"$errors"); continue
+    fi
+    while IFS= read -r issue; do
+      [ -n "$issue" ] || continue
+      key="$repo#$(jq -r .number <<<"$issue")"
+      if jq -e --arg k "$key" "$sa_jq_norm"'(.entries | keys | map(norm_repo)) + ((.waiting // []) | map(.key | norm_repo)) + ((.unqueued_offered // []) | map(norm_repo)) | index($k | norm_repo)' <<<"$doc" >/dev/null; then continue; fi
+      comments=$(gh api "repos/$repo/issues/$(jq -r .number <<<"$issue")/comments?per_page=100" 2>/dev/null </dev/null) || comments=''
+      if ! jq -e 'type == "array" and length < 100' <<<"$comments" >/dev/null 2>&1; then
+        errors=$(jq -c --arg k "$key" '. + [{key: $k, kind: "claim-unreadable", detail: {key: $k}}]' <<<"$errors"); continue
+      fi
+      if jq -e 'any(.[]; (.body // "") | test("^<!-- super-agent-claim "))' <<<"$comments" >/dev/null; then continue; fi
+      unqueued=$(jq -c --arg k "$key" --argjson i "$issue" '. + [{key: $k, title: $i.title, created_at: $i.created_at}]' <<<"$unqueued")
+      doc=$(jq -c --arg k "$key" '.unqueued_offered = ((.unqueued_offered // []) + [$k])' <<<"$doc")
+    done < <(jq -c --arg since "$batch_since" '.[] | select(.pull_request == null and .created_at >= $since)' <<<"$raw")
+  done < <(jq -r '(.active_repos // [])[]' "$fleet")
+fi
+[ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] || sa_write "$ledger" "$doc"
 
-jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" '
+jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" '
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
   {ledger: $l, checked: $n,
    entries: [$e[] | {key, from, stage, stalls, observed}],
@@ -148,4 +193,5 @@ jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson
    closed: pick("closed"; {key, thread, worktree, reason}),
    at_rest: pick("at-rest"; {key, thread}),
    woke: $wk,
+   unqueued: $uq,
    errors: $errs}'

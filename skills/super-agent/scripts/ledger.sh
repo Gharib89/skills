@@ -6,11 +6,15 @@
 #   ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id>
 #          --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>]
 #          [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]...
+#   ledger --ledger <file> add --task <slug> --thread <id> [--worktree <path>] [--branch <name>]
+#          [--repo <owner/name>] [--machine <name>] [--environment <id>] [--instance <id>]
+#          [--model <id>] [--effort <level>] [--area <path>]...
+#   ledger --ledger <file> adopt <the same flags as add>
 #   ledger --ledger <file> get <key>
 #   ledger --ledger <file> list [--open]
 #   ledger --ledger <file> set <key> <field> <json>
 #   ledger --ledger <file> rethread <key> --thread <id> --worktree <path>
-#          --branch <name> [--kind ship|triage] [--environment <id>] [--instance <id>]
+#          --branch <name> [--kind ship|triage|task] [--environment <id>] [--instance <id>]
 #          [--model <id>] [--effort <level>] [--area <path>]...
 #   ledger --ledger <file> ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]]
 #   ledger --ledger <file> allowed
@@ -23,7 +27,7 @@
 #   ledger --ledger <file> limit <owner/name> --reviewer <name>
 #   ledger --ledger <file> unlimit <owner/name>
 #
-# A key is `<owner/name>#<number>`. `--ledger` comes first and names the file,
+# A key is `<owner/name>#<number>`, or `task:<slug>` for a `task` entry. `--ledger` comes first and names the file,
 # which a first `add` creates. `add` starts an entry at stage `launched`, stalls
 # 0, observed null: `reconcile` fills `observed`, the baseline `watch` compares
 # against, and `error`, the fault kind it last failed to read. `add` over an
@@ -53,6 +57,13 @@
 # `unwait` removes. `--kind` is the owner skill the thread runs, `ship` (the
 # default) or `triage`: a `triage` entry has no PR, and `reconcile` settles it
 # when its run has completed and the issue carries neither `needs-triage` nor `needs-info`.
+# A `task` entry (`--task <slug>`, kind `task`) is any other thread the super agent
+# launched (a grill, a deploy, a review): its key needs no issue number, `repo` and
+# `number` are null unless `--repo` is given (so a remote task's PR is found by its
+# `--branch`), and `reconcile` closes it on its thread's rest, never on an issue's or
+# a PR's state. `adopt` takes `add`'s flags and records a thread someone else launched
+# (`adopted` true, kind `task` unless `--repo` and `--number` name a ticket); the
+# watcher and `reconcile` treat it like a launched one.
 # A `need` is something only the owner can settle: one row in `needs` per key
 # (the entry, or a waiting ticket), its one action, `since` when and whether its
 # push went out. A repeat with the same action keeps `since` and `pushed`, a new
@@ -83,15 +94,16 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add --repo <owner/name> --number <n> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> --worktree <path> --branch <name> [--kind ship|triage] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]] | allowed | briefed | wait <key> --reason <text> | unwait <key> | need <key> --action <text> | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
+usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]] | allowed | briefed | wait <key> --reason <text> | unwait <key> | need <key> --action <text> | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
 cmd=${1:-}; [ $# -gt 0 ] && shift
 
 case $cmd in
-  add)
-    repo='' number='' thread='' worktree='' branch='' machine=local environment='' instance='' model='' effort='' areas='[]' kind=ship
+  add|adopt)
+    repo='' number='' thread='' worktree='' branch='' machine='' environment='' instance='' model='' effort='' areas='[]' kind='' task='' adopted=false
+    [ "$cmd" != adopt ] || adopted=true
     while [ $# -gt 0 ]; do
       case $1 in
         --area) sa_flag_value "$usage" "${2:-}"; areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas") ;;
@@ -104,23 +116,36 @@ case $cmd in
         --environment) sa_flag_value "$usage" "${2:-}"; environment=$2 ;;
         --instance) sa_flag_value "$usage" "${2:-}"; instance=$2 ;;
         --kind) sa_flag_value "$usage" "${2:-}"; case $2 in ship|triage) kind=$2 ;; *) sa_tooling "$usage" ;; esac ;;
+        --task) sa_flag_value "$usage" "${2:-}"; case $2 in *[!A-Za-z0-9._-]*) sa_tooling "$usage" ;; esac; task=$2 ;;
         --model) sa_flag_value "$usage" "${2:-}"; model=$2 ;;
         --effort) sa_flag_value "$usage" "${2:-}"; effort=$2 ;;
         *) sa_tooling "$usage" ;;
       esac
       shift 2
     done
-    case $number in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
-    [ -n "$repo" ] && [ -n "$thread" ] && [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage"
-    key="$repo#$number"
+    [ -n "$thread" ] || sa_tooling "$usage"
+    # a task on a linked machine counts against that machine's slots, so it names it
+    [ -z "$task" ] || [ -z "$environment" ] || [ -n "$machine" ] || sa_tooling "$usage"
+    machine=${machine:-local}
+    if [ -n "$task" ]; then
+      # a task is no ticket: no number, and --kind would name an owner skill it does not run
+      [ -z "$kind$number" ] || sa_tooling "$usage"
+      kind=task key="task:$task"
+    else
+      kind=${kind:-ship}
+      case $number in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
+      [ -n "$repo" ] && [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage"
+      key="$repo#$number"
+    fi
     sa_read "$ledger"
     old=$(sa_key "$doc" "$key")
     jq -e --arg k "$old" '.entries[$k] and (.entries[$k].stage | IN("settled", "closed") | not)' <<<"$doc" >/dev/null && sa_fail "$key is already in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "$number" --arg t "$thread" \
+    entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "${number:-null}" --arg t "$thread" \
       --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg env "$environment" --arg inst "$instance" --arg model "$model" \
-      --arg effort "$effort" --arg now "$now" --argjson areas "$areas" --arg kind "$kind" \
-      '{key: $k, repo: $repo, number: $n, thread: $t, worktree: $w, branch: $b, machine: $m, areas: $areas, kind: $kind,
+      --arg effort "$effort" --arg now "$now" --argjson areas "$areas" --arg kind "$kind" --argjson adopted "$adopted" --arg task "$task" \
+      '{key: $k, repo: (if $repo == "" then null else $repo end), number: (if $task == "" then $n else null end),
+        thread: $t, worktree: $w, branch: $b, machine: $m, areas: $areas, kind: $kind, adopted: $adopted,
         environment_id: (if $env == "" then null else $env end),
         instance_id: (if $inst == "" then null else $inst end),
         model: (if $model == "" then null else $model end),
@@ -162,7 +187,7 @@ case $cmd in
     while [ $# -gt 0 ]; do
       case $1 in
         --area) sa_flag_value "$usage" "${2:-}"; areas=$(jq -c --arg a "$2" '(. // []) + [$a]' <<<"${areas:-null}") ;;
-        --kind) sa_flag_value "$usage" "${2:-}"; case $2 in ship|triage) kind=$2 ;; *) sa_tooling "$usage" ;; esac ;;
+        --kind) sa_flag_value "$usage" "${2:-}"; case $2 in ship|triage|task) kind=$2 ;; *) sa_tooling "$usage" ;; esac ;;
         --thread) sa_flag_value "$usage" "${2:-}"; thread=$2 ;;
         --worktree) sa_flag_value "$usage" "${2:-}"; worktree=$2 ;;
         --branch) sa_flag_value "$usage" "${2:-}"; branch=$2 ;;
@@ -174,10 +199,11 @@ case $cmd in
       esac
       shift 2
     done
-    [ -n "$thread" ] && [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage"
+    [ -n "$thread" ] || sa_tooling "$usage"
     sa_read "$ledger"
     key=$(sa_key "$doc" "$key")
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$key is not in the ledger"
+    case $key in task:*) ;; *) [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage" ;; esac
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     doc=$(jq -c --arg k "$key" --arg t "$thread" --arg w "$worktree" --arg b "$branch" --arg m "$model" \
       --arg e "$effort" --arg env "$environment" --arg inst "$instance" --arg now "$now" --arg kind "$kind" --argjson areas "${areas:-null}" \
@@ -237,47 +263,7 @@ case $cmd in
     had=$(jq -r --arg k "$1" "$sa_jq_norm"'[(.waiting // [])[] | select((.key | norm_repo) == ($k | norm_repo))] | length > 0' <<<"$doc")
     [ "$had" != true ] || sa_write "$ledger" "$(jq -c --arg k "$1" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' <<<"$doc")"
     jq -cn --arg k "$1" --argjson r "$had" '{key: $k, removed: $r}' ;;
-  need)
-    [ $# -eq 3 ] && [ "$2" = --action ] || sa_tooling "$usage"
-    key=$1; sa_flag_value "$usage" "$3"; action=$3
-    case $key in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
-    case ${key##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
-    case $action in *$'\n'*) sa_tooling "an action is one line" ;; esac
-    sa_read "$ledger"
-    row=$(jq -cn --arg k "$key" --arg a "$action" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      --argjson old "$(jq -c --arg k "$key" "$sa_jq_norm"'(.needs // []) | map(select((.key | norm_repo) == ($k | norm_repo))) | first // null' <<<"$doc")" \
-      '(if $old != null and $old.action == $a then $old else {key: $k, action: $a, since: $now, pushed: false} end)')
-    sa_write "$ledger" "$(jq -c --arg k "$key" --argjson n "$row" "$sa_jq_norm"'.needs = ((.needs // []) | map(select((.key | norm_repo) != ($k | norm_repo))) + [$n])' <<<"$doc")"
-    jq -cn --argjson n "$row" '{need: $n}' ;;
-  pushed)
-    [ $# -eq 1 ] || sa_tooling "$usage"
-    sa_read "$ledger"
-    jq -e --arg k "$1" "$sa_jq_norm"'[(.needs // [])[] | select((.key | norm_repo) == ($k | norm_repo))] | length > 0' <<<"$doc" >/dev/null || sa_fail "$1 has no open need"
-    doc=$(jq -c --arg k "$1" "$sa_jq_norm"'.needs |= map(if (.key | norm_repo) == ($k | norm_repo) then .pushed = true else . end)' <<<"$doc")
-    sa_write "$ledger" "$doc"
-    jq -cn --argjson n "$(jq -c --arg k "$1" "$sa_jq_norm"'.needs[] | select((.key | norm_repo) == ($k | norm_repo))' <<<"$doc")" '{need: $n}' ;;
-  unneed)
-    [ $# -eq 1 ] || sa_tooling "$usage"
-    sa_read "$ledger"
-    had=$(jq -r --arg k "$1" "$sa_jq_norm"'[(.needs // [])[] | select((.key | norm_repo) == ($k | norm_repo))] | length > 0' <<<"$doc")
-    [ "$had" != true ] || sa_write "$ledger" "$(jq -c --arg k "$1" "$sa_jq_norm"'.needs = ((.needs // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' <<<"$doc")"
-    jq -cn --arg k "$1" --argjson r "$had" '{key: $k, removed: $r}' ;;
-  limit)
-    [ $# -eq 3 ] && [ "$2" = --reviewer ] || sa_tooling "$usage"
-    repo=$1; sa_flag_value "$usage" "$3"; reviewer=$3
-    case $repo in */*) ;; *) sa_tooling "$usage" ;; esac
-    sa_read "$ledger"
-    # A repeat keeps the first row: the first notice's time is the record.
-    row=$(jq -cn --arg r "$repo" --arg w "$reviewer" --argjson nows "$(sa_epoch)" \
-      --argjson old "$(jq -c --arg r "$repo" "$sa_jq_norm"'(.review_limits // []) | map(select((.repo | norm_repo) == ($r | norm_repo))) | first // null' <<<"$doc")" \
-      '$old // {repo: $r, reviewer: $w, since: (($nows // now) | strftime("%Y-%m-%dT%H:%M:%SZ"))}')
-    sa_write "$ledger" "$(jq -c --arg r "$repo" --argjson l "$row" "$sa_jq_norm"'.review_limits = ((.review_limits // []) | map(select((.repo | norm_repo) != ($r | norm_repo))) + [$l])' <<<"$doc")"
-    jq -cn --argjson l "$row" '{limit: $l}' ;;
-  unlimit)
-    [ $# -eq 1 ] || sa_tooling "$usage"
-    sa_read "$ledger"
-    had=$(jq -r --arg r "$1" "$sa_jq_norm"'[(.review_limits // [])[] | select((.repo | norm_repo) == ($r | norm_repo))] | length > 0' <<<"$doc")
-    [ "$had" != true ] || sa_write "$ledger" "$(jq -c --arg r "$1" "$sa_jq_norm"'.review_limits = ((.review_limits // []) | map(select((.repo | norm_repo) != ($r | norm_repo))))' <<<"$doc")"
-    jq -cn --arg r "$1" --argjson h "$had" '{repo: $r, removed: $h}' ;;
+  need|pushed|unneed|limit|unlimit)
+    source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/owner.sh" && ledger_owner "$cmd" "$@" ;;
   *) sa_tooling "$usage" ;;
 esac
