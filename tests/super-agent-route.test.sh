@@ -198,7 +198,6 @@ check "one Claude instance with room keeps the job on Claude Code" "claude null"
 quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst claudeAgent_b claude 0.8 failed)" "$agy_q"
 check "an instance that is signed out gives no room" "agy claude" "$(job)"
 
-finish
 
 # --- weekly headroom: the weekly remaining times the entry's weekly_weight --------------------------
 w() { jq -r '"\(.instance_id) \(.reason)"'; }
@@ -241,3 +240,10 @@ check "an instance with no measured bucket is never skipped on a floor" b "$(R -
 unknown
 res=$(R --size M --raise 1 --quota "$tmp/q.json")
 check "an unknown quota still routes and never asks" "claude sonnet medium ask=false" "$(jq -r '"\(.instance_id) \(.tier.model) \(.tier.effort) ask=\(.ask)"' <<<"$res")"
+
+quotas "$(inst a claude 0.05 ok "$(b5 0.9 0.05)")"
+check "a weekly bucket exactly at the reserve is not under it" a "$(R --size M --quota "$tmp/q.json" | jq -r .instance_id)"
+quotas "$(inst a claude 0.5 ok '{"weekly_weight":-1}')"
+check_rc "a negative weight is refused" 2 "$(R --size M --quota "$tmp/q.json" >/dev/null 2>&1; echo $?)"
+
+finish

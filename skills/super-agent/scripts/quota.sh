@@ -45,8 +45,10 @@
 #         `read_at` the UTC time of the read, `wake` the --wake id or null. Claude's ids are
 #         `session`, `week` (all models) and `week-<model>`; Codex's are `session`
 #         and `week`; agy's are its own bucket ids
-# exit: 0 a read, unknown providers included · 2 usage, or a fleet file that is
-#       missing, not JSON or has providers that are not an object
+# exit: 0 a read, unknown providers included · 2 usage (--save without --wake
+#       included), a failed save, or a fleet file that is missing, not JSON,
+#       has providers that are not an object, a weekly_weight not above 0 or
+#       a floor outside 0 to 1
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 

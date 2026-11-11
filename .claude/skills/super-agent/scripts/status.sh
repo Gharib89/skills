@@ -30,8 +30,8 @@
 #         is open), `changed` true when a row differs from the last printed
 #         block, `unpushed` the open needs whose push has not gone out, each of
 #         which `ledger pushed` marks once sent
-# exit: 0 a block or none · 2 usage, an unreadable or wrong-shaped ledger, or a
-#       write that failed
+# exit: 0 a block or none · 2 usage, an unreadable or wrong-shaped ledger or
+#       --quota file, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -85,7 +85,8 @@ block=$(jq -r --argjson d "$digest" --argjson c "$changed" --argjson q "$qdoc" '
   def bucket($p; $w): [$p.buckets[]? | select(if $w == "5h" then .window == "5h" else .window == "weekly" and (.id == "week" or $p.driver != "claude") end)] | first | .remaining;
   ([("Needs you", "Merged", "Running", "Waiting", "Reviewer limit") as $n | .rows[$n] // empty]) as $rows
   | ([($q.providers // {}) | to_entries[] | "Quota \(.key): weekly \(bucket(.value; "weekly") | pct), 5 hour \(bucket(.value; "5h") | pct)"]) as $qlines
-  | if ($d or $c) and ($rows | length) > 0 then ($rows + $qlines) | join("\n") else "" end' <<<"$now")
+  | if ($d or $c) and ($rows | length) > 0 then ($rows + $qlines) | join("\n") else "" end' <<<"$now") \
+  || sa_tooling "$quota: not a quota read"
 
 # What the next run compares with. A digest also counts its Merged tickets as
 # listed, so the row it printed leaving is no change: the stored rows are the
