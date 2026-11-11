@@ -46,6 +46,11 @@ u=https://github.com/Gharib89/skills
 want="Merged (2): [skills#650]($u/issues/650) PR [679]($u/pull/679), [skills#655]($u/issues/655) PR [685]($u/pull/685)
 Running (2): [skills#674]($u/issues/674) at its merge gate, [skills#689]($u/issues/689) in review
 Waiting (3): [skills#658]($u/issues/658), [skills#660]($u/issues/660), [skills#686]($u/issues/686)"
+# the Waiting row follows the waiting list's order, not the order rows were written in
+L wait Gharib89/skills#686 --reason r --order 1 >/dev/null
+want="Merged (2): [skills#650]($u/issues/650) PR [679]($u/pull/679), [skills#655]($u/issues/655) PR [685]($u/pull/685)
+Running (2): [skills#674]($u/issues/674) at its merge gate, [skills#689]($u/issues/689) in review
+Waiting (3): [skills#686]($u/issues/686), [skills#658]($u/issues/658), [skills#660]($u/issues/660)"
 out=$(S)
 check "the block holds Merged, Running and Waiting in order, as links, with no Needs row" "$want" "$(jq -r .block <<<"$out")"
 check "the first block reports a change" true "$(jq .changed <<<"$out")"

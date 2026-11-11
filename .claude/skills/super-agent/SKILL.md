@@ -33,14 +33,11 @@ directory.
 - `ledger.sh add|adopt|get|list|set|rethread|ruling|allowed|briefed|wait|unwait|need|pushed|unneed|limit|unlimit`
   reads and writes the ledger; its `--ledger` comes first. A key is
   `<owner/name>#<n>`, or `task:<slug>` for a `task` entry. `add --kind triage`
-  records a `/triage` ticket, which has no PR (default `ship`). `add --task
-  <slug>` records a thread that is no ticket's (a grill, a deploy, decks, a
-  review), which closes on its thread's rest, never on an issue's state;
-  `adopt` records a thread someone else launched, in the same flags. `list`
-  also prints `waiting`, the tickets placement could not place. `ruling
-  --brief` marks a ruling launch briefs carry, with `--repo` or `--machine` to
-  limit it to launches for that repo or machine; `briefed` lists those.
-  `need`, `pushed` and `unneed` keep the owner's open needs.
+  records a `/triage` ticket, no PR. `add --task
+  <slug>` records a thread that is no ticket's (a grill, a review), closed on
+  its thread's rest; `adopt` records a thread someone else launched,
+  in the same flags. `list` prints `waiting` in order. Its `--help` holds
+  `ruling --brief` and `need`.
 - `status.sh --ledger <ledger> [--quota <file>] [--digest]` prints the status
   block.
 - `watch.sh` polls every open entry's thread and PR and exits on the first
@@ -51,22 +48,20 @@ directory.
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage (a merged PR is `merged` until its thread rests, then `settled`),
   keeps each entry's `stalls`, and prints one summary: `settled` (each with
-  its `kind`), `closed`, `stalled`, `at_rest`, `woke`, `unqueued`, `errors`,
-  `entries`. A
-  stall adds 1 and a real step takes 1 off
-  ([watching](reference/watching.md)). You never set `stalls` by hand, except
-  the reset below.
+  its `kind`), `closed`, `stalled`, `at_rest`, `woke`, `ready`, `dropped`,
+  `unqueued`, `errors`, `entries`. A stall adds 1 and a real step takes 1 off
+  ([watching](reference/watching.md)). Never set `stalls` by hand, bar the
+  reset below.
 - `setup.sh` probes the machines, accounts and quota commands, merges each
   `--probe` reply, and proposes the fleet file (below) with `--propose`, one
   provider per instance from `--instances <file>`; it takes `--fleet <file>` in
   place of `--ledger`, and writes only with `--write`.
-- `probe.sh --json` measures the machine it runs on and prints one JSON line.
+- `probe.sh --json` measures this machine.
 - `launch.sh` prepares a launch in one call (claim, route, place, brief: the
   `t3_thread_launch` arguments, which you send), and its `record` form writes
   the entry after it (The loop); `record --task <slug>` writes a `task` entry
   for a launch that is no ticket's.
-- `launch-check.sh` answers whether one machine takes a launch now: a free
-  slot, load, RAM, no same-repo ticket in the way, the repo under its ship cap.
+- `launch-check.sh` answers whether one machine takes a launch now (Placement).
 - `place.sh` picks the machine a launch runs on (Placement).
 - `quota.sh --fleet <file> [--save <file> --wake <id>]` reads each provider
   instance's quota and auth. A read that fails is `unknown`, not an error.
@@ -127,6 +122,12 @@ the issue), one `--blocked-by <n>` per open blocker on GitHub, and
 `waiting`) and the rules for slots, same-repo tickets and the ship cap in
 [reference/placement.md](reference/placement.md). Reach a machine only through
 its T3 environment id the owner already linked: no host, user, key or SSH.
+
+## The waiting list
+
+The owner's "queue" is the waiting list: "add N to the queue" is `ledger.sh
+wait <key> --reason queued`, "ship M after N" adds `--after <N>` (full keys);
+launch reconcile's `ready` rows ([rules](reference/waiting-list.md)).
 
 ## Claims and intake
 
@@ -261,6 +262,7 @@ parts and the re-brief form:
 - An entry in stage `merged` needs nothing: the watcher wakes you when its
   thread rests, and it settles then.
 - `woke`: a settled triage thread reran; `Running` shows it again.
+- `ready`: waiting rows to launch, in order. `dropped`: closed issues' rows.
 - `unqueued`: open issues in an active repo, filed since the batch began, that
   no entry, waiting row or claim holds. Say them in one chat line, each key
   with its title, and ask whether to launch any: reconcile lists each once, so
@@ -340,9 +342,9 @@ repos, to propose it to the owner as a global rule.
 ## After a restart or compaction
 
 `scripts/ledger.sh --ledger <ledger> list --open` is what you own. Run
-`scripts/reconcile.sh --ledger <ledger>` and start the watcher before
-anything else. Its `waiting` rows get a place rerun when a machine could have
-come back.
+`scripts/reconcile.sh --ledger <ledger> --fleet <fleet>` and start the watcher
+before anything else. Launch its `ready` rows (the queue); `list`'s other
+`waiting` rows get a place rerun when a machine could have come back.
 
 ## Hard rules
 

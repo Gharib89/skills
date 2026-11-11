@@ -36,24 +36,36 @@
 # `t3_thread_read`, and matched by id and worktree path like a local one. An
 # environment with no `--remote`, a missing file or one that is not the
 # thread's JSON is `thread-unreadable` for that environment's entries alone.
+# It also reads the waiting list, the owner's queue (`ledger wait`): a row whose
+# issue closed is dropped from the ledger and named in `dropped`, and the rows
+# that could launch now are `ready`, in the list's order: no `--after` blocker or
+# a blocker that merged (its entry `merged` or `settled`, or, with no such entry,
+# its issue closed and not as not planned), and the repo under its ship cap, `max_ships` in the fleet
+# file's `repos`, 3 without one, counting its open entries and the ready rows
+# ahead. A ready row is a candidate: `place` still decides the machine. A row
+# whose issue or blocker cannot be read stays, is not ready and is in `errors`,
+# its `key` the waiting row and its `detail.key` the issue that could not be read.
 # With `--fleet`, it also lists `unqueued`: an open issue in one of the fleet
 # file's active repos, created since the earliest open entry launched (a batch is
 # running), that no ledger entry of any stage, no waiting row and no claim comment
 # holds. Each is listed once: the ledger keeps the keys it offered
 # (`unqueued_offered`), so a later run leaves them out. Nothing is launched.
 #
-# stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, errors}:
+# stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, ready,
+#         dropped, unqueued, errors}:
 #         `entries` one {key, from, stage, stalls, observed} per open entry that
 #         was read; `stalled` one {key, thread, stalls, reason} per stall counted
 #         now, `reason` `run-completed` or `stall-window`;
 #         `settled` one {key, thread, worktree, kind} per entry that ended; `closed` one
 #         {key, thread, worktree, reason} (`pr-closed` or `issue-closed`);
+#         `ready` one {key, order, after, reason, since} per waiting row that can launch;
+#         `dropped` one {key, reason: `issue-closed`} per waiting row removed now;
 #         `unqueued` one {key, title, created_at} per issue offered now (`[]` without
 #         --fleet); `at_rest` one {key, thread}; `woke` one {key, thread, kind} per settled
 #         triage entry reopened now; `errors` one {key, kind, detail}, `kind`
 #         `thread-unreadable`, `thread-mismatch`, `pr-unreadable`,
-#         `issue-unreadable` (or `claim-unreadable`, `repo-unreadable` for an
-#         `unqueued` read); `checked` counts the open entries it looked at
+#         `issue-unreadable` (a waiting row's issue or its blocker's too), or
+#         `claim-unreadable`, `repo-unreadable` for an `unqueued` read; `checked` counts the open entries it looked at
 # exit: 0 a reconcile, errors in the answer included · 2 usage, an unreadable
 #       ledger, or a write that failed
 set -uo pipefail
@@ -74,6 +86,9 @@ done
 [ -n "$ledger" ] || sa_tooling "$usage"
 [ -z "$fleet" ] || jq -e '((.active_repos // []) | type == "array" and all(type == "string"))' "$fleet" >/dev/null 2>&1 \
   || sa_tooling "$fleet: not JSON, or active_repos is not an array of strings"
+
+[ -z "$fleet" ] || jq -e '[(.repos // {})[]? | .max_ships // 1 | type == "number" and . >= 1 and . == floor] | all' "$fleet" >/dev/null 2>&1 \
+  || sa_tooling "$fleet: every repos.<owner/name>.max_ships must be a whole number of 1 or more"
 
 sa_read "$ledger"
 # A batch is running while an entry is open: it began when the earliest of them launched.
@@ -182,9 +197,37 @@ if [ -n "$fleet" ] && [ -n "$batch_since" ]; then
     done < <(jq -c --arg since "$batch_since" '.[] | select(.pull_request == null and .created_at >= $since)' <<<"$raw")
   done < <(jq -r '(.active_repos // [])[]' "$fleet")
 fi
-[ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] || sa_write "$ledger" "$doc"
+# The waiting list: the owner's queue. A closed issue drops its row; a row is
+# ready when its blocker merged and its repo has a free ship slot.
+ready='[]' dropped='[]'
+issue_read() { gh api "repos/$1/issues/$2" 2>/dev/null </dev/null; } # <owner/name> <number>
+unreadable() { errors=$(jq -c --arg k "$1" --arg d "$2" '. + [{key: $k, kind: "issue-unreadable", detail: {key: $d}}]' <<<"$errors"); } # <row key> <the key that failed to read>
+while IFS= read -r row; do
+  key=$(jq -r .key <<<"$row") repo=$(jq -r .repo <<<"$row")
+  issue=$(issue_read "$repo" "$(jq -r .number <<<"$row")") || issue=''
+  state=$(jq -r '.state // empty' <<<"$issue" 2>/dev/null)
+  if [ -z "$state" ]; then unreadable "$key" "$key"; continue; fi
+  if [ "$state" = closed ]; then
+    doc=$(jq -c --arg k "$key" "$sa_jq_norm"'.waiting |= map(select((.key | norm_repo) != ($k | norm_repo)))' <<<"$doc")
+    dropped=$(jq -c --arg k "$key" '. + [{key: $k, reason: "issue-closed"}]' <<<"$dropped"); continue
+  fi
+  after=$(jq -r '.after // empty' <<<"$row")
+  if [ -n "$after" ] && ! jq -e --arg k "$after" "$sa_jq_norm"'[.entries[] | select(.key | norm_repo == ($k | norm_repo)) | .stage] | any(IN("merged", "settled"))' <<<"$doc" >/dev/null; then
+    blocker=$(issue_read "${after%#*}" "${after##*#}") || blocker=''
+    bstate=$(jq -r '.state // empty' <<<"$blocker" 2>/dev/null)
+    if [ -z "$bstate" ]; then unreadable "$key" "$after"; continue; fi
+    # A closed issue means merged unless it was closed as not planned.
+    [ "$bstate" = closed ] && [ "$(jq -r '.state_reason // empty' <<<"$blocker")" != not_planned ] || continue
+  fi
+  max=$([ -z "$fleet" ] || jq -r --arg r "$repo" "$sa_jq_norm"'[(.repos // {}) | to_entries[] | select(.key | norm_repo == ($r | norm_repo)) | .value.max_ships] | first // empty' "$fleet")
+  used=$(jq -r --arg r "$repo" --argjson ready "$ready" "$sa_jq_open$sa_jq_norm"'[.entries[] | select(is_open and ((.repo // "") | norm_repo) == ($r | norm_repo))] | length + ([$ready[] | select(.repo | norm_repo == ($r | norm_repo))] | length)' <<<"$doc")
+  [ "$used" -lt "${max:-3}" ] || continue
+  ready=$(jq -c --argjson r "$row" '. + [$r | {key, repo, order, after, reason, since}]' <<<"$ready")
+done < <(jq -c "$sa_jq_waiting"'waiting_list[]' <<<"$doc")
+ready=$(jq -c 'map(del(.repo))' <<<"$ready")
+[ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] && [ "$dropped" = '[]' ] || sa_write "$ledger" "$doc"
 
-jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" '
+jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" '
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
   {ledger: $l, checked: $n,
    entries: [$e[] | {key, from, stage, stalls, observed}],
@@ -193,5 +236,7 @@ jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson
    closed: pick("closed"; {key, thread, worktree, reason}),
    at_rest: pick("at-rest"; {key, thread}),
    woke: $wk,
+   ready: $rd,
+   dropped: $dr,
    unqueued: $uq,
    errors: $errs}'

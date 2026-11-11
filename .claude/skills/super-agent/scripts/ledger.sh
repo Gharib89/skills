@@ -19,7 +19,7 @@
 #   ledger --ledger <file> ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]]
 #   ledger --ledger <file> allowed
 #   ledger --ledger <file> briefed
-#   ledger --ledger <file> wait <key> --reason <text>
+#   ledger --ledger <file> wait <key> --reason <text> [--order <n>] [--after <key>]
 #   ledger --ledger <file> unwait <key>
 #   ledger --ledger <file> need <key> --action <text>
 #   ledger --ledger <file> pushed <key>
@@ -54,7 +54,11 @@
 # which placement reads to run two tickets of one repo side by side. A ticket
 # that could not be placed is `wait`ed: a row in `waiting` (no thread, no
 # stage, never watched) that the morning report lists, and that `add` or
-# `unwait` removes. `--kind` is the owner skill the thread runs, `ship` (the
+# `unwait` removes. The waiting list is also the owner's queue: a row takes an
+# `--order` (a whole number of up to 9 digits, lowest first, 0 allowed; rows with none follow the
+# ordered ones, oldest first) and an `--after <key>` blocker, another ticket that
+# must merge first, which `reconcile` reads into its `ready` rows. A repeat
+# `wait` keeps the order and blocker it is not given anew. `--kind` is the owner skill the thread runs, `ship` (the
 # default) or `triage`: a `triage` entry has no PR, and `reconcile` settles it
 # when its run has completed and the issue carries neither `needs-triage` nor `needs-info`.
 # A `task` entry (`--task <slug>`, kind `task`) is any other thread the super agent
@@ -83,7 +87,7 @@
 #         and closed ones); `set` {key, field, value}; `rethread` {ledger, key, entry}; `ruling` {ruling:
 #         {date, text, allow, brief, repo, machine}}; `allowed` {allowed: [{date, call, line}]};
 #         `briefed` {briefed: [{date, text, repo, machine}]}; `wait`
-#         {waiting: {key, repo, number, reason, since}}; `unwait` {key,
+#         {waiting: {key, repo, number, reason, since, order, after}}; `unwait` {key,
 #         removed}; `need` {need: {key, action, since, pushed}}; `pushed`
 #         {need}; `unneed` {key, removed}; `limit` {limit: {repo, reviewer,
 #         since}}; `unlimit` {repo, removed}; `list` also holds `waiting`,
@@ -94,7 +98,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]] | allowed | briefed | wait <key> --reason <text> | unwait <key> | need <key> --action <text> | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
+usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]] | allowed | briefed | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -164,7 +168,7 @@ case $cmd in
     case ${1:-} in --open) open=true; shift ;; esac
     [ $# -eq 0 ] || sa_tooling "$usage"
     sa_read "$ledger"
-    jq -c --arg l "$ledger" --argjson open "$open" "$sa_jq_open"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings, waiting: (.waiting // []), needs: (.needs // []), review_limits: (.review_limits // [])}' <<<"$doc" ;;
+    jq -c --arg l "$ledger" --argjson open "$open" "$sa_jq_open$sa_jq_waiting"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings, waiting: waiting_list, needs: (.needs // []), review_limits: (.review_limits // [])}' <<<"$doc" ;;
   set)
     [ $# -eq 3 ] || sa_tooling "$usage"
     key=$1 field=$2
@@ -245,16 +249,34 @@ case $cmd in
     sa_read "$ledger"
     jq -c '{briefed: [.rulings[] | select(.brief == true) | {date, text, repo: (.repo // null), machine: (.machine // null)}]}' <<<"$doc" ;;
   wait)
-    [ $# -eq 3 ] && [ "$2" = --reason ] || sa_tooling "$usage"
-    key=$1; sa_flag_value "$usage" "$3"; reason=$3
-    case $key in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
-    case ${key##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
+    [ $# -ge 3 ] || sa_tooling "$usage"
+    key=$1; shift; reason='' order='' after=''
+    while [ $# -gt 0 ]; do
+      case $1 in
+        --reason) sa_flag_value "$usage" "${2:-}"; reason=$2 ;;
+        --order) sa_flag_value "$usage" "${2:-}"; case $2 in ''|*[!0-9]*|??????????*) sa_tooling "$usage" ;; esac; order=$2 ;;
+        --after) sa_flag_value "$usage" "${2:-}"; after=$2 ;;
+        *) sa_tooling "$usage" ;;
+      esac
+      shift 2
+    done
+    [ -n "$reason" ] || sa_tooling "$usage"
+    for k in "$key" ${after:+"$after"}; do
+      case $k in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
+      case ${k##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
+    done
+    [ "$(printf %s "$after" | tr A-Z a-z)" != "$(printf %s "$key" | tr A-Z a-z)" ] || sa_tooling "$usage"
     sa_read "$ledger"
     jq -e --arg k "$(sa_key "$doc" "$key")" '.entries[$k] | . != null and (.stage != "settled" and .stage != "closed")' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
-    # A repeat keeps the first `since`: how long it has waited is the report's point.
+    # A repeat keeps the first `since` (how long it has waited is the report's
+    # point) and the order and blocker it is not given anew (placement rewrites
+    # a row's reason and knows neither).
     row=$(jq -cn --arg k "$key" --arg r "${key%#*}" --argjson n "${key##*#}" --arg why "$reason" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      --arg order "$order" --arg after "$after" \
       --argjson old "$(jq -c --arg k "$key" "$sa_jq_norm"'(.waiting // []) | map(select((.key | norm_repo) == ($k | norm_repo))) | first // null' <<<"$doc")" \
-      '{key: $k, repo: $r, number: $n, reason: $why, since: ($old.since // $now)}')
+      '{key: $k, repo: $r, number: $n, reason: $why, since: ($old.since // $now),
+        order: (if $order != "" then ($order | tonumber) else $old.order end),
+        after: (if $after != "" then $after else $old.after end)}')
     sa_write "$ledger" "$(jq -c --arg k "$key" --argjson w "$row" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))) + [$w])' <<<"$doc")"
     jq -cn --argjson w "$row" '{waiting: $w}' ;;
   unwait)

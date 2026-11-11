@@ -52,9 +52,11 @@ exceptions bound these rules.
   posts once and is never retried; a later run's read of `retro` issues covers
   an issue create whose response was lost.
   A ninth: `super-agent`'s `watch` and `reconcile` read a supervised ticket's
-  PR list and issue with `gh api`, and its thread with the `t3` CLI, for the
-  same reason: it composes no other skill, so no adapter is beside it; both
-  only read. Its `claim` posts and deletes its own claim comment with `gh api`
+  PR list and issue with `gh api` (`reconcile` also reads the issue of each
+  waiting row and of its `--after` blocker), and its thread with the `t3` CLI,
+  for the same reason: it composes no other skill, so no adapter is beside it;
+  both only read. Its `claim` posts and deletes its own claim comment with
+  `gh api`
   (it never assigns the ticket), and its `intake` reads the ready issues, the
   same way. Its `watch` and `reconcile` also read a remote entry's PR checks
   (`commits/<sha>/check-runs`), `reconcile --fleet` reads a repo's open issues
