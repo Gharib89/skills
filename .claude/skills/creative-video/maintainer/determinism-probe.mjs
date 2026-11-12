@@ -34,17 +34,23 @@ import { HEIGHT, WIDTH } from "../scripts/render/root.mjs";
 
 stage("determinism-probe");
 const argv = process.argv.slice(2);
+const USAGE =
+  "usage: determinism-probe.mjs <run-folder> [--runs N] [--launches N] [--load K] [--out dir] [--times t,t]";
 const flag = (name, fallback) => {
   const i = argv.indexOf(`--${name}`);
-  return i < 0 ? fallback : argv[i + 1];
+  if (i < 0) return fallback;
+  const value = argv[i + 1];
+  if (!value || value.startsWith("--")) {
+    console.error(`determinism-probe: --${name} wants a value\n${USAGE}`);
+    process.exit(2);
+  }
+  return value;
 };
 const src = argv.find(
   (a, i) => !a.startsWith("--") && !argv[i - 1]?.startsWith("--"),
 );
 if (!src) {
-  console.error(
-    "usage: determinism-probe.mjs <run-folder> [--runs N] [--load K] [--out dir] [--times t,t]",
-  );
+  console.error(USAGE);
   process.exit(2);
 }
 // A count flag is a whole number of at least `min`; anything else is usage.
