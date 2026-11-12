@@ -3,8 +3,8 @@
 # recurred in merged PRs because nothing looked: a failed read taken as an
 # answer (#1088, #1089, #1092, #1135, #1160, #1171) and a list read that stops
 # at its first page (#1108, #1161). `scripts/check.sh full` runs each mode as
-# its own row, and the edit rung runs both on an edited script through the
-# `read-lint` pre-commit hook.
+# its own row, and the edit rung runs each on an edited script through the
+# `read-verdict-lint` and `list-paging-lint` pre-commit hooks.
 #
 #   scripts/read-lint.sh verdict [<script>...]   a failed read taken as a verdict
 #   scripts/read-lint.sh paging  [<script>...]   an unpaged list read
