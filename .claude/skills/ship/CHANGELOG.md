@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.58.2 (2026-11-12)
+
+### Chores
+
+- **scripts**: Contract-check 14 reads shell fences, .sh and path call forms and <json> slots
+  ([#1184](https://github.com/Gharib89/skills/pull/1184),
+  [`d781e3c`](https://github.com/Gharib89/skills/commit/d781e3c6b62635f3b5e980065d5f5e41cbecb342))
+
+
 ## v0.58.1 (2026-11-12)
 
 ### Chores
