@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.20.0 (2026-11-12)
+
+### Features
+
+- **super-agent**: Merge-gate ruler, fixed resume step, notify command and the owner's rulings
+  ([#1168](https://github.com/Gharib89/skills/pull/1168),
+  [`aa551f5`](https://github.com/Gharib89/skills/commit/aa551f54532f355ebe381d6abe4e164d7e5f209f))
+
+
 ## v0.19.0 (2026-11-12)
 
 ### Features
