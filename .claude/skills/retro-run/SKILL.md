@@ -7,7 +7,7 @@ description: >-
   recent PRs.
 argument-hint: "[--days <n>]"
 metadata:
-  version: 0.2.1
+  version: 0.2.2
 ---
 
 # retro-run
