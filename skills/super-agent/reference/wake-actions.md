@@ -27,8 +27,9 @@ An entry ended and its thread and worktree are yours to close. Per row:
    threads): `t3_thread_list` with `includeSubagents` and the entry's
    `environment_id`, each row whose `parentThreadId` is the entry's thread.
    Settle each one at rest (status not `running` or `waiting`, not already
-   `settled`) the same way, once. Read nothing of it and send it nothing; one
-   still running stays for a later wake.
+   `settled`) the same way, once. Read nothing of it and send it nothing. With
+   one still running, skip steps 3 and 4: the row stays, so a later wake
+   settles it.
 3. Run `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
    [remote](remote.md)); a `task` entry holding no worktree has nothing to
    remove. A `kept: true` result posts nothing; on a refusal (exit 1) record a
@@ -37,9 +38,7 @@ An entry ended and its thread and worktree are yours to close. Per row:
    after the worktree goes, and never otherwise.
 4. Run `scripts/ledger.sh --ledger <ledger> set <key> cleanup_owed false`.
 
-A settled entry is unwatched: a message to its thread goes unseen. A message
-from the owner to a thread still open in the ledger changes nothing here: it
-stays watched.
+A settled entry is unwatched: a message to its thread goes unseen.
 
 ## verify
 
@@ -80,11 +79,12 @@ ruling or run may waive it. Per hold:
 
 1. File the failure as its own issue, ordered before the ticket
    ([lessons](lessons.md)), and put it first on the waiting list
-   (`ledger.sh wait <its key> --reason failure`); a ticket with
+   (`ledger.sh wait <its key> --reason failure --order 0`); a ticket with
    no thread yet waits behind it (`ledger.sh wait <key> --after <its key>`).
 2. The held ticket's PR stays unmerged, its entry open and watched; tell its run
    in its thread to wait for that fix.
-3. Once the fix merges, tell the run to re-run the gate.
+3. When reconcile shows the fix's entry `merged`, tell the run to re-run the
+   gate.
 
 ## parents_done
 

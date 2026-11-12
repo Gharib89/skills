@@ -84,7 +84,7 @@ answer() { # <removed> <kept> <reason or empty> [<branch_deleted>]
     '{key: $k, removed: $r, kept: $p, reason: (if $why == "" then null else $why end)} + (if $bd == "" then {} else {branch_deleted: ($bd == "true")} end)'
 }
 # `--delete-branch` adds `branch_deleted` to every answer past the stage check
-bd() { if $delete; then printf %s "$1"; fi; }
+branch_field() { if $delete; then printf %s "$1"; fi; }
 case $stage in
   settled|closed) ;;
   *) answer false false "stage $stage: only a settled or closed entry's worktree is removed"; exit 1 ;;
@@ -94,26 +94,26 @@ real=$(cd "$path" 2>/dev/null && pwd -P) || real=''
 listing=$([ -n "$real" ] && git -C "$real" worktree list --porcelain 2>/dev/null </dev/null | sed -n 's/^worktree //p')
 mainwt=$(head -1 <<<"$listing")
 if [ -z "$real" ] || [ -z "$listing" ] || ! grep -Fxq "$real" <<<"$listing"; then
-  answer false true "not a worktree" "$(bd false)"; exit 0
+  answer false true "not a worktree" "$(branch_field false)"; exit 0
 fi
-[ "$real" != "$mainwt" ] || { answer false false "refused: $path is the main checkout" "$(bd false)"; exit 1; }
-if [ -n "$(git -C "$real" status --porcelain 2>/dev/null </dev/null)" ]; then answer false true dirty "$(bd false)"; exit 0; fi
+[ "$real" != "$mainwt" ] || { answer false false "refused: $path is the main checkout" "$(branch_field false)"; exit 1; }
+if [ -n "$(git -C "$real" status --porcelain 2>/dev/null </dev/null)" ]; then answer false true dirty "$(branch_field false)"; exit 0; fi
 # the ledger's branch is what the checks below read, so the worktree must be on it: any other head may hold commits they never see
 cur=$(git -C "$real" symbolic-ref -q --short HEAD 2>/dev/null </dev/null) || cur=''
-[ "$cur" = "$branch" ] || { answer false true "head is not $branch" "$(bd false)"; exit 0; }
+[ "$cur" = "$branch" ] || { answer false true "head is not $branch" "$(branch_field false)"; exit 0; }
 if [ "$merged" != true ]; then
   if ! unpushed=$(git -C "$real" rev-list "refs/heads/$branch" --not --remotes 2>/dev/null </dev/null); then
-    answer false true "branch unreadable" "$(bd false)"; exit 0
+    answer false true "branch unreadable" "$(branch_field false)"; exit 0
   fi
-  [ -z "$unpushed" ] || { answer false true unpushed "$(bd false)"; exit 0; }
+  [ -z "$unpushed" ] || { answer false true unpushed "$(branch_field false)"; exit 0; }
 fi
 if ! err=$(git -C "$mainwt" worktree remove "$real" 2>&1 </dev/null); then
-  answer false true "remove failed: $(head -1 <<<"$err")" "$(bd false)"; exit 0
+  answer false true "remove failed: $(head -1 <<<"$err")" "$(branch_field false)"; exit 0
 fi
 git -C "$mainwt" worktree prune >/dev/null 2>&1 </dev/null
 if $delete && [ "$merged" = true ]; then
   if err=$(git -C "$mainwt" branch -D "$branch" 2>&1 </dev/null); then answer true false '' true
   else answer true false "branch delete failed: $(head -1 <<<"$err")" false; fi
 else
-  answer true false '' "$(bd false)"
+  answer true false '' "$(branch_field false)"
 fi

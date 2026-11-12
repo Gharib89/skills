@@ -97,17 +97,15 @@ ruling is scoped the same way:
 
 ## Fleet keys the owner sets
 
-Each is optional, and a fleet file without it
-behaves as before.
+Each is optional: a fleet file without it keeps the default.
 
 - `merge_gate_ruler`: `owner` (default) or `super-agent`, who rules on a
   merge-gate hold outside the merge allowance and the standing waivers. Any
   other value is a tooling error from `brief.sh`. The launch brief says which
   ([launch-brief](launch-brief.md)).
-- `notify`: `{"command": <shell text>, "delay": <whole seconds, 600 when
-  unset>}`, the alarm that runs when the watcher exited on an event and no
-  reconcile followed within the delay
-  ([watching](watching.md#the-notify-command)).
+- `notify`: `{"command", "delay"}`, the alarm that runs when the watcher exited
+  on an event and no reconcile followed within the delay
+  ([watching](watching.md#the-notify-command) has its shape).
 - `repos.<owner/name>.machine`: pins the repo to one machine key
   ([placement](placement.md#the-rules)). `machines.<m>.slots`: the machine's
   slot count. Edit both with `scripts/fleet.sh`, not by hand.
@@ -117,9 +115,9 @@ behaves as before.
 Run the super agent's own thread on Sonnet with high effort: it routes, reads
 summaries and records, work that needs no larger tier. The owner sets it in T3
 Code, in the model selection of the super agent thread (or when launching it);
-a running super agent never changes its own model. The status block's
-`Super agent on <instance>` line shows which provider instance the thread runs
-on.
+a running super agent never changes its own model. Tell the owner this at the
+end of setup. The status block's `Super agent on <instance>` line shows which
+provider instance the thread runs on.
 
 ## Re-runs
 

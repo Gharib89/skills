@@ -38,6 +38,7 @@ sa_notify_read "$fleet"
 [ -n "$notify_cmd" ] || { jq -cn '{notified: false, reason: "no notify command"}'; exit 0; }
 
 sleep "$notify_delay"
+# A missing stamp reads as 0: no reconcile is known, so the alarm may fire.
 stamp=$(cat "$ledger.reconciled" 2>/dev/null)
 case $stamp in ''|*[!0-9]*) stamp=0 ;; esac
 if [ "$stamp" -ge "$since" ]; then jq -cn '{notified: false, reason: "reconciled"}'; exit 0; fi

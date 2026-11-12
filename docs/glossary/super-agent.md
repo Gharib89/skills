@@ -49,7 +49,7 @@ Reconcile's `parents_done` list: an open parent issue (a spec) whose sub-issues 
 _Avoid_: batch complete, epic done
 
 **Standing waiver**:
-A merge-gate hold the launch template waives in advance, with its condition written out, so a run that meets it merges without a round trip to the owner. The fleet file lists them and the launch brief carries each condition word for word. Any hold outside the listed waivers is still an escalation.
+A merge-gate hold the launch template waives in advance, with its condition written out, so a run that meets it merges without a round trip to the owner. The fleet file lists them and the launch brief carries each condition word for word. A hold outside the listed waivers goes to the merge-gate ruler.
 _Avoid_: auto-merge, merge allowance (that is the launch permission to merge at all), exception
 
 **Fleet file**:

@@ -180,12 +180,12 @@ same steps.
    <id> --ledger <ledger>`, `<id>` the thread id `t3_thread_launch` returned.
    No turn ends between `t3_thread_launch` and this call: `record` fails with
    `unrecorded launch` when it has no entry to write or the ledger lacks it.
-   A remote launch first saves the new thread's `t3_thread_read`
-   ([remote](reference/remote.md)). It writes the ledger entry, with the fleet's
-   machine key and the routed tier's model and effort, and runs the baseline
-   reconcile `watch.sh` compares against; a running watcher picks the entry up
-   from there. A triaged ticket now shipping takes a new launch and record,
-   never `rethread`, which is rung 3's. On the first wake, compare
+   A remote launch also passes `--worktree` and `--remote`
+   ([remote](reference/remote.md#steps) step 1). It writes the ledger entry,
+   with the fleet's machine key and the routed tier's model and effort, and runs
+   the baseline reconcile `watch.sh` compares against; a running watcher picks
+   the entry up from there. A triaged ticket now shipping takes a new launch
+   and record, never `rethread`, which is rung 3's. On the first wake, compare
    `.thread.branch` from `t3 thread show` with the entry's branch: the PR is
    found by branch, so when they differ, `ledger.sh set <key> branch <json>`.
 3. **Watch.** Start `scripts/watch.sh --ledger <ledger> --fleet <fleet>
@@ -294,19 +294,17 @@ The owner decides these, and you decide everything else:
 
 Placement `waiting` and a same-repo wait are not escalations.
 
-With `merge_gate_ruler: super-agent` you rule on a merge-gate hold, record the
-ruling (`ledger.sh ruling`) and report it to the owner in the next status
-block. **A hold on a failure the PR did not cause is never waived, whoever
-rules**: file the failure as its own issue ordered first on the waiting list,
-leave the ticket unmerged, and have its run re-run the gate once that fix
-merges. Tell the run its ruling in its thread; it never writes it into a PR body
+With `merge_gate_ruler: super-agent` you rule on a merge-gate hold. **A hold on
+a failure the PR did not cause is never waived, whoever rules**: its fix is
+filed first and the ticket stays unmerged
 ([wake-actions](reference/wake-actions.md#merge-gate-holds)).
 
 ### Escalation format
 
 The owner reads one thing: the **status block** `scripts/status.sh --ledger
-<ledger> --quota <file>` prints. Post it as printed, never rewrite it, and
-post nothing on a wake whose `block` is empty. Only a new need sends a push.
+<ledger> --quota <file> --instance <id>` prints. Post it as printed, never
+rewrite it, and post nothing on a wake whose `block` is empty. Only a new need
+sends a push.
 A need names exactly one action, and a pick from fixed options (approve or deny
 a held call, a scope fork) also opens an AskUserQuestion dialog with the
 recommended option first.
@@ -341,10 +339,9 @@ list, the rulings and the needs; never rebuild it from the transcript):
 summary's rows (Acting on the summary) and launch its `ready` rows; `list`'s
 other `waiting` rows get a place rerun when a machine could have come back.
 
-Compact at about 100k tokens of context, well below the 240k to 260k at which
-the retro saw eight compactions. The compaction instruction is this one line,
-never one you write: `Resume the super-agent loop: run SKILL.md's After a
-restart or compaction step.`
+Compact at about 100k tokens of context, with exactly this instruction:
+`Resume the super-agent loop: run SKILL.md's After a restart or compaction
+step.`
 
 ## Hard rules
 
@@ -353,8 +350,8 @@ restart or compaction step.`
   probe or scratch thread you read and settle within the same turn, and a
   thread a supervised thread started, which you settle once at rest and do
   nothing else with.
-- Touch only threads the ledger holds, the probe threads you launch and, to
-  settle them, the threads a supervised thread started.
+- Touch only threads the ledger holds, your probe threads and the helper
+  threads the first rule settles.
 - Route and verify; the supervised thread implements, and its owner skill
   merges.
 - Settle a finished thread; never archive one. Remove a worktree only through

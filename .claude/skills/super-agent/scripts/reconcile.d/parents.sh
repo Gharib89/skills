@@ -2,9 +2,9 @@
 # sourced by it. A merged PR whose ticket is a sub-issue: once the ticket reads
 # closed and every sub-issue of the open parent is closed, the parent is offered,
 # once (the ledger keeps `parents_offered`). The entry's `parent_checked` ends its
-# look; an unreadable ticket or parent is retried on a later wake. It reads and
-# sets the caller's $doc, $errors, $parents_done and $parents_changed, and calls
-# its `issue_read` and `unreadable`.
+# look; an unreadable ticket or parent is retried on a later wake. It reads the
+# caller's $doc, sets its $parents_done and $parents_changed, and calls its
+# `issue_read` and `unreadable` (which records the error).
 
 # shellcheck disable=SC2034,SC2154  # parents_changed is read by reconcile.sh; doc and the helpers come from it and _lib.sh
 
