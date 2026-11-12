@@ -138,9 +138,14 @@ test("a fix re-judges only the changed scene in round 2, and a red second round 
   assert.equal(r.code, 1);
   assert.match(
     r.out,
-    /^gates: 12 pass, 1 fail; stop: the critic's second round is red, no video$/m,
+    /^gates: 12 pass, 1 fail; stop: the critic's second round is red, no video \(a fix made after round 2 was never judged\)$/m,
   );
   assert.equal(record(fx).attempts, 3);
+  // A fix after the stop is not judged: no third round is requested.
+  compose(fx, "context", "<p>what the narration says</p>");
+  r = raw(fx);
+  assert.doesNotMatch(r.out, /pending|run the critic/);
+  assert.equal(record(fx).gates.critic.rounds.length, 2);
 });
 
 test("past two rounds a render carries the second round's verdict rather than ask for a third", () => {
@@ -155,7 +160,7 @@ test("past two rounds a render carries the second round's verdict rather than as
   assert.equal(r.code, 0, r.out);
   assert.match(
     gateLine(r, "critic"),
-    /^pass: 0 finding\(s\), round 2 of 2, carried: no third round vs /,
+    /^pass: 0 finding\(s\), round 2 of 2, carried: no third round, a fix made after round 2 was never judged vs /,
   );
 });
 

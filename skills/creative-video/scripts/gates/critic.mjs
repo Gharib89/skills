@@ -163,7 +163,7 @@ export function criticGate({
   return {
     ...base,
     status: evidence.length ? "fail" : "pass",
-    measured: `${evidence.length} finding(s)${evidence.length ? `, first: ${evidence[0]}` : ""}, round ${round} of ${ROUNDS}${carried ? ", carried: no third round" : ""}`,
+    measured: `${evidence.length} finding(s)${evidence.length ? `, first: ${evidence[0]}` : ""}, round ${round} of ${ROUNDS}${carried ? ", carried: no third round, a fix made after round 2 was never judged" : ""}`,
     evidence,
     stills: dirOf(carried ? rounds[ROUNDS - 1] : key),
     // The final round's red is final: no later round can judge a fix.

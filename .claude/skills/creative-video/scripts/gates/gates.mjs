@@ -33,7 +33,7 @@
 //         <detail>` per warning, then `gates: <n> pass, <m> fail[, 1 pending]`,
 //         when red ending `; next: fix attempt <a> of 2` or, past two, `; stop:
 //         red after two fix attempts, no video`, on a red second critic round
-//         `; stop: the critic's second round is red, no video`, and with only
+//         `; stop: the critic's second round is red, no video (a fix made after round 2 was never judged)`, and with only
 //         the critic left `; next: run the critic, round <r> of 2`; a check
 //         run's red names no fix attempt, and its line ends `; check run:
 //         gates.json not written`
