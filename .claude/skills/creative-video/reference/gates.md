@@ -107,7 +107,7 @@ its last verdict, so only a changed scene is judged again. The critic has two
 rounds per voice, and the cap stays at two: a red second round is final,
 `; stop: the critic's second round is red, no video`, and a later gates run
 past two rounds carries the second round's verdict (`carried: no third
-round`). Both lines end by saying a fix made after round 2 was never judged:
+round`). Both lines say that a fix made after round 2 was never judged:
 the verdict is on the frames of round 2, so a fix after it is not judged, and
 no third round is asked for. An `invented` finding is
 fixed in the visual: take the fact off screen, or show one the narration
