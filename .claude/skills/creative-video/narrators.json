@@ -98,17 +98,23 @@
     {
       "id": "ar-eg-advisor-6",
       "gender": "male",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 12.63,
+      "pause": 0.59
     },
     {
       "id": "ar-eg-advisor-7",
       "gender": "male",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 12.22,
+      "pause": 0.59
     },
     {
       "id": "ar-eg-advisor-8",
       "gender": "male",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 12.23,
+      "pause": 0.75
     },
     {
       "id": "ar-eg-advisor-9",
@@ -118,7 +124,9 @@
     {
       "id": "ar-eg-assistant-1",
       "gender": "female",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 11.26,
+      "pause": 0.71
     },
     {
       "id": "ar-eg-assistant-10",
@@ -198,7 +206,9 @@
     {
       "id": "ar-eg-concierge-1",
       "gender": "male",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 13.91,
+      "pause": 0.57
     },
     {
       "id": "ar-eg-concierge-10",
@@ -283,7 +293,9 @@
     {
       "id": "ar-eg-podcaster-1",
       "gender": "male",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 11.75,
+      "pause": 0.64
     },
     {
       "id": "ar-eg-podcaster-10",
@@ -343,7 +355,9 @@
     {
       "id": "ar-eg-storyteller-1",
       "gender": "female",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 11.64,
+      "pause": 0.6
     },
     {
       "id": "ar-eg-storyteller-10",
@@ -403,7 +417,9 @@
     {
       "id": "ar-eg-techagent-1",
       "gender": "male",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 12.49,
+      "pause": 0.58
     },
     {
       "id": "ar-eg-techagent-12",
@@ -453,7 +469,9 @@
     {
       "id": "ar-eg-training-3",
       "gender": "female",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 11.64,
+      "pause": 0.64
     },
     {
       "id": "ar-eg-training-4",
@@ -503,7 +521,9 @@
     {
       "id": "ar-eg-tutor-5",
       "gender": "male",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 11.13,
+      "pause": 0.7
     },
     {
       "id": "ar-eg-tutor-6",

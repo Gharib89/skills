@@ -7,6 +7,42 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.4 (2026-11-12)
+
+### Documentation
+
+- **creative-video**: Craft docs state the layout and reading gate rules
+  ([#1173](https://github.com/Gharib89/skills/pull/1173),
+  [`2667bd8`](https://github.com/Gharib89/skills/commit/2667bd88c1b338898036cedf62050e605e759011))
+
+
+## v0.22.3 (2026-11-12)
+
+### Chores
+
+- **creative-video**: Probe the determinism gate flake
+  ([#1171](https://github.com/Gharib89/skills/pull/1171),
+  [`213a158`](https://github.com/Gharib89/skills/commit/213a158c7166d8867d94fa72f0f4447923a7a084))
+
+
+## v0.22.2 (2026-11-12)
+
+### Chores
+
+- **creative-video**: Calibrate seven Gemini Egyptian voice rates
+  ([#1172](https://github.com/Gharib89/skills/pull/1172),
+  [`5385d6b`](https://github.com/Gharib89/skills/commit/5385d6bde02c43da5acfb1639b72dd9f4ae0048d))
+
+
+## v0.22.1 (2026-11-12)
+
+### Chores
+
+- **creative-video**: Calibrate three Gemini Egyptian voice rates
+  ([#1169](https://github.com/Gharib89/skills/pull/1169),
+  [`8b40e5e`](https://github.com/Gharib89/skills/commit/8b40e5e9fdb45e6109a49b706ebb293468c59c29))
+
+
 ## v0.22.0 (2026-11-11)
 
 ### Features
