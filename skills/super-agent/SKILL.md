@@ -32,12 +32,12 @@ directory.
 
 - `ledger.sh add|adopt|get|list|set|rethread|ruling|allowed|briefed|wait|unwait|need|pushed|unneed|limit|unlimit`
   reads and writes the ledger; its `--ledger` comes first. A key is
-  `<owner/name>#<n>`, or `task:<slug>` for a `task` entry. `add --kind triage`
-  records a `/triage` ticket, no PR. `add --task
-  <slug>` records a thread that is no ticket's (a grill, a review), closed on
-  its thread's rest; `adopt` records a thread someone else launched,
-  in the same flags. `list` prints `waiting` in order. Its `--help` holds
-  `ruling --brief` and `need`.
+  `<owner/name>#<n>`, or `task:<slug>` for a `task` entry. `add` with
+  `--kind triage` records a `/triage` ticket, no PR. `add` with
+  `--task <slug>` records a thread that is no ticket's (a grill, a review),
+  closed on its thread's rest; `adopt` records a thread someone else
+  launched, in the same flags. `list` prints `waiting` in order. Its
+  `--help` holds `ruling` with `--brief`, and `need`.
 - `status.sh --ledger <ledger> [--quota <file>] [--instance <id>] [--digest]`
   prints the status block.
 - `watch.sh` polls every open entry's thread and PR and exits on the first
@@ -63,8 +63,8 @@ directory.
 - `probe.sh --json` measures this machine.
 - `launch.sh` prepares a launch in one call (claim, route, place, brief: the
   `t3_thread_launch` arguments, which you send), and its `record` form writes
-  the entry after it (The loop); `record --task <slug>` writes a `task` entry
-  for a launch that is no ticket's.
+  the entry after it (The loop); `record` with `--task <slug>` writes a
+  `task` entry for a launch that is no ticket's.
 - `launch-check.sh` answers whether one machine takes a launch now (Placement).
 - `place.sh` picks the machine a launch runs on (Placement).
 - `quota.sh --fleet <file> [--save <file> --wake <id>]` reads each provider

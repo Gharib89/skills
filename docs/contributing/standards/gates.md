@@ -100,7 +100,9 @@ do to pass.
   slot, per the `contract` gate. Name the script as the usage line does, with
   or without `.sh` or a path. A fence of output (no language, `text`, `json`)
   is not read; a sample of a call carries `contract-check: sample` on its line,
-  or on the line above its fence.
+  or on the line above its fence, or on a fence line of its own. A span that
+  gives a verb of the mechanic the paragraph named last (`wait k --after j`)
+  is read as that mechanic's call, so write the full call.
 - No `curl` without `--max-time` in a shell file under `skills/`, per the
   `contract` gate: a hung download hangs the run that called it.
 - No `bash -c`, `sh -c` or `eval` without an input redirect inside a

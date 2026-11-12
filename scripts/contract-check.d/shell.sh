@@ -15,8 +15,11 @@
 #     other fence (none, text, json, diff) is a sample of output and is skipped.
 #   - a call names a mechanic and gives it arguments: the mechanic alone, or with
 #     only its verb (`run-file gate clean`), or asked `--help`, names the tool and is not read;
+#   - a span with no mechanic whose first word is a verb of the mechanic named
+#     last in its paragraph (`wait k --after j`) is that mechanic's call;
 #   - a deliberate sample is skipped by a line holding `contract-check: sample`
-#     (all spans on that line), or by such a line directly above a fence.
+#     (all spans on that line, or that fence line), or by such a line directly
+#     above a fence.
 #   - a CHANGELOG records what once was true, so it is skipped.
 #   What a call owes: the usage line's own required flags, outside [...]; a
 #   `( --a | --b )` group is satisfied by either. A mechanic with top-level
@@ -122,7 +125,11 @@ if [ -s "$work/required" ]; then
             printf "%s:%d: `%s` gives %s where %s\047s usage line takes a <json> value; quote a string as \047\"text\"\047\n", curfile, ln, call, jt, m
         }
       }
-      function spans(txt, pos0,   i, k, rest, delim, z, j, span, line, off, n, at) {
+      function isverb(m, w,   r, np, q, x) {
+        for (r = 1; r <= nr; r++) if (rm[r] == m && rsel[r] != "") { np = split(rsel[r], q, "|"); for (x = 1; x <= np; x++) if (q[x] == w && w !~ /^--/) return 1 }
+        return 0
+      }
+      function spans(txt, pos0,   i, k, rest, delim, z, j, span, line, off, n, at, sp, fw, lm) {
         line = txt; off = 0
         while ((i = index(line, "`")) > 0) {
           k = 0; while (substr(line, i + k, 1) == "`") k++
@@ -131,9 +138,13 @@ if [ -s "$work/required" ]; then
           if (j == 0) break
           span = substr(rest, 1, j - 1)
           sub(/^ +/, "", span)
-          if (index(span, " ") > 0 && mech(substr(span, 1, index(span, " ") - 1)) != "") {
+          sp = index(span, " "); fw = (sp > 0) ? substr(span, 1, sp - 1) : span
+          if (mech(fw) != "") {
+            lm = mech(fw)
+            if (sp > 0) { at = off + i; n = 1; while (n < pn && poff[n + 1] <= at) n++; check(span, pline[n]) }
+          } else if (sp > 0 && lm != "" && isverb(lm, fw)) {
             at = off + i; n = 1; while (n < pn && poff[n + 1] <= at) n++
-            check(span, pline[n])
+            check(lm " " span, pline[n])
           }
           off += i + 2 * k + j - 2; line = substr(rest, j + k)
         }
@@ -148,7 +159,7 @@ if [ -s "$work/required" ]; then
         if (i > nt || mech(toks[i]) == "") return
         call = toks[i]
         for (i = i + 1; i <= nt; i++) {
-          if (toks[i] ~ /^(\||\|\||&&|;|&)$/ || toks[i] ~ /^[0-9]*>/ || (toks[i] ~ /^</ && toks[i] !~ />$/)) break
+          if (toks[i] ~ /^(\||\|\||&&|;|&)$/ || toks[i] ~ /^[0-9]*>/ || (toks[i] ~ /^</ && toks[i] !~ />$/) || toks[i] ~ /^#/) break
           call = call " " toks[i]
           if (toks[i] ~ /;$/) { sub(/;$/, "", call); break }
         }
@@ -174,6 +185,7 @@ if [ -s "$work/required" ]; then
         }
         if (fence != "") {
           if (!fcheck) next
+          if (index($0, MARK)) { facc = ""; next }
           line = $0; sub(/^ *(\$ )?/, "", line)
           if (facc == "") fstart = FNR
           if (line ~ /\\$/) { sub(/\\$/, "", line); facc = facc line " "; next }

@@ -67,6 +67,25 @@ $sa/zz.md:28: \`quota.sh --save f --wake w\` lacks --fleet from quota's usage li
 $sa/zz.md:29: \`scripts/quota.sh --save f --wake w\` lacks --fleet from quota's usage line
 $sa/zz.md:34: \`quota.sh --save f --wake w\` lacks --fleet from quota's usage line" "$out"
 
+# The #1166 gap: a span that names no mechanic, only a verb of the one the
+# paragraph named last, is read as that mechanic's call. A fence line holding the
+# marker is a sample, so it is skipped and the other lines stay checked.
+cat > "$sa/zz.md" <<'EOT'
+Run `ledger.sh --ledger l get k`, then `wait k --after j` (no reason).
+
+A new paragraph forgets it: `wait k --after j`.
+
+```sh
+quota.sh --save f --wake w  # contract-check: sample
+quota.sh --save f --wake w
+```
+EOT
+run "$sa/scripts" "$sa"
+check_rc "a verb-only span fails as the last mechanic's call, a marked fence line does not" 1 "$rc"
+check "and only the unmarked lines are named" "$sa/zz.md:1: \`ledger wait k --after j\` lacks --reason from ledger's usage line
+$sa/zz.md:1: \`ledger wait k --after j\` lacks --ledger from ledger's usage line
+$sa/zz.md:7: \`quota.sh --save f --wake w\` lacks --fleet from quota's usage line" "$out"
+
 cat > "$sa/zz.md" <<'EOT'
 By name: `quota.sh --fleet f --save f --wake w` and `scripts/quota.sh --fleet f --save f --wake w`.
 By verb: `ledger.sh --ledger l wait k --reason r --after j`.
