@@ -245,7 +245,9 @@ reconcile_parents
 # The stamp `notify` reads: a reconcile ran, so a super agent is answering its wakes.
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 
-jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" --argjson d "$doc" '
+# The ledger goes in on stdin: one argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
+jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" '
+  . as $d |
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
   def entries: [$d.entries[]?];
   def needed($k; $r): [($d.needs // [])[] | select((.key | ascii_downcase) == ($k | ascii_downcase) and (.reason == null or .reason == $r))] | length > 0;
@@ -273,4 +275,4 @@ jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson
         elif .stage == "at-rest" and (.stalls // 0) >= 3 then {reason: "stall-cap", detail: .stalls}
         else null end) as $r
      | select($r != null and (needed(.key; $r.reason) | not)) | {key, thread, reason: $r.reason, detail: $r.detail}],
-   errors: $errs}'
+   errors: $errs}' <<<"$doc"

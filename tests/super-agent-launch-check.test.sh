@@ -124,4 +124,18 @@ check "and a higher one lets the launch through" 0 "$(bash "$s/launch-check.sh" 
 jq '.repos = {"Gharib89/skills": {"max_ships": 0}}' "$fleet" > "$tmp/capped.json"
 check_rc "a max_ships that is not a whole number of 1 or more exits 2" 2 "$(bash "$s/launch-check.sh" --fleet "$tmp/capped.json" --ledger "$led" --own home --machine box --load 1 --free-gb 8 --repo Gharib89/skills >/dev/null 2>&1; echo $?)"
 
+# a ledger over 128 KiB (Linux's one-argument cap) is read the same as a small one
+rm -f "$led"; add Gharib89/skills 1 box
+small=$(LC --machine box --load 1 --free-gb 8 | jq -c '{ok, refused, slots}')
+jq -c '.pad = ("x" * 140000)' "$led" > "$tmp/big.json" && mv "$tmp/big.json" "$led"
+check "the test ledger is over 128 KiB" true "$([ "$(wc -c < "$led")" -gt 131072 ] && echo true)"
+out=$(LC --machine box --load 1 --free-gb 8 2>"$tmp/err"); rc=$?
+check_rc "a ledger over 128 KiB is read" 0 "$rc"
+check "and answers as the small ledger did" "$small" "$(jq -c '{ok, refused, slots}' <<<"$out")"
+# a fleet file that is not JSON is refused by its own name, not the ledger's
+printf 'not json\n' > "$tmp/badjson.json"
+out=$(bash "$s/launch-check.sh" --fleet "$tmp/badjson.json" --ledger "$led" --own home --machine box --load 1 --free-gb 8 2>/dev/null); rc=$?
+check_rc "a fleet file that is not JSON exits 2" 2 "$rc"
+check "and the error names the fleet file" true "$(jq -r --arg f "$tmp/badjson.json" '.error | startswith($f)' <<<"$out")"
+
 finish
