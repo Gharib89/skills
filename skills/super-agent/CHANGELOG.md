@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.20.2 (2026-11-12)
+
+### Bug Fixes
+
+- **super-agent**: Route the last hand-rolled repo comparisons through the shared normalisers
+  ([#1182](https://github.com/Gharib89/skills/pull/1182),
+  [`8f39bfc`](https://github.com/Gharib89/skills/commit/8f39bfc3f8501d9fec33ecc9505bf8d737a89a09))
+
+
 ## v0.20.1 (2026-11-12)
 
 ### Bug Fixes

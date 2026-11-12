@@ -246,11 +246,11 @@ reconcile_parents
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 
 # The ledger goes in on stdin: one argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
-jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" '
+jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" "$sa_jq_norm"'
   . as $d |
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
   def entries: [$d.entries[]?];
-  def needed($k; $r): [($d.needs // [])[] | select((.key | ascii_downcase) == ($k | ascii_downcase) and (.reason == null or .reason == $r))] | length > 0;
+  def needed($k; $r): [($d.needs // [])[] | select((.key | norm_repo) == ($k | norm_repo) and (.reason == null or .reason == $r))] | length > 0;
   {ledger: $l, checked: $n,
    entries: [$e[] | {key, from, stage, stalls, observed}],
    stalled: $st,
