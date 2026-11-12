@@ -11,7 +11,7 @@ reconcile_unqueued() {
     while IFS= read -r repo; do
       [ -n "$repo" ] || continue
       raw=$(gh api "repos/$repo/issues?state=open&sort=created&direction=desc&per_page=100" 2>/dev/null </dev/null) || raw=''
-      if ! jq -e 'type == "array"' <<<"$raw" >/dev/null 2>&1; then
+      if ! jq -e --arg since "$batch_since" 'type == "array" and (length < 100 or .[-1].created_at < $since)' <<<"$raw" >/dev/null 2>&1; then
         errors=$(jq -c --arg r "$repo" '. + [{key: $r, kind: "repo-unreadable", detail: {repo: $r}}]' <<<"$errors"); continue
       fi
       while IFS= read -r issue; do

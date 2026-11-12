@@ -78,7 +78,11 @@ exceptions bound these rules.
   list with no error. A path variable (a branch, a ref, a file path) is
   URI-encoded, because a `/` or `#` in it otherwise addresses another resource.
   A read that needs only the newest items, the verify read after a create, sorts
-  and bounds its page instead.
+  and bounds its page instead. The `list-paging` gate
+  (`scripts/read-lint.sh paging`) fails a `per_page=` read with no `--paginate`
+  and no full-page test (`length < 100`) within 8 lines, unless a
+  `# paged: <reason>` marker sits on a line of the statement or the comment line
+  above it, the reason required.
 - **A failed read is never a verdict.** A read that fails (a missing tool, a
   nonzero exit, empty or unparseable output) exits 2 or answers `unavailable`;
   it is never compared, graded or passed on as data. Write the status check
@@ -86,7 +90,12 @@ exceptions bound these rules.
   than reading both out of one pipeline, give every `case $?` a failing `*)`
   arm, and use `jq -e` where the value decides the answer. Every instance is a
   silent pass: jq missing makes both sides of a comparison print nothing, and
-  `cmp` of two empty outputs exits 0.
+  `cmp` of two empty outputs exits 0. The `read-verdict` gate
+  (`scripts/read-lint.sh verdict`) fails a `gh`, `t3`, `ffmpeg` or `nvidia-smi`
+  capture with no `||` or status check after it, and a bare
+  `if jq -e ... <<<"$v"` over a capture never checked, unless a
+  `# read-checked: <reason>` marker sits on a line of the statement or the
+  comment line above it, the reason required.
 - **A mechanic whose bare invocation is a real run declares it.** A mechanic
   whose spec gives its flag a default (a default path) does not require the flag
   to pass the `contract` gate's bare-invocation check: a header line reading

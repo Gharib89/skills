@@ -118,6 +118,7 @@ host_issue_create() { # <title> <body-file> <label>
       | _gh_create -X POST "$R/issues" --input - --jq '{number, url: .html_url}'
   }
   _issue_find() {
+    # paged: the newest 20 of the caller's open issues, sorted newest first: a just-created issue is on page 1
     api "$R/issues?state=open&creator=$me&sort=created&direction=desc&per_page=20" --jq '.[]' \
       | jq -s --arg t "$title" '[.[] | select(.pull_request == null and .title == $t)] | first | select(. != null) | {number, url: .html_url}'
   }

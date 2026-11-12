@@ -238,6 +238,7 @@ sa_pr_of() {
   # A one-off failed read, with the next one fine, was measured on 2026-11-06,
   # so the read is tried twice before the PR is called unreadable.
   for _ in 1 2; do
+    # paged: per_page=1 sorted newest first: only the branch's latest PR is wanted
     list=$(gh api "repos/$repo/pulls?head=${repo%%/*}:$(sa_uri "$branch")&state=all&sort=created&direction=desc&per_page=1" 2>/dev/null </dev/null) \
       || list=''
     jq -e 'type == "array"' <<<"$list" >/dev/null 2>&1 && break
@@ -256,7 +257,7 @@ sa_pr_of() {
   sha=$(jq -r '.head.sha // empty' <<<"$pr")
   if [ "$(jq -r .state <<<"$pr_obs")" = open ] && [ -n "$sha" ]; then
     runs=$(gh api "repos/$repo/commits/$sha/check-runs?per_page=100" 2>/dev/null </dev/null) || runs=''
-    if ! jq -e '(.check_runs | type) == "array"' <<<"$runs" >/dev/null 2>&1; then
+    if ! jq -e '(.check_runs | type) == "array" and (.check_runs | length) < 100' <<<"$runs" >/dev/null 2>&1; then
       obs_kind='pr-unreadable' obs_detail=$(jq -cn --arg r "$repo" --arg s "$sha" '{repo: $r, checks_of: $s}'); return 1
     fi
     checks=$(jq -r 'if (.check_runs | length) == 0 then "none" elif any(.check_runs[]; .status != "completed") then "pending" else "done" end' <<<"$runs")

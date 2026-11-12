@@ -78,6 +78,10 @@ do to pass.
 - A test reading the current time with `date` only through a stub or under the
   `# clock-exception: <reason>` marker, per the `clock` gate
   (`scripts/clock-lint.sh`, the form in [tests.md](tests.md)).
+- A skill script's read whose failure is the answer on purpose, or a list read
+  that needs only the newest items, carrying `# read-checked: <reason>` or
+  `# paged: <reason>`, per the `read-verdict` and `list-paging` gates
+  (`scripts/read-lint.sh`, the forms in [shell.md](shell.md)).
 - A PR whose diff changes a skill's `description`, or a mechanic's usage line or
   `stdout:` header under a non-`feat` title, carrying a `Grade:` line under
   `## Special things to note`, per the `bump-guard` job's grade-statement step

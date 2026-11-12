@@ -91,6 +91,7 @@ get() {
 
 # read_filed: every earlier issue labelled `retro`, with its class lines, in $filed.
 read_filed() {
+  # paged: `get` passes --paginate
   get "earlier retro issues" 'repos/{owner}/{repo}/issues?labels=retro&state=all&per_page=100'
   filed=$(jq -cs '[add[] | select(has("pull_request") | not)
     | {number, state, classes: [.body // "" | scan("(?m)^Class: *(.+?)[ \r]*$") | .[0]]}] | sort_by(.number)' <<<"$got" 2>/dev/null) \
@@ -100,7 +101,8 @@ read_filed() {
 if [ "$cmd" = file ]; then
   read_filed
   split=$(jq -c --argjson filed "$filed" 'map(. + {old: (.key | IN($filed[].classes[]))})
-    | {kept: map(select(.old | not) | del(.old)), dropped: map(select(.old) | .key)}' <<<"$findings")
+    | {kept: map(select(.old | not) | del(.old)), dropped: map(select(.old) | .key)}' <<<"$findings") \
+    || tooling "findings: unreadable split"
   if jq -e '.kept == []' <<<"$split" >/dev/null; then
     jq -c '{issue: null, url: null, filed: [], dropped}' <<<"$split"
     exit 0
@@ -166,6 +168,7 @@ candidate='def section($h): [.pr.body | scan("(?ms)^## " + $h + "[ \t]*\n(.*?)(?
 found=''
 while read -r pr; do
   n=$(jq -r .number <<<"$pr")
+  # paged: `get` passes --paginate
   get "review comments of #$n" "repos/{owner}/{repo}/pulls/$n/comments?per_page=100"
   line=$(jq -cs --argjson pr "$pr" --arg author "$(jq -r .author <<<"$pr")" \
     "{pr: \$pr, comments: add} | $candidate" <<<"$got" 2>/dev/null) \

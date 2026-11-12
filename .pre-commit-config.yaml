@@ -87,3 +87,16 @@ repos:
         entry: scripts/clock-lint.sh
         language: system
         files: ^tests/.*\.sh$
+      # The shell standard's two read rules, as scripts/read-lint.sh modes (also
+      # the `read-verdict` and `list-paging` rows of `full`): a failed read is
+      # never a verdict, and a list read pages or refuses a full page.
+      - id: read-verdict-lint
+        name: read-verdict-lint
+        entry: scripts/read-lint.sh verdict
+        language: system
+        files: ^skills/[^/]+/scripts/.*\.sh$
+      - id: list-paging-lint
+        name: list-paging-lint
+        entry: scripts/read-lint.sh paging
+        language: system
+        files: ^skills/[^/]+/scripts/.*\.sh$
