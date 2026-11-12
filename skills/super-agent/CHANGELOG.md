@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.20.3 (2026-11-12)
+
+### Chores
+
+- **scripts**: Lint a failed read taken as a verdict and an unpaged list read
+  ([#1183](https://github.com/Gharib89/skills/pull/1183),
+  [`e6b9295`](https://github.com/Gharib89/skills/commit/e6b9295f677dff4cdd6009ea57000bbc6e3578fc))
+
+
 ## v0.20.2 (2026-11-12)
 
 ### Bug Fixes
