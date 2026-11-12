@@ -16,7 +16,8 @@ host_issue_comments() {
   local c login push perms='{}'
   c=$(api "$R/issues/$1/comments" --paginate --jq '.[] | {author: .user.login, body, created_at}' | jq -s .) || return 1
   while IFS= read -r login; do
-    push=$(api "$R/collaborators/$(jq -rn --arg l "$login" '$l | @uri')/permission" --jq '.user.permissions.push') || return 1
+    # read-checked: a failed call leaves push empty, which the line below reads as writer null, the documented "host could not tell"
+    push=$(api "$R/collaborators/$(jq -rn --arg l "$login" '$l | @uri')/permission" --jq '.user.permissions.push')
     perms=$(jq -c --arg l "$login" --arg p "$push" '. + {($l): $p}' <<<"$perms")
   done < <(jq -r '[.[].author | strings] | unique[]' <<<"$c")
   jq --argjson p "$perms" 'map(. + {writer: ({"true": true, "false": false}[$p[.author // ""] // ""])})' <<<"$c"
