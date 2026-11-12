@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.5 (2026-11-12)
+
+### Bug Fixes
+
+- **creative-video**: Say a fix after the critic's round 2 was never judged
+  ([#1174](https://github.com/Gharib89/skills/pull/1174),
+  [`8878f78`](https://github.com/Gharib89/skills/commit/8878f78e4e537f2cf646aa1c5287e03ab853418a))
+
+
 ## v0.22.4 (2026-11-12)
 
 ### Documentation
