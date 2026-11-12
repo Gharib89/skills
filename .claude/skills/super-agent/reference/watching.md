@@ -22,8 +22,10 @@ lists the fields; this file holds the rules behind them.
   counts like any other. Reconcile reads it the same way, as `running`.
 - A PR that merges while its thread still runs (or waits on the line) raises
   one `pr-merged` event, when the thread rests or `--stall-window` seconds have
-  passed since the merge, whichever comes first, not two. A remote entry's
-  `pr-merged` is not held: its thread read is stale.
+  passed since the merge, whichever comes first. Past the window with the
+  thread still working, its later rest raises `run-finished` once more, which
+  settles the entry. A remote entry's `pr-merged` is not held: its thread read
+  is stale.
 - One watcher runs per ledger: a second start exits 1 with `running`, and the
   first is left alone.
 
