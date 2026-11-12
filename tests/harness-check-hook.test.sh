@@ -161,7 +161,7 @@ check "an edit in a worktree of the session's repo is checked" "edit $fixture/wt
 echo 'x = 4' > "$r/new.py"
 STUB_RC=1 STUB_ERR="cat: tests/data.txt: No such file or directory" \
   STUB_OUT='{"rung":"turn","verdict":"fail","checks":{"runner":"pass","tests":"fail"}}' hook turn "$stop_in"
-check_rc "a failing turn whose tail names a missing file still blocks" 2 "$rc"
+check_rc "a failing turn whose tail names a missing file exits 2 as before" 2 "$rc"
 check "the blocking exit prints a line naming the failing check" "harness: turn rung failed: tests" "$out"
 STUB_RC=1 STUB_ERR="cat: tests/data.txt: No such file or directory" STUB_OUT='' hook edit "$edit_in"
 check_rc "a failing edit with no JSON line still blocks" 2 "$rc"
