@@ -115,8 +115,8 @@ while read -r fn line; do
 done <<<"$vocab"
 
 # A default for a function the contract gives no object answer is a shape
-# nobody documented.
-# A number-list answer (`[n, ...]`) has no keys to hold, so its default is `[]`.
+# nobody documented, except a number-list answer (`[n, ...]`): it has no keys to
+# hold, so its default is `[]`.
 for f in "$defaults"/*.json; do
   fn=$(basename "$f" .json)
   if sed '/^[^#]/q' "$doc" | grep -Eq "^#   $fn .*-> \[n,"; then
