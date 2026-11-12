@@ -34,7 +34,7 @@ export function summaryLine({ gates, failing, pending, attempts, check }) {
     pending ? ", 1 pending" : ""
   }${
     gates.critic.final
-      ? "; stop: the critic's second round is red, no video"
+      ? "; stop: the critic's second round is red, no video (a fix made after round 2 was never judged)"
       : failing
         ? check
           ? ""
