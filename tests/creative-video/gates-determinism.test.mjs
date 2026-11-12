@@ -70,8 +70,22 @@ test("a frame that differs only in a batched launch is re-checked alone, twice, 
   const rechecks = snaps.slice(2);
   assert.ok(rechecks.length > 0 && rechecks.length % 2 === 0);
   for (const s of rechecks) assert.equal(s.times.length, 1);
+  for (let i = 0; i < rechecks.length; i += 2)
+    assert.deepEqual(rechecks[i].times, rechecks[i + 1].times);
+  assert.equal(
+    new Set(rechecks.map((s) => s.times[0])).size,
+    rechecks.length / 2,
+  );
   const dirs = rechecks.map((s) => s.outDir);
   assert.equal(new Set(dirs).size, dirs.length);
   for (const d of dirs)
     assert.ok(d.startsWith(path.join(fx.dir, ".cache", "gates", "frames")));
+});
+
+test("a re-check that answers no frame stops the stage instead of passing the frame", () => {
+  const fx = timed();
+  compose(fx, "context", "<p data-flaky data-empty-recheck>a line</p>", "");
+  const r = runGates(fx, {}, { critic: false });
+  assert.equal(r.code, 1);
+  assert.match(r.err, /snapshot gave 0 of 1 frame for a re-check/);
 });

@@ -18,8 +18,10 @@ export async function determinismFindings(launch, sampled, sceneAt, fail) {
     if (pixels === b[i][1]) continue;
     const again = [];
     for (const n of [1, 2]) {
-      const [one] = await launch(`recheck-${i}-${n}`, [t]);
-      again.push(one?.[1]);
+      const taken = await launch(`recheck-${i}-${n}`, [t]);
+      if (taken.length !== 1)
+        fail(`snapshot gave ${taken.length} of 1 frame for a re-check`);
+      again.push(taken[0][1]);
     }
     if (again[0] !== again[1])
       findings.push(
