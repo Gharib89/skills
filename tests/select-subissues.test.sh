@@ -14,7 +14,7 @@ mkdir -p "$repo"
 git -C "$repo" init -q
 git -C "$repo" remote add origin https://github.com/owner/repo.git
 
-# <case-dir> <candidate numbers...>: a fresh fake whose ready list is those
+# <candidate numbers...>: a fresh fake whose ready list is those
 # issues in order, none blocked, and whose sub-issue answers the caller writes.
 fresh() {
   rm -rf "$SHIP_FAKE"; mkdir -p "$SHIP_FAKE"
@@ -35,12 +35,15 @@ check "an issue with no open sub-issue (all closed, or none) is selected" 10 "$(
 
 fresh 10
 printf '[12]\n' > "$SHIP_FAKE/host_issue_subissues_open.1.json"
-check "a lone parent with an open sub-issue leaves nothing ready" nothing-ready "$(sel | jq -r .reason)"
+out=$(sel); rc=$?
+check "a lone parent with an open sub-issue leaves nothing ready, exit 1" 'nothing-ready 1' \
+  "$(jq -r .reason <<<"$out") $rc"
 
 fresh 10
 : > "$SHIP_FAKE/host_issue_subissues_open.1.fail"
-check "a failed sub-issue query stops, it never reads as no sub-issues" \
-  'blockers-unavailable 10' "$(sel | jq -r '"\(.reason) \(.candidate)"')"
+out=$(sel); rc=$?
+check "a failed sub-issue query stops with exit 1, it never reads as no sub-issues" \
+  'blockers-unavailable 10 1' "$(jq -r '"\(.reason) \(.candidate)"' <<<"$out") $rc"
 
 # The adapters answer from the host's own links: GitHub's native sub-issues
 # route, and Azure DevOps' child links (Hierarchy-Forward), never the parent
