@@ -38,6 +38,10 @@ w v-brace.sh 'a=$(gh api repos/o/r) || { echo unreadable >&2; exit 2; }
 if jq -e ".open" <<<"$a" >/dev/null; then echo open; fi'
 lint verdict "$fixture/v-brace.sh"
 check_rc "a || block that exits is a status check" 0 "$rc"
+w v-brace-noexit.sh 'a=$(gh api repos/o/r) || { echo "cannot exit now"; }
+if jq -e ".open" <<<"$a" >/dev/null; then echo open; fi'
+lint verdict "$fixture/v-brace-noexit.sh"
+check_rc "a || block that only mentions exit is no status check" 1 "$rc"
 w v-true.sh 'a=$(gh api repos/o/r) || true
 if jq -e ".open" <<<"$a" >/dev/null; then echo open; fi'
 lint verdict "$fixture/v-true.sh"
