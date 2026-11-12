@@ -11,7 +11,7 @@ s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin" "$tmp/tools" "$tmp/fake"
-for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut find wc diff chmod; do
+for t in bash env jq awk sed grep cat cp mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut find wc diff chmod; do
   ln -s "$(command -v "$t")" "$tmp/tools/$t" || exit 2
 done
 export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake
@@ -70,7 +70,10 @@ check "and the refusal is the usage line" "usage: ledger" "$(jq -r .error <<<"$o
 
 # --- status: a merged ticket acknowledged under another case is not reported again -----
 printf '%s\n' '{"rulings":[],"entries":{"acme/widgets#5":{"key":"acme/widgets#5","repo":"acme/widgets","number":5,"stage":"merged","observed":{"pr":{"number":9,"state":"merged"}}}},"status":{"merged_ack":["ACME/Widgets#5"]}}' > "$tmp/status.json"
-check "status: a merged key acked in another case is not listed" '' "$(bash "$s/status.sh" --ledger "$tmp/status.json" | jq -r '.block | select(contains("Merged"))')"
+jq 'del(.status)' "$tmp/status.json" > "$tmp/status-noack.json"
+has_merged() { bash "$s/status.sh" --ledger "$1" | jq -r 'if (.block | type) == "string" then (.block | contains("Merged") | tostring) else "error" end'; }
+check "status: the Merged row lists the ticket with no ack (control)" true "$(has_merged "$tmp/status-noack.json")"
+check "status: a merged key acked in another case is not listed" false "$(has_merged "$tmp/status.json")"
 
 # --- reconcile: the cap, a blocker, a need, an offered parent or task, each in another case
 rled=$tmp/reconcile.json
@@ -106,13 +109,19 @@ rfix; RL add --repo acme/widgets --number 7 --thread t-7 --worktree /wt/7 --bran
 sa_thread t-7 idle 2 0 /wt/7 b7; sa_pr acme/widgets b7 merged; sa_issue acme/widgets 7 closed
 sa_route "repos/acme/widgets/issues/7" '{"number":7,"state":"closed","labels":[],"parent_issue_url":"https://api.github.com/repos/acme/widgets/issues/100"}'
 sa_route "repos/acme/widgets/issues/100" '{"number":100,"title":"spec","state":"open","sub_issues_summary":{"total":1,"completed":1,"percent_completed":100}}'
-jq '.parents_offered = ["ACME/Widgets#100"]' "$rled" > "$rled.new" && mv "$rled.new" "$rled"
-check "reconcile: a parent offered under another case is not offered again" 0 "$(RC | jq '.parents_done | length')"
+plen() { jq -r --arg f "$1" 'if (.[$f] | type) == "array" then (.[$f] | length | tostring) else "error" end'; }
+pfix() { cp "$rled" "$rled.base"; }
+pfix
+check "reconcile: a merged ticket whose parent is complete offers it (control)" 1 "$(RC | plen parents_done)"
+cp "$rled.base" "$rled"; jq '.parents_offered = ["ACME/Widgets#100"]' "$rled" > "$rled.new" && mv "$rled.new" "$rled"
+check "reconcile: a parent offered under another case is not offered again" 0 "$(RC | plen parents_done)"
 rfix; printf '%s\n' '{"machines":{},"active_repos":["acme/widgets"]}' > "$tmp/uq.json"
 sa_route "repos/acme/widgets/issues?state=open&sort=created&direction=desc&per_page=100" '[{"number":30,"title":"late","created_at":"2999-01-01T00:00:00Z"}]'
 sa_route "repos/acme/widgets/issues/30/comments?per_page=100" '[]'
-jq '.unqueued_offered = ["ACME/Widgets#30"]' "$rled" > "$rled.new" && mv "$rled.new" "$rled"
-check "reconcile: an unqueued issue offered under another case is not offered again" 0 "$(RC --fleet "$tmp/uq.json" | jq '.unqueued | length')"
+cp "$rled" "$rled.base"
+check "reconcile: an unclaimed new issue is offered (control)" 1 "$(RC --fleet "$tmp/uq.json" | plen unqueued)"
+cp "$rled.base" "$rled"; jq '.unqueued_offered = ["ACME/Widgets#30"]' "$rled" > "$rled.new" && mv "$rled.new" "$rled"
+check "reconcile: an unqueued issue offered under another case is not offered again" 0 "$(RC --fleet "$tmp/uq.json" | plen unqueued)"
 
 # --- the guard: no script compares a repo or path by hand ----------------------------------
 # A hand-rolled lowercase or a raw `[ "$repo" = ... ]` is the class #1154 and #1180 closed. The
