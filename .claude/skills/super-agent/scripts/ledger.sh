@@ -21,7 +21,7 @@
 #   ledger --ledger <file> briefed
 #   ledger --ledger <file> wait <key> --reason <text> [--order <n>] [--after <key>]
 #   ledger --ledger <file> unwait <key>
-#   ledger --ledger <file> need <key> --action <text>
+#   ledger --ledger <file> need <key> --action <text> [--reason <word>]
 #   ledger --ledger <file> pushed <key>
 #   ledger --ledger <file> unneed <key>
 #   ledger --ledger <file> limit <owner/name> --reviewer <name>
@@ -33,8 +33,8 @@
 # against, and `error`, the fault kind it last failed to read. `add` over an
 # entry whose stage is `settled` or `closed` (a triaged ticket that now ships)
 # replaces it; over any other entry it refuses. `set` takes any
-# field but the entry's identity (key, repo, number); `stage` must be one of
-# launched, running, at-rest, merged, settled, closed. `rethread` points a
+# field but the entry's identity (key, repo, number) and `stage`, which only
+# `reconcile` moves (`add` and `rethread` start one at launched). `rethread` points a
 # ticket's entry at a fresh thread and starts its tracking over (stage
 # launched, stalls 0, no observed state), so the key stays one entry; `--environment` names the new thread's linked
 # machine, and without it the entry is this machine's again. `--kind` and
@@ -71,7 +71,8 @@
 # A `need` is something only the owner can settle: one row in `needs` per key
 # (the entry, or a waiting ticket), its one action, `since` when and whether its
 # push went out. A repeat with the same action keeps `since` and `pushed`, a new
-# action is a new need. `pushed` marks the push sent, `unneed` clears the need;
+# action is a new need. `--reason` names the cause it answers: only that
+# `escalate` row stays silent for it. `pushed` marks the push sent, `unneed` clears the need;
 # `status` reads the rows. `--instance` is the T3 provider instance the thread
 # launched on (route's `instance_id`), which `status` names on the Running row. A
 # `limit` records that a repo's hosted reviewer answered a review request with a
@@ -92,13 +93,13 @@
 #         {need}; `unneed` {key, removed}; `limit` {limit: {repo, reviewer,
 #         since}}; `unlimit` {repo, removed}; `list` also holds `waiting`,
 #         `needs` and `review_limits`; any failure {error}
-# exit: 0 ok · 1 the key is already in, or not in, the ledger, a stage outside
-#       the list, or an identity field · 2 usage, a value that is not JSON, an
+# exit: 0 ok · 1 the key is already in, or not in, the ledger, `stage`, or an
+#       identity field · 2 usage, a value that is not JSON, an
 #       unreadable or wrong-shaped ledger, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]] | allowed | briefed | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
+usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]] | allowed | briefed | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -173,11 +174,10 @@ case $cmd in
     [ $# -eq 3 ] || sa_tooling "$usage"
     key=$1 field=$2
     value=$(jq -c . <<<"$3" 2>/dev/null) && [ -n "$value" ] || sa_tooling "the value is not JSON: $3"
-    case $field in key|repo|number) sa_fail "$field is the entry's identity and cannot be set" ;; esac
-    if [ "$field" = stage ]; then
-      jq -ne --argjson v "$value" '$v | IN("launched", "running", "at-rest", "merged", "settled", "closed")' >/dev/null \
-        || sa_fail "stage must be one of $sa_stages"
-    fi
+    case $field in
+      key|repo|number) sa_fail "$field is the entry's identity and cannot be set" ;;
+      stage) sa_fail "stage is moved by reconcile only (add and rethread start it at launched)" ;;
+    esac
     sa_read "$ledger"
     key=$(sa_key "$doc" "$key")
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$key is not in the ledger"
@@ -216,7 +216,7 @@ case $cmd in
         | .instance_id = (if $inst == "" then null else $inst end)
         | .model = (if $m == "" then null else $m end) | .effort = (if $e == "" then null else $e end)
         | .stage = "launched" | .stalls = 0 | .observed = null | .error = null | .rest_since = null
-        | .judged_run = 0 | .kind = (if $kind == "" then .kind else $kind end) | .areas = ($areas // .areas)
+        | .judged_run = 0 | del(.cleanup_owed, .verify_owed) | .kind = (if $kind == "" then .kind else $kind end) | .areas = ($areas // .areas)
         | .launched_at = $now | .updated_at = $now)' <<<"$doc")
     sa_write "$ledger" "$doc"
     jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$(jq -c --arg k "$key" '.entries[$k]' <<<"$doc")" \

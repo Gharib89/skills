@@ -30,7 +30,7 @@ fixture() {
     sa_thread "t-$n" running 1 0 "/wt/$n" "feat/x-$n"
     sa_pr $repo "feat/x-$n" none
   done
-  [ "${1:-}" = settled ] && bash "$s/ledger.sh" --ledger "$led" set "$repo#6" stage '"settled"' >/dev/null
+  [ "${1:-}" = settled ] && sa_stage "$led" "$repo#6" settled
   return 0
 }
 event() { jq -r '[(.key // "null"), .event] | join(" ")' <<<"$1"; }
@@ -87,7 +87,7 @@ sa_pr $repo feat/x-5 merged
 sa_thread t-5 idle 1 0 /wt/5 feat/x-5
 out=$(W --timeout 5)
 check "a merged PR is pr-merged, ahead of the run that finished with it" "$repo#5 pr-merged" "$(event "$out")"
-check "and the event carries the PR" '{"number":7,"state":"merged"}' "$(jq -c .observed.pr <<<"$out")"
+check "and the event carries the PR and when it merged" '{"number":7,"state":"merged","merged_at":"2026-11-06T10:00:00Z"}' "$(jq -c .observed.pr <<<"$out")"
 
 fixture
 sa_pr $repo feat/x-5 closed
@@ -212,7 +212,7 @@ sa_thread t-6 running 1 0 /wt/6 feat/x-6
 check "a different fault than the recorded one is reported" "$repo#5 thread-unreadable" "$(event "$(W --timeout 5)")"
 
 fixture
-for n in 5 6; do bash "$s/ledger.sh" --ledger "$led" set "$repo#$n" stage '"closed"' >/dev/null; done
+for n in 5 6; do sa_stage "$led" "$repo#$n" closed; done
 out=$(W --timeout 2 2>/dev/null); rc=$?
 check_rc "a ledger with nothing open exits 1" 1 "$rc"
 check "and says so" "no open entry in the ledger $led" "$(jq -r .error <<<"$out")"
@@ -226,7 +226,7 @@ check "watch leaves the ledger as it found it" "$before" "$(cat "$led")"
 
 # --- a merged entry is watched until its thread rests --------------------------
 fixture
-bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stage '"merged"' >/dev/null
+sa_stage "$led" "$repo#5" merged
 bash "$s/ledger.sh" --ledger "$led" set "$repo#5" observed '{"status":"running","run_count":1,"pending":0,"pr":{"number":7,"state":"merged"}}' >/dev/null
 sa_pr $repo feat/x-5 merged
 out=$(W --timeout 2)
@@ -237,7 +237,7 @@ check "its thread coming to rest is run-finished" "$repo#5 run-finished" "$(even
 
 # --- an entry added while a watcher runs is watched ----------------------------
 fixture
-bash "$s/ledger.sh" --ledger "$led" set "$repo#6" stage '"settled"' >/dev/null
+sa_stage "$led" "$repo#6" settled
 cat > "$SA_FAKE/on-sleep" <<EOS
 bash "$s/ledger.sh" --ledger "$led" add --repo $repo --number 7 --thread t-7 --worktree /wt/7 --branch feat/x-7 >/dev/null
 bash "$s/ledger.sh" --ledger "$led" set "$repo#7" observed '$base' >/dev/null
@@ -275,5 +275,56 @@ echo 999999 > "$led.watch"
 out=$(W --timeout 1); rc=$?
 check_rc "a pid file of a dead watcher is taken over" 0 "$rc"
 check "and the lock is released at exit" "no" "$([ -f "$led.watch" ] && echo yes || echo no)"
+
+# --- a rest that ends on the waiting line is running until the window passes ---
+# The brief tells a run that ends a turn to wait on its own background work to
+# say so in a last line of this exact text. 2099 is inside any window, 2020 past
+# the 60 s one, so no case reads the clock.
+wl='Waiting on my own background work.'
+soon=2099-01-01T00:00:00Z
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $soon
+check "a thread at rest on the waiting line is no run-finished inside the window" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$(printf 'Checks started.\n\n%s\n' "$wl")" $soon
+check "prose above the line does not matter, only the last line" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $old
+check "past the window the rest is stall-window, not run-finished" "$repo#5 stall-window" "$(event "$(W --timeout 5 --stall-window 60)")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl more" $soon
+check "a last line that only starts with the waiting line is a finished run" "$repo#5 run-finished" "$(event "$(W --timeout 5 --stall-window 60)")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$(printf '%s\nPR: https://x/7\n' "$wl")" $soon
+check "the waiting line above another line is a finished run" "$repo#5 run-finished" "$(event "$(W --timeout 5 --stall-window 60)")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl"
+check "a thread with no update stamp cannot be timed, so its rest is run-finished" "$repo#5 run-finished" "$(event "$(W --timeout 5 --stall-window 60)")"
+# the window's edge, with the clock taken from the test
+edge=$(date -u -d "$soon" +%s) # a fixed stamp converted, no clock read
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $soon
+check "one second inside the window it is still waiting" "null timeout" "$(event "$(SA_NOW=$((edge + 59)) W --timeout 2 --stall-window 60)")"
+check "at the window it is a stall-window" "$repo#5 stall-window" "$(event "$(SA_NOW=$((edge + 60)) W --timeout 5 --stall-window 60)")"
+bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stalls 3 >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $old
+check "an entry at 3 stalls stays quiet past the window too" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+
+# --- a PR merging while its thread runs raises one event ------------------------
+fixture
+sa_pr_merged_at $repo feat/x-5 $soon
+out=$(W --timeout 2 --stall-window 60)
+check "a merge inside the bound, thread still running, is no event" "null timeout" "$(event "$out")"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5
+out=$(W --timeout 5 --stall-window 60)
+check "the thread resting is the one event, pr-merged" "$repo#5 pr-merged" "$(event "$out")"
+bash "$s/reconcile.sh" --ledger "$led" >/dev/null
+check "and the entry it settled raises no second one" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+fixture
+sa_pr_merged_at $repo feat/x-5 $old
+check "a merge past the bound is pr-merged though the thread still runs" "$repo#5 pr-merged" "$(event "$(W --timeout 5 --stall-window 60)")"
+fixture
+sa_pr_merged_at $repo feat/x-5 $soon
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $soon
+check "a merge with its thread waiting on the waiting line is no event inside the bound" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
+fixture
+sa_pr_merged_at $repo feat/x-5 $soon
+check "a merge one second inside the bound is no event" "null timeout" "$(event "$(SA_NOW=$((edge + 59)) W --timeout 2 --stall-window 60)")"
+check "a merge at the bound is pr-merged" "$repo#5 pr-merged" "$(event "$(SA_NOW=$((edge + 60)) W --timeout 5 --stall-window 60)")"
 
 finish

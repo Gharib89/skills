@@ -165,7 +165,7 @@ check "it is waiting, the cap named in the reason" '{"reason":"waiting","why":"s
 check "a launch with no area, which overlaps both, still names the cap first" "ship cap: 2 of 2 open tickets of acme/widgets" "$(L 7 | jq -r .detail.reason)"
 check "and the ledger holds the waiting row" 1 "$(bash "$s/ledger.sh" --ledger "$led" list | jq '[.waiting[] | select(.key == "acme/widgets#7")] | length')"
 check "a settled ticket does not count against the cap" ok \
-  "$(bash "$s/ledger.sh" --ledger "$led" set "$repo#2" stage '"settled"' >/dev/null; L 7 --area c | jq -r 'if .launch then "ok" else .reason end')"
+  "$(sa_stage "$led" "$repo#2" settled; L 7 --area c | jq -r 'if .launch then "ok" else .reason end')"
 
 # --- record: the ledger entry and the baseline reconcile -------------------------------
 reset; issue 7 "widgets: add a frobnicator to the pipeline and more" ready-for-agent L bug

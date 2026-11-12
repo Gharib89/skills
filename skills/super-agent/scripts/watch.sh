@@ -11,12 +11,18 @@
 # which `reconcile` records: `pr-merged`, `pr-closed`, `pending-approval` (a
 # permission hold, which wakes nothing by itself), `run-finished`, and
 # `stall-window`. A remote entry adds `pr-opened` and `checks-finished`. A run
-# starting is no event. A run that finished is looked at
+# starting is no event. A thread at rest whose last message ends on the waiting
+# line (`sa_waiting_line`, `_lib.sh`) is still working: no `run-finished`, and its
+# `stall-window` runs from when it rested (`rest_at`) while it waits. A PR that
+# merged while its thread still runs raises `pr-merged` once, when the thread
+# rests or `--stall-window` seconds after the merge, whichever comes first (a
+# remote entry's is not held). A run that finished is looked at
 # again `--recheck` seconds later (default 90) and reported only if the thread
 # is still at rest, since a run that waits on its own background subagent starts
 # again within about a minute (measured 2026-11-06). `stall-window` is an entry
 # at rest with no change for `--stall-window` seconds (default 900) since
-# `reconcile` stamped its `rest_since`; an entry already at 3 stalls is
+# `reconcile` stamped its `rest_since` (the later of that and `rest_at`, for a
+# thread waiting on the waiting line); an entry already at 3 stalls is
 # escalated, so its window stays quiet.
 # A thread that answers with another id or worktree path than the entry holds
 # is `thread-mismatch`; a thread or PR it cannot read is `thread-unreadable` or
@@ -27,7 +33,8 @@
 # and returns between two reconciles stays quiet. An entry with no `observed`
 # baseline is skipped and named in `unobserved`.
 # Settled and closed entries are not watched; a `merged` entry (PR merged,
-# thread still running) is, and wakes `run-finished` when the thread rests. The
+# thread still running) is, and wakes `run-finished` when the thread rests, unless
+# its `pr-merged` was held and has not been raised yet. The
 # ledger is read again each poll, so an entry added mid-watch is watched from
 # its next poll on (once `reconcile` has observed it). Only one watcher runs per
 # ledger: its pid is held in `<ledger>.watch`, and a second start exits 1 naming
@@ -41,7 +48,7 @@
 # backstop schedule. `--remote` is accepted and unused here.
 #
 # stdout: {key, thread, event, observed} for a change, `observed` the snapshot
-#         {status, run_count, pending, gate, pr: {number, state[, checks, head]}}; {key, thread,
+#         {status, run_count, pending, gate, waiting, rest_at, pr: {number, state[, merged_at, checks, head]}}; {key, thread,
 #         event, detail} for `thread-mismatch`, `thread-unreadable` and
 #         `pr-unreadable`; {key: null, thread: null, event: "timeout",
 #         watching, unobserved} once --timeout passes, `watching` the keys it
@@ -116,22 +123,30 @@ load
 # change_of <observed> <snapshot>: the change from the baseline to the snapshot,
 # the PR's end first since it outranks a run that finished with it.
 change_of() {
-  jq -rn --argjson o "$1" --argjson n "$2" '
-    if $n.pr.state == "merged" and $o.pr.state != "merged" then "pr-merged"
+  jq -rn --argjson o "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(sa_now_s)" "$sa_jq_active"'
+    (($n.pr.merged_at // null) | if . == null then 0 else (try fromdateiso8601 catch 0) end) as $merged
+    # a merge with its thread still working is no wake yet: the thread resting
+    # or the bound passing is the one event (a remote thread is read only on a wake, so its status is stale)
+    | if $n.pr.state == "merged" and $o.pr.state != "merged" then
+        (if ($n.pr | has("checks") | not) and ($n | active($w; $now)) and $now - $merged < $w then empty else "pr-merged" end)
     elif $n.pr.state == "closed" and $o.pr.state != "closed" then "pr-closed"
     elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "none" then "pr-opened"
     elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "open" and $n.pr.checks == "done" and ($o.pr.checks != "done" or $o.pr.head != $n.pr.head) then "checks-finished"
     elif $n.pending > $o.pending then "pending-approval"
-    elif $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
+    elif ($n.waiting | not) and $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
     else empty end'
 }
 
 # stall_window_of <entry> <snapshot>: `stall-window` for an entry that has rested
-# past the window with nothing else to report.
+# past the window with nothing else to report. A rest on the waiting line is timed
+# from the thread's own last update, since no `run-finished` woke a reconcile to
+# stamp `rest_since`; a merged entry rests into `run-finished`, bar that one.
 stall_window_of() {
-  jq -rn --argjson e "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(date -u +%s)" '
-    if $e.rest_since != null and $n.pr.state != "merged" and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
-       and $now - ($e.rest_since | fromdateiso8601) >= $w then "stall-window" else empty end'
+  jq -rn --argjson e "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(sa_now_s)" '
+    ($e.rest_since | if . == null then null else fromdateiso8601 end) as $rs
+    | (if $n.waiting then ([$rs, $n.rest_at] | map(select(. != null)) | max) else $rs end) as $since
+    | if $since != null and ($n.pr.state != "merged" or $n.waiting) and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
+       and $now - $since >= $w then "stall-window" else empty end'
 }
 
 start=$SECONDS

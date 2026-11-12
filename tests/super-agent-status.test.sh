@@ -5,6 +5,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
+source tests/super-agent-fake.sh
 
 s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
@@ -13,7 +14,7 @@ led=$tmp/ledger.json
 L() { bash "$s/ledger.sh" --ledger "$led" "$@"; }
 S() { bash "$s/status.sh" --ledger "$led" "$@"; }
 add() { L add --repo Gharib89/skills --number "$1" --thread "t-$1" --worktree "/wt/$1" --branch "b-$1" >/dev/null; }
-stage() { L set "Gharib89/skills#$1" stage "\"$2\"" >/dev/null; }
+stage() { sa_stage "$led" "Gharib89/skills#$1" "$2"; }
 obs() { L set "Gharib89/skills#$1" observed "$2" >/dev/null; }
 
 # --- the contract every script keeps -------------------------------------------

@@ -51,7 +51,7 @@ check "one JSON object is the whole answer" 1 "$(jq -s length <<<"$out")"
 check "it checked both entries" 2 "$(jq .checked <<<"$out")"
 check "a running thread moves its entry from launched to running" "launched>running launched>running" \
   "$(jq -r '[.entries[] | "\(.from)>\(.stage)"] | join(" ")' <<<"$out")"
-check "the baseline is in the ledger" '{"status":"running","run_count":1,"pending":0,"gate":false,"pr":{"number":null,"state":"none"}}' \
+check "the baseline is in the ledger" '{"status":"running","run_count":1,"pending":0,"gate":false,"waiting":false,"rest_at":null,"pr":{"number":null,"state":"none"}}' \
   "$(jq -c --arg k "$repo#5" '.entries[$k].observed' "$led")"
 check "so a watch after it sees nothing" "null timeout" \
   "$(bash "$s/watch.sh" --ledger "$led" --interval 1 --timeout 2 | jq -r '[(.key // "null"), .event] | join(" ")')"
@@ -264,7 +264,7 @@ check "the resumed run ending with the issue clear settles it again" settled "$(
 # a triage entry settled by hand has no baseline: nothing to compare, nothing woke
 rm -f "$led"
 L add --repo $repo --number 9 --thread t-9 --worktree /wt/9 --branch triage/x-9 --kind triage >/dev/null
-L set $repo#9 stage '"settled"' >/dev/null
+sa_stage "$led" $repo#9 settled
 sa_thread t-9 idle 1 0 /wt/9 triage/x-9
 out=$(R)
 check "a settled triage entry with no baseline is not reported in woke" "[]" "$(jq -c .woke <<<"$out")"

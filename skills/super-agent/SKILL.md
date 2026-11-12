@@ -47,11 +47,14 @@ directory.
   `checks-finished`. Rules: [watching](reference/watching.md).
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage (a merged PR is `merged` until its thread rests, then `settled`),
-  keeps each entry's `stalls`, and prints one summary: `settled` (each with
-  its `kind`), `closed`, `stalled`, `at_rest`, `woke`, `ready`, `dropped`,
-  `unqueued`, `errors`, `entries`. A stall adds 1 and a real step takes 1 off
-  ([watching](reference/watching.md)). Never set `stalls` by hand, bar the
-  reset below.
+  keeps each entry's `stalls`, and prints one summary: the lists `cleanup`,
+  `verify`, `escalate` say what you owe (Acting on the summary), the rest
+  report. A stall adds 1 and a real step takes 1 off
+  ([watching](reference/watching.md)). `ledger.sh set` refuses `stage`; never
+  set `stalls` by hand, bar [the reset](reference/stall-ladder.md#the-ladder).
+- `pulse.sh` takes reconcile's flags, runs it, and answers `alive` (the watcher
+  runs), `changed` (anything to act on) and `summary` (reconcile's answer when
+  `changed`, else null): the whole backstop turn.
 - `setup.sh` probes the machines, accounts and quota commands, merges each
   `--probe` reply, and proposes the fleet file (below) with `--propose`, one
   provider per instance from `--instances <file>`; it takes `--fleet <file>` in
@@ -215,16 +218,20 @@ same steps.
    watches, so end the turn. A background Bash stops at 2 h, so the watcher
    times out first. Keep one backstop schedule per super agent thread, firing
    while the watcher lives too: `list_scheduled_tasks` first, and only when
-   none is bound here, `schedule_task` on an interval of 900000 ms bound to
-   this thread, its prompt "Wake: reconcile the ledger and start the
-   watcher". When `ledger.sh list --open` is empty, `delete_scheduled_task`
-   it: the loop is done.
-4. **Wake.** The watcher's exit or the schedule wakes you. Both run the same
-   step.
-5. **Reconcile.** Run `scripts/reconcile.sh --ledger <ledger> --fleet
-   <fleet>`, read its summary, act on it (below), run `scripts/status.sh` with
-   `--quota <file>` (Escalation format), then start the watcher again while an
-   entry is open.
+   none is bound here, `schedule_task` on an interval of 1800000 ms bound to
+   this thread, its prompt "Backstop: run scripts/pulse.sh and follow
+   SKILL.md step 4". When `ledger.sh list --open` is empty,
+   `delete_scheduled_task` it: the loop is done.
+4. **Wake.** The watcher's exit or the schedule wakes you. A watcher wake runs
+   step 5. A backstop wake runs `scripts/pulse.sh --ledger <ledger> --fleet
+   <fleet>` instead (the flags of step 5): `alive` true and `changed` false
+   ends the turn there, nothing else read or posted; `alive` false starts the
+   watcher; `changed` true makes its `summary` the answer step 5 acts on.
+5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
+   ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
+   action it prints (Acting on the summary), run `scripts/status.sh --ledger
+   <ledger> --quota <file>` (Escalation format), then start the watcher again
+   while an entry is open.
 
 **No turn ends without a watcher running** while the ledger holds an open
 entry. A supervised thread finishing wakes nothing, and neither does its
@@ -239,8 +246,8 @@ thread read; the backstop schedule is what notices a remote thread resting.
 
 Wait only through the watcher: a `sleep` or a poll in your own turn spends
 context on nothing. Read a thread's messages only in small slices
-(`t3_thread_read` with a low `limit` and `maxCharsPerItem`): your context
-carries the ledger and summaries, never a supervised thread's transcript.
+(`t3_thread_read` with a low `limit` and `maxCharsPerItem`): your context never
+carries a supervised thread's transcript.
 
 ## The launch brief
 
@@ -250,40 +257,35 @@ parts and the re-brief form:
 
 ## Acting on the summary
 
-- `settled` of kind `ship`: the PR merged. Check the merged PR against the
-  issue's acceptance criteria. Met: settle the thread with
-  `t3_thread_organize` action `settle` on its id (and `environmentId`).
-  Unmet: escalate, naming the gap. Of kind `task`: its thread has run and rests;
-  read its last message in a small slice, say its outcome in one chat line, then
-  settle the thread the same way. Of kind `triage`: confirm the issue now
-  carries a ready label or the owner skill's other outcome, then settle it
-  the same way; no PR. A settled entry is unwatched: a message to its
-  thread goes unseen.
-- An entry in stage `merged` needs nothing: the watcher wakes you when its
-  thread rests, and it settles then.
-- `woke`: a settled triage thread reran; `Running` shows it again.
+Reconcile prints what you owe as three lists, each row naming its entry; a row
+stays in every answer until you clear its cause, so a wake that does nothing
+prints it again. Per-row steps:
+[reference/wake-actions.md](reference/wake-actions.md).
+
+- `cleanup`: per row, settle its thread, `scripts/worktree.sh remove --ledger
+  <ledger> <key>`, then `ledger.sh set <key> cleanup_owed false`.
+- `verify`: check the merged PR against the issue's acceptance criteria, then
+  `ledger.sh set <key> verify_owed false`; unmet, record a need first. A
+  `merged` entry settles when its thread rests.
+- `escalate`: record one need per row with `ledger.sh need` (Escalation
+  format), which silences it.
+
+The other lists report:
+
+- `stalled`: climb the **stall ladder**, keyed on the entry's `stalls`:
+  nudge, re-brief, then a fresh thread on a raised tier
+  ([reference/stall-ladder.md](reference/stall-ladder.md)).
 - `ready`: waiting rows to launch, in order. `dropped`: closed issues' rows.
 - `unqueued`: open issues in an active repo, filed since the batch began, that
   no entry, waiting row or claim holds. Say them in one chat line, each key
-  with its title, and ask whether to launch any: reconcile lists each once, so
-  say it now. Launch one only on the owner's go.
-- `closed`: the PR closed unmerged; record a need naming the reason.
-- Once a `settled` row's thread is settled, and for each `closed` row, run
-  `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
-  [reference/remote.md](reference/remote.md)); a `task` entry holding no
-  worktree has nothing to remove. A `kept: true` result posts
-  nothing; a refusal (exit 1) is an escalation.
-- An entry whose `observed.pending` is above 0 holds a permission request:
-  escalate it, since a held thread is not a stall.
-- `at_rest` with a merge-gate summary is not a stall: an allowed merge in
-  progress needs nothing from you, and a hold outside the merge allowance and
-  the standing waivers is an escalation.
-- `stalled`: climb the **stall ladder**, keyed on the entry's `stalls` after
-  reconcile: nudge, re-brief, then a fresh thread on a raised tier
-  ([reference/stall-ladder.md](reference/stall-ladder.md)).
-- `errors`: an entry reconcile could not read or match gets no action from you:
-  escalate it, and start the watcher again after
-  ([same file](reference/stall-ladder.md#errors)).
+  with its title, and ask whether to launch any: reconcile lists each once.
+  Launch one only on the owner's go.
+- `woke`: a settled triage thread reran; `Running` shows it again.
+- `at_rest` with a merge-gate summary is no stall: an allowed merge needs
+  nothing from you, and a hold outside the merge allowance and the standing
+  waivers is an escalation.
+- `errors` of an entry: its `escalate` row covers them; say others in one chat
+  line.
 
 ## Escalation
 
@@ -343,7 +345,8 @@ repos, to propose it to the owner as a global rule.
 
 `scripts/ledger.sh --ledger <ledger> list --open` is what you own. Run
 `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>` and start the watcher
-before anything else. Launch its `ready` rows (the queue); `list`'s other
+before anything else. Do its `cleanup`, `verify` and `escalate` rows, and
+launch its `ready` rows (the queue); `list`'s other
 `waiting` rows get a place rerun when a machine could have come back.
 
 ## Hard rules
