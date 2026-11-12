@@ -69,7 +69,7 @@ import { determinismFindings } from "./determinism.mjs";
 import { joinsFindings } from "./joins.mjs";
 import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
-import { BED_LU, bedLevel, licenceFindings } from "./sound-kit.mjs";
+import { levelGates, licenceFindings } from "./sound-kit.mjs";
 import { soundFindings } from "./sounds.mjs";
 import { fixAttempts, summaryLine } from "./fix-cap.mjs";
 import { warnings } from "./warnings.mjs";
@@ -402,7 +402,9 @@ const support = !pack
 const summary = (ev) =>
   `${ev.length} finding(s)${ev.length ? `, first: ${ev[0]}` : ""}`;
 const kit = soundKit(run);
-const bed = await orFail(() => bedLevel({ proj, timeline, kit, backend }));
+const levels = await orFail(() =>
+  levelGates({ proj, timeline, kit, events, backend }),
+);
 const root = fs.readFileSync(path.join(proj, "index.html"), "utf8");
 const compositions = path.join(proj, "compositions");
 // What the render compiles: the root with every composition inlined.
@@ -437,7 +439,7 @@ const judged = {
     licenceFindings(events, root, kit),
     "every <audio> but the narration has a licence record in sound.json",
   ],
-  "bed level": [bed.evidence, `${BED_LU} LU`, bed.measured],
+  ...levels,
   ...(arabic && {
     joins: [
       joins.lines(),

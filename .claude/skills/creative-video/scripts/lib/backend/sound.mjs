@@ -1,5 +1,6 @@
 // The backend's sound sources: Openverse's audio search and the Kenney packs'
 // zips.
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { toolPaths } from "../tools.mjs";
@@ -33,4 +34,25 @@ export async function unzipSounds(zip, dir) {
     if (!f.dir && /\.(ogg|wav|mp3)$|^(licen[cs]e|readme)\.txt$/i.test(name))
       fs.writeFileSync(path.join(dir, name), await f.async("nodebuffer"));
   }
+}
+
+// `file`'s audio decoded to mono 32-bit floats at `rate` Hz, `{ samples, rate }`,
+// for the loop seam (lib/seam.mjs).
+export async function pcm(file, rate = 22050) {
+  const r = spawnSync(
+    "ffmpeg",
+    [
+      ...["-v", "error", "-i", file, "-vn", "-ac", "1", "-ar", String(rate)],
+    ].concat(["-f", "f32le", "-"]),
+    { maxBuffer: 1 << 30 },
+  );
+  if (r.status !== 0)
+    throw new Error(
+      `ffmpeg ${file}: ${r.stderr?.toString().trim() || r.error?.message}`,
+    );
+  const { buffer, byteOffset, length } = r.stdout;
+  return {
+    samples: new Float32Array(buffer.slice(byteOffset, byteOffset + length)),
+    rate,
+  };
 }

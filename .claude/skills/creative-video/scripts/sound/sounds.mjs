@@ -13,7 +13,9 @@
 // every query word) is downloaded into the store (a failed download counts as
 // no result). Else the Kenney packs setup installed are searched by each
 // file's name words plus its word-index words (kenney.mjs), a bed only among
-// stems marked `loop`. Else the sound is dropped from the kit into its
+// stems marked `loop`. A bed from Openverse must also loop clean: of the first
+// five usable results, the first whose loop seam measures clean (lib/seam.mjs)
+// is kept, and none dropping it. Else the sound is dropped from the kit into its
 // `dropped` list, where it replaces an earlier drop of its event, as a sound
 // found does. The store is
 // <data>/creative-video/sounds/: openverse/<id>.<ext>, kenney/<pack>/<file> and
@@ -22,7 +24,8 @@
 //         dropped: <why>` per sound (the bed's event is `bed`), and `warn
 //         dropped sound: <event>: <why>` per sound dropped
 // writes: sound.json with each found sound's source, file
-//         (assets/sounds/<name>), licence, creator, url and attribution, the
+//         (assets/sounds/<name>), licence, creator, url and attribution, and
+//         each palette sound's `gain` (dB, EFFECT_GAIN where it has none), the
 //         store, and <run>/project/assets/sounds/
 // exit:   0 every sound found or dropped · 1 refused, `sounds: <why>` on
 //         stderr (no sound.json, a malformed one, or a malformed queries.json:
@@ -30,7 +33,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { readJson } from "../lib/json.mjs";
-import { SOUND, kitSounds } from "../lib/kit.mjs";
+import { EFFECT_GAIN, SOUND, kitSounds } from "../lib/kit.mjs";
+import { seam } from "../lib/seam.mjs";
 import { stage } from "../lib/stage.mjs";
 import { dest, loadBackend } from "../lib/tools.mjs";
 import { AUDIO, entryOf } from "./kenney.mjs";
@@ -70,6 +74,8 @@ function readRecords() {
       if (typeof r?.[f] !== "string") refuse(`${key}.${f} is not text`);
   return v;
 }
+// The results of a bed query measured for a clean loop seam.
+const SEAMS = 5;
 // Formats the render plays.
 const PLAYS = ["mp3", "ogg", "wav", "flac"];
 // Openverse's categories of speech, and a title marking a word said aloud
@@ -113,18 +119,38 @@ async function fromOpenverse(query, medium) {
   }
   const ext = (r) =>
     (r.filetype || path.extname(r.url ?? "").slice(1)).toLowerCase();
-  const r = results.find(
+  const usable = results.filter(
     (r) =>
       r.license === "cc0" && r.url && PLAYS.includes(ext(r)) && names(r, query),
   );
-  if (!r) return "openverse found no usable CC0 result";
-  const name = `${r.id}.${ext(r)}`;
+  if (!usable.length) return "openverse found no usable CC0 result";
   fs.mkdirSync(path.join(store, "openverse"), { recursive: true });
-  try {
-    await backend.download(r.url, path.join(store, "openverse", name));
-  } catch (e) {
-    return `openverse download failed (${e.message})`;
+  // A bed repeats end to start, so it is the first result whose loop seam
+  // measures clean (lib/seam.mjs), of at most SEAMS downloaded to measure.
+  let r;
+  let failed;
+  for (const c of usable.slice(0, medium ? SEAMS : 1)) {
+    const file = path.join(store, "openverse", `${c.id}.${ext(c)}`);
+    try {
+      await backend.download(c.url, file);
+    } catch (e) {
+      failed = `openverse download failed (${e.message})`;
+      continue;
+    }
+    if (!medium) {
+      r = c;
+      break;
+    }
+    const { samples, rate } = await backend.pcm(file);
+    if (seam(samples, rate).clean) {
+      r = c;
+      break;
+    }
+    fs.rmSync(file, { force: true });
+    failed = `openverse found no result whose loop seam is clean (tried ${usable.slice(0, SEAMS).length})`;
   }
+  if (!r) return failed;
+  const name = `${r.id}.${ext(r)}`;
   return {
     source: `openverse:${r.id}`,
     file: `assets/sounds/${name}`,
@@ -214,7 +240,7 @@ if (kit.palette) {
   const out = [];
   for (const s of kit.palette) {
     const filled = await each("palette", s);
-    if (filled) out.push(filled);
+    if (filled) out.push({ ...filled, gain: filled.gain ?? EFFECT_GAIN });
   }
   kit.palette = out;
 }

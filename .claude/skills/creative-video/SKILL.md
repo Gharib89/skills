@@ -92,8 +92,8 @@ you would have written an adjective. At least:
   each colour means in the story. Colour carries meaning or stays out.
 - **Sound**: the sound palette as a short list, each sound with the story event
   it marks and nothing else; where the bed plays, where it drops out, and the
-  one moment it changes. A low bed plays by default, well under the voice and
-  drawn from the concept's world (room tone, a track), and drops out for the
+  one moment it changes. A low bed plays by default, 15 to 20 LU under the voice
+  and drawn from the concept's world (room tone, a track), and drops out for the
   hardest step of the explanation. Effects are recorded CC0 sounds that
   `sounds.mjs` finds, never tones or beeps generated in code: nobody can hear
   whether they are good, and they sound like it.
@@ -165,8 +165,8 @@ folder's files, timing, the word anchors, the pinned CLI and the render;
    stance, then the format kit in `<run>/project/kit/`, both before any scene.
    Write the bed and the sound palette into `<run>/project/kit/sound.json` and
    run `node <skill>/scripts/sound/sounds.mjs <run>`
-   ([Sound](reference/authoring.md#sound)); the root places the bed. A bed
-   that is music carries one reason line on `SPEC.md`'s Sound line, as a
+   ([Sound](reference/authoring.md#sound)); the root places the bed. A music
+   bed carries one reason line on `SPEC.md`'s Sound line, as a
    banned default does.
 6. **Script.** Write `<run>/script.json`
    ([reference/voice.md](reference/voice.md) holds its shape), one scene per

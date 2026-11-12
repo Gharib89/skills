@@ -8,6 +8,13 @@ import { narrator as findNarrator } from "./narrators.mjs";
 export const CAST = "project/kit/cast.json";
 export const SOUND = "project/kit/sound.json";
 
+// The gain (dB) of a palette sound with none of its own: effects play well under
+// the voice. Measured 2026-11-12 with ffmpeg ebur128 on the CC0 effects setup
+// installs, looped to a 3 s window: -11.9 to -28.6 LUFS, a median of -17.0,
+// against a narration at -22.5 LUFS short-term, so a sound at full volume sat
+// up to 10 LU over the voice, and at -18 dB the loudest sits 7.4 LU under it.
+export const EFFECT_GAIN = -18;
+
 // sound.json, or null when the run has none.
 export const soundKit = (run) => maybeJson(run, SOUND);
 

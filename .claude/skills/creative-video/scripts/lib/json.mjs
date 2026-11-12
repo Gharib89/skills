@@ -105,6 +105,9 @@ export const SHAPES = {
   // The cast (lib/kit.mjs): each role's narrators.json id per language and
   // the style line it speaks in.
   "project/kit/cast.json": map(obj({ voices: map(text), style: opt(text) })),
+  // The spoken forms (lib/pronounce.mjs): a written word and what the narrator
+  // is sent for it.
+  "project/kit/pronounce.json": map(matchWord),
   // The sound kit (lib/kit.mjs): the bed and each palette sound by the query
   // the agent writes, the `file` sound/sounds.mjs fills, and what it dropped.
   "project/kit/sound.json": obj({
@@ -116,7 +119,16 @@ export const SHAPES = {
         file: opt(text),
       }),
     ),
-    palette: opt(list(obj({ event: text, query: matchWord, file: opt(text) }))),
+    palette: opt(
+      list(
+        obj({
+          event: text,
+          query: matchWord,
+          file: opt(text),
+          gain: opt(number),
+        }),
+      ),
+    ),
     dropped: opt(list(obj({ event: text, query: text, why: text }))),
   }),
   // The source pack, read by the claims check and the gates.

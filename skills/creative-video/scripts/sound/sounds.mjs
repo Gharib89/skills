@@ -13,7 +13,9 @@
 // every query word) is downloaded into the store (a failed download counts as
 // no result). Else the Kenney packs setup installed are searched by each
 // file's name words plus its word-index words (kenney.mjs), a bed only among
-// stems marked `loop`. Else the sound is dropped from the kit into its
+// stems marked `loop`. A bed from Openverse must also loop clean: of the first
+// five usable results, the first whose loop seam measures clean (lib/seam.mjs)
+// is kept, and none dropping it. Else the sound is dropped from the kit into its
 // `dropped` list, where it replaces an earlier drop of its event, as a sound
 // found does. The store is
 // <data>/creative-video/sounds/: openverse/<id>.<ext>, kenney/<pack>/<file> and
