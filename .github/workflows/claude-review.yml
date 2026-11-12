@@ -4,7 +4,7 @@ name: Claude PR Review
 # every run. An issue-comment trigger and nothing else, which
 # is what `Request: comment @claude` in the profile asks for. There is
 # deliberately no `pull_request` trigger: a check run on the PR head would make
-# this a CI leg, and `## CI` says this repo has none.
+# this a CI leg; docs/agents/ship-gates.md names this workflow as not one.
 on:
   issue_comment:
     types: [created]
@@ -49,6 +49,9 @@ jobs:
     # its own step env: block shadows anything set further out.
     env:
       OTEL_RESOURCE_ATTRIBUTES: user.email=ahmed.gharib@itworx.com
+    # A hung round must not hold a runner: without this the job inherits the
+    # host's six-hour default.
+    timeout-minutes: 15
     # <<< repo-owned
     steps:
       # Not optional: the action runs `git diff ... HEAD` in the workspace
