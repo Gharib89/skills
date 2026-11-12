@@ -174,9 +174,10 @@ exceptions bound these rules.
   `_lib.sh`.** Compare `norm_repo` and `norm_path` (jq, from `$sa_jq_norm`) or
   `sa_key` on both sides, never a hand-rolled `ascii_downcase`, `tr A-Z a-z` or
   `[ "$repo" = "$other" ]`; `tests/super-agent-normalise.test.sh` greps for
-  those and carries a mixed-case and trailing-slash case per comparer. A machine
-  name is the exception: a fleet key is looked up exactly (`.machines[$m]`), so
-  it stays exact.
+  those (bar a quota bucket id and a branch slug, which name no repo), and
+  carries a mixed-case case per repo comparer and a trailing-slash case for the
+  area path. A machine name is the exception: a fleet key is looked up exactly
+  (`.machines[$m]`), so it stays exact.
 
 ## Splitting a file that outgrew the size limit
 
