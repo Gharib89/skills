@@ -24,17 +24,17 @@ skill's base directory.
 2. Launch one **probe thread** per `to_probe` row, all at once, with
    `t3_thread_launch`: `environmentId` set, `scratch: true`, no worktree, the
    cheapest tier. With a fleet file, take `modelSelection` from route
-   (`quota.sh`, then `route.sh --size XS --quota <file>`: its `instance_id`,
-   `model`, `options`); on a first setup, use the first enabled Claude instance
-   in the capabilities answer, its Sonnet model and effort low, as that answer
-   names them. Its message is one line asking it to run the script below with
-   `bash -s -- --json` and reply with its one JSON line and nothing else, then
-   the full text of `scripts/probe.sh` in a code fence: that machine has no
-   checkout of this repo. `t3_thread_wait` each, read its reply with
-   `t3_thread_read` (`limit` 2), save it to a file, and settle the thread
-   (`t3_thread_organize` action `settle`) as soon as its reply is read. A probe
-   thread is no ledger entry and takes no slot. Measured 2026-11-06: one replied
-   in 15 to 20 s.
+   (`quota.sh`, then `route.sh --size XS --quota <file>`, `<file>` the saved
+   quota read: its `instance_id`, `model`, `options`); on a first setup, use the
+   first enabled Claude instance in the capabilities answer, its Sonnet model
+   and effort low, as that answer names them. Its message is one line asking it
+   to run the script below with `bash -s -- --json` and reply with its one JSON
+   line and nothing else, then the full text of `scripts/probe.sh` in a code
+   fence: that machine has no checkout of this repo. `t3_thread_wait` each, read
+   its reply with `t3_thread_read` (`limit` 2), save it to a file, and settle
+   the thread (`t3_thread_organize` action `settle`) as soon as its reply is
+   read. A probe thread is no ledger entry and takes no slot. Measured
+   2026-11-06: one replied in 15 to 20 s.
 3. Run setup again with `--propose` and one `--probe <environment id>=<reply
    file>` per machine, and show the owner its proposal: each machine's slots,
    the thresholds, the `work_week` (weekday numbers in week order, 0 is

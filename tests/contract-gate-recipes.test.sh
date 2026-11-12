@@ -40,6 +40,17 @@ scripts/quota.sh --save f --wake w
 ```
 
 `quota.sh --save f --wake w` <!-- contract-check: sample -->
+
+~~~bash
+$ quota.sh --save f --wake w; echo ok
+scripts/quota.sh --save f --wake w && true
+~~~
+
+```console
+quota.sh --fleet=f --save f --wake w > out
+quota.sh --save f --wake w 2>&1
+```
+
 Naming the tool is no call: `quota.sh`, `ledger.sh wait`, `run-file gate clean`, `quota.sh --help`.
 EOT
 run "$sa/scripts" "$sa"
@@ -51,7 +62,10 @@ $sa/zz.md:3: \`ledger.sh --ledger l wait k --after j\` lacks --reason from ledge
 $sa/zz.md:5: \`ledger.sh --ledger l set k branch main\` gives main where ledger's usage line takes a <json> value; quote a string as '\"text\"'
 $sa/zz.md:6: \`ledger.sh get k\` lacks --ledger from ledger's usage line
 $sa/zz.md:9: \`scripts/quota.sh --save f --wake w\` lacks --fleet from quota's usage line
-$sa/zz.md:10: \`scripts/ledger.sh --ledger l wait k --after j\` lacks --reason from ledger's usage line" "$out"
+$sa/zz.md:10: \`scripts/ledger.sh --ledger l wait k --after j\` lacks --reason from ledger's usage line
+$sa/zz.md:28: \`quota.sh --save f --wake w\` lacks --fleet from quota's usage line
+$sa/zz.md:29: \`scripts/quota.sh --save f --wake w\` lacks --fleet from quota's usage line
+$sa/zz.md:34: \`quota.sh --save f --wake w\` lacks --fleet from quota's usage line" "$out"
 
 cat > "$sa/zz.md" <<'EOT'
 By name: `quota.sh --fleet f --save f --wake w` and `scripts/quota.sh --fleet f --save f --wake w`.
@@ -66,6 +80,17 @@ scripts/quota.sh --fleet f --save f --wake w
 FOO=1 scripts/ledger.sh --ledger l wait k --reason r \
   --after j | jq .
 ```
+
+~~~bash
+$ quota.sh --fleet f --save f --wake w; echo ok
+scripts/quota.sh --fleet f --save f --wake w && true
+~~~
+
+```console
+quota.sh --fleet=f --save f --wake w > out
+```
+
+By value: `ledger.sh --ledger l set k branch "\"main\""` and `ledger.sh --ledger l set k x [1]`.
 EOT
 run "$sa/scripts" "$sa"
 check_rc "the corrected recipes pass" 0 "$rc"

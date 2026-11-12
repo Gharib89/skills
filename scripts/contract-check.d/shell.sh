@@ -98,7 +98,7 @@ if [ -s "$work/required" ]; then
         if (t ~ /^\047["\[{0-9]/ || t ~ /^"\\"/) return 1
         return 0
       }
-      function check(call, ln,   toks, nt, m, padded, r, sel, np, q, hit, s, rq, nq, x, na, alt, y, ok, base, jt, w, any, kt, lw) {
+      function check(call, ln,   toks, nt, m, padded, r, sel, np, q, hit, s, rq, nq, x, na, alt, y, ok, base, jt, w, kt, lw) {
         nt = split(call, toks, " "); m = mech(toks[1]); padded = " " call " "
         for (r = 1; r <= nr; r++) {
           if (rm[r] != m) continue
@@ -122,7 +122,7 @@ if [ -s "$work/required" ]; then
             printf "%s:%d: `%s` gives %s where %s\047s usage line takes a <json> value; quote a string as \047\"text\"\047\n", curfile, ln, call, jt, m
         }
       }
-      function spans(txt, pos0,   i, k, rest, delim, z, j, span, line, off, n) {
+      function spans(txt, pos0,   i, k, rest, delim, z, j, span, line, off, n, at) {
         line = txt; off = 0
         while ((i = index(line, "`")) > 0) {
           k = 0; while (substr(line, i + k, 1) == "`") k++
@@ -147,8 +147,9 @@ if [ -s "$work/required" ]; then
         if (i > nt) return
         call = toks[i]
         for (i = i + 1; i <= nt; i++) {
-          if (toks[i] ~ /^(\||\|\||&&|;|&)$/ || toks[i] ~ /^[0-9]*>/ || (toks[i] ~ /^</ && toks[i] !~ />$/) || toks[i] ~ /;$/) break
+          if (toks[i] ~ /^(\||\|\||&&|;|&)$/ || toks[i] ~ /^[0-9]*>/ || (toks[i] ~ /^</ && toks[i] !~ />$/)) break
           call = call " " toks[i]
+          if (toks[i] ~ /;$/) { sub(/;$/, "", call); break }
         }
         sub(/[)]+$/, "", call)
         check(call, fstart)
