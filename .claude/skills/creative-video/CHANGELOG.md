@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.23.0 (2026-11-12)
+
+### Features
+
+- **creative-video**: Spoken acronyms, effect loudness and a music bed that loops clean
+  ([#1196](https://github.com/Gharib89/skills/pull/1196),
+  [`785d0eb`](https://github.com/Gharib89/skills/commit/785d0eb14074f722d71cd9457447ffd157c4a495))
+
+
 ## v0.22.6 (2026-11-12)
 
 ### Bug Fixes
