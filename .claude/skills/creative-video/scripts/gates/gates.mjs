@@ -13,7 +13,8 @@
 // verdicts and <run>/project/. Samples each scene 0.3 s in, at its middle and
 // on its last frame (gates/samples.mjs), and measures the samples with
 // HyperFrames' check, a text probe (one launch, over the samples and a 0.25 s
-// grid) and two snapshot launches. Thirteen gates judge the project, each a hard
+// grid) and two snapshot launches, each frame that differs between them taken
+// again alone in two more (gates/determinism.mjs). Thirteen gates judge the project, each a hard
 // fail: determinism (the same pixels twice), layout, contrast, reading time,
 // the caption band, anchors (an at() naming a word the narration lacks),
 // script errors (a scene's script that throws), sounds (each <audio> renders
@@ -40,7 +41,7 @@
 // writes: <run>/gates.json, not on a check run (the inputs and voice it is of,
 //         the attempts, each gate's status, measured, floor and evidence, the
 //         warnings); on every run, a check run too, .cache/gates/frames/a and
-//         b, the critic's stills under .cache/critic/<key>, and the root again
+//         b, and recheck-<i>-<n> for a frame that differed, the critic's stills under .cache/critic/<key>, and the root again
 //         (render/root.mjs)
 // exit:   0 every gate passes · 1 a gate fails or the critic is pending, or
 //         `gates: <why>` on stderr (the render's own refusals: no timeline, an
