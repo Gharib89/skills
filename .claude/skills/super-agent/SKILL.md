@@ -284,8 +284,8 @@ The other lists report:
 - `at_rest` with a merge-gate summary is no stall: an allowed merge needs
   nothing from you, and a hold outside the merge allowance and the standing
   waivers is an escalation.
-- `errors`: an entry's needs only its `escalate` row; say other kinds in one
-  chat line.
+- `errors` of an entry: its `escalate` row covers them; say others in one chat
+  line.
 
 ## Escalation
 
