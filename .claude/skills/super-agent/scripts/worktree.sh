@@ -111,7 +111,7 @@ if ! err=$(git -C "$mainwt" worktree remove "$real" 2>&1 </dev/null); then
   answer false true "remove failed: $(head -1 <<<"$err")" "$(branch_field false)"; exit 0
 fi
 git -C "$mainwt" worktree prune >/dev/null 2>&1 </dev/null
-if $delete && [ "$merged" = true ]; then
+if $delete && [ "$kind" = ship ] && [ "$merged" = true ]; then
   if err=$(git -C "$mainwt" branch -D "$branch" 2>&1 </dev/null); then answer true false '' true
   else answer true false "branch delete failed: $(head -1 <<<"$err")" false; fi
 else

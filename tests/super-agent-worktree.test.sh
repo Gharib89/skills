@@ -181,5 +181,8 @@ check "an open entry is refused with the flag too, its branch kept" '1 yes' "$rc
 add_wt del-remote --push
 out=$(W remove --key acme/w#35 --path "$repo/wt-del-remote" --branch feat/del-remote --stage settled --kind ship --merged true --delete-branch)
 check "the flag form deletes the branch of a merged PR the same way" 'true no' "$(jq -r .branch_deleted <<<"$out") $(branch_exists del-remote)"
+add_wt del-keytriage --push
+out=$(W remove --key acme/w#36 --path "$repo/wt-del-keytriage" --branch feat/del-keytriage --stage settled --kind triage --merged true --delete-branch)
+check "the flag form keeps a triage branch even when told merged" 'false yes' "$(jq -r .branch_deleted <<<"$out") $(branch_exists del-keytriage)"
 
 finish
