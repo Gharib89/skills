@@ -70,12 +70,13 @@ jq -e '[(.repos // {})[]? | .max_ships // 1 | type == "number" and . >= 1 and . 
 jq -e --arg m "$machine" '.machines[$m] | type == "object"' "$fleet" >/dev/null || sa_fail "$machine is not in the fleet file"
 sa_read "$ledger"
 
-out=$(jq -cn --slurpfile fleet "$fleet" --argjson doc "$doc" --arg m "$machine" --arg own "$own" --arg key "$key" \
+# The ledger goes in on stdin: one argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
+out=$(jq -c --slurpfile fleet "$fleet" --arg m "$machine" --arg own "$own" --arg key "$key" \
   --argjson load "$load" --argjson free "$free" --arg repo "$repo" --argjson areas "$areas" --argjson blockers "$blockers" \
   "$sa_jq_open$sa_jq_norm"'
   def under($a; $b): ($a | norm_path) as $x | ($b | norm_path) as $y
     | $x == $y or ($x | startswith($y + "/")) or ($y | startswith($x + "/"));
-  $fleet[0] as $f | $f.machines[$m] as $mm
+  . as $doc | $fleet[0] as $f | $f.machines[$m] as $mm
   | [$doc.entries[] | select(is_open) | select((.key | norm_repo) != ($key | norm_repo))] as $open
   | ([$open[] | select(.machine == $m or (.machine == "local" and $m == $own))] | length) as $used
   | (($mm.slots // 1) - ($mm.reserve // 0)) as $ceiling
@@ -96,7 +97,7 @@ out=$(jq -cn --slurpfile fleet "$fleet" --argjson doc "$doc" --arg m "$machine" 
   | {machine: $m, ok: ($refused | length == 0), refused: $refused,
      slots: {used: $used, ceiling: $ceiling}, load: {value: $load, limit: $limit},
      free_gb: {value: $free, floor: $floor}, repo: {conflicts: $conflicts},
-     cap: {open: $repoopen, max: $max}}') \
+     cap: {open: $repoopen, max: $max}}' <<<"$doc") \
   || sa_tooling "$fleet or $ledger cannot be read"
 printf '%s\n' "$out"
 jq -e .ok >/dev/null <<<"$out"
