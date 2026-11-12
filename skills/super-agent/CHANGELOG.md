@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.19.0 (2026-11-12)
+
+### Features
+
+- **super-agent**: Reconcile prints the wake's actions, and fewer wakes
+  ([#1167](https://github.com/Gharib89/skills/pull/1167),
+  [`836c871`](https://github.com/Gharib89/skills/commit/836c871b8bf72167b30ed823c4cae9a310eab2bb))
+
+
 ## v0.18.0 (2026-11-11)
 
 ### Features
