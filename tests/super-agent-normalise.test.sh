@@ -127,11 +127,12 @@ check "reconcile: an unqueued issue offered under another case is not offered ag
 # A hand-rolled lowercase or a raw `[ "$repo" = ... ]` is the class #1154 and #1180 closed. The
 # two lowercase uses left name no repo: a quota bucket id and a branch slug.
 hand_scan() { # <dir>
-  grep -rnE 'ascii_downcase|tr .?A-Z.? .?a-z|\[\[? "?\$\{?(repo|key|after|pkey|path|area|areas)\}?"? +(=|==|!=) ' "$1" \
+  grep -rnE 'ascii_downcase|tr .?(A-Z|\[:upper:\]).? .?(a-z|\[:lower:\]).?|\[\[? "?\$\{?(repo|key|after|pkey|path|area|areas)\}?"? +(=|==|!=) ' "$1" \
     | grep -v "$1/_lib.sh:" | grep -v "$1/quota.sh:.*week-" | grep -v "$1/launch.sh:.*slug=" | grep -vF "[ \"\$areas\" = '[]' ]" || true
 }
 check "no script lowercases or compares a repo, key or path by hand (use norm_repo, norm_path, sa_key)" '' "$(hand_scan "$s")"
-mkdir -p "$tmp/planted"; printf '%s\n' 'if [ "$repo" = "$other" ]; then :; fi' > "$tmp/planted/x.sh"
-check "the guard flags a planted raw repo comparison" 1 "$(hand_scan "$tmp/planted" | grep -c 'x.sh:1')"
+mkdir -p "$tmp/planted"
+printf '%s\n' 'if [ "$repo" = "$other" ]; then :; fi' 'x | ascii_downcase' 'tr A-Z a-z' "tr '[:upper:]' '[:lower:]'" > "$tmp/planted/x.sh"
+check "the guard flags a planted line of each pattern" "4" "$(hand_scan "$tmp/planted" | wc -l | tr -d ' ')"
 
 finish
