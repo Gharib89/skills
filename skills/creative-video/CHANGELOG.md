@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.0 (2026-11-12)
+
+### Features
+
+- **creative-video**: Move hyperframes skills to 33304cf
+  ([#1200](https://github.com/Gharib89/skills/pull/1200),
+  [`5405372`](https://github.com/Gharib89/skills/commit/540537204cedcb2f3bca679f780db2a6ceb1c84c))
+
+
 ## v0.23.0 (2026-11-12)
 
 ### Features
