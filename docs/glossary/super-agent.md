@@ -25,11 +25,11 @@ The background script the super agent leaves running at the end of each turn: it
 _Avoid_: watchdog, poller, monitor
 
 **Waiting line**:
-The fixed last line, `Waiting on my own background work.`, that the launch brief tells a supervised thread to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A thread's final message is the PR URL and the gate state, never this line.
+The fixed last line, `Waiting on my own background work.`, that the launch brief tells a supervised thread to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A thread's final message is the PR URL and the gate state, never this line. Not the **Waiting list**.
 _Avoid_: heartbeat, keepalive, status ping
 
 **Wake action**:
-A row in one of the three lists reconcile prints for what the super agent owes after a wake: `cleanup` (an entry ended: settle its thread, remove its worktree), `verify` (a ship PR merged: check it against the issue's criteria) and `escalate` (only the owner can unblock it: a permission hold, a fault, a stall at the cap, a closed PR or issue). A row stays in every answer until the super agent clears its cause (`cleanup_owed` or `verify_owed` set false, or a recorded need), so a wake that does nothing prints it again. The super agent does what the lists print, and never moves an entry's stage itself.
+A row in one of the three lists reconcile prints for what the super agent owes after a wake: `cleanup` (an entry ended: settle its thread, remove its worktree), `verify` (a ship PR merged: check it against the issue's criteria) and `escalate` (only the owner can unblock it: a permission hold, a fault, a stall at the cap, a closed PR or issue). A row stays in every answer until the super agent clears its cause (`cleanup_owed` or `verify_owed` set false, or a recorded need), so a wake that does nothing prints it again. The super agent does what the lists print, and never sets an entry's stage: reconcile moves it.
 _Avoid_: todo, task (that is a ledger kind), notification
 
 **Stall**:

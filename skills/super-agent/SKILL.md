@@ -47,12 +47,11 @@ directory.
   `checks-finished`. Rules: [watching](reference/watching.md).
 - `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
   stage (a merged PR is `merged` until its thread rests, then `settled`),
-  keeps each entry's `stalls`, and prints one summary: the action lists
-  `cleanup`, `verify`, `escalate` say what you owe (Acting on the summary), and
-  `settled`, `closed`, `stalled`, `at_rest`, `woke`, `ready`, `dropped`,
-  `unqueued`, `errors`, `entries` report. A stall adds 1 and a real step takes
-  1 off ([watching](reference/watching.md)). `ledger.sh set` refuses `stage`;
-  never set `stalls` by hand, bar the reset below.
+  keeps each entry's `stalls`, and prints one summary: the lists `cleanup`,
+  `verify`, `escalate` say what you owe (Acting on the summary), the rest
+  report. A stall adds 1 and a real step takes 1 off
+  ([watching](reference/watching.md)). `ledger.sh set` refuses `stage`; never
+  set `stalls` by hand, bar [the reset](reference/stall-ladder.md#the-ladder).
 - `pulse.sh` takes reconcile's flags, runs it, and answers `alive` (the watcher
   runs), `changed` (anything to act on) and `summary` (reconcile's answer when
   `changed`, else null): the whole backstop turn.
@@ -227,12 +226,12 @@ same steps.
    step 5. A backstop wake runs `scripts/pulse.sh --ledger <ledger> --fleet
    <fleet>` instead (the flags of step 5): `alive` true and `changed` false
    ends the turn there, nothing else read or posted; `alive` false starts the
-   watcher; `changed` true makes its `summary` the one step 5 acts on, with no
-   second reconcile.
-5. **Reconcile.** Reconcile first on every wake: `scripts/reconcile.sh
-   --ledger <ledger> --fleet <fleet>`. Do each action it prints (below), run
-   `scripts/status.sh --quota <file>` (Escalation format), then start the
-   watcher again while an entry is open.
+   watcher; `changed` true makes its `summary` the answer step 5 acts on.
+5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
+   ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
+   action it prints (Acting on the summary), run `scripts/status.sh --ledger
+   <ledger> --quota <file>` (Escalation format), then start the watcher again
+   while an entry is open.
 
 **No turn ends without a watcher running** while the ledger holds an open
 entry. A supervised thread finishing wakes nothing, and neither does its
@@ -258,7 +257,7 @@ parts and the re-brief form:
 
 ## Acting on the summary
 
-Reconcile prints what you owe as three lists, each row naming its call; a row
+Reconcile prints what you owe as three lists, each row naming its entry; a row
 stays in every answer until you clear its cause, so a wake that does nothing
 prints it again. Per-row steps:
 [reference/wake-actions.md](reference/wake-actions.md).
@@ -266,7 +265,8 @@ prints it again. Per-row steps:
 - `cleanup`: per row, settle its thread, `scripts/worktree.sh remove --ledger
   <ledger> <key>`, then `ledger.sh set <key> cleanup_owed false`.
 - `verify`: check the merged PR against the issue's acceptance criteria, then
-  `ledger.sh set <key> verify_owed false`; unmet, record a need first.
+  `ledger.sh set <key> verify_owed false`; unmet, record a need first. A
+  `merged` entry settles when its thread rests.
 - `escalate`: record one need per row with `ledger.sh need` (Escalation
   format), which silences it.
 
@@ -284,8 +284,7 @@ The other lists report:
 - `at_rest` with a merge-gate summary is no stall: an allowed merge needs
   nothing from you, and a hold outside the merge allowance and the standing
   waivers is an escalation.
-- `errors` need nothing beyond the entry's `escalate` row, and a `merged`
-  entry settles when its thread rests.
+- `errors` need nothing beyond the entry's `escalate` row.
 
 ## Escalation
 

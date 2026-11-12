@@ -53,6 +53,11 @@ $wl" $past
 out=$(R)
 check "the same rest past the window is at-rest" at-rest "$(stage 5)"
 check "and the run that completed is a stall at once" "$repo#5 1 run-completed" "$(stalled "$out")"
+# the window's edge, the clock taken from the test: $inside is 4070908800
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $inside
+check "one second inside the window it is still running" running "$(SA_NOW=4070908859 R --stall-window 60 >/dev/null; stage 5)"
+SA_NOW=4070908860 R --stall-window 60 >/dev/null
+check "at the window it is at-rest" at-rest "$(stage 5)"
 sa_thread t-5 idle 2 0 /wt/5 feat/x-5 "$wl is not my last line.
 Stopped." $inside
 check "a message that does not end on the waiting line is a rest" at-rest "$(R >/dev/null; stage 5)"

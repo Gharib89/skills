@@ -108,7 +108,7 @@ done
 sa_read "$ledger"
 # A batch is running while an entry is open: it began when the earliest of them launched.
 batch_since=$(jq -r "$sa_jq_open"'[.entries[] | select(is_open) | .launched_at] | min // empty' <<<"$doc")
-now_s=$(date -u +%s) now=$(date -u -d "@$now_s" +%Y-%m-%dT%H:%M:%SZ)
+now_s=$(sa_now_s) now=$(date -u -d "@$now_s" +%Y-%m-%dT%H:%M:%SZ)
 checked=0 entries='[]' errors='[]' stalled='[]'
 fail() { # <kind> <detail>: record the error of the entry in $key
   errors=$(jq -c --arg k "$key" --arg kind "$1" --argjson d "$2" '. + [{key: $k, kind: $kind, detail: $d}]' <<<"$errors")

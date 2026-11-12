@@ -40,13 +40,18 @@ sa_env_words() {
 # a bad test clock reads as the real one.
 sa_epoch() { case ${SA_NOW:-} in ''|*[!0-9]*) printf null ;; *) printf '%s' "$SA_NOW" ;; esac; }
 
+# sa_now_s: the epoch second now, or `SA_NOW` when it is a whole number, so a test
+# takes the clock and pins a window's edge.
+sa_now_s() { case ${SA_NOW:-} in ''|*[!0-9]*) date -u +%s ;; *) printf '%s' "$SA_NOW" ;; esac; }
+
 # sa_flag_value <usage> <value>: a flag's value may be neither empty nor dash-led,
 # or the next flag is read as the value.
 sa_flag_value() { case $2 in -*|'') sa_tooling "$1" ;; esac; }
 
 command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 
-# The stages an entry moves through, only ever by `reconcile`: `launched` is an
+# The stages an entry moves through, by `reconcile` alone (`ledger add` and
+# `rethread` only start one at `launched`): `launched` is an
 # entry nothing has observed yet; `merged` is a PR merged whose thread is still
 # running, watched until it rests; `settled` and `closed` end an entry and are
 # never watched again, except a settled `triage` entry, which `reconcile` re-reads

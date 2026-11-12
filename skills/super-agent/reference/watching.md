@@ -29,20 +29,15 @@ lists the fields; this file holds the rules behind them.
 
 ## The wake's actions
 
-- `reconcile` marks an entry `cleanup_owed` when it settles or closes, and a
-  ship entry `verify_owed` when it first reaches `merged` or `settled` with a
-  merged PR. `cleanup`, `verify` and `escalate` list them, in every answer,
-  until the super agent clears the field (`ledger set <key> cleanup_owed false`)
-  or, for `escalate`, records a need. An entry settled before these fields
-  existed has neither, so it prints no row.
-- `escalate` gives one row per entry, the first of: a permission request
-  (`permission-hold`), a recorded error (`fault`), 3 stalls at rest
-  (`stall-cap`), a closed PR or issue still owing its cleanup (`pr-closed`,
-  `issue-closed`).
-- `pulse.sh` runs reconcile and reads the watcher's lock: a backstop turn that
-  finds the watcher alive and nothing to act on ends there.
-- `ledger set` refuses `stage`: only reconcile moves it. `rethread` clears both
-  owed fields with the rest of the entry's state.
+`reconcile` marks an entry `cleanup_owed` when it settles or closes, and a ship
+entry `verify_owed` when it first reaches `merged` or `settled` with a merged
+PR (an entry settled before these fields existed has neither, so no row). Its
+`cleanup`, `verify` and `escalate` rows stay in every answer until the super
+agent clears the field or, for `escalate`, records a need:
+[wake-actions](wake-actions.md) holds each row's steps. `pulse.sh` runs
+reconcile and reads the watcher's lock. `ledger set` refuses `stage`: reconcile
+moves it, and `add` and `rethread` start it at `launched`; `rethread` clears
+both owed fields.
 
 ## Settling a triage entry
 

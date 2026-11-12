@@ -108,6 +108,13 @@ fixture
 R >/dev/null
 rm "$SA_FAKE/threads/t-5.json"
 check "an error row is a change" true "$(P | jq .changed)"
+L need "$repo#5" --action "refresh the thread read" >/dev/null
+check "an entry's error with its need recorded is not" false "$(P | jq .changed)"
+sa_issue $repo 30 open
+L wait "$repo#31" --reason r >/dev/null
+check "an error of a waiting row, which no entry carries, is" true "$(P | jq .changed)"
+rm -f "$led"
+check "a ledger that does not exist yet is quiet" false "$(P | jq .changed)"
 
 # --- a failing reconcile is relayed --------------------------------------------
 rm -f "$led"

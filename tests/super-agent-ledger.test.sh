@@ -83,7 +83,7 @@ check_rc "--allow with no call exits 2" 2 "$rc"
 # --- set: one field, never the stage -----------------------------------------------
 out=$(L set Gharib89/skills#6 stage '"running"' 2>/dev/null); rc=$?
 check_rc "set refuses stage, whatever the value, and exits 1" 1 "$rc"
-check "and says reconcile moves it" "stage is moved by reconcile only" "$(jq -r .error <<<"$out")"
+check "and says reconcile moves it" "stage is moved by reconcile only (add and rethread start it at launched)" "$(jq -r .error <<<"$out")"
 out=$(L set Gharib89/skills#6 stage '"asleep"' 2>/dev/null); rc=$?
 check_rc "a stage outside the list is refused the same way" 1 "$rc"
 check "the refused stage left the entry alone" launched "$(jq -r '.entries["Gharib89/skills#6"].stage' "$led")"
