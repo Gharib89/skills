@@ -169,6 +169,9 @@ sa_route "$issues" "$(jq -cn --arg l "$late" '[{number: 38, title: "full page", 
 out=$(R --fleet "$fleet")
 check "a full page of comments is an error, not an unclaimed issue" "0 $repo#38 claim-unreadable" \
   "$(jq -r '[(.unqueued | length), .errors[0].key, .errors[0].kind] | join(" ")' <<<"$out")"
+sa_route "$issues" "$(jq -cn --arg l "$late" '[range(100) | {number: (100 + .), title: "x", created_at: $l}]')"
+out=$(R --fleet "$fleet")
+check "a full page of issues all newer than the batch is an error, not the whole set" "$repo repo-unreadable" "$(jq -r '.errors[0] | "\(.key) \(.kind)"' <<<"$out")"
 rm -f "$SA_FAKE/gh/$(printf '%s' "$issues" | sed 's/[^A-Za-z0-9._-]/_/g')"
 out=$(R --fleet "$fleet")
 check "a repo whose issues cannot be read is an error" "$repo repo-unreadable" "$(jq -r '.errors[0] | "\(.key) \(.kind)"' <<<"$out")"

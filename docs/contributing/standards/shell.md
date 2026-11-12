@@ -91,8 +91,10 @@ exceptions bound these rules.
   arm, and use `jq -e` where the value decides the answer. Every instance is a
   silent pass: jq missing makes both sides of a comparison print nothing, and
   `cmp` of two empty outputs exits 0. The `read-verdict` gate
-  (`scripts/read-lint.sh verdict`) fails a `gh`, `t3`, `ffmpeg` or `nvidia-smi`
-  capture with no `||` or status check after it, and a bare
+  (`scripts/read-lint.sh verdict`) fails a `gh`, `api`, `t3`, `ffmpeg` or
+  `nvidia-smi` capture with no `|| exit` (or return) or status check after it
+  (not `jq`: a `jq -r` over data the script holds is no outside read), and a
+  bare
   `if jq -e ... <<<"$v"` over a capture never checked, unless a
   `# read-checked: <reason>` marker sits on a line of the statement or the
   comment line above it, the reason required.

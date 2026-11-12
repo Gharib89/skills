@@ -140,6 +140,13 @@ out=$(W --timeout 5)
 check "a check read that fails is pr-unreadable, not silence" "$repo#6 pr-unreadable" "$(jq -r '[.key, .event] | join(" ")' <<<"$out")"
 rm -f "$SA_FAKE/gh-fail"
 fixture
+sa_pr_head $repo feat/x-6 open sha6; sa_checks $repo sha6 "done"
+R "${remote_args[@]}" >/dev/null
+sa_pr_head $repo feat/x-7 none sha7
+sa_route "repos/$repo/commits/sha6/check-runs?per_page=100" "$(jq -cn '{total_count: 100, check_runs: [range(100) | {status: "completed"}]}')"
+out=$(W --timeout 5)
+check "a full page of check runs is pr-unreadable, not a verdict on the first page" "$repo#6 pr-unreadable" "$(jq -r '[.key, .event] | join(" ")' <<<"$out")"
+fixture
 sa_pr_head $repo feat/x-6 open sha6; sa_checks $repo sha6 pending
 sa_pr_head $repo feat/x-7 none sha7
 R "${remote_args[@]}" >/dev/null

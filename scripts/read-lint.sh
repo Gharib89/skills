@@ -11,9 +11,11 @@
 #   default files: every *.sh under skills/*/scripts
 #
 # verdict. A statement is one line, or the lines a trailing backslash joins.
-#  - A capture `v=$(gh|t3|ffmpeg|nvidia-smi ...)` fails with no `||`, not under
-#    `if`/`!`/`while`/`&&`, and no `$?`, `[ -n "$v" ]` or `! jq -e` read of it after. `jq` is
-#    not in that list: a `jq -r` over data the script already holds is not a
+#  - A capture `v=$(gh|api|t3|ffmpeg|nvidia-smi ...)` fails with no `|| exit`
+#    (or return, continue, fail, tooling), not under `if`/`!`/`while`, and no
+#    `$?`, `[ -n "$v" ]` or `! jq -e` read of it after. `api` is ship's wrapper
+#    over `gh api`. `|| v=''` is a deliberate answer, no bare capture, but a
+#    later bare `jq -e` over `v` still fails. `jq` is not in that list: a `jq -r` over data the script already holds is not a
 #    read of the outside (255 such sites); the `jq -e` form below covers it.
 #  - A bare `if jq -e ... <<<"$v"` (not negated) fails when `v` was last
 #    captured by `$(...)` with none of those checks and no earlier
@@ -70,8 +72,11 @@ for f in "$@"; do
         if (mode == "paging") {
           if (t !~ /per_page=/ || t ~ /--paginate/ || mt ~ /#[ \t]*paged:[ \t]*[^ \t]/) continue
           ok = 0
+          pp = t; sub(/^.*per_page=/, "", pp); sub(/[^0-9].*$/, "", pp)
+          rx = "length\\)?[ \t]*(==|<|>=)[ \t]*" pp "([^0-9]|$)"
+          if (pp != "" && t ~ rx) ok = 1
           for (i = endl[s] + 1; i <= endl[s] + 8 && i <= NR; i++)
-            if (raw[i] ~ /length\)?[ \t]*(==|<|>=)[ \t]*100/) ok = 1
+            if (pp != "" && raw[i] ~ rx) ok = 1
           if (!ok) printf "%s:%d: list read with per_page= and no --paginate or full-page refusal; page it, refuse a full page, or mark a newest-items read with a `# paged: <reason>` marker\n", FILENAME, ln[s]
           continue
         }
@@ -81,16 +86,20 @@ for f in "$@"; do
           a = substr(code, RSTART, RLENGTH); sub(/^[ \t;&|(]+/, "", a); sub(/^(local|declare|export)[ \t]+(-[A-Za-z]+[ \t]+)?/, "", a); sub(/=$/, "", a)
           rest = substr(code, RSTART + RLENGTH)
           if (rest ~ /^"?\$\(/) {
-            checked = (code ~ /\|\|/ || code ~ /^[ \t]*(if|elif|while|until|!)[ \t]/ || code ~ /&&/ || code ~ /\$\?/)
-            if (!checked && s < n && (st[s + 1] ~ /^[ \t]*(\[|\[\[|case|[A-Za-z_]*=)[^;]*\$\?/ || st[s + 1] ~ ("^[ \t]*(if|elif)[ \t]+![ \t]*jq[^<]*<<<[ \t]*\"?\\$\\{?" a "[^A-Za-z0-9_]") || st[s + 1] ~ ("^[ \t]*\\[\\[?[ \t]+-[nz][ \t]+\"?\\$\\{?" a "[^A-Za-z0-9_]"))) checked = 1
+            fallback = (code ~ /\|\|/ && code !~ /\|\|[ \t]*(exit|return|continue|break|fail|tooling|die|refuse|unavailable)([ \t;]|$)/)
+            checked = ((code ~ /\|\|/ && !fallback) || code ~ /^[ \t]*(if|elif|while|until|!)[ \t]/ || code ~ /\$\?/)
+            if (!checked && s < n && (st[s + 1] ~ /^[ \t]*(if[ \t]+)?(\[|\[\[|case|[A-Za-z_]*=)[^;]*\$\?/ || st[s + 1] ~ ("^[ \t]*(if|elif)[ \t]+![ \t]*jq[^<]*<<<[ \t]*\"?\\$\\{?" a "[^A-Za-z0-9_]") || st[s + 1] ~ ("^[ \t]*\\[\\[?[ \t]+-[nz][ \t]+\"?\\$\\{?" a "[^A-Za-z0-9_]"))) checked = 1
             state[a] = checked ? "checked" : "capture"
+            # A `|| v=` fallback answers a failed read on purpose, so it is no bare capture,
+            # but a later `jq -e` over it still needs the validation.
+            bare = !(fallback && !checked)
             inner = rest; sub(/^"?\$\([ \t]*/, "", inner)
             while (inner ~ /^(command|builtin|env)[ \t]/) sub(/^[a-z]+[ \t]+/, "", inner)
-            if (!checked && !marked && inner ~ /^(gh|t3|ffmpeg|nvidia-smi)([ \t)]|$)/)
+            if (!checked && bare && !marked && inner ~ /^(gh|api|t3|ffmpeg|nvidia-smi)([ \t)]|$)/)
               printf "%s:%d: bare capture of %s with no `||` or status check; check the exit status, or mark a read whose failure is the answer with a `# read-checked: <reason>` marker\n", FILENAME, ln[s], inner ~ /^gh/ ? "gh" : substr(inner, 1, index(inner, " ") ? index(inner, " ") - 1 : length(inner))
           } else state[a] = "other"
         }
-        if (code ~ /^[ \t]*(if|elif)[ \t]+!?[ \t]*jq[ \t]+(-[A-Za-z]*e[A-Za-z]*|-e)[ \t]/ && match(code, /<<<[ \t]*"?\$\{?[A-Za-z_][A-Za-z0-9_]*/)) {
+        if (code ~ /^[ \t]*(if|elif)[ \t]+!?[ \t]*jq[ \t]+(-[A-Za-z]+[ \t]+)*(-[A-Za-z]*e[A-Za-z]*|--exit-status)[ \t]/ && match(code, /<<<[ \t]*"?\$\{?[A-Za-z_][A-Za-z0-9_]*/)) {
           v = substr(code, RSTART, RLENGTH); sub(/^<<<[ \t]*"?\$\{?/, "", v)
           if (code ~ /^[ \t]*(if|elif)[ \t]+![ \t]*jq/) { if (state[v] == "capture") state[v] = "validated"; continue }
           if (state[v] == "capture" && !marked)

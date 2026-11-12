@@ -20,12 +20,29 @@ lint verdict "$fixture/v-bad-if.sh"
 check_rc "an if jq -e over an unchecked capture fails" 1 "$rc"
 case $out in *'v-bad-if.sh:2:'*"capture whose status was never checked"*) check "and names the line and the rule" 0 0 ;; *) check "and names the line and the rule" "line 2 and the rule" "$out" ;; esac
 
-w v-bad-bare.sh 'raw=$(gh api repos/o/r)
-echo "$raw"
-gpu=$(nvidia-smi --query-gpu=name --format=csv)'
-lint verdict "$fixture/v-bad-bare.sh"
-check_rc "a bare capture of gh and of nvidia-smi fails" 1 "$rc"
-check "and flags both" 2 "$(grep -c 'bare capture' <<<"$out")"
+for tool in 'gh api repos/o/r' 'api "$R/issues"' 'nvidia-smi -L' 't3 thread list' 'ffmpeg -i a.mp4' 'gh api repos/o/r && echo got'; do
+  w v-bad-bare.sh "raw=\$($tool)
+echo \"\$raw\""
+  lint verdict "$fixture/v-bad-bare.sh"
+  check_rc "a bare capture of '$tool' fails" 1 "$rc"
+done
+w v-bad-fallback.sh 'a=$(gh api repos/o/r) || a=""
+if jq -e ".open" <<<"$a" >/dev/null; then echo open; fi'
+lint verdict "$fixture/v-bad-fallback.sh"
+check_rc "a || fallback does not validate a later bare jq -e" 1 "$rc"
+w v-bad-flags.sh 'a=$(gh api repos/o/r) || a=""
+if jq -c -e ".open" <<<"$a" >/dev/null; then echo open; fi'
+lint verdict "$fixture/v-bad-flags.sh"
+check_rc "jq -c -e is read as jq -e" 1 "$rc"
+w v-decoy.sh 'a=$(gh api repos/o/r) || a=""
+[ -n "$a" ] || exit 2
+b=$(gh api repos/o/r); if [ $? -ne 0 ]; then exit 2; fi
+c=$(gh api repos/o/r)
+if [ $? -ne 0 ]; then exit 2; fi
+d=$(jq -r ".a || .b" <<<"$a")
+printf "%s\n" "$a" "$b" "$c" "$d"'
+lint verdict "$fixture/v-decoy.sh"
+check_rc "|| and ? inside a filter, an if on \$?, and an -n test are no violation" 0 "$rc"
 
 w v-ok.sh 'x=$(gh api repos/o/r) || exit 2
 if jq -e ".a" <<<"$x" >/dev/null; then echo a; fi
@@ -75,6 +92,15 @@ done'
 lint paging "$fixture/p-ok.sh"
 check_rc "paginated, full-page-refusing and marked reads pass" 0 "$rc"
 check "with no output" "" "$out"
+
+w p-bad-size.sh 'gh api "repos/o/r/issues?per_page=50" --jq ".[]"
+x=1; if [ "${#y}" -lt 3 ]; then echo "$x" | jq "length < 100"; fi'
+lint paging "$fixture/p-bad-size.sh"
+check_rc "a full-page test for another size does not clear the read" 1 "$rc"
+w p-decoy.sh 'gh api "repos/o/r/issues?per_page=100" --jq "if length == 100 then error(\"full\") else . end"
+# per_page=100 in a comment is no read'
+lint paging "$fixture/p-decoy.sh"
+check_rc "a refusal inside the statement clears it, and a comment is no read" 0 "$rc"
 
 w p-noreason.sh 'gh api "repos/o/r/issues?per_page=20" # paged:'
 lint paging "$fixture/p-noreason.sh"
