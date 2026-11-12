@@ -25,9 +25,8 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See
 `source` saying where the skill lives. A `source: "."` entry is a skill this
 repo writes: its source is `skills/<name>/`, and `.claude/skills/<name>/` is its
 derived copy, refreshed from it. Every other entry is installed from the
-upstream its `source` names, at the lock's `ref` (the skills ship composes come
-from `mattpocock/skills`, `upstash/context7` and `humanlayer/skills`), and lives
-only under `.claude/skills/`. The `hyperframes` and `hyperframes-cli` entries
+upstream its `source` names, at the lock's `ref`, and lives only under
+`.claude/skills/`. The `hyperframes` and `hyperframes-cli` entries
 (`heygen-com/hyperframes`) are maintainer aids for building explainer-video
 components; `creative-video` composes `hyperframes` and `media-use` from the
 same upstream at the same ref. Adding a skill this repo writes touches the
@@ -42,16 +41,17 @@ npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill up
 ```
 
 **A change to `skills/<name>/` is not finished until the refresh line has run
-and both trees are in the same commit.** `.claude/skills/` is what actually
-executes, so an unrefreshed change means the run is exercising the previous
-version. Run the refresh at the end of the implementation phase, before the
+and both trees are in the same commit.** `.claude/skills/` is the copy a session
+here executes, unless a personal skill of the same name in `~/.claude/skills/`
+shadows it (a personal skill wins over a project skill), so an unrefreshed
+change means the run is exercising the previous version. Run the refresh at the
+end of the implementation phase, before the
 self-review: the run's remaining phases then invoke the new mechanics. Changed
 `SKILL.md` prose does not take effect in the run, because the run loaded it at
 its start. Ship's own prose is proven by the
 `ship-live-run` Verification in `docs/agents/ship.md`, which drives the
 worktree's Ship on a fixture repo; any other skill's prose is proven by its
-next run. The `derived-copies` check in `scripts/check.sh full`, which
-CI's `check-full` leg runs on every PR head, fails when the two trees differ.
+next run.
 
 ### Harness
 
