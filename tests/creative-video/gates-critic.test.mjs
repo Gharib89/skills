@@ -142,9 +142,13 @@ test("a fix re-judges only the changed scene in round 2, and a red second round 
   );
   assert.equal(record(fx).attempts, 3);
   // A fix after the stop is not judged: no third round is requested.
-  compose(fx, "context", "<p>what the narration says</p>");
+  compose(fx, "context", "<p>a later fix</p>");
   r = raw(fx);
   assert.doesNotMatch(r.out, /pending|run the critic/);
+  assert.match(
+    gateLine(r, "critic"),
+    /round 2 of 2, carried: no third round, a fix made after round 2 was never judged vs /,
+  );
   assert.equal(record(fx).gates.critic.rounds.length, 2);
 });
 
