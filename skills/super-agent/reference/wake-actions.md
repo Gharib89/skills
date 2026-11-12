@@ -19,10 +19,11 @@ the super agent clears the field or records a need
 An entry ended and its thread and worktree are yours to close. Per row:
 
 1. Settle the thread with `t3_thread_organize` action `settle` on its `thread`
-   (and `environment_id`). Of kind `task`, first read its last message in a
-   small slice and say its outcome in one chat line. Of kind `triage`, first
-   confirm the issue now carries a ready label or the owner skill's other
-   outcome; with none, record a need naming the gap and go on.
+   (and `environment_id`), unless it already reads `settled`. Of kind `task`,
+   first read its last message in a small slice and say its outcome in one chat
+   line. Of kind `triage`, first confirm the issue now carries a ready label or
+   the owner skill's other outcome; with none, record a need naming the gap and
+   go on.
 2. Settle the threads the entry's thread started (its helper and review
    threads): `t3_thread_list` with `includeSubagents` and the entry's
    `environment_id`, each row whose `parentThreadId` is the entry's thread.

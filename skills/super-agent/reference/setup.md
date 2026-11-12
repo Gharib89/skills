@@ -103,7 +103,7 @@ Each is optional: a fleet file without it keeps the default.
   merge-gate hold outside the merge allowance and the standing waivers. Any
   other value is a tooling error from `brief.sh`. The launch brief says which
   ([launch-brief](launch-brief.md)).
-- `notify`: `{"command", "delay"}`, the alarm that runs when the watcher exited
+- `notify`: `{command, delay}`, the alarm that runs when the watcher exited
   on an event and no reconcile followed within the delay
   ([watching](watching.md#the-notify-command) has its shape).
 - `repos.<owner/name>.machine`: pins the repo to one machine key
