@@ -15,9 +15,9 @@
 # which Claude Code swaps it for a file path, and one line on stdout, with the
 # failing checks' names when check.sh reports them. A Stop hook that exits 2
 # with empty stdout and a stderr naming a missing file is non-blocking
-# (measured, #1189), and a failing test's tail often names a missing file. A check that is unavailable
-# (exit 2) or over budget (exit 3) never blocks: it is a systemMessage to the
-# human, and the next rung still catches defects.
+# (measured, #1189), and a failing test's tail often names a missing file. A
+# check that is unavailable (exit 2) or over budget (exit 3) never blocks: it
+# is a systemMessage to the human, and the next rung still catches defects.
 #
 # Bash 3.2 and no jq. The budgets below are written from the harness profile's
 # `## Budgets`; each hook entry's `timeout` in .claude/settings.json is the
