@@ -47,7 +47,7 @@ A scene's three stills the gates judge before the full render: in (0.3 s after i
 _Avoid_: thumbnails, review frames
 
 **Sound palette**:
-The effects a creative video uses, one per kind of story event it marks (a wrong answer, a door opening), fixed in the format kit with each sound's source and licence, so the same event sounds the same in every chapter.
+The effects a creative video uses, one per kind of story event it marks (a wrong answer, a door opening), fixed in the format kit with each sound's source, licence and `gain`, so the same event sounds the same, and as loud, in every chapter.
 _Avoid_: SFX library, sound cues (the kit's whole sound, bed included)
 
 **Staging**:

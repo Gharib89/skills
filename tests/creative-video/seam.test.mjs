@@ -47,13 +47,6 @@ test("a last 50 ms more than 3 dB off the first fails the seam, which a loop wou
 
 test("a file silent at both ends has no level to differ by, and one silent at one end is not clean", () => {
   const quiet = (s, from, to) => s.fill(0, from, to);
-  assert.deepEqual(
-    seam(
-      tone((s) => quiet(s, 0, 400)),
-      RATE,
-    ).level === null,
-    false,
-  );
   const both = tone((s) => {
     quiet(s, 0, 400);
     quiet(s, s.length - 400);
@@ -68,4 +61,10 @@ test("a file silent at both ends has no level to differ by, and one silent at on
     ).clean,
     false,
   );
+});
+
+test("a file shorter than two spans has no seam to measure and is not clean", () => {
+  const r = seam(new Float32Array(10), RATE);
+  assert.equal(r.clean, false);
+  assert.equal(seam(new Float32Array(0), RATE).clean, false);
 });

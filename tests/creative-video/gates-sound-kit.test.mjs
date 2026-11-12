@@ -287,5 +287,9 @@ test("an effect's margin is the voice's loudness in its 3 s window less the effe
     evidence: [],
     measured: "no effect plays where the voice does",
   });
+  // A data-volume that is no number would pass as NaN: it is a finding.
+  assert.deepEqual((await judge(NaN)).evidence, [
+    'one: <audio id="d"> has a data-volume that is not a number: set it to a number from 0 to 1',
+  ]);
   fs.rmSync(proj, { recursive: true });
 });

@@ -218,6 +218,9 @@ async function voice(group, ctc) {
 // `own`, a scene's aligned spoken words, as its written words: each one's
 // spoken words timed as one.
 function merge(own, { written, counts }) {
+  // An alignment that is not one word per spoken word is QC's to fail, as it
+  // is for a scene with no spelled word.
+  if (own.length !== counts.reduce((a, b) => a + b, 0)) return own;
   let at = 0;
   return written.map((text, i) => {
     const spoken = own.slice(at, (at += counts[i]));

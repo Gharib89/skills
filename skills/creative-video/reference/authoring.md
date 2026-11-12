@@ -217,18 +217,17 @@ sci-fi large space engine, so a bed query needs engine, space or spaceship.
 A music bed comes from Openverse: query the genre and `loop` (`lofi loop`,
 `calm loop`). The stage measures the loop seam of up to five CC0 results
 (the sample jump at the join against the file's own steps, and the level
-either side of it) and takes the first that is clean, so a bed never clicks or
-pumps when it repeats; with none clean the bed is dropped with the count tried.
-It
-copies what it finds into `project/assets/sounds/` and writes the sound's
-`file`, `source`, `licence`, `creator`, `url` and `attribution` into
-`sound.json`. A sound its query found before, on any run, is copied again with
-no search. It prints `sound <event>: openverse <id> | kenney <pack>/<file> |
-cached | dropped: <why>` per sound. A sound found nowhere moves to
-`sound.json`'s `dropped` list with its reason, and prints `warn dropped sound:
-<event>: <why>`. To swap a found sound, change its `query` and run again. To
-retry a dropped one, put it back under `bed` or `palette` with its `query`, or
-a new one, and run again: this run's outcome replaces its `dropped` entry. Or
+either side of it) and takes the first that is clean, so a bed does not click
+or pump at the join when it repeats; with none clean the bed is dropped with
+the count tried. The stage copies what it finds into `project/assets/sounds/`
+and writes the sound's `file`, `source`, `licence`, `creator`, `url` and
+`attribution` into `sound.json`. A sound its query found before, on any run, is
+copied again with no search. It prints `sound <event>: openverse <id> | kenney
+<pack>/<file> | cached | dropped: <why>` per sound. A sound found nowhere moves
+to `sound.json`'s `dropped` list with its reason, and prints `warn dropped
+sound: <event>: <why>`. To swap a found sound, change its `query` and run again.
+To retry a dropped one, put it back under `bed` or `palette` with its `query`,
+or a new one, and run again: this run's outcome replaces its `dropped` entry. Or
 stage the moment without it. Never edit the fields it writes.
 
 The root plays the bed: every stage that writes `index.html` adds it after the

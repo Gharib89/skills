@@ -43,7 +43,8 @@ export async function pcm(file, rate = 22050) {
     "ffmpeg",
     [
       ...["-v", "error", "-i", file, "-vn", "-ac", "1", "-ar", String(rate)],
-    ].concat(["-f", "f32le", "-"]),
+      ...["-f", "f32le", "-"],
+    ],
     { maxBuffer: 1 << 30 },
   );
   if (r.status !== 0)

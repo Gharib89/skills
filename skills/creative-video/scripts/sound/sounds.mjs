@@ -141,13 +141,20 @@ async function fromOpenverse(query, medium) {
       r = c;
       break;
     }
-    const { samples, rate } = await backend.pcm(file);
-    if (seam(samples, rate).clean) {
+    let clean = false;
+    try {
+      const { samples, rate } = await backend.pcm(file);
+      clean = seam(samples, rate).clean;
+    } catch (e) {
+      failed = `openverse bed could not be decoded (${e.message})`;
+    }
+    if (clean) {
       r = c;
       break;
     }
     fs.rmSync(file, { force: true });
-    failed = `openverse found no result whose loop seam is clean (tried ${usable.slice(0, SEAMS).length})`;
+    if (!failed?.includes("decoded"))
+      failed = `openverse found no result whose loop seam is clean (tried ${usable.slice(0, SEAMS).length})`;
   }
   if (!r) return failed;
   const name = `${r.id}.${ext(r)}`;
