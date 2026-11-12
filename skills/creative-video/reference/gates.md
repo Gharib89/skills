@@ -21,7 +21,10 @@ scene 0.3 s in, at its middle and on its last frame, and prints one `gate
 failing one indented under it. Each is a hard fail:
 
 - `determinism`: the same frames in two separate launches. A clock or a random
-  draw in a scene makes them differ.
+  draw in a scene makes them differ. A frame that differs is re-checked once
+  before it fails: that one time alone in two fresh launches, and it is a
+  finding only if those two differ too, since a launch of many times can differ
+  on a scene's last frame where the frame alone never does.
 - `layout`: no HyperFrames layout error, and no clipped or overlapping text in
   any one sample frame (HyperFrames grades those info, the gate fails them), no
   readable text under 18 px or outside a margin of 5% of each side. In an

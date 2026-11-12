@@ -13,7 +13,8 @@
 // verdicts and <run>/project/. Samples each scene 0.3 s in, at its middle and
 // on its last frame (gates/samples.mjs), and measures the samples with
 // HyperFrames' check, a text probe (one launch, over the samples and a 0.25 s
-// grid) and two snapshot launches. Thirteen gates judge the project, each a hard
+// grid) and two snapshot launches, each frame that differs between them taken
+// again alone in two more (gates/determinism.mjs). Thirteen gates judge the project, each a hard
 // fail: determinism (the same pixels twice), layout, contrast, reading time,
 // the caption band, anchors (an at() naming a word the narration lacks),
 // script errors (a scene's script that throws), sounds (each <audio> renders
@@ -40,7 +41,7 @@
 // writes: <run>/gates.json, not on a check run (the inputs and voice it is of,
 //         the attempts, each gate's status, measured, floor and evidence, the
 //         warnings); on every run, a check run too, .cache/gates/frames/a and
-//         b, the critic's stills under .cache/critic/<key>, and the root again
+//         b, and recheck-<i>-<n> for a frame that differed, the critic's stills under .cache/critic/<key>, and the root again
 //         (render/root.mjs)
 // exit:   0 every gate passes · 1 a gate fails or the critic is pending, or
 //         `gates: <why>` on stderr (the render's own refusals: no timeline, an
@@ -64,6 +65,7 @@ import {
 import { HEIGHT, WIDTH, writeRoot } from "../render/root.mjs";
 import { inputsHash } from "./inputs.mjs";
 import { criticGate } from "./critic.mjs";
+import { determinismFindings } from "./determinism.mjs";
 import { joinsFindings } from "./joins.mjs";
 import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
@@ -148,11 +150,11 @@ fs.rmSync(path.join(run, ".cache", "gates", "frames"), {
   recursive: true,
   force: true,
 });
-const launch = (d) =>
+const launch = (d, times) =>
   orFail(async () => {
     const taken = await backend.snapshot(
       proj,
-      sampled,
+      times,
       path.resolve(run, ".cache", "gates", "frames", d),
       { env },
     );
@@ -164,15 +166,11 @@ const launch = (d) =>
       ]),
     );
   });
-const [a, b] = [await launch("a"), await launch("b")];
-if (a.length !== sampled.length || b.length !== sampled.length)
-  fail(`snapshot gave ${a.length} and ${b.length} of ${sampled.length} frames`);
-const determinism = a.flatMap(([t, pixels], i) =>
-  pixels === b[i][1]
-    ? []
-    : [
-        `${t.toFixed(2)} s ${sceneAt(t)}: the frame differs between two launches`,
-      ],
+const { findings: determinism, first: a } = await determinismFindings(
+  launch,
+  sampled,
+  sceneAt,
+  fail,
 );
 
 // One defect held across several samples is one finding: its first time, and
