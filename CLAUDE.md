@@ -55,19 +55,13 @@ by its next run.
 
 ### Harness
 
-`scripts/check.sh` is this repo's check entry point: `edit <file>...` lints and
-formats (ShellCheck on scripts; actionlint, zizmor and Prettier on workflows;
-Prettier on JavaScript); `turn` typechecks and runs the affected tests of every
-uncommitted change; and `full` answers for the whole repo: the runner on every
-file first, then `tests/run.sh` and the repo's own checks that need no base, all
-at once, so it costs the runner plus its longest row. A probe of the check
-contract uses a throwaway repo from the template with stub `FULL_ROWS`. It
-prints one JSON line and exits 0 pass, 1 fail, 2 unavailable, 3 over budget.
-Hooks in `.claude/settings.json` run `edit` after every Edit or Write and `turn`
-at every stop, and the pre-commit runner is the commit rung, which also runs the
-house-style check on Markdown. Harness profile: `docs/agents/harness.md`. Re-run
-`/setup-harness` after adding a stack, a member or a tool. Ship's gate,
-`scripts/local-gate.sh`, runs only `secrets` and `version-lines`, which need a
-base ref, and reports every `full` check `deferred-to-ci`: CI's `check-full`
-runs `full` on the PR head. Ship's phase 5 runs that gate inline; outside
-Ship, `full` can run in the background.
+`scripts/check.sh` is this repo's check entry point, with rungs
+`edit <file>...`, `turn` and `full`: its header says what each runs and what it
+prints. Hooks in
+`.claude/settings.json` run `edit` after every Edit or Write and `turn` at every
+stop, and the pre-commit runner is the commit rung. Harness profile:
+`docs/agents/harness.md`. Re-run `/setup-harness` after adding a stack, a member
+or a tool. Ship's gate, `scripts/local-gate.sh`, runs only `secrets` and
+`version-lines`, which need a base ref, and reports every `full` check
+`deferred-to-ci`: CI's `check-full` runs `full` on the PR head. Ship's phase 5
+runs that gate inline; outside Ship, `full` can run in the background.
