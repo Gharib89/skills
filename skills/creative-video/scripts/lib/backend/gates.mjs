@@ -320,10 +320,11 @@ function overPaints() {
 }
 
 // Runs in the page: each scene's tween windows, in the scene's own seconds, and
-// its sounds as `{ id, start, authored, src }` (gates/sounds.mjs): the live
-// data-start, the data-start its scene file gives the <audio> with that id
-// before any script runs, null where the file has none, and the file it plays,
-// which the licence gate looks up in the sound kit.
+// its sounds as `{ id, start, authored, src, volume }` (gates/sounds.mjs): the
+// live data-start, the data-start its scene file gives the <audio> with that id
+// before any script runs, null where the file has none, the file it plays,
+// which the licence gate looks up in the sound kit, and its data-volume (1
+// where it has none), which the effect level gate moves the file's loudness by.
 async function sceneEvents() {
   const r3 = (n) => Math.round(n * 1000) / 1000;
   const out = {};
@@ -375,6 +376,7 @@ async function sceneEvents() {
           start: r3(+a.dataset.start),
           authored: written,
           src: a.getAttribute("src"),
+          volume: +(a.dataset.volume ?? 1),
         };
       }),
     };

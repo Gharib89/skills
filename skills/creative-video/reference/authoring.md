@@ -188,14 +188,16 @@ Write `project/kit/sound.json` with the kit, before any scene:
 
 ```json
 {
-  "bed": {"query": "kitchen ambience", "level": -28, "out": ["hardest-step"]},
+  "bed": {"query": "lofi loop", "level": -12, "out": ["hardest-step"]},
   "palette": [{"event": "ticket", "query": "bell ding"}]
 }
 ```
 
 `bed` is the low sound under the whole video: `query` the words to search
 for, `level` its gain in dB, `out` the ids of the scenes it drops out for. Each
-`palette` entry is one sound and the story event it marks. Then:
+`palette` entry is one sound and the story event it marks, `gain` its volume
+in dB (`-18` where it has none: found sounds measure -12 to -29 LUFS looped,
+against a narration near -22). Then:
 
 ```
 node <skill>/scripts/sound/sounds.mjs <run>
@@ -211,24 +213,40 @@ the two or three words a clip's title or tags carry (`bell ding`, `radio
 squelch`): the stage passes over every Openverse result that lacks any one
 word. The packs hold UI, casino, RPG, sci-fi and synth effects and short music
 stings; a bed comes only from the one stem whose loop seam measures clean, the
-sci-fi large space engine, so a bed query needs engine, space or spaceship. It
-copies what it finds into `project/assets/sounds/` and writes the sound's
-`file`, `source`, `licence`, `creator`, `url` and `attribution` into
-`sound.json`. A sound its query found before, on any run, is copied again with
-no search. It prints `sound <event>: openverse <id> | kenney <pack>/<file> |
-cached | dropped: <why>` per sound. A sound found nowhere moves to
-`sound.json`'s `dropped` list with its reason, and prints `warn dropped sound:
-<event>: <why>`. To swap a found sound, change its `query` and run again. To
-retry a dropped one, put it back under `bed` or `palette` with its `query`, or
-a new one, and run again: this run's outcome replaces its `dropped` entry. Or
-stage the moment without it. Never edit the fields it writes.
+sci-fi large space engine, so a bed query needs engine, space or spaceship.
+A music bed comes from Openverse: query the genre and `loop` (`lofi loop`,
+`calm loop`). The stage measures the loop seam of up to five CC0 results
+(the sample jump at the join against the file's own steps, and the level
+either side of it) and takes the first that is clean, so a bed does not click
+or pump at the join when it repeats; with none clean the bed is dropped with
+each outcome counted (unclean, undecodable, not downloaded). The stage copies
+what it finds into `project/assets/sounds/` and writes the sound's `file`,
+`source`, `licence`, `creator`, `url` and `attribution` into `sound.json`. A
+sound its query found before, on any run, is copied again with no search. It
+prints `sound <event>: openverse <id> | kenney <pack>/<file> | cached | dropped:
+<why>` per sound. A sound found nowhere moves to `sound.json`'s `dropped` list
+with its reason, and prints `warn dropped sound: <event>: <why>`. To swap a
+found sound, change its `query` and run again. To retry a dropped one, put it
+back under `bed` or `palette` with its `query`, or a new one, and run again:
+this run's outcome replaces its `dropped` entry. Or stage the moment without it.
+Never edit the fields it writes.
 
 The root plays the bed: every stage that writes `index.html` adds it after the
 narration as `<audio id="bed">`, looped over the whole video at its `level`,
 with a volume lane (`data-automation`) that ducks it to 0.35 while words play
 and silences it across each `out` scene, each change a 0.2 s ramp. A palette
 sound plays where a scene places it, by its `file`
-([Scenes on word times](#scenes-on-word-times)).
+([Scenes on word times](#scenes-on-word-times)), at the volume its `gain`
+gives: set `data-volume` on it to `10 ** (gain / 20)`
+(`ding.dataset.volume = 10 ** (-18 / 20)`), since an `<audio>` with none plays
+at full volume, which for found sounds is from 6 LU under the voice to about
+10 LU over it. The `effect level` gate fails
+one under 6 LU below the voice where it plays and names the volume that passes.
+
+Set the bed's `level` so the `bed level` gate passes: its closest 3 s window
+15 to 20 LU under the voice. Under 15 LU it covers the words, over 20 LU it
+cannot be heard. A bed that measures about -19 LUFS under a -22 LUFS narration
+sits in the band at a `level` near -12.
 
 ## The pinned CLI
 

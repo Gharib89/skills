@@ -28,10 +28,9 @@ in `<skill>/narrators.json` (`af_heart` for `en`, `ar-eg-csagent-2` for `ar`).
 Narration is the **spoken form**: write numbers, dates and symbols out as words
 ("forty two", not "42"), because QC compares the text against what the aligner
 hears: a numeral's spoken words match nothing in the text and cost precision.
-In Egyptian Arabic narration, keep English terms in Latin letters (`pull
-request`); QC spells them in Arabic letters as a speaker says them. An acronym
-of more than four capitals QC reads as a word: write it as its letters' names
-in Arabic.
+An acronym or command name in English narration is said as its letters, and an
+English term in Arabic narration is respelled: see
+[pronounce.md](pronounce.md).
 
 `roles` is optional: one role per sentence, like `cites`. `null`, or no `roles`
 at all, means `narrator`. Any other role needs `project/kit/cast.json`: per

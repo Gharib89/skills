@@ -4,6 +4,10 @@
 //                                  order, the last repeated: `"timeout"`
 //                                  throws as the real search does, a list is
 //                                  its results; a query not named finds none
+//   CREATIVE_VIDEO_FAKE_SEAM       JSON: a file's loop seam by its name, `click`
+//                                  (a jump at the join), `fade` (a quiet
+//                                  end) or `undecodable` (ffmpeg fails); any
+//                                  other file loops clean
 //   CREATIVE_VIDEO_FAKE_LOUD       JSON: a file's short-term loudness (LUFS) by
 //                                  its name, else narration.wav -16, any
 //                                  other file -20
@@ -50,4 +54,23 @@ export async function shortTerm(file, seconds) {
   for (let i = 1; i <= Math.round(seconds * 10); i++)
     out.push([+(i / 10).toFixed(3), lufs]);
   return out;
+}
+
+// A tone of whole cycles, so its join is clean; `click` leaves a half-cycle
+// jump at it and `fade` a last tenth at a fifth of the level.
+export async function pcm(file) {
+  const name = path.basename(file);
+  log({ call: "pcm", file: name });
+  const rate = 8000;
+  const samples = Float32Array.from(
+    { length: rate },
+    (_, i) => 0.5 * Math.sin((2 * Math.PI * 200 * i) / rate),
+  );
+  const seam = JSON.parse(process.env.CREATIVE_VIDEO_FAKE_SEAM ?? "{}")[name];
+  if (seam === "undecodable") throw new Error(`ffmpeg ${name}: invalid data`);
+  if (seam === "click")
+    for (let i = 0; i < 40; i++) samples[samples.length - 1 - i] += 0.4;
+  if (seam === "fade")
+    for (let i = rate - 400; i < rate; i++) samples[i] *= 0.2;
+  return { samples, rate };
 }

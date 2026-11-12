@@ -11,7 +11,8 @@
 // narration is voiced at once, otherwise each uncached scene alone: one
 // synthesis call per run of consecutive sentences one role speaks, the calls
 // joined in order, aligned once and split per scene at the aligner's word
-// times. A scene failing voice QC is not cached. Once every scene passes,
+// times. A script's acronyms and command names are sent as their spoken form
+// (lib/pronounce.mjs). A scene failing voice QC is not cached. Once every scene passes,
 // with <run>/brief.json, the voiced scenes and the render's closing hold must
 // land within 10 percent of the brief's `length`.
 // stdout: one line per scene, `voice <id>: voiced|cached · recall · precision ·
@@ -37,6 +38,7 @@ import { maybeJson, readJson } from "../lib/json.mjs";
 import { CAST, rolesOf, voices, voicesOf } from "../lib/kit.mjs";
 import { HOLD, fitsLength } from "../lib/length.mjs";
 import { narrator as findNarrator } from "../lib/narrators.mjs";
+import { wordSpeaker } from "../lib/pronounce.mjs";
 import { writeIgnore } from "../lib/runfolder.mjs";
 import { stage } from "../lib/stage.mjs";
 import { catalogue, loadBackend, toolPaths } from "../lib/tools.mjs";
@@ -62,6 +64,9 @@ const script = readJson(run, "script.json");
 const brief = maybeJson(run, "brief.json");
 writeIgnore(run);
 const { language } = script;
+// Each written word as the narrator is sent it (lib/pronounce.mjs); read before
+// any synthesis, so a malformed map costs no voicing.
+const say = wordSpeaker(run, language);
 // Each role's narrator, the narrator role's first.
 const cast = voices(run, script);
 const narrator = cast.narrator;
@@ -102,9 +107,16 @@ const runsOf = (sentences) =>
     return runs;
   }, []);
 const scenes = script.scenes.map((s) => {
-  const text = s.narration.join(" ");
+  // What the narrator is sent, QC compares and the cache keys on is the spoken
+  // form; voice.json keeps the written words, each timed over its spoken ones.
+  const written = s.narration.join(" ").split(/\s+/);
+  const counts = written.map((w) => say(w).split(/\s+/).length);
   const roles = rolesOf(s);
-  const sentences = s.narration.map((t, i) => ({ role: roles[i], text: t }));
+  const sentences = s.narration.map((t, i) => ({
+    role: roles[i],
+    text: t.replace(/\S+/g, say),
+  }));
+  const text = sentences.map((x) => x.text).join(" ");
   const runs = runsOf(sentences).map((r) => ({ ...r, n: cast[r.role] }));
   // A scene one voice speaks in its narrators.json style keys as it did before
   // the cast, so a cache voiced then stays a hit.
@@ -130,6 +142,8 @@ const scenes = script.scenes.map((s) => {
     id: s.id,
     text,
     words: text.split(/\s+/),
+    written,
+    counts,
     roles,
     sentences,
     key,
@@ -190,7 +204,7 @@ async function voice(group, ctc) {
       scene: s,
       samples: samples.subarray(from, to),
       sampleRate,
-      words: own.map((w) => ({
+      words: merge(own, s).map((w) => ({
         text: w.text,
         start: +(w.start - start).toFixed(3),
         end: +(w.end - start).toFixed(3),
@@ -198,6 +212,19 @@ async function voice(group, ctc) {
       heard,
       qc: check(s.text, heard, own.at(-1).end - own[0].start, language),
     };
+  });
+}
+
+// `own`, a scene's aligned spoken words, as its written words: each one's
+// spoken words timed as one.
+function merge(own, { written, counts }) {
+  // An alignment that is not one word per spoken word is QC's to fail, as it
+  // is for a scene with no spelled word.
+  if (own.length !== counts.reduce((a, b) => a + b, 0)) return own;
+  let at = 0;
+  return written.map((text, i) => {
+    const spoken = own.slice(at, (at += counts[i]));
+    return { text, start: spoken[0].start, end: spoken.at(-1).end };
   });
 }
 

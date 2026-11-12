@@ -24,7 +24,7 @@ test("a red run is attempt 1 of 2, the same inputs judged again add none, and ch
   const fx = timed({ context: RED });
   let r = runGates(fx);
   assert.equal(r.code, 1);
-  assert.match(r.out, /^gates: 12 pass, 1 fail; next: fix attempt 1 of 2$/m);
+  assert.match(r.out, /^gates: 13 pass, 1 fail; next: fix attempt 1 of 2$/m);
   assert.equal(record(fx).attempts, 1);
   r = runGates(fx);
   assert.match(r.out, /; next: fix attempt 1 of 2$/m);
@@ -37,7 +37,7 @@ test("a red run is attempt 1 of 2, the same inputs judged again add none, and ch
   assert.equal(r.code, 1);
   assert.match(
     r.out,
-    /^gates: 12 pass, 1 fail; stop: red after two fix attempts, no video$/m,
+    /^gates: 13 pass, 1 fail; stop: red after two fix attempts, no video$/m,
   );
   assert.equal(record(fx).attempts, 3);
 });
@@ -66,7 +66,7 @@ test("a pass resets the count, and so does a new voice, but not a script.json ed
   compose(fx, "context", GREEN);
   const ok = runGates(fx);
   assert.equal(ok.code, 0, ok.out);
-  assert.match(ok.out, /^gates: 13 pass, 0 fail$/m);
+  assert.match(ok.out, /^gates: 14 pass, 0 fail$/m);
   assert.equal(record(fx).attempts, 0);
 });
 
@@ -78,10 +78,10 @@ test("a check run on changed inputs prints every gate and the summary but writes
   compose(fx, "context", "<p>another clipped line</p>");
   const r = runGates(fx, {}, { check: true });
   assert.equal(r.code, 1);
-  assert.equal(r.out.match(/^gate [a-z ]+: (pass|fail): /gm).length, 13, r.out);
+  assert.equal(r.out.match(/^gate [a-z ]+: (pass|fail): /gm).length, 14, r.out);
   assert.match(
     r.out,
-    /^gates: 12 pass, 1 fail; check run: gates\.json not written$/m,
+    /^gates: 13 pass, 1 fail; check run: gates\.json not written$/m,
   );
   assert.equal(fs.readFileSync(file, "utf8"), before);
   assert.match(runGates(fx).out, /; next: fix attempt 2 of 2$/m);
@@ -92,7 +92,7 @@ test("a red check run with the critic pending asks for no critic: the failing ga
   const r = runGates(fx, {}, { check: true, critic: false });
   assert.match(
     r.out,
-    /^gates: 11 pass, 1 fail, 1 pending; check run: gates\.json not written$/m,
+    /^gates: 12 pass, 1 fail, 1 pending; check run: gates\.json not written$/m,
   );
 });
 
@@ -113,6 +113,7 @@ test("gates.json records the inputs, the voice, each gate's verdict with its evi
     "sounds",
     "licence",
     "bed level",
+    "effect level",
     "must and avoid",
     "support",
     "critic",

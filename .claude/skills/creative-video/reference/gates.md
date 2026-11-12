@@ -55,8 +55,17 @@ failing one indented under it. Each is a hard fail:
   root, plays a `file` that `sound.json` gives a licence
   ([Sound](authoring.md#sound)).
 - `bed level`: the bed at least 15 LU under the voice in each 3 s window that
-  holds a word, by short-term loudness, its level and lane applied. It names
-  each window under 15 LU, and passes as `no bed` without one.
+  holds a word, and no more than 20 LU under it at its closest window, by
+  short-term loudness, its level and lane applied. It names each window under
+  15 LU, or the closest window over 20 LU with the dB to raise `level` by, and
+  passes as `no bed` without one.
+- `effect level`: each palette sound a scene plays at least 6 LU under the
+  voice in the 3 s window its start falls in, by short-term loudness, its file
+  looped and moved by its `data-volume`. It names the `data-volume` that
+  passes, logs the closest margin and the sound it is, and passes as `no
+  effect` without one; a sound played where the voice is silent has nothing to
+  sit under. Set it from the palette `gain`
+  ([Sound](authoring.md#sound)).
 - `joins` (an Arabic run): each Arabic word split across boxes, shaped piece
   by piece in the face Chrome draws it in, matches the word shaped whole.
 - `must and avoid`: every `must` word of `brief.json` is said or shown, no

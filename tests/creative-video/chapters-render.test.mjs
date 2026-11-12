@@ -299,7 +299,7 @@ test("a bed in the sound kit renders no chapter again: it plays in the whole pro
     JSON.stringify({
       bed: {
         query: "room tone",
-        level: -28,
+        level: -6,
         source: "openverse:bed-1",
         file: "assets/sounds/bed-1.mp3",
         licence: "CC0-1.0",

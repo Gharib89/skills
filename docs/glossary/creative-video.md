@@ -3,7 +3,7 @@
 The sibling of `explainer-video` whose scenes the agent authors freely, the `creative-video` skill. Terms it shares with `explainer-video`, such as excerpt and claim, keep their meaning from [Explainer video](explainer-video.md); its critic is its own, below.
 
 **Bed**:
-A recorded sound under a creative video's narration, drawn from the format concept's world (a kitchen's room tone, a studio crowd), kept well under the voice and taken out for the hardest step. It is not music unless the concept names a reason.
+A recorded sound under a creative video's narration, drawn from the format concept's world (a kitchen's room tone, a studio crowd), kept 15 to 20 LU under the voice, so it is heard but covers no word, and taken out for the hardest step. It is not music unless the concept names a reason.
 _Avoid_: score, soundtrack, background music
 
 **Brand**:
@@ -47,7 +47,7 @@ A scene's three stills the gates judge before the full render: in (0.3 s after i
 _Avoid_: thumbnails, review frames
 
 **Sound palette**:
-The effects a creative video uses, one per kind of story event it marks (a wrong answer, a door opening), fixed in the format kit with each sound's source and licence, so the same event sounds the same in every chapter.
+The effects a creative video uses, one per kind of story event it marks (a wrong answer, a door opening), fixed in the format kit with each sound's source, licence and `gain`, so the same event sounds the same, and as loud, in every chapter.
 _Avoid_: SFX library, sound cues (the kit's whole sound, bed included)
 
 **Staging**:

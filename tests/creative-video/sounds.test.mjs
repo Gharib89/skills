@@ -4,6 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { EFFECT_GAIN } from "../../skills/creative-video/scripts/lib/kit.mjs";
 import { fixture, here } from "./voice-lib.mjs";
 import { calls, exec, project, readJson } from "./timing-lib.mjs";
 
@@ -96,6 +97,28 @@ test("each sound comes from Openverse's first usable CC0 result into the store a
     assert.ok(fs.existsSync(store(fx, f)), f);
   for (const f of ["bed-1.mp3", "tear-1.ogg"])
     assert.ok(fs.existsSync(project(fx, "assets", "sounds", f)), f);
+});
+
+test("a palette sound with no gain is written the default one, a sound with its own keeps it", () => {
+  const fx = fixture();
+  kit(fx, {
+    palette: [
+      { event: "ticket", query: "paper tear" },
+      { event: "loud", query: "paper tear", gain: -6 },
+    ],
+  });
+  const r = fetch(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(
+    kitOf(fx).palette.map((s) => s.gain),
+    [EFFECT_GAIN, -6],
+  );
+  // A re-run keeps what it wrote.
+  assert.equal(fetch(fx, {}).code, 0);
+  assert.deepEqual(
+    kitOf(fx).palette.map((s) => s.gain),
+    [EFFECT_GAIN, -6],
+  );
 });
 
 test("a re-run, or another run folder asking the same queries, fetches nothing", () => {
@@ -288,6 +311,7 @@ test("two timeouts fall back to the Kenney pack whose index words match the quer
     creator: "Kenney",
     url: "https://kenney.nl/assets/rpg-audio",
     attribution: '"bookFlip1.ogg" by Kenney (kenney.nl), CC0 1.0',
+    gain: EFFECT_GAIN,
   });
   assert.ok(
     fs.existsSync(project(fx, "assets", "sounds", "rpg-audio-bookFlip1.ogg")),

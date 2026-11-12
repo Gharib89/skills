@@ -14,12 +14,12 @@
 // on its last frame (gates/samples.mjs), and measures the samples with
 // HyperFrames' check, a text probe (one launch, over the samples and a 0.25 s
 // grid) and two snapshot launches, each frame that differs between them taken
-// again alone in two more (gates/determinism.mjs). Thirteen gates judge the project, each a hard
+// again alone in two more (gates/determinism.mjs). Fourteen gates judge the project, each a hard
 // fail: determinism (the same pixels twice), layout, contrast, reading time,
 // the caption band, anchors (an at() naming a word the narration lacks),
 // script errors (a scene's script that throws), sounds (each <audio> renders
-// at the start the gates judge, gates/sounds.mjs), licence and bed level (the
-// sound kit, gates/sound-kit.mjs), must and avoid, support (the
+// at the start the gates judge, gates/sounds.mjs), licence, bed level and effect
+// level (the sound kit, gates/sound-kit.mjs), must and avoid, support (the
 // claims check passed on the voiced narration) and the critic
 // (gates/critic.mjs), pending until each scene's verdict is written. Length,
 // loudness and voice QC are the voice and render stages' own. A video in
@@ -69,7 +69,7 @@ import { determinismFindings } from "./determinism.mjs";
 import { joinsFindings } from "./joins.mjs";
 import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
-import { BED_LU, bedLevel, licenceFindings } from "./sound-kit.mjs";
+import { levelGates, licenceFindings } from "./sound-kit.mjs";
 import { soundFindings } from "./sounds.mjs";
 import { fixAttempts, summaryLine } from "./fix-cap.mjs";
 import { warnings } from "./warnings.mjs";
@@ -402,7 +402,9 @@ const support = !pack
 const summary = (ev) =>
   `${ev.length} finding(s)${ev.length ? `, first: ${ev[0]}` : ""}`;
 const kit = soundKit(run);
-const bed = await orFail(() => bedLevel({ proj, timeline, kit, backend }));
+const levels = await orFail(() =>
+  levelGates({ proj, timeline, kit, events, backend }),
+);
 const root = fs.readFileSync(path.join(proj, "index.html"), "utf8");
 const compositions = path.join(proj, "compositions");
 // What the render compiles: the root with every composition inlined.
@@ -437,7 +439,7 @@ const judged = {
     licenceFindings(events, root, kit),
     "every <audio> but the narration has a licence record in sound.json",
   ],
-  "bed level": [bed.evidence, `${BED_LU} LU`, bed.measured],
+  ...levels,
   ...(arabic && {
     joins: [
       joins.lines(),

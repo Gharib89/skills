@@ -310,6 +310,7 @@ export async function probe(dir, times, { joins = [] } = {}) {
         const attr = (name) => a.match(new RegExp(`${name}="([^"]*)"`))?.[1];
         const [authored, created] = [attr("data-sound"), attr("data-created")];
         const src = attr("src") ?? null;
+        const volume = +(attr("data-volume") ?? 1);
         if (authored)
           return [
             {
@@ -317,10 +318,19 @@ export async function probe(dir, times, { joins = [] } = {}) {
               start: +(attr("data-moved") ?? authored),
               authored: +authored,
               src,
+              volume,
             },
           ];
         return created
-          ? [{ id: attr("id") ?? "", start: +created, authored: null, src }]
+          ? [
+              {
+                id: attr("id") ?? "",
+                start: +created,
+                authored: null,
+                src,
+                volume,
+              },
+            ]
           : [];
       }),
     };
