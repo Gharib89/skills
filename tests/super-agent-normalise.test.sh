@@ -56,4 +56,55 @@ sa_route "repos/Acme/Widgets/issues?state=open&labels=ready-for-agent&per_page=1
 out=$(bash "$s/intake.sh" --fleet "$fleet" --ledger "$led" --machine alpha --thread th-a 2>/dev/null)
 check "intake: a ticket the ledger holds under another case is held" '["Acme/Widgets#5"]' "$(jq -c .held <<<"$out")"
 
+# --- ledger need, limit and wait --after: the same row in another case ------------------
+L need acme/widgets#7 --action a >/dev/null; L need ACME/Widgets#7 --action b >/dev/null
+check "ledger need: a repeat in another case is one row" 1 "$(jq '.needs | length' "$led")"
+check "ledger pushed: a mixed-case key marks it" true "$(L pushed ACME/WIDGETS#7 | jq -r .need.pushed)"
+check "ledger unneed: a mixed-case key removes it" 0 "$(L unneed Acme/widgets#7 >/dev/null; jq '.needs | length' "$led")"
+L limit acme/widgets --reviewer claude >/dev/null; L limit ACME/Widgets --reviewer codex >/dev/null
+check "ledger limit: a repeat in another case is one row" 1 "$(jq '.review_limits | length' "$led")"
+check "ledger unlimit: a mixed-case repo removes it" 0 "$(L unlimit Acme/WIDGETS >/dev/null; jq '.review_limits | length' "$led")"
+out=$(L wait acme/widgets#8 --reason r --after ACME/Widgets#8 2>/dev/null); rc=$?
+check_rc "ledger wait: a row cannot wait on itself in another case" 2 "$rc"
+
+# --- status: a merged ticket acknowledged under another case is not reported again -----
+printf '%s\n' '{"rulings":[],"entries":{"acme/widgets#5":{"key":"acme/widgets#5","repo":"acme/widgets","number":5,"stage":"merged","observed":{"pr":{"number":9,"state":"merged"}}}},"status":{"merged_ack":["ACME/Widgets#5"]}}' > "$tmp/status.json"
+check "status: a merged key acked in another case is not listed" '' "$(bash "$s/status.sh" --ledger "$tmp/status.json" | jq -r '.block | select(contains("Merged"))')"
+
+# --- reconcile: the cap, a blocker, a need, an offered parent or task, each in another case
+rled=$tmp/reconcile.json
+RC() { bash "$s/reconcile.sh" --ledger "$rled" "$@"; }
+RL() { bash "$s/ledger.sh" --ledger "$rled" "$@"; }
+rfix() {
+  rm -f "$rled" "$SA_FAKE/calls"
+  RL add --repo acme/widgets --number 5 --thread t-5 --worktree /wt/5 --branch b5 >/dev/null
+  sa_thread t-5 running 1 0 /wt/5 b5; sa_pr acme/widgets b5 none; sa_issue acme/widgets 5 open
+  sa_issue acme/widgets 9 open; sa_issue ACME/Widgets 9 open
+}
+rfix; RL wait ACME/Widgets#9 --reason r >/dev/null
+printf '%s\n' '{"repos":{"Acme/WIDGETS":{"max_ships":1}}}' > "$tmp/cap.json"
+check "reconcile: a fleet repo key in another case caps the repo's open tickets" '[]' "$(RC --fleet "$tmp/cap.json" | jq -c '[.ready[].key]')"
+printf '%s\n' '{"repos":{"Acme/WIDGETS":{"max_ships":2}}}' > "$tmp/cap.json"
+check "and a roomier cap in that case frees the row" '["ACME/Widgets#9"]' "$(RC --fleet "$tmp/cap.json" | jq -c '[.ready[].key]')"
+rfix; RL add --repo acme/widgets --number 6 --thread t-6 --worktree /wt/6 --branch b6 >/dev/null
+sa_thread t-6 running 1 0 /wt/6 b6; sa_pr acme/widgets b6 merged; sa_issue acme/widgets 6 open
+RL wait acme/widgets#9 --reason r --after ACME/WIDGETS#6 >/dev/null
+check "reconcile: a blocker named in another case is the merged ticket" '["acme/widgets#9"]' "$(RC | jq -c '[.ready[].key]')"
+rfix; sa_thread t-5 idle 4 1 /wt/5 b5 "Stopped after the tests."
+check "reconcile: a permission hold is escalated" "acme/widgets#5" "$(RC | jq -r '[.escalate[].key] | join(",")')"
+RL need ACME/Widgets#5 --action x --reason permission-hold >/dev/null
+check "and a need on it in another case silences it" '[]' "$(RC | jq -c '[.escalate[].key]')"
+# a waiting row that duplicates a settled entry in another case is no error row for pulse
+printf '%s\n' '{"rulings":[],"entries":{"acme/widgets#5":{"key":"acme/widgets#5","repo":"acme/widgets","number":5,"stage":"settled","observed":{}}},"waiting":[{"key":"ACME/Widgets#5","reason":"r","since":"2026-11-01T00:00:00Z"}]}' > "$rled"
+sa_issue acme/widgets 5 open; sa_gh_fail "/issues/5" 2
+check "pulse: an error on a key the ledger holds in another case is not a change" false "$(bash "$s/pulse.sh" --ledger "$rled" | jq .changed)"
+rm -f "$SA_FAKE/gh-fail"
+
+# --- the guard: no script compares a repo or path by hand ----------------------------------
+# A hand-rolled lowercase or a raw `[ "$repo" = ... ]` is the class #1154 and #1180 closed. The
+# two lowercase uses left name no repo: a quota bucket id and a branch slug.
+hand=$(grep -rnE 'ascii_downcase|tr .?A-Z.? .?a-z|\[\[? "?\$\{?(repo|key|after|pkey|path|area|areas)\}?"? +(=|==|!=) ' "$s" \
+  | grep -v "$s/_lib.sh:" | grep -v "$s/quota.sh:.*week-" | grep -v "$s/launch.sh:.*slug=" | grep -vF "[ \"\$areas\" = '[]' ]" || true)
+check "no script lowercases or compares a repo, key or path by hand (use norm_repo, norm_path, sa_key)" '' "$hand"
+
 finish

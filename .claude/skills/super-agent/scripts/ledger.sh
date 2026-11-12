@@ -265,7 +265,7 @@ case $cmd in
       case $k in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
       case ${k##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
     done
-    [ "$(printf %s "$after" | tr A-Z a-z)" != "$(printf %s "$key" | tr A-Z a-z)" ] || sa_tooling "$usage"
+    jq -en --arg a "$after" --arg k "$key" "$sa_jq_norm"'($a|norm_repo)!=($k|norm_repo)' >/dev/null || sa_tooling "$usage"
     sa_read "$ledger"
     jq -e --arg k "$(sa_key "$doc" "$key")" '.entries[$k] | . != null and (.stage != "settled" and .stage != "closed")' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
     # A repeat keeps the first `since` (how long it has waited is the report's

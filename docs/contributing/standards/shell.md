@@ -170,6 +170,13 @@ exceptions bound these rules.
   each side before it is compared, rather than one side being reshaped to match
   the other's format. Otherwise the comparison fails on format while the values
   agree, or passes on a format both sides lost.
+- **A repo, key or path in `skills/super-agent/scripts` goes through
+  `_lib.sh`.** Compare `norm_repo` and `norm_path` (jq, from `$sa_jq_norm`) or
+  `sa_key` on both sides, never a hand-rolled `ascii_downcase`, `tr A-Z a-z` or
+  `[ "$repo" = "$other" ]`; `tests/super-agent-normalise.test.sh` greps for
+  those and carries a mixed-case and trailing-slash case per comparer. A machine
+  name is the exception: a fleet key is looked up exactly (`.machines[$m]`), so
+  it stays exact.
 
 ## Splitting a file that outgrew the size limit
 

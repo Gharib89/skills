@@ -47,8 +47,8 @@ alive=false
 [[ $args == *watch.sh* ]] && alive=true
 
 held=$(jq -c '(.entries // {}) | keys' "$ledger" 2>/dev/null) || held='[]'
-jq -cn --argjson s "$summary" --argjson a "$alive" --argjson held "$held" '
-  ($s | .errors |= map(select(.key as $k | $held | index($k) | not))
+jq -cn --argjson s "$summary" --argjson a "$alive" --argjson held "$held" "$sa_jq_norm"'
+  ($s | .errors |= map(select(.key as $k | $held | map(norm_repo) | index($k | norm_repo) | not))
      | [to_entries[] | select(.key | IN("ledger", "checked", "entries", "at_rest") | not) | .value
         | select(type == "array" and length > 0)] | length > 0) as $lists
   | ($lists or ([$s.entries[] | select(.from != .stage)] | length > 0)) as $c
