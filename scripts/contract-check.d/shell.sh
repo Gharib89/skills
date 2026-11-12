@@ -1,55 +1,190 @@
 # shellcheck shell=bash
 # shellcheck disable=SC2034,SC2154 # variables set by the sourcing script
 # Checks 14 to 16 of scripts/contract-check.sh, sourced by it: they share its variables.
-# 14. Markdown that invokes a mechanic names the flags the call requires. A code
-# span opening with `<mechanic> ` is an invocation, and one that leaves out a
-# required flag teaches a call the mechanic refuses: ship's phase 7 wrote
-# `update-pr-body --section` for a call that also needs `--body-file`. The
-# required flags are the usage line's own, outside [...]; a `( --a | --b )`
-# group is satisfied by either. A mechanic with top-level alternatives
-# (`run-file`) has no one flag set to hold. Fenced blocks are samples, so they
-# are skipped, and a CHANGELOG records what once was true.
+# 14. Markdown that invokes a mechanic names the flags and value forms the call
+# requires, wherever the call is written, because a recipe that exits 2 as
+# written teaches a call the mechanic refuses: ship's phase 7 wrote
+# `update-pr-body --section` for a call that also needs `--body-file`.
+#   Where a call is read:
+#   - a code span whose first word names a mechanic: bare (`merge`), with `.sh`
+#     (`quota.sh`) or with a path to the script (`scripts/quota.sh`); a span may
+#     run over a line break;
+#   - a line of a fenced block that is an instruction to run, which is a fence
+#     whose language is sh, bash, shell, zsh or console, with `\` continuations
+#     joined and the call cut at a pipe, `&&`, `||`, `;` or a redirect. Any
+#     other fence (none, text, json, diff) is a sample of output and is skipped.
+#   - a call names a mechanic and gives it arguments: the mechanic alone, or with
+#     only its verb (`run-file gate clean`), or asked `--help`, names the tool and is not read;
+#   - a deliberate sample is skipped by a line holding `contract-check: sample`
+#     (all spans on that line), or by such a line directly above a fence.
+#   - a CHANGELOG records what once was true, so it is skipped.
+#   What a call owes: the usage line's own required flags, outside [...]; a
+#   `( --a | --b )` group is satisfied by either. A mechanic with top-level
+#   alternatives (`run-file`, `ledger`) is read per alternative, the one a call
+#   names by its verb, or by its first required flag where it has no verb; flags
+#   written before the first alternative's verb (`ledger --ledger <file> add|...`)
+#   belong to every alternative. A `<json>` slot takes a JSON value: a
+#   `<placeholder>`, a number, true, false, null, a `{`/`[` structure or a
+#   string quoted for the shell with its own quotes inside (`'"main"'`), so an
+#   unquoted word is refused.
+# alt_verb <alt>: the 1-based positions "first last" of the up to two words at
+# bracket depth 0 that name the alternative (`gate clean`, `set`, `add|adopt`),
+# or nothing. A word straight after a flag is that flag's value (`--job text`),
+# not a verb; after a <slot> it is one (`--ledger <file> add`).
+alt_verb() {
+  printf '%s\n' "$1" | awk '{
+    d = 0; n = split($0, w, " "); f = 0
+    for (i = 1; i <= n; i++) {
+      t = w[i]
+      if (d == 0 && t ~ /^[a-z][a-z0-9-]*(\|[a-z0-9-]+)*$/ && w[i - 1] !~ /^--/) { if (!f) f = i; if (i - f < 2) l = i; continue }
+      if (f) break
+      if (d == 0 && t !~ /^[-<"\[(]/) break
+      for (j = 1; j <= length(t); j++) { c = substr(t, j, 1); if (c == "[" || c == "(") d++; else if (c == "]" || c == ")") d-- }
+    }
+    if (f) print f, l }'
+}
+# json_slot <alt> <verb position>: which word after the verb (after the mechanic
+# when there is none) is the alternative's `<json>` slot, up to its first flag.
+json_slot() {
+  printf '%s\n' "$1" | awk -v v="${2:-0}" '{
+    n = split($0, w, " "); k = 0
+    for (i = v + 1; i <= n; i++) { if (w[i] ~ /^[-\[(]/) break; k++; if (w[i] == "<json>") { print k; exit } } }'
+}
 : > "$work/required"
 for path in "$dir"/*.sh; do
   m=$(basename "$path" .sh)
   [ -f "$work/$m.usage" ] || continue
   utail=$(tail_of "$m" "$(cat "$work/$m.usage")")
-  [ "$(usage_alts "$utail" | wc -l)" -eq 1 ] || continue
-  reqs=$(required_flags "$utail" | tr '\n' ' ')
-  [ -n "$reqs" ] && printf '%s\t%s\n' "$m" "$reqs" >> "$work/required"
+  alts=$(usage_alts "$utail")
+  multi=0; [ "$(printf '%s\n' "$alts" | wc -l)" -gt 1 ] && multi=1
+  lead=""
+  while IFS= read -r a; do
+    a=${a#"$m "}
+    # A line that is prose about the flags (`<line>, each taking --file or --issue`) is no call to hold.
+    case $a in *', '*) continue ;; esac
+    read -r vf vl <<<"$(alt_verb "$a")"; sel=""
+    if [ "$multi" -eq 1 ]; then
+      if [ -n "$vf" ]; then sel=$(printf '%s\n' "$a" | awk -v f="$vf" -v l="$vl" '{s = $f; for (k = f + 1; k <= l; k++) s = s " " $k; print s}')
+      else sel=$(required_flags "$a" | head -1); fi
+      [ -n "$sel" ] || continue
+    fi
+    if [ "$multi" -eq 1 ] && [ -z "$lead" ] && [ -n "$vf" ]; then
+      lead=$(required_flags "$(printf '%s\n' "$a" | awk -v i="$vf" '{s = ""; for (k = 1; k < i; k++) s = s $k " "; print s}')" | tr '\n' ' ')
+    fi
+    reqs=$(required_flags "$a" | tr '\n' ' ')
+    printf '%s\t%s\t%s\t%s\n' "$m" "$sel" "$reqs" "$(json_slot "$a" "${vl:-0}")" >> "$work/required"
+  done <<EOA
+$alts
+EOA
+  # `lead` is known only after the first alternative: add it to every row of this
+  # mechanic, which is how a global flag reaches the alternatives after the first.
+  if [ -n "$lead" ]; then
+    awk -F'\t' -v OFS='\t' -v m="$m" -v lead="$lead" '$1 == m { $3 = $3 " " lead } { print }' "$work/required" > "$work/required.new" && mv "$work/required.new" "$work/required"
+  fi
 done
+# A mechanic with no required flag and no <json> slot owes nothing.
+awk -F'\t' '$3 ~ /[^ ]/ || $4 != ""' "$work/required" > "$work/required.new" && mv "$work/required.new" "$work/required"
 if [ -s "$work/required" ]; then
   find "$skills" -name '*.md' ! -name CHANGELOG.md | sort | tr '\n' '\0' | xargs -0 awk -v reqfile="$work/required" '
-      BEGIN { while ((getline l < reqfile) > 0) { split(l, p, "\t"); req[p[1]] = p[2] } }
-      FNR == 1 { fence = ""; flen = 0 }
-      {
-        if (match($0, /^ *(```+|~~~+)/)) {
-          t = substr($0, RSTART, RLENGTH); gsub(/ /, "", t)
-          if (fence == "") { fence = substr(t, 1, 1); flen = length(t); next }
-          if (substr(t, 1, 1) == fence && length(t) >= flen && $0 ~ /^ *[`~]+ *$/) { fence = ""; next }
+      function mech(tok,   b) {
+        sub(/^[$("\047`]+/, "", tok)
+        if (tok ~ /\//) { if (tok !~ /\.sh$/) return ""; sub(/.*\//, "", tok) }
+        sub(/\.sh$/, "", tok)
+        return (tok in known) ? tok : ""
+      }
+      function has(padded, part) { return index(padded, " " part " ") > 0 || (part ~ /^--/ && index(padded, " " part "=") > 0) }
+      function jsonok(t) {
+        if (t ~ /^</ || t ~ /^(-?[0-9]+(\.[0-9]+)?|true|false|null)$/ || t ~ /^[\[{]/) return 1
+        if (t ~ /^\047["\[{0-9]/ || t ~ /^"\\"/) return 1
+        return 0
+      }
+      function check(call, ln,   toks, nt, m, padded, r, sel, np, q, hit, s, rq, nq, x, na, alt, y, ok, base, jt, w, any, kt, lw) {
+        nt = split(call, toks, " "); m = mech(toks[1]); padded = " " call " "
+        for (r = 1; r <= nr; r++) {
+          if (rm[r] != m) continue
+          sel = rsel[r]; base = 1
+          if (sel != "") {
+            np = split(sel, q, "|"); hit = 0
+            for (s = 1; s <= np; s++) if (has(padded, q[s])) { hit = 1; lw = q[s]; sub(/.* /, "", lw); if (q[s] !~ /^--/) for (kt = 1; kt <= nt; kt++) if (toks[kt] == lw) base = kt }
+            if (!hit) continue
+          }
+          if (nt == base || has(padded, "--help")) continue
+          nq = split(rreq[r], rq, " ")
+          for (x = 1; x <= nq; x++) {
+            if (rq[x] == "" || (rq[x] in seen_here)) continue
+            seen_here[rq[x]] = 1
+            na = split(rq[x], alt, "|"); ok = 0
+            for (y = 1; y <= na; y++) if (has(padded, alt[y])) ok = 1
+            if (!ok) { w = rq[x]; gsub(/\|/, " or ", w); printf "%s:%d: `%s` lacks %s from %s\047s usage line\n", curfile, ln, call, w, m }
+          }
+          delete seen_here
+          if (rjson[r] != "" && (jt = toks[base + rjson[r]]) != "" && !jsonok(jt))
+            printf "%s:%d: `%s` gives %s where %s\047s usage line takes a <json> value; quote a string as \047\"text\"\047\n", curfile, ln, call, jt, m
         }
-        if (fence != "") next
-        line = $0
+      }
+      function spans(txt, pos0,   i, k, rest, delim, z, j, span, line, off, n) {
+        line = txt; off = 0
         while ((i = index(line, "`")) > 0) {
           k = 0; while (substr(line, i + k, 1) == "`") k++
           rest = substr(line, i + k); delim = ""; for (z = 0; z < k; z++) delim = delim "`"
           j = index(rest, delim)
           if (j == 0) break
           span = substr(rest, 1, j - 1)
-          line = substr(rest, j + k)
           sub(/^ +/, "", span)
-          for (m in req) {
-            if (index(span, m " ") != 1) continue
-            n = split(req[m], r, " ")
-            for (x = 1; x <= n; x++) {
-              if (r[x] == "") continue
-              na = split(r[x], alt, "|"); ok = 0
-              for (y = 1; y <= na; y++) if (index(span, alt[y]) > 0) ok = 1
-              if (!ok) { gsub(/\|/, " or ", r[x]); printf "%s:%d: `%s` lacks %s from %s\047s usage line\n", FILENAME, FNR, span, r[x], m }
-            }
+          if (index(span, " ") > 0 && mech(substr(span, 1, index(span, " ") - 1)) != "") {
+            at = off + i; n = 1; while (n < pn && poff[n + 1] <= at) n++
+            check(span, pline[n])
           }
+          off += i + 2 * k + j - 2; line = substr(rest, j + k)
         }
-      }' > "$work/doc-hits"
+      }
+      function flush() { if (ptxt != "") spans(ptxt); ptxt = ""; pn = 0 }
+      function addline(s) { if (ptxt != "") ptxt = ptxt " "; pn++; poff[pn] = length(ptxt) + 1; pline[pn] = FNR; ptxt = ptxt s }
+      function runline(s,   toks, nt, i, call) {
+        if (s ~ /^ *#/) return
+        nt = split(s, toks, " ")
+        for (i = 1; i <= nt; i++) if (mech(toks[i]) != "") break
+        if (i > nt) return
+        call = toks[i]
+        for (i = i + 1; i <= nt; i++) {
+          if (toks[i] ~ /^(\||\|\||&&|;|&)$/ || toks[i] ~ /^[0-9]*>/ || (toks[i] ~ /^</ && toks[i] !~ />$/) || toks[i] ~ /;$/) break
+          call = call " " toks[i]
+        }
+        sub(/[)]+$/, "", call)
+        check(call, fstart)
+      }
+      BEGIN {
+        while ((getline l < reqfile) > 0) { n = split(l, p, "\t"); nr++; rm[nr] = p[1]; rsel[nr] = p[2]; rreq[nr] = p[3]; rjson[nr] = p[4]; known[p[1]] = 1 }
+        MARK = "contract-check: sample"
+      }
+      FNR == 1 { flush(); curfile = FILENAME; fence = ""; flen = 0; fcheck = 0; sample = 0; facc = "" }
+      {
+        if (match($0, /^ *(```+|~~~+)/)) {
+          t = substr($0, RSTART, RLENGTH); gsub(/ /, "", t)
+          if (fence == "") {
+            flush()
+            fence = substr(t, 1, 1); flen = length(t)
+            info = tolower(substr($0, RSTART + RLENGTH)); sub(/^ +/, "", info); sub(/[ \t{].*/, "", info)
+            fcheck = (info ~ /^(sh|bash|shell|zsh|console)$/) && !sample; sample = 0; facc = ""
+            next
+          }
+          if (substr(t, 1, 1) == fence && length(t) >= flen && $0 ~ /^ *[`~]+ *$/) { fence = ""; fcheck = 0; facc = ""; next }
+        }
+        if (fence != "") {
+          if (!fcheck) next
+          line = $0; sub(/^ *(\$ )?/, "", line)
+          if (facc == "") fstart = FNR
+          if (line ~ /\\$/) { sub(/\\$/, "", line); facc = facc line " "; next }
+          runline(facc line); facc = ""
+          next
+        }
+        if (index($0, MARK)) { sample = 1; addline(""); next }
+        sample = 0
+        if ($0 ~ /^[ \t]*$/ || $0 ~ /^#/ || $0 ~ /^ *([-*+]|[0-9]+[.)]) / || $0 ~ /^ *\|/) flush()
+        if ($0 ~ /^[ \t]*$/) next
+        addline($0)
+      }
+      END { flush() }' > "$work/doc-hits"
   if [ -s "$work/doc-hits" ]; then cat "$work/doc-hits"; rc=1; fi
 fi
 

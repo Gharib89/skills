@@ -130,13 +130,13 @@ the human to run where the write succeeds.
 
 `update-pr-body` and `update-issue-body` share one section surgery. A `## `
 heading counts only at column 0, outside a fence and outside a `<details>`
-record: a line opening on `<details>` or `<details ...>` at column 0 through
-its matching line opening on `</details>`, nesting counted. The record's `## `
-lines are no section to `--section`, to `--preamble`'s boundary or to the
-`sections` list. A section write replaces the section's prose and, by default
-in both mechanics, carries every record in its old content through, verbatim
-and in order, below the new content. `update-pr-body --section <name>
---drop-records` skips that carry, so the body file is all the section keeps;
+record: a line opening on `<details>` or `<details ...>` at column 0 through its
+matching line opening on `</details>`, nesting counted. The record's `## ` lines
+are no section to `--section`, to `--preamble`'s boundary or to the `sections`
+list. A section write replaces the section's prose and, by default in both
+mechanics, carries every record in its old content through, verbatim and in
+order, below the new content. `update-pr-body --section <name> --drop-records
+--body-file <file>` skips that carry, so the body file is all the section keeps;
 `update-issue-body` has no such flag. A `## <name>` found only inside a record
 is an absent section, created at the end. A body file that ends inside an open
 fence or record is refused, exit 2.

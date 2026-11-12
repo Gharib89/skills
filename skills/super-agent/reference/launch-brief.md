@@ -26,7 +26,8 @@ On `launch: true`, add each name in `needs` to `args` (`projectId`: the repo's
 T3 project, from `t3_project_list` on the environment `args.environmentId`
 names, this machine without one), then call `t3_thread_launch` with `args`,
 never `delegate_task`: it runs only in your own project and refuses another repo
-("A local task runs in this thread's project", measured). With no project
-there, rerun launch with `--exclude <record.machine>` and every earlier flag;
-ending at `waiting`, that is the no-project escalation: `ledger.sh unwait <key>`
-and escalate. Never link, unlink or clone a project on any machine.
+("A local task runs in this thread's project", measured). With no project there,
+rerun launch with `--exclude <record.machine>` and every earlier flag; ending at
+`waiting`, that is the no-project escalation: `ledger.sh --ledger <ledger>
+unwait <key>` and escalate. Never link, unlink or clone a project on any
+machine.

@@ -44,7 +44,8 @@
 # 12  every flag that takes a value refuses a leading-dash value with the usage
 #     line;
 # 13  every host failure, driven through the Host fake, prints one JSON object;
-# 14  Markdown that invokes a mechanic in a code span names its required flags.
+# 14  Markdown that invokes a mechanic, in a code span or a shell fence, names its
+#     required flags and a <json> slot's value form (the rule: shell.sh).
 # Check 15 greps every shell file for three habits that fail silently: a curl
 # with no time limit, a command in a redirect-fed read loop that drains the loop's
 # input, and a fence pattern written by hand instead of SHIP_AWK_FENCE.
