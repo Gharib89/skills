@@ -1,7 +1,7 @@
 {
-  "hyperframes": "0.9.33",
+  "hyperframes": "0.9.39",
   "rates": {
-    "render": 0.34,
+    "render": 0.37,
     "audio": 0.2
   }
 }
