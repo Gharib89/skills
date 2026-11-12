@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.15.2 (2026-11-12)
+
+### Bug Fixes
+
+- **setup-harness**: Print a line before the stop hook's blocking exit
+  ([#1202](https://github.com/Gharib89/skills/pull/1202),
+  [`93e0031`](https://github.com/Gharib89/skills/commit/93e00318627bab98067f5fe7fe7c46d997b38ef1))
+
+
 ## v0.15.1 (2026-11-12)
 
 ### Chores
