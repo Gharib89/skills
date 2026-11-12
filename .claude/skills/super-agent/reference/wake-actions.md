@@ -44,10 +44,10 @@ A settled entry is unwatched: a message to its thread goes unseen.
 ## verify
 
 A ship PR merged. Check it (the row's `pr`) against the issue's acceptance
-criteria, then `ledger.sh set <key> verify_owed false`. Unmet: record a need
-naming the gap first, with `--reason verify` (the PR merged, so the owner
-decides, not the thread). A row in stage `merged` waits for its thread to rest,
-which settles it; do the check now.
+criteria, then `ledger.sh --ledger <ledger> set <key> verify_owed false`. Unmet:
+record a need naming the gap first, with `--reason verify` (the PR merged, so
+the owner decides, not the thread). A row in stage `merged` waits for its thread
+to rest, which settles it; do the check now.
 
 ## escalate
 
@@ -79,10 +79,10 @@ PR never touched) is never waived, whichever way the ruler is set, and no
 ruling or run may waive it. Per hold:
 
 1. File the failure as its own issue, ordered before the ticket
-   ([lessons](lessons.md)), and put it first on the waiting list
-   (`ledger.sh wait <its key> --reason failure --order 0`); a ticket with
-   no thread yet waits behind it (`ledger.sh wait <key> --reason failure
-   --after <its key>`).
+   ([lessons](lessons.md)), and put it first on the waiting list (`ledger.sh
+   --ledger <ledger> wait <its key> --reason failure --order 0`); a ticket with
+   no thread yet waits behind it (`ledger.sh --ledger <ledger> wait <key>
+   --reason failure --after <its key>`).
 2. The held ticket's PR stays unmerged, its entry open and watched; tell its run
    in its thread to wait for that fix.
 3. When reconcile shows the fix's entry `merged`, tell the run to re-run the

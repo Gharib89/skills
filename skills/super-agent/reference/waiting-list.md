@@ -11,18 +11,19 @@ in the way) and the ones the owner queued.
 
 ## Recording
 
-- "Add N to the queue": `ledger.sh wait <key> --reason queued`. Every key is
-  the full `<owner/name>#<n>`: expand the owner's bare numbers with the repo
-  they are talking about. `wait` refuses a ticket that has an open thread.
-  Rows with no `--order` run oldest first, after the ordered ones.
-- "Put N first": `ledger.sh wait <key> --reason queued --order <n>`, lowest
-  first, 0 allowed, up to 9 digits. A repeat `wait` keeps the order and
-  blocker it is not given.
-- "Take N off the queue": `ledger.sh unwait <key>`.
-- "Ship M after N": `ledger.sh wait <M> --after <N> --reason "after <N>"`. N is
-  any ticket's key, in this repo or another, and must merge first. `--after` is
-  the ledger's own: it adds no blocking edge on GitHub, which stays the record
-  there.
+- "Add N to the queue": `ledger.sh --ledger <ledger> wait <key> --reason
+  queued`. Every key is the full `<owner/name>#<n>`: expand the owner's bare
+  numbers with the repo they are talking about. `wait` refuses a ticket that has
+  an open thread. Rows with no `--order` run oldest first, after the ordered
+  ones.
+- "Put N first": `ledger.sh --ledger <ledger> wait <key> --reason queued --order
+  <n>`, lowest first, 0 allowed, up to 9 digits. A repeat `wait` keeps the order
+  and blocker it is not given.
+- "Take N off the queue": `ledger.sh --ledger <ledger> unwait <key>`.
+- "Ship M after N": `ledger.sh --ledger <ledger> wait <M> --after <N> --reason
+  "after <N>"`. N is any ticket's key, in this repo or another, and must merge
+  first. `--after` is the ledger's own: it adds no blocking edge on GitHub,
+  which stays the record there.
 
 Say what you recorded in one line. The owner's queueing words are the go the
 hard rule "launch only on the owner's go" asks for, so none is asked again.

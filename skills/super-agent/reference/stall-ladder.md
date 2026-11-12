@@ -26,7 +26,7 @@ A **hard finding** (a verified acceptance-criterion gap you send back to the
 thread) raises the same way as rung 3.
 
 An entry you escalated at 3 stalls stays quiet until the owner
-answers; then reset it with `ledger.sh set <key> stalls 0`.
+answers; then reset it with `ledger.sh --ledger <ledger> set <key> stalls 0`.
 
 ## Errors
 
