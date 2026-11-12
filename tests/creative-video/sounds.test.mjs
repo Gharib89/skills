@@ -4,6 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { EFFECT_GAIN } from "../../skills/creative-video/scripts/lib/kit.mjs";
 import { fixture, here } from "./voice-lib.mjs";
 import { calls, exec, project, readJson } from "./timing-lib.mjs";
 
@@ -96,6 +97,80 @@ test("each sound comes from Openverse's first usable CC0 result into the store a
     assert.ok(fs.existsSync(store(fx, f)), f);
   for (const f of ["bed-1.mp3", "tear-1.ogg"])
     assert.ok(fs.existsSync(project(fx, "assets", "sounds", f)), f);
+});
+
+const BEDS = {
+  "kitchen ambience": [
+    [
+      hit("bed-1", "Kitchen Ambience"),
+      hit("bed-2", "Kitchen Ambience 2"),
+      hit("bed-3", "Kitchen Ambience 3"),
+    ],
+  ],
+};
+const fetchSeams = (fx, seams) =>
+  exec(sounds, fx, [fx.dir], {
+    CREATIVE_VIDEO_FAKE_OPENVERSE: JSON.stringify(BEDS),
+    CREATIVE_VIDEO_FAKE_SEAM: JSON.stringify(seams),
+  });
+
+test("a bed is the first result whose loop seam measures clean: a click or a fade at the join is skipped for the next", () => {
+  const fx = fixture();
+  kit(fx, { bed: KIT.bed });
+  const r = fetchSeams(fx, { "bed-1.mp3": "click", "bed-2.mp3": "fade" });
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.equal(r.out.trim(), "sound bed: openverse bed-3");
+  assert.equal(kitOf(fx).bed.file, "assets/sounds/bed-3.mp3");
+  // A dirty download is not kept, so a re-run measures it again.
+  assert.ok(!fs.existsSync(store(fx, "openverse", "bed-1.mp3")));
+  assert.ok(fs.existsSync(store(fx, "openverse", "bed-3.mp3")));
+  assert.deepEqual(
+    asked(fx, "pcm").map((c) => c.file),
+    ["bed-1.mp3", "bed-2.mp3", "bed-3.mp3"],
+  );
+});
+
+test("a bed none of whose results loops clean is dropped with the count tried, and a palette sound's seam is never measured", () => {
+  const fx = fixture();
+  kit(fx);
+  const r = fetchSeams(fx, {
+    "bed-1.mp3": "click",
+    "bed-2.mp3": "click",
+    "bed-3.mp3": "fade",
+  });
+  assert.equal(r.code, 0, r.out + r.err);
+  const k = kitOf(fx);
+  assert.equal(k.bed, undefined);
+  assert.match(
+    k.dropped.find((d) => d.event === "bed").why,
+    /^openverse found no result whose loop seam is clean \(tried 3\)/,
+  );
+  assert.deepEqual(
+    asked(fx, "pcm").map((c) => c.file),
+    ["bed-1.mp3", "bed-2.mp3", "bed-3.mp3"],
+  );
+});
+
+test("a palette sound with no gain is written the default one, a sound with its own keeps it", () => {
+  const fx = fixture();
+  kit(fx, {
+    palette: [
+      { event: "ticket", query: "paper tear" },
+      { event: "loud", query: "paper tear", gain: -6 },
+    ],
+  });
+  const r = fetch(fx);
+  assert.equal(r.code, 0, r.out + r.err);
+  assert.deepEqual(
+    kitOf(fx).palette.map((s) => s.gain),
+    [EFFECT_GAIN, -6],
+  );
+  // A re-run keeps what it wrote.
+  assert.equal(fetch(fx, {}).code, 0);
+  assert.deepEqual(
+    kitOf(fx).palette.map((s) => s.gain),
+    [EFFECT_GAIN, -6],
+  );
 });
 
 test("a re-run, or another run folder asking the same queries, fetches nothing", () => {
@@ -288,6 +363,7 @@ test("two timeouts fall back to the Kenney pack whose index words match the quer
     creator: "Kenney",
     url: "https://kenney.nl/assets/rpg-audio",
     attribution: '"bookFlip1.ogg" by Kenney (kenney.nl), CC0 1.0',
+    gain: EFFECT_GAIN,
   });
   assert.ok(
     fs.existsSync(project(fx, "assets", "sounds", "rpg-audio-bookFlip1.ogg")),
