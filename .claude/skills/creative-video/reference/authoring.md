@@ -238,7 +238,8 @@ sound plays where a scene places it, by its `file`
 ([Scenes on word times](#scenes-on-word-times)), at the volume its `gain`
 gives: set `data-volume` on it to `10 ** (gain / 20)`
 (`ding.dataset.volume = 10 ** (-18 / 20)`), since an `<audio>` with none plays
-at full volume, 4 LU under the voice or closer. The `effect level` gate fails
+at full volume, which for found sounds is from 6 LU under the voice to about
+10 LU over it. The `effect level` gate fails
 one under 6 LU below the voice where it plays and names the volume that passes.
 
 Set the bed's `level` so the `bed level` gate passes: its closest 3 s window

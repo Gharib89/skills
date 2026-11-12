@@ -132,18 +132,18 @@ export async function effectLevel({ proj, timeline, kit, events, backend }) {
   const evidence = [];
   let closest;
   for (const { scene, s, file } of plays) {
+    if (!(s.volume >= 0 && s.volume <= 1)) {
+      evidence.push(
+        `${scene}: <audio id="${s.id}"> has a data-volume that is no number from 0 to 1: set one`,
+      );
+      continue;
+    }
     const start = scenes.find((x) => x.id === scene)?.start ?? 0;
     const t = start + sceneSeconds({ start }, s);
     const a = Math.floor(t / WINDOW) * WINDOW;
     const e = Math.min(a + WINDOW, total);
     const heard = voice.findLast(([at]) => at <= e + 1e-6)?.[1] ?? -Infinity;
     if (heard === -Infinity) continue;
-    if (!Number.isFinite(s.volume)) {
-      evidence.push(
-        `${scene}: <audio id="${s.id}"> has a data-volume that is not a number: set it to a number from 0 to 1`,
-      );
-      continue;
-    }
     const margin = heard - (loud.get(file) + 20 * Math.log10(s.volume));
     const at = +t.toFixed(3);
     if (!closest || margin < closest.margin)

@@ -287,9 +287,12 @@ test("an effect's margin is the voice's loudness in its 3 s window less the effe
     evidence: [],
     measured: "no effect plays where the voice does",
   });
-  // A data-volume that is no number would pass as NaN: it is a finding.
-  assert.deepEqual((await judge(NaN)).evidence, [
-    'one: <audio id="d"> has a data-volume that is not a number: set it to a number from 0 to 1',
-  ]);
+  // A data-volume outside 0 to 1, or no number, would pass as NaN: it is a
+  // finding, wherever the voice is silent too.
+  for (const bad of [NaN, -0.5, 1.5])
+    assert.deepEqual((await judge(bad)).evidence, [
+      'one: <audio id="d"> has a data-volume that is no number from 0 to 1: set one',
+    ]);
+  assert.equal((await judge(NaN, 1, 1)).evidence.length, 1);
   fs.rmSync(proj, { recursive: true });
 });
