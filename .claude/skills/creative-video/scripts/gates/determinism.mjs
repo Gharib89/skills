@@ -21,9 +21,12 @@ export async function determinismFindings(launch, sampled, sceneAt, fail) {
       const taken = await launch(`recheck-${i}-${n}`, [t]);
       if (taken.length !== 1)
         fail(`snapshot gave ${taken.length} of 1 frame for a re-check`);
-      again.push(taken[0][1]);
+      again.push(taken[0]);
     }
-    if (again[0] !== again[1])
+    // A frame that repeats alone replaces launch a's, so the critic judges,
+    // and keys its verdict on, the stable frame.
+    if (again[0][1] === again[1][1]) a[i] = again[0];
+    else
       findings.push(
         `${t.toFixed(2)} s ${sceneAt(t)}: the frame differs between two launches and between two single-frame re-checks`,
       );

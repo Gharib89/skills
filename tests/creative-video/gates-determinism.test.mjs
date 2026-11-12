@@ -62,9 +62,8 @@ test("the stage asks one check, one probe and two snapshots over every scene's i
 test("a frame that differs only in a batched launch is re-checked alone, twice, and passes", () => {
   const fx = timed();
   compose(fx, "context", "<p data-flaky>a line</p>", "");
-  // The critic's stills are keyed on the flaky launch's pixels, so it stays
-  // pending here; the determinism line is what this test reads.
-  const r = runGates(fx, {}, { critic: false });
+  const r = runGates(fx);
+  assert.equal(r.code, 0, r.out);
   assert.match(gateLine(r, "determinism"), /^pass: 0 finding\(s\)/);
   const snaps = calls(fx).filter((c) => c.call === "snapshot");
   const rechecks = snaps.slice(2);
