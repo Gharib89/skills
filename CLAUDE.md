@@ -43,8 +43,9 @@ npx skills add . --skill ship --skill cloud-ship --skill setup-skills --skill up
 **A change to `skills/<name>/` is not finished until the refresh line has run
 and both trees are in the same commit.** `.claude/skills/` is the copy a session
 here executes, unless a personal skill of the same name in `~/.claude/skills/`
-shadows it (a personal skill wins over a project skill), so an unrefreshed
-change means the run is exercising the previous version. Run the refresh at the
+shadows it (a personal skill wins over a project skill); the run then exercises
+that personal copy, whatever this tree holds. Otherwise an unrefreshed change
+means the run is exercising the previous version. Run the refresh at the
 end of the implementation phase, before the self-review: the run's remaining
 phases then invoke the new mechanics. Changed `SKILL.md` prose does not take
 effect in the run, because the run loaded it at its start. Ship's own prose is
