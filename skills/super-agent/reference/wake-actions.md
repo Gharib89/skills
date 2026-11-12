@@ -81,7 +81,8 @@ ruling or run may waive it. Per hold:
 1. File the failure as its own issue, ordered before the ticket
    ([lessons](lessons.md)), and put it first on the waiting list
    (`ledger.sh wait <its key> --reason failure --order 0`); a ticket with
-   no thread yet waits behind it (`ledger.sh wait <key> --after <its key>`).
+   no thread yet waits behind it (`ledger.sh wait <key> --reason failure
+   --after <its key>`).
 2. The held ticket's PR stays unmerged, its entry open and watched; tell its run
    in its thread to wait for that fix.
 3. When reconcile shows the fix's entry `merged`, tell the run to re-run the
