@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.58.3 (2026-11-12)
+
+### Bug Fixes
+
+- **ship**: Selection skips an issue with open sub-issues
+  ([#1201](https://github.com/Gharib89/skills/pull/1201),
+  [`4018285`](https://github.com/Gharib89/skills/commit/40182850a5f7897a964863db81d7e91b48e75873))
+
+
 ## v0.58.2 (2026-11-12)
 
 ### Chores
