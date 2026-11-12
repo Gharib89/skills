@@ -45,8 +45,9 @@ ticket hit it again.
    one issue.
 2. Order it before the work it would hit: launch it first, or record a
    blocking edge on each ticket it blocks.
-3. Hold each dependent ticket with `ledger.sh wait <key> --reason <text>`
-   until the issue's PR merges, then `ledger.sh unwait <key>` and launch it.
+3. Hold each dependent ticket with `ledger.sh --ledger <ledger> wait <key>
+   --reason <text>` until the issue's PR merges, then `ledger.sh --ledger
+   <ledger> unwait <key>` and launch it.
 
 ## A cross-repo lesson
 
