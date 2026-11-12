@@ -98,17 +98,23 @@
     {
       "id": "ar-eg-advisor-6",
       "gender": "male",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 12.63,
+      "pause": 0.59
     },
     {
       "id": "ar-eg-advisor-7",
       "gender": "male",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 12.22,
+      "pause": 0.59
     },
     {
       "id": "ar-eg-advisor-8",
       "gender": "male",
-      "backend": "gemini"
+      "backend": "gemini",
+      "rate": 12.23,
+      "pause": 0.75
     },
     {
       "id": "ar-eg-advisor-9",
