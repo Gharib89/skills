@@ -365,6 +365,8 @@ check(
 // and renders there, its onset read from the MP4 above 1.5 kHz, where the
 // 220 Hz narration is silent. So does the same beep created by a kit script
 // the root loads by src, `kit` its text, which HyperFrames never scans (#1067).
+// The beeps play at volume 0.1: at full volume a 2 kHz tone is louder than the
+// narration and fails `effect level`.
 function sounded(name, body, js, kit) {
   const run = runFolder(work, name, [
     { id: "lead", frames: 45 },
@@ -434,6 +436,7 @@ const created = sounded(
     ding.src = "assets/beep.wav";
     ding.dataset.start = window.TIMING.scenes.two.start + 1;
     ding.dataset.duration = 0.3;
+    ding.dataset.volume = 0.1;
     document.querySelector('[data-composition-id="two"]').append(ding);`,
 );
 const kitted = sounded(
@@ -446,6 +449,7 @@ const kitted = sounded(
   ding.src = "assets/beep.wav";
   ding.dataset.start = start;
   ding.dataset.duration = 0.3;
+  ding.dataset.volume = 0.1;
   document.querySelector('[data-composition-id="' + scene + '"]').append(ding);
 };
 `,
