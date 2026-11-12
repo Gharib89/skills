@@ -115,9 +115,14 @@ while read -r fn line; do
 done <<<"$vocab"
 
 # A default for a function the contract gives no object answer is a shape
-# nobody documented.
+# nobody documented, except a number-list answer (`[n, ...]`): it has no keys to
+# hold, so its default is `[]`.
+header=$(sed '/^[^#]/q' "$doc") || exit 2
 for f in "$defaults"/*.json; do
   fn=$(basename "$f" .json)
+  if grep -Eq "^#   $fn .*-> \[n," <<<"$header"; then
+    check "$fn's default is an empty number list" '[]' "$(jq -c . "$f")"; continue
+  fi
   check "$fn's default answers a documented object shape" "$fn" \
     "$(awk -v f="$fn" '$1 == f {print $1}' <<<"$contract")"
 done

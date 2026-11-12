@@ -42,8 +42,9 @@ leave no trace on any issue.
 2. **PR cap.** `list-prs --open`; at or above the profile's `PR cap:` (default
    3, `none` disables), stop `pr-queue-full`.
 3. **Select.** `select`: the oldest open `ready-for-agent` issue with no
-   assignee and no open blocker. No candidate: stop `nothing-ready`, the one
-   clean no-op. The host's blocker query exists and failed: stop
+   assignee, no open blocker and no open sub-issue (a spec parent is never
+   shipped as one PR). No candidate: stop `nothing-ready`, the one clean no-op.
+   The host's blocker or sub-issue query exists and failed: stop
    `blockers-unavailable`.
 4. **Run** phases 0 to 9 on the selected issue as `ship <issue> --unattended`,
    skipping `prepare`, which is done.

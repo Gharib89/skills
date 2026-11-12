@@ -238,7 +238,7 @@ findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 | `prepare` failed its Cloud lane `Bootstrap:` | `bootstrap-failed` | no claim |
 | Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | no claim |
 | No issue passes selection | `nothing-ready` | no claim |
-| The host's blocker query exists and failed | `blockers-unavailable` | no claim |
+| The host's blocker or sub-issue query exists and failed | `blockers-unavailable` | no claim |
 | Merge gate reached | none: the run's success | holds until merge |
 
 Hand-back is `manage-issue <issue> handback "<reason>"`; the rules, attended

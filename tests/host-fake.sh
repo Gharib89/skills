@@ -69,7 +69,7 @@ _host_fake() { # <fn> <args...>
 # tests/host-contract.test.sh asserts.
 for _fn in host_tooling_reasons host_tooling_install host_identity host_can_push \
   host_copilot_login host_copilot_review_on_push \
-  host_issue_get host_issue_comments host_issue_blockers_open host_issue_linked_prs \
+  host_issue_get host_issue_comments host_issue_blockers_open host_issue_subissues_open host_issue_linked_prs \
   host_issue_assign host_issue_unassign host_issue_add_label \
   host_issue_remove_label host_issue_comment host_issue_close host_issue_create \
   host_issue_body host_issue_set_body \
