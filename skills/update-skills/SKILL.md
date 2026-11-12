@@ -199,7 +199,7 @@ section carries the content below either way:
 - `## Change outline`: `Shape: none, mechanical (skills refresh).` while item 3
   below lists no file a run executes. When it lists one (a workflow, a script,
   a hook, such as a file the setup-skills re-run edited), the outline opens
-  instead with one `diff` fence of 15 lines or fewer, in the form
+  instead with one `diff` fence, preferably 15 lines or fewer, in the form
   `.claude/skills/show-me/SKILL.md` gives, each such file's path a root over
   the steps it changed, then
   `Shape: mechanical for the skill copies (skills refresh).`. Then:
