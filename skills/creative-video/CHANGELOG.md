@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.3 (2026-11-12)
+
+### Chores
+
+- **creative-video**: Probe the determinism gate flake
+  ([#1171](https://github.com/Gharib89/skills/pull/1171),
+  [`213a158`](https://github.com/Gharib89/skills/commit/213a158c7166d8867d94fa72f0f4447923a7a084))
+
+
 ## v0.22.2 (2026-11-12)
 
 ### Chores
