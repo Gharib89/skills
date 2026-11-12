@@ -28,7 +28,7 @@ test("a scene left on the wall clock fails determinism at its times, and its fra
     only(r, "determinism");
     assert.match(
       gateLine(r, "determinism"),
-      /^fail: 3 finding\(s\), first: \d+\.\d\d s context: the frame differs between two launches vs the same pixels twice$/,
+      /^fail: 3 finding\(s\), first: \d+\.\d\d s context: the frame differs between two launches and between two single-frame re-checks vs the same pixels twice$/,
     );
   }
   const twin = timed();
@@ -57,4 +57,21 @@ test("the stage asks one check, one probe and two snapshots over every scene's i
     ["a", "b"].map((d) => path.join(fx.dir, ".cache", "gates", "frames", d)),
   );
   for (const s of snaps) assert.deepEqual(s.times, sampled);
+});
+
+test("a frame that differs only in a batched launch is re-checked alone, twice, and passes", () => {
+  const fx = timed();
+  compose(fx, "context", "<p data-flaky>a line</p>", "");
+  // The critic's stills are keyed on the flaky launch's pixels, so it stays
+  // pending here; the determinism line is what this test reads.
+  const r = runGates(fx, {}, { critic: false });
+  assert.match(gateLine(r, "determinism"), /^pass: 0 finding\(s\)/);
+  const snaps = calls(fx).filter((c) => c.call === "snapshot");
+  const rechecks = snaps.slice(2);
+  assert.ok(rechecks.length > 0 && rechecks.length % 2 === 0);
+  for (const s of rechecks) assert.equal(s.times.length, 1);
+  const dirs = rechecks.map((s) => s.outDir);
+  assert.equal(new Set(dirs).size, dirs.length);
+  for (const d of dirs)
+    assert.ok(d.startsWith(path.join(fx.dir, ".cache", "gates", "frames")));
 });

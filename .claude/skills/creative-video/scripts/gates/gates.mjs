@@ -64,6 +64,7 @@ import {
 import { HEIGHT, WIDTH, writeRoot } from "../render/root.mjs";
 import { inputsHash } from "./inputs.mjs";
 import { criticGate } from "./critic.mjs";
+import { determinismFindings } from "./determinism.mjs";
 import { joinsFindings } from "./joins.mjs";
 import { readable, readingFindings } from "./reading.mjs";
 import { ceil3, sampleTimes } from "./samples.mjs";
@@ -148,11 +149,11 @@ fs.rmSync(path.join(run, ".cache", "gates", "frames"), {
   recursive: true,
   force: true,
 });
-const launch = (d) =>
+const launch = (d, times) =>
   orFail(async () => {
     const taken = await backend.snapshot(
       proj,
-      sampled,
+      times,
       path.resolve(run, ".cache", "gates", "frames", d),
       { env },
     );
@@ -164,15 +165,11 @@ const launch = (d) =>
       ]),
     );
   });
-const [a, b] = [await launch("a"), await launch("b")];
-if (a.length !== sampled.length || b.length !== sampled.length)
-  fail(`snapshot gave ${a.length} and ${b.length} of ${sampled.length} frames`);
-const determinism = a.flatMap(([t, pixels], i) =>
-  pixels === b[i][1]
-    ? []
-    : [
-        `${t.toFixed(2)} s ${sceneAt(t)}: the frame differs between two launches`,
-      ],
+const { findings: determinism, first: a } = await determinismFindings(
+  launch,
+  sampled,
+  sceneAt,
+  fail,
 );
 
 // One defect held across several samples is one finding: its first time, and

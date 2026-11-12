@@ -12,6 +12,9 @@
 //                 `hidden` is never shown, opacity 0
 //   tl.<call>(... Date.now() or performance.now() ...) the scene's snapshots
 //                 differ between two launches
+//   data-flaky    the scene's snapshots differ only in a launch taking
+//                 several times at once, as the #1019 flake did; one time
+//                 alone is clean
 //   at("<id>", "<word>")  a word the timeline lacks, or with no nth one it
 //                 holds more than once, is a console_error, as the browser
 //                 running the scene's script reports it
@@ -337,7 +340,9 @@ export async function snapshot(dir, times, outDir) {
     const m = sceneAt(dir, time);
     const draw = /\btl\.[^;]*\b(Date|performance)\.now\(\)/.test(m?.html ?? "")
       ? Math.random()
-      : "";
+      : /\bdata-flaky\b/.test(m?.html ?? "") && times.length > 1
+        ? Math.random()
+        : "";
     // The scene's markup is drawn too, so an edited scene shows new pixels.
     const html = crypto
       .createHash("sha256")
