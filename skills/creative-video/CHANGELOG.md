@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.6 (2026-11-12)
+
+### Bug Fixes
+
+- **creative-video**: Re-check a differing determinism frame before it fails the gate
+  ([#1177](https://github.com/Gharib89/skills/pull/1177),
+  [`ebbb954`](https://github.com/Gharib89/skills/commit/ebbb9541ff0aa0738ba7775ca7255224ce39f767))
+
+
 ## v0.22.5 (2026-11-12)
 
 ### Bug Fixes
