@@ -155,4 +155,16 @@ git -C "$r" worktree add -q "$fixture/wt"
 hook edit '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"'"$fixture"'/wt/c.py"}}'
 check "an edit in a worktree of the session's repo is checked" "edit $fixture/wt/c.py" "$(sed 's/ deadline=.*//' "$STUB_LOG")"
 
+# Claude Code treats a Stop hook that exits 2 with empty stdout and a stderr
+# naming a missing file as non-blocking (measured on 2.1.323, #1189), and a
+# failing test's tail often says exactly that: stdout carries a line first.
+echo 'x = 4' > "$r/new.py"
+STUB_RC=1 STUB_ERR="cat: tests/data.txt: No such file or directory" \
+  STUB_OUT='{"rung":"turn","verdict":"fail","checks":{"runner":"pass","tests":"fail"}}' hook turn "$stop_in"
+check_rc "a failing turn whose tail names a missing file exits 2 as before" 2 "$rc"
+check "the blocking exit prints a line naming the failing check" "harness: turn rung failed: tests" "$out"
+STUB_RC=1 STUB_ERR="cat: tests/data.txt: No such file or directory" STUB_OUT='' hook edit "$edit_in"
+check_rc "a failing edit with no JSON line still blocks" 2 "$rc"
+check "a failing check with no JSON line still prints a line" "harness: edit rung failed" "$out"
+
 finish
