@@ -44,6 +44,18 @@ sa_epoch() { case ${SA_NOW:-} in ''|*[!0-9]*) printf null ;; *) printf '%s' "$SA
 # takes the clock and pins a window's edge.
 sa_now_s() { case ${SA_NOW:-} in ''|*[!0-9]*) date -u +%s ;; *) printf '%s' "$SA_NOW" ;; esac; }
 
+# sa_notify_read <fleet>: the fleet file's `notify` into $notify_cmd (empty when
+# the file has none) and $notify_delay (seconds, 600 when unset). A notify that
+# is no object holding a non-empty command, or whose delay is not a whole number
+# of seconds, is refused by name: a detached notify has no one to read its error.
+# shellcheck disable=SC2034  # read by watch.sh and notify.sh
+sa_notify_read() {
+  jq -e '(.notify // null) as $n | $n == null or ($n | type == "object" and (.command | type == "string" and length > 0)
+      and ((.delay // 600) | type == "number" and . >= 1 and . == floor))' "$1" >/dev/null 2>&1 \
+    || sa_tooling "$1: notify must be an object with a non-empty command and a delay of whole seconds, 1 or more"
+  notify_cmd=$(jq -r '.notify.command // ""' "$1") notify_delay=$(jq -r '.notify.delay // 600' "$1")
+}
+
 # sa_flag_value <usage> <value>: a flag's value may be neither empty nor dash-led,
 # or the next flag is read as the value.
 sa_flag_value() { case $2 in -*|'') sa_tooling "$1" ;; esac; }

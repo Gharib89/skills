@@ -170,5 +170,23 @@ check "an own key the fleet file does not hold is skipped, not refused" gpubox "
 check "no call of any run above was a link, unlink or launch" 0 "$(grep -c '^t3 environment \(link\|unlink\)\|^t3 thread start' "$SA_FAKE/calls")"
 check "the fleet file the runs read holds no host, user or key" 0 \
   "$(jq '[.. | strings | select(test("@|ssh|\\.pem|id_rsa"))] | length' "$fleet")"
+# --- a repo pinned to one machine runs only there -----------------------------------------
+reset
+jq '.repos = {"gharib89/skills": {"machine": "gpubox"}}' "$fleet" > "$tmp/pinned.json"
+PP() { bash "$s/place.sh" --fleet "$tmp/pinned.json" --ledger "$led" --own home --repo Gharib89/skills --readings "$readings"; }
+out=$(PP)
+check "a pinned repo skips this machine even when it fits, matched without case" 'gpubox {"machine":"home","outcome":"skipped:pinned"}' \
+  "$(jq -r .placed.machine <<<"$out") $(jq -c '.considered[0]' <<<"$out")"
+check "and a machine other than the pin is never considered" 0 "$(jq '[.considered[] | select(.machine == "plain")] | length' <<<"$out")"
+sa_load 9 12288
+sa_environments '[{"environmentId":"env-gpu","label":"gpubox","status":"unreachable"},{"environmentId":"env-plain","label":"plain","status":"reachable"}]'
+out=$(PP)
+check "a pinned machine that is down means the ticket waits, never another machine" 'null true' "$(jq -r '"\(.placed) \(.waiting)"' <<<"$out")"
+reset
+jq '.repos = {"other/repo": {"machine": "gpubox"}}' "$fleet" > "$tmp/pinned-other.json"
+check "another repo's pin changes nothing here" home "$(bash "$s/place.sh" --fleet "$tmp/pinned-other.json" --ledger "$led" --own home --repo Gharib89/skills --readings "$readings" | jq -r .placed.machine)"
+jq '.repos = {"gharib89/skills": {"machine": "nowhere"}}' "$fleet" > "$tmp/pinned-bad.json"
+out=$(bash "$s/place.sh" --fleet "$tmp/pinned-bad.json" --ledger "$led" --own home --repo Gharib89/skills --readings "$readings" 2>/dev/null); rc=$?
+check "a pin naming a machine the fleet file lacks exits 2, naming it" "2 1" "$rc $(jq -r .error <<<"$out" | grep -c nowhere)"
 
 finish

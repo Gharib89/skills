@@ -4,20 +4,26 @@
 
 - [Every wake](#every-wake)
 - [A need](#a-need)
+- [A ruling](#a-ruling)
 - [The digest](#the-digest)
 
 `scripts/` is under this skill's base directory. `status.sh --help` lists its
-fields. The block is rows `Needs you`, `Merged`, `Running`, `Waiting` and
+fields. Pass `--instance <id>` with this thread's provider instance, read once
+per session from `t3 thread show $T3CODE_THREAD_ID --json`
+(`.thread.providerInstanceId`); without it the block has no `Super agent on`
+line. The block is rows `Needs you`, `Merged`, `Running`, `Waiting` and
 `Reviewer limit`, one line each, an empty row left out, `Needs you` first; each
 ticket is a link, and a `Running` ticket names the provider instance it
 launched on. A `task` entry (a thread that is no ticket's) reads
 `task:<slug> (task)`, and an adopted entry of either kind adds `(adopted)`. A
 posted block ends with one `Quota <instance>` line per provider
-instance, its weekly and 5 hour remaining or `unknown`.
+instance, its weekly and 5 hour remaining or `unknown`, then a `Super agent on
+<instance>` line: the instance this thread runs on.
 
 ## Every wake
 
-After `reconcile.sh`, run `scripts/status.sh --ledger <ledger> --quota <file>`,
+After `reconcile.sh`, run `scripts/status.sh --ledger <ledger> --quota <file>
+--instance <id>`,
 `<file>` the wake's saved quota read (Routing; read it with `quota.sh --fleet
 <fleet> --save <file> --wake <id>` if no launch did):
 
@@ -51,6 +57,17 @@ answered, its ticket settles, or its stall resets, since nothing else clears
 one. A `closed` ticket's need stays until the owner answers. Repeating `need`
 with the same action keeps its time and its push, so a re-escalation never
 pushes twice.
+
+## A ruling
+
+Record the owner's answer with `scripts/ledger.sh --ledger <ledger> ruling
+<text> --allow <call>`, which dates it. Pass `--allow` only when the answer lets
+that call run unheld in later briefs (a deny is a ruling with no `--allow`), and
+`--brief` when later briefs must carry the ruling, with `--repo` or `--machine`
+to limit it. A standing line for one repo or machine belongs in the fleet file
+([setup](setup.md#fleet-brief-lines)). A ruling of your own on a merge-gate hold
+(`merge_gate_ruler: super-agent`) is recorded the same way, then reported in the
+next block.
 
 ## The digest
 

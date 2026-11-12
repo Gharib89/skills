@@ -156,6 +156,33 @@ add_wt order --push; entry order settled ship merged 14
 check "a key before --ledger removes the same" true "$(W remove acme/w#14 --ledger "$led" | jq -r .removed)"
 
 # --- nothing is ever forced ---------------------------------------------------------------------
-check "the script holds no --force and no branch delete" 0 "$(grep -cE -- '--force|branch -[dD]|branch --delete' "$s/worktree.sh")"
+check "the script holds no --force, and its one branch delete is the guarded -D" '0 1 1' \
+  "$(grep -cE -- '--force|branch --delete|branch -d ' "$s/worktree.sh") $(grep -vE '^\s*#' "$s/worktree.sh" | grep -c 'branch -D') $(grep -vE '^\s*#' "$s/worktree.sh" | grep -B2 'branch -D' | grep -c 'if $delete')"
+# --- --delete-branch: the opt-in that also deletes a merged PR's branch ---------------------------
+add_wt del-merged; entry del-merged settled ship merged 30
+out=$(W remove --ledger "$led" acme/w#30)
+check "without the flag the answer has no branch field and the branch stays" 'false yes' "$(jq 'has("branch_deleted")' <<<"$out") $(branch_exists del-merged)"
+add_wt del-merged2; entry del-merged2 settled ship merged 31
+out=$(W remove --ledger "$led" acme/w#31 --delete-branch); rc=$?
+check_rc "with the flag a merged PR's worktree is removed, exit 0" 0 "$rc"
+check "and its branch with it, even on commits no remote holds" 'true true no no' "$(jq -r '"\(.removed) \(.branch_deleted) \(if .reason == null then "no" else .reason end)"' <<<"$out") $(branch_exists del-merged2)"
+check "the answer keeps its other fields" '{"key":"acme/w#31","removed":true,"kept":false,"reason":null,"branch_deleted":true}' "$(jq -c . <<<"$out")"
+add_wt del-closed --push; entry del-closed closed ship closed 32
+out=$(W remove --ledger "$led" acme/w#32 --delete-branch)
+check "a closed PR's branch is never deleted: only a merged one's" 'true false yes' "$(jq -r .removed <<<"$out") $(jq -r .branch_deleted <<<"$out") $(branch_exists del-closed)"
+add_wt del-triage --push; entry del-triage settled triage none 33
+check "a triage entry's branch is never deleted" 'false yes' "$(W remove --ledger "$led" acme/w#33 --delete-branch | jq -r .branch_deleted) $(branch_exists del-triage)"
+add_wt del-dirty; entry del-dirty settled ship merged 34
+printf 'x\n' > "$repo/wt-del-dirty/new.txt"
+out=$(W remove --ledger "$led" acme/w#34 --delete-branch)
+check "a kept worktree keeps its branch" 'dirty false yes' "$(jq -r .reason <<<"$out") $(jq -r .branch_deleted <<<"$out") $(branch_exists del-dirty)"
+out=$(W remove --ledger "$led" acme/w#8 --delete-branch 2>/dev/null); rc=$?
+check "an open entry is refused with the flag too, its branch kept" '1 yes' "$rc $(branch_exists open)"
+add_wt del-remote --push
+out=$(W remove --key acme/w#35 --path "$repo/wt-del-remote" --branch feat/del-remote --stage settled --kind ship --merged true --delete-branch)
+check "the flag form deletes the branch of a merged PR the same way" 'true no' "$(jq -r .branch_deleted <<<"$out") $(branch_exists del-remote)"
+add_wt del-keytriage --push
+out=$(W remove --key acme/w#36 --path "$repo/wt-del-keytriage" --branch feat/del-keytriage --stage settled --kind triage --merged true --delete-branch)
+check "the flag form keeps a triage branch even when told merged" 'false yes' "$(jq -r .branch_deleted <<<"$out") $(branch_exists del-keytriage)"
 
 finish

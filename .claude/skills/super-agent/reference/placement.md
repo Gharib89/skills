@@ -29,6 +29,13 @@ only with no blocking edge and no overlapping areas, so a ticket with no
 `--area` waits for the other to finish. A repo runs at most its **ship cap**
 at once: the fleet file's `repos.<owner/name>.max_ships`, 3 when unset, counting
 every open ticket of the repo, ship and triage, on every machine; a launch over
-it waits, the cap named in its reason. Reach a machine only through its T3
+it waits, the cap named in its reason. A repo the fleet file pins
+(`repos.<owner/name>.machine`) runs only on that machine: every other machine is
+skipped as `pinned`, and the ticket waits when the pinned machine is down or
+full. Pin a repo, unpin it, or set a machine's slots with `scripts/fleet.sh
+--fleet <fleet> pin <owner/name> <machine>`, `unpin <owner/name>` or `slots
+<machine> <n>`, after a probe thread there says the machine is ready
+([setup](setup.md#steps) step 2); the machine must be in the fleet file and
+`<n>` above its `reserve`. Reach a machine only through its T3
 environment id the owner already linked: no host, user, key or SSH.
 

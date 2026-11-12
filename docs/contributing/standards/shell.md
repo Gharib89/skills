@@ -53,7 +53,8 @@ exceptions bound these rules.
   an issue create whose response was lost.
   A ninth: `super-agent`'s `watch` and `reconcile` read a supervised ticket's
   PR list and issue with `gh api` (`reconcile` also reads the issue of each
-  waiting row and of its `--after` blocker), and its thread with the `t3` CLI,
+  waiting row and of its `--after` blocker, and the issue of a merged ticket
+  with its parent issue), and its thread with the `t3` CLI,
   for the same reason: it composes no other skill, so no adapter is beside it;
   both only read. Its `claim` posts and deletes its own claim comment with
   `gh api`
