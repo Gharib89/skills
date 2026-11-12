@@ -295,11 +295,12 @@ sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$(printf '%s\nPR: https://x/7\n' "$wl")" 
 check "the waiting line above another line is a finished run" "$repo#5 run-finished" "$(event "$(W --timeout 5 --stall-window 60)")"
 sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl"
 check "a thread with no update stamp cannot be timed, so its rest is run-finished" "$repo#5 run-finished" "$(event "$(W --timeout 5 --stall-window 60)")"
-# the window's edge, with the clock taken from the test: $soon is 4070908800
+# the window's edge, with the clock taken from the test
+edge=$(date -u -d "$soon" +%s) # a fixed stamp converted, no clock read
 fixture
 sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $soon
-check "one second inside the window it is still waiting" "null timeout" "$(event "$(SA_NOW=4070908859 W --timeout 2 --stall-window 60)")"
-check "at the window it is a stall-window" "$repo#5 stall-window" "$(event "$(SA_NOW=4070908860 W --timeout 5 --stall-window 60)")"
+check "one second inside the window it is still waiting" "null timeout" "$(event "$(SA_NOW=$((edge + 59)) W --timeout 2 --stall-window 60)")"
+check "at the window it is a stall-window" "$repo#5 stall-window" "$(event "$(SA_NOW=$((edge + 60)) W --timeout 5 --stall-window 60)")"
 bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stalls 3 >/dev/null
 sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $old
 check "an entry at 3 stalls stays quiet past the window too" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
@@ -323,7 +324,7 @@ sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $soon
 check "a merge with its thread waiting on the waiting line is no event inside the bound" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
 fixture
 sa_pr_merged_at $repo feat/x-5 $soon
-check "a merge one second inside the bound is no event" "null timeout" "$(event "$(SA_NOW=4070908859 W --timeout 2 --stall-window 60)")"
-check "a merge at the bound is pr-merged" "$repo#5 pr-merged" "$(event "$(SA_NOW=4070908860 W --timeout 5 --stall-window 60)")"
+check "a merge one second inside the bound is no event" "null timeout" "$(event "$(SA_NOW=$((edge + 59)) W --timeout 2 --stall-window 60)")"
+check "a merge at the bound is pr-merged" "$repo#5 pr-merged" "$(event "$(SA_NOW=$((edge + 60)) W --timeout 5 --stall-window 60)")"
 
 finish
