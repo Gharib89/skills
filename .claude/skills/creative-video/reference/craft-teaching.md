@@ -200,6 +200,10 @@ The 15 a minute is what one strong film did, not a target: its type was large
 picture that lags the voice, changes once a sentence, or holds still while
 three things are named.
 
+A picture that changes on every word still has to hold each text for the
+reading floor and keep it inside the margin at the three sampled stills
+([the gate rules](craft-motion.md#write-to-the-layout-and-reading-gates)).
+
 ## Voice and pace
 
 Write narration as talk to one viewer ("your request", not "the request"):

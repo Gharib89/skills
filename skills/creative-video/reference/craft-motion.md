@@ -3,6 +3,7 @@
 ## Contents
 
 - [Decide in numbers](#decide-in-numbers)
+- [Write to the layout and reading gates](#write-to-the-layout-and-reading-gates)
 - [Stills before the full render](#stills-before-the-full-render)
 - [Every library runs on the frame's clock](#every-library-runs-on-the-frames-clock)
 - [Charts, shapes and effects](#charts-shapes-and-effects)
@@ -46,6 +47,33 @@ breathing loops as generated), so taste is yours, and only defects are not.
 
 Budget for many passes: "one prompt" showcases hide long work, such as a
 45-second short that took 163 calls and about 7 hours (reported).
+
+## Write to the layout and reading gates
+
+The gates judge each scene at three stills: 0.3 s in, the middle and the last
+frame (a scene under 0.6 s is judged at its middle only). In the blind
+screening runs a first draft that ignored this cost about 50 findings and most
+of the fix attempts, so author to these numbers from the first scene
+([gates.md](gates.md#running-them) holds the full rules):
+
+- **Safe margin.** Readable text stays 5% in from each side of the frame.
+- **Readable means `opacity >= 0.99`.** Text still fading in is not readable,
+  so it is exempt from the margin, size and caption-band checks and does not
+  count toward the reading floor.
+- **Reading floor.** A text stays readable for 0.8 s up to 3 words, else 0.3 s
+  a word and at least 1.2 s, in one unbroken run: two short runs never add up.
+
+Two patterns cleared nearly all of those findings:
+
+- **A scaled stage inset.** Put the content in one stage element scaled to
+  about 0.9 around its centre and leave the wall and ground full-bleed outside
+  it. Content that fills the stage then sits inside the margin (inferred: 0.9
+  maps the stage edge to 5%, so go a touch under, 0.88, where text sits flush
+  to the edge), and the background still reaches the frame's edges.
+- **Slide-ins that start at `opacity: 0`.** A tween that moves text in from
+  off-frame while fully opaque is readable and outside the margin at the 0.3 s
+  still. Start it at `opacity: 0`, and a text that arrives late in the scene
+  is not judged until it is drawn.
 
 ## Stills before the full render
 
