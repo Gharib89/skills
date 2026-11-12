@@ -64,7 +64,8 @@ reset; issue 7 "widgets: add a frobnicator to the pipeline and more" ready-for-a
 check_rc "a missing flag exits 2" 2 "$(bash "$s/launch.sh" "$repo#7" --fleet "$fleet" --ledger "$led" >/dev/null 2>&1; echo $?)"
 check_rc "a wanted answer that is neither yes nor no exits 2" 2 "$(L 7 --wanted maybe >/dev/null 2>&1; echo $?)"
 check_rc "a raise that is no number exits 2" 2 "$(L 7 --raise x >/dev/null 2>&1; echo $?)"
-check_rc "record with no launch file exits 2" 2 "$(bash "$s/launch.sh" record --thread t --ledger "$led" >/dev/null 2>&1; echo $?)"
+check_rc "record with no launch file and no task is an unrecorded launch, exit 1" 1 "$(bash "$s/launch.sh" record --thread t --ledger "$led" >/dev/null 2>&1; echo $?)"
+check_rc "record with a launch file that is not there exits 2" 2 "$(bash "$s/launch.sh" record --launch "$tmp/none.json" --thread t --ledger "$led" >/dev/null 2>&1; echo $?)"
 
 # --- a ready ticket: the whole argument object ----------------------------------
 reset; issue 7 "widgets: add a frobnicator to the pipeline and more" ready-for-agent L bug
@@ -164,7 +165,7 @@ check "it is waiting, the cap named in the reason" '{"reason":"waiting","why":"s
 check "a launch with no area, which overlaps both, still names the cap first" "ship cap: 2 of 2 open tickets of acme/widgets" "$(L 7 | jq -r .detail.reason)"
 check "and the ledger holds the waiting row" 1 "$(bash "$s/ledger.sh" --ledger "$led" list | jq '[.waiting[] | select(.key == "acme/widgets#7")] | length')"
 check "a settled ticket does not count against the cap" ok \
-  "$(bash "$s/ledger.sh" --ledger "$led" set "$repo#2" stage '"settled"' >/dev/null; L 7 --area c | jq -r 'if .launch then "ok" else .reason end')"
+  "$(sa_stage "$led" "$repo#2" settled; L 7 --area c | jq -r 'if .launch then "ok" else .reason end')"
 
 # --- record: the ledger entry and the baseline reconcile -------------------------------
 reset; issue 7 "widgets: add a frobnicator to the pipeline and more" ready-for-agent L bug

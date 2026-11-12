@@ -4,18 +4,25 @@
 # exit is what wakes the super agent.
 #
 #   watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>]
-#         [--stall-window <s>] [--remote <environment id>=<dir>]...
+#         [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>]
 #
 # Polls every open ledger entry, in ledger order, each `--interval` seconds
 # (default 30). A change is a difference from the entry's `observed` baseline,
 # which `reconcile` records: `pr-merged`, `pr-closed`, `pending-approval` (a
 # permission hold, which wakes nothing by itself), `run-finished`, and
-# `stall-window`. A run starting is no event. A run that finished is looked at
+# `stall-window`. A remote entry adds `pr-opened` and `checks-finished`. A run
+# starting is no event. A thread at rest whose last message ends on the waiting
+# line (`sa_waiting_line`, `_lib.sh`) is still working: no `run-finished`, and its
+# `stall-window` runs from when it rested (`rest_at`) while it waits. A PR that
+# merged while its thread still runs raises `pr-merged` once, when the thread
+# rests or `--stall-window` seconds after the merge, whichever comes first (a
+# remote entry's is not held). A run that finished is looked at
 # again `--recheck` seconds later (default 90) and reported only if the thread
 # is still at rest, since a run that waits on its own background subagent starts
 # again within about a minute (measured 2026-11-06). `stall-window` is an entry
 # at rest with no change for `--stall-window` seconds (default 900) since
-# `reconcile` stamped its `rest_since`; an entry already at 3 stalls is
+# `reconcile` stamped its `rest_since` (the later of that and `rest_at`, for a
+# thread waiting on the waiting line); an entry already at 3 stalls is
 # escalated, so its window stays quiet.
 # A thread that answers with another id or worktree path than the entry holds
 # is `thread-mismatch`; a thread or PR it cannot read is `thread-unreadable` or
@@ -26,19 +33,27 @@
 # and returns between two reconciles stays quiet. An entry with no `observed`
 # baseline is skipped and named in `unobserved`.
 # Settled and closed entries are not watched; a `merged` entry (PR merged,
-# thread still running) is, and wakes `run-finished` when the thread rests. The
+# thread still running) is, and wakes `run-finished` when the thread rests, unless
+# its `pr-merged` was held and has not been raised yet. The
 # ledger is read again each poll, so an entry added mid-watch is watched from
 # its next poll on (once `reconcile` has observed it). Only one watcher runs per
 # ledger: its pid is held in `<ledger>.watch`, and a second start exits 1 naming
 # the running one, so a backstop wake can start it blindly. Watch writes nothing
 # else, so an unreconciled change is reported again by the next watch. A remote
-# entry (an `environment_id`) is read as `reconcile` reads it, from its
-# `--remote` reply file, read again each poll: a file the super agent does not
-# refresh shows no new run, so a remote thread's own changes reach the watcher
-# only as fast as the files do, while its PR is read from GitHub each poll.
+# entry (an `environment_id`) is woken from GitHub alone, found by its branch: a
+# PR opening (`pr-opened`), the checks on its head commit finishing
+# (`checks-finished`), a merge and a close. Its thread is not read between wakes:
+# the baseline holds the thread `reconcile` read from the reply file on the last
+# wake, so a remote thread's own finish reaches the super agent through the
+# backstop schedule. `--remote` is accepted and unused here.
+# With `--fleet`, a fleet file holding a `notify` command makes each exit on an
+# event (not the timeout) leave a detached `notify.sh` behind: it runs the command
+# once if no reconcile followed within the fleet file's delay, since the watcher's
+# exit is what wakes the super agent and a stopped one would wake no one. A
+# malformed `notify` is refused before the first poll.
 #
 # stdout: {key, thread, event, observed} for a change, `observed` the snapshot
-#         {status, run_count, pending, gate, pr: {number, state}}; {key, thread,
+#         {status, run_count, pending, gate, waiting, rest_at, pr: {number, state[, merged_at, checks, head]}}; {key, thread,
 #         event, detail} for `thread-mismatch`, `thread-unreadable` and
 #         `pr-unreadable`; {key: null, thread: null, event: "timeout",
 #         watching, unobserved} once --timeout passes, `watching` the keys it
@@ -51,13 +66,14 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>] [--stall-window <s>] [--remote <environment id>=<dir>]...'
+usage='usage: watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>] [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>]'
 sa_help "$usage" "$@"
-ledger='' interval=30 timeout='' recheck=90 window=$sa_stall_window
+ledger='' fleet='' interval=30 timeout='' recheck=90 window=$sa_stall_window
 while [ $# -gt 0 ]; do
   case $1 in
     --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
+    --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2 ;;
     --interval) sa_flag_value "$usage" "${2:-}"; interval=$2; shift 2 ;;
     --timeout) sa_flag_value "$usage" "${2:-}"; timeout=$2; shift 2 ;;
     --recheck) sa_flag_value "$usage" "${2:-}"; recheck=$2; shift 2 ;;
@@ -69,6 +85,11 @@ case $interval in ''|0|*[!0-9]*) sa_tooling "$usage" ;; esac
 case $timeout in *[!0-9]*) sa_tooling "$usage" ;; esac
 case $recheck in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
 [ -n "$ledger" ] || sa_tooling "$usage"
+notify_cmd=''
+if [ -n "$fleet" ]; then
+  [ -f "$fleet" ] || sa_tooling "$fleet: no such file"
+  sa_notify_read "$fleet"
+fi
 
 # One watcher per ledger. The pid is written to a temp file and linked to the
 # lock, which is atomic and never leaves an empty lock for a second start to
@@ -113,20 +134,37 @@ load
 # change_of <observed> <snapshot>: the change from the baseline to the snapshot,
 # the PR's end first since it outranks a run that finished with it.
 change_of() {
-  jq -rn --argjson o "$1" --argjson n "$2" '
-    if $n.pr.state == "merged" and $o.pr.state != "merged" then "pr-merged"
+  jq -rn --argjson o "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(sa_now_s)" "$sa_jq_active"'
+    (($n.pr.merged_at // null) | if . == null then 0 else (try fromdateiso8601 catch 0) end) as $merged
+    # a merge with its thread still working is no wake yet: the thread resting
+    # or the bound passing is the one event (a remote thread is read only on a wake, so its status is stale)
+    | if $n.pr.state == "merged" and $o.pr.state != "merged" then
+        (if ($n.pr | has("checks") | not) and ($n | active($w; $now)) and $now - $merged < $w then empty else "pr-merged" end)
     elif $n.pr.state == "closed" and $o.pr.state != "closed" then "pr-closed"
+    elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "none" then "pr-opened"
+    elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "open" and $n.pr.checks == "done" and ($o.pr.checks != "done" or $o.pr.head != $n.pr.head) then "checks-finished"
     elif $n.pending > $o.pending then "pending-approval"
-    elif $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
+    elif ($n.waiting | not) and $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
     else empty end'
 }
 
 # stall_window_of <entry> <snapshot>: `stall-window` for an entry that has rested
-# past the window with nothing else to report.
+# past the window with nothing else to report. A rest on the waiting line is timed
+# from the thread's own last update, since no `run-finished` woke a reconcile to
+# stamp `rest_since`; a merged entry rests into `run-finished`, bar that one.
 stall_window_of() {
-  jq -rn --argjson e "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(date -u +%s)" '
-    if $e.rest_since != null and $n.pr.state != "merged" and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
-       and $now - ($e.rest_since | fromdateiso8601) >= $w then "stall-window" else empty end'
+  jq -rn --argjson e "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(sa_now_s)" '
+    ($e.rest_since | if . == null then null else fromdateiso8601 end) as $rs
+    | (if $n.waiting then ([$rs, $n.rest_at] | map(select(. != null)) | max) else $rs end) as $since
+    | if $since != null and ($n.pr.state != "merged" or $n.waiting) and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
+       and $now - $since >= $w then "stall-window" else empty end'
+}
+
+# woke: the watcher is about to exit on an event, which wakes the super agent;
+# leave the alarm for the day it does not answer.
+woke() {
+  [ -z "$notify_cmd" ] || setsid -f bash "$(dirname "${BASH_SOURCE[0]}")/notify.sh" --ledger "$ledger" --fleet "$fleet" --since "$(sa_now_s)" \
+    >/dev/null 2>&1 </dev/null
 }
 
 start=$SECONDS
@@ -135,7 +173,13 @@ while :; do
   while IFS= read -r entry; do
     key=$(jq -r .key <<<"$entry") thread=$(jq -r .thread <<<"$entry")
     read_ok=false event=''
-    if sa_observe "$entry"; then
+    if [ -n "$(jq -r '.environment_id // empty' <<<"$entry")" ]; then
+      # remote: GitHub only, over the thread fields of the last reconcile
+      if sa_pr_of "$entry"; then
+        read_ok=true obs=$(jq -c --argjson pr "$pr_obs" '.observed + {pr: $pr}' <<<"$entry")
+        event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs")
+      fi
+    elif sa_observe "$entry"; then
       read_ok=true
       event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs")
       if [ "$event" = run-finished ] && [ "$recheck" -gt 0 ]; then
@@ -154,6 +198,7 @@ while :; do
       jq -cn --arg k "$key" --arg t "$thread" --arg e "$obs_kind" --argjson d "$obs_detail" \
         '{key: $k, thread: $t, event: $e, detail: $d}'
     fi
+    woke
     exit 0
   done < <(jq -c '.[]' <<<"$open")
   [ -n "$timeout" ] && [ $((SECONDS - start)) -ge "$timeout" ] && break

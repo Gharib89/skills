@@ -6,6 +6,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
+source tests/super-agent-fake.sh
 
 s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
@@ -58,7 +59,7 @@ check "and only the slots are refused" '["slots"]' "$(jq -c .refused <<<"$out")"
 check "it counts the entries on the machine" '{"used":2,"ceiling":2}' "$(jq -c .slots <<<"$out")"
 out=$(LC --machine box --load 9 --free-gb 1)
 check "every threshold that fails is named" '["slots","load","ram"]' "$(jq -c .refused <<<"$out")"
-bash "$s/ledger.sh" --ledger "$led" set Gharib89/skills#1 stage '"settled"' >/dev/null
+sa_stage "$led" Gharib89/skills#1 settled
 check "a settled entry holds no slot" 0 "$(LC --machine box --load 1 --free-gb 8 >/dev/null; echo $?)"
 
 # --- the slot kept for the owner's messages ------------------------------------------
@@ -97,7 +98,7 @@ rm -f "$led"
 add Gharib89/skills 1 box --area skills/ship
 check "a blocking edge to an open ticket refuses even apart" 1 "$(R --area docs --blocked-by 1 >/dev/null; echo $?)"
 check "an edge to a ticket not open here refuses nothing" 0 "$(R --area docs --blocked-by 9 >/dev/null; echo $?)"
-bash "$s/ledger.sh" --ledger "$led" set Gharib89/skills#1 stage '"settled"' >/dev/null
+sa_stage "$led" Gharib89/skills#1 settled
 check "a settled ticket is out of the way" 0 "$(R --area skills/ship >/dev/null; echo $?)"
 
 
@@ -113,7 +114,7 @@ out=$(K); rc=$?
 check_rc "three open tickets (a triage one among them, one on another machine) refuse the fourth" 1 "$rc"
 check "the refusal is the cap, and only it" '["cap"]' "$(jq -c .refused <<<"$out")"
 check "another repo is not counted" 0 "$(LC --machine box --load 1 --free-gb 8 --repo Gharib89/other --area docs >/dev/null; echo $?)"
-check "a settled ticket stops counting" 0 "$(bash "$s/ledger.sh" --ledger "$led" set Gharib89/skills#3 stage '"settled"' >/dev/null; K >/dev/null; echo $?)"
+check "a settled ticket stops counting" 0 "$(sa_stage "$led" Gharib89/skills#3 settled; K >/dev/null; echo $?)"
 check "--key leaves its own entry out of the count" 0 "$(add Gharib89/skills 3 box --area c 2>/dev/null; K --key Gharib89/skills#3 >/dev/null; echo $?)"
 jq '.repos = {"gharib89/SKILLS": {"max_ships": 2}}' "$fleet" > "$tmp/capped.json"
 check "a repo's max_ships from the fleet file wins, its key matched without case" '["cap"]' \

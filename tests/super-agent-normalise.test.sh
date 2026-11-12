@@ -35,8 +35,8 @@ check "ledger get: a mixed-case key finds the entry" acme/widgets#5 "$(L get ACM
 out=$(L add --repo Acme/Widgets --number 5 --thread t --worktree /w --branch b 2>/dev/null); rc=$?
 check_rc "ledger add: a mixed-case key is already in the ledger" 1 "$rc"
 check "and the refusal says so" "Acme/Widgets#5 is already in the ledger" "$(jq -r .error <<<"$out")"
-L set ACME/WIDGETS#5 stage '"running"' >/dev/null
-check "ledger set: a mixed-case key writes the entry" running "$(L get acme/widgets#5 | jq -r .stage)"
+L set ACME/WIDGETS#5 branch '"b2"' >/dev/null
+check "ledger set: a mixed-case key writes the entry" b2 "$(L get acme/widgets#5 | jq -r .branch)"
 L wait acme/widgets#6 --reason r >/dev/null; L wait ACME/Widgets#6 --reason r2 >/dev/null
 check "ledger wait: a repeat in another case is one row" 1 "$(L list | jq '.waiting | length')"
 check "ledger unwait: a mixed-case key removes it" true "$(L unwait ACME/WIDGETS#6 | jq .removed)"

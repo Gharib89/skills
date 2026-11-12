@@ -5,6 +5,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
+source tests/super-agent-fake.sh
 
 s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
@@ -13,7 +14,7 @@ led=$tmp/ledger.json
 L() { bash "$s/ledger.sh" --ledger "$led" "$@"; }
 S() { bash "$s/status.sh" --ledger "$led" "$@"; }
 add() { L add --repo Gharib89/skills --number "$1" --thread "t-$1" --worktree "/wt/$1" --branch "b-$1" >/dev/null; }
-stage() { L set "Gharib89/skills#$1" stage "\"$2\"" >/dev/null; }
+stage() { sa_stage "$led" "Gharib89/skills#$1" "$2"; }
 obs() { L set "Gharib89/skills#$1" observed "$2" >/dev/null; }
 
 # --- the contract every script keeps -------------------------------------------
@@ -46,6 +47,11 @@ u=https://github.com/Gharib89/skills
 want="Merged (2): [skills#650]($u/issues/650) PR [679]($u/pull/679), [skills#655]($u/issues/655) PR [685]($u/pull/685)
 Running (2): [skills#674]($u/issues/674) at its merge gate, [skills#689]($u/issues/689) in review
 Waiting (3): [skills#658]($u/issues/658), [skills#660]($u/issues/660), [skills#686]($u/issues/686)"
+# the Waiting row follows the waiting list's order, not the order rows were written in
+L wait Gharib89/skills#686 --reason r --order 1 >/dev/null
+want="Merged (2): [skills#650]($u/issues/650) PR [679]($u/pull/679), [skills#655]($u/issues/655) PR [685]($u/pull/685)
+Running (2): [skills#674]($u/issues/674) at its merge gate, [skills#689]($u/issues/689) in review
+Waiting (3): [skills#686]($u/issues/686), [skills#658]($u/issues/658), [skills#660]($u/issues/660)"
 out=$(S)
 check "the block holds Merged, Running and Waiting in order, as links, with no Needs row" "$want" "$(jq -r .block <<<"$out")"
 check "the first block reports a change" true "$(jq .changed <<<"$out")"
@@ -136,5 +142,14 @@ L unlimit Gharib89/skills >/dev/null
 out=$(S)
 check "clearing the record changes the rows" true "$(jq .changed <<<"$out")"
 check "and the block no longer says it" 0 "$(S --digest | jq -r .block | grep -c 'Reviewer limit')"
+# --- the super agent's own instance: a line on a posted block, never a reason to post ------------------
+check "without --instance the block names no super agent line" 0 "$(S --digest | jq -r .block | grep -c '^Super agent')"
+check "--instance ends a posted block with the instance the super agent runs on" "Super agent on claude_small" "$(S --instance claude_small --digest | jq -r .block | tail -1)"
+check "it follows the Quota lines" "Quota claude_big: weekly 35%, 5 hour 90%|Super agent on claude_small" \
+  "$(S --quota "$tmp/q2.json" --instance claude_small --digest | jq -r .block | grep -E '^(Quota claude_big|Super agent)' | paste -sd'|')"
+check "a block with no row to post stays empty with it" "" "$(rm -f "$tmp/empty.json"; bash "$s/status.sh" --ledger "$tmp/empty.json" --instance claude_small --digest | jq -r .block)"
+out=$(S --instance claude_other); out=$(S --instance claude_small)
+check "a different instance alone posts no block" 'false ' "$(jq -r '"\(.changed) \(.block)"' <<<"$out")"
+check_rc "--instance with no value exits 2" 2 "$(S --instance >/dev/null 2>&1; echo $?)"
 
 finish

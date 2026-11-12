@@ -40,18 +40,34 @@ sa_env_words() {
 # a bad test clock reads as the real one.
 sa_epoch() { case ${SA_NOW:-} in ''|*[!0-9]*) printf null ;; *) printf '%s' "$SA_NOW" ;; esac; }
 
+# sa_now_s: the epoch second now, or `SA_NOW` when it is a whole number, so a test
+# takes the clock and pins a window's edge.
+sa_now_s() { case ${SA_NOW:-} in ''|*[!0-9]*) date -u +%s ;; *) printf '%s' "$SA_NOW" ;; esac; }
+
+# sa_notify_read <fleet>: the fleet file's `notify` into $notify_cmd (empty when
+# the file has none) and $notify_delay (seconds, 600 when unset). A notify that
+# is no object holding a non-empty command, or whose delay is not a whole number
+# of seconds, is refused by name: a detached notify has no one to read its error.
+# shellcheck disable=SC2034  # read by watch.sh and notify.sh
+sa_notify_read() {
+  jq -e '(.notify // null) as $n | $n == null or ($n | type == "object" and (.command | type == "string" and length > 0)
+      and ((.delay // 600) | type == "number" and . >= 1 and . == floor))' "$1" >/dev/null 2>&1 \
+    || sa_tooling "$1: notify must be an object with a non-empty command and a delay of whole seconds, 1 or more"
+  notify_cmd=$(jq -r '.notify.command // ""' "$1") notify_delay=$(jq -r '.notify.delay // 600' "$1")
+}
+
 # sa_flag_value <usage> <value>: a flag's value may be neither empty nor dash-led,
 # or the next flag is read as the value.
 sa_flag_value() { case $2 in -*|'') sa_tooling "$1" ;; esac; }
 
 command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 
-# The stages an entry moves through. `launched` is an entry nothing has observed
-# yet; `merged` is a PR merged whose thread is still running, watched until it
-# rests; `settled` and `closed` end an entry and are never watched again, except a
-# settled `triage` entry, which `reconcile` re-reads for a new run (`woke`).
-# shellcheck disable=SC2034  # read by ledger.sh
-sa_stages='launched, running, at-rest, merged, settled, closed'
+# The stages an entry moves through, by `reconcile` alone (`ledger add` and
+# `rethread` only start one at `launched`): `launched` is an
+# entry nothing has observed yet; `merged` is a PR merged whose thread is still
+# running, watched until it rests; `settled` and `closed` end an entry and are
+# never watched again, except a settled `triage` entry, which `reconcile` re-reads
+# for a new run (`woke`).
 
 # sa_read <ledger>: the ledger's JSON in $doc, an empty one for a file not yet
 # written. A file that is not JSON or has the wrong shape is refused by name,
@@ -104,6 +120,12 @@ sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 # shellcheck disable=SC2034  # read by the scripts that source this file
 sa_jq_norm='def norm_repo: ascii_downcase; def norm_path: sub("^(\\./)+"; "") | sub("/+$"; "");'
 
+# The waiting list in the owner's order: rows with an `order` first, lowest
+# first, then the rest by `since`. `sort_by` is stable, so rows that tie keep the
+# order they were written in. Applied to the ledger: `waiting_list`.
+# shellcheck disable=SC2034  # read by ledger.sh, reconcile.sh and status.sh
+sa_jq_waiting='def waiting_list: (.waiting // []) | sort_by([(.order // 1e18), .since]);'
+
 # sa_key <ledger json> <key>: the key the ledger stores for <key>, whatever its
 # case, else <key> itself.
 sa_key() { jq -r --arg k "$2" "$sa_jq_norm"'(first(.entries | keys[] | select(norm_repo == ($k | norm_repo))) // $k)' <<<"$1"; }
@@ -119,11 +141,26 @@ sa_remote_flag() {
   sa_remote_dirs=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$sa_remote_dirs")
 }
 
+# The last line a supervised run writes when it ends a turn only to wait on its own
+# background work (a check, a CI wait, a subagent): the launch brief asks for it
+# word for word, and `sa_observe` reads it as `waiting`. A rest that ends on it is
+# running until the stall window passes, so it raises no `run-finished` and adds no
+# stall. Defined once here: `brief.sh` sends it and the observation matches it.
+sa_waiting_line='Waiting on my own background work.'
+
+# `active($w; $now)` for a snapshot (`$obs`): the thread is running, or at rest on
+# the waiting line for less than `$w` seconds (`rest_at`, the thread's last update,
+# is when its run ended). `waiting` is true only with a `rest_at` to time it by.
+# shellcheck disable=SC2034  # read by watch.sh and reconcile.sh
+sa_jq_active='def active($w; $now): .status == "running" or (.waiting == true and ($now - .rest_at) < $w);'
+
 # sa_observe <entry>: one look at an entry's thread (through the `t3` CLI, or for
 # an entry with an `environment_id` through its reply file) and
 # its PR (through `gh` REST) as a snapshot in $obs:
-# {status, run_count, pending, gate, pr: {number, state}}, `state` one of none,
-# open, merged, closed, and `gate` true when the thread's last assistant message
+# {status, run_count, pending, gate, waiting, rest_at, pr: {number, state}}, `state`
+# one of none, open, merged, closed (a merged PR adds its `merged_at`), `waiting`
+# true when the thread's last assistant message ends on `sa_waiting_line`, `rest_at`
+# the thread's `updatedAt` as an epoch (null when it has none), and `gate` true when the thread's last assistant message
 # is a ship merge-gate summary, which carries `ship <version>` as a word of its own and its `Unmet criteria` item (ship
 # prints the version in its first reply too, so the version alone is no summary). A thread is found by the id and worktree path the entry holds,
 # never by a process name, which once matched the wrong process. On failure it
@@ -134,9 +171,8 @@ sa_remote_flag() {
 # {status, run_count, pending}, and the PR is not looked up.
 # shellcheck disable=SC2034  # obs, obs_kind and obs_detail are read by the callers
 sa_observe() {
-  local thread worktree repo branch raw line found list pr env dir reason file
-  thread=$(jq -r .thread <<<"$1") worktree=$(jq -r .worktree <<<"$1")
-  repo=$(jq -r .repo <<<"$1") branch=$(jq -r .branch <<<"$1")
+  local thread worktree raw line found env dir reason file
+  thread=$(jq -r .thread <<<"$1") worktree=$(jq -r '.worktree // ""' <<<"$1")
   obs_detail=$(jq -cn --arg t "$thread" '{thread: $t}')
   env=$(jq -r '.environment_id // empty' <<<"$1") reason='' file=''
   if [ -n "$env" ]; then
@@ -167,13 +203,38 @@ sa_observe() {
     return 1
   fi
   found=$(jq -c '{thread: .thread.threadId, worktree: .thread.worktreePath}' <<<"$line")
-  if [ "$found" != "$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')" ]; then
+  want=$(jq -cn --arg t "$thread" --arg w "$worktree" '{thread: $t, worktree: $w}')
+  # a `task` entry may hold no worktree: the thread id alone is matched
+  [ -n "$worktree" ] || { found=$(jq -c '{thread}' <<<"$found"); want=$(jq -cn --arg t "$thread" '{thread: $t}'); }
+  if [ "$found" != "$want" ]; then
     obs_kind='thread-mismatch' obs_detail=$found; return 1
   fi
   # `sa_thread_only` set: the caller wants the thread alone, no PR read.
   if [ -n "${sa_thread_only:-}" ]; then
     obs=$(jq -c '{status: .thread.status, run_count: .thread.runCount, pending: .thread.pendingRequestCount}' <<<"$line"); return 0
   fi
+  sa_pr_of "$1" || return 1
+  obs=$(jq -c --argjson pr "$pr_obs" --arg wl "$sa_waiting_line" '
+    (.thread.updatedAt | if type == "string" then (sub("[.][0-9]+Z$"; "Z") | try fromdateiso8601 catch null) else null end) as $rest
+    | ([.messages[]? | select(.role == "assistant")] | last | (.text // "")) as $text
+    | {status: .thread.status, run_count: .thread.runCount,
+       pending: .thread.pendingRequestCount,
+       gate: ($text | (test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+") and test("Unmet criteria"))),
+       waiting: ($rest != null and (($text | split("\n") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != "")) | last) == $wl)),
+       rest_at: $rest, pr: $pr}' <<<"$line")
+}
+
+# sa_pr_of <entry>: the entry's PR, found by its branch through `gh` REST, as
+# {number, state} in $pr_obs, `state` one of none, open, merged, closed. An entry
+# with no repo or no branch (a `task` entry) has no PR: state none. A remote entry
+# (an `environment_id`) also carries `checks` for its head commit, `none` (no check
+# run yet), `pending` or `done`, since `watch` wakes a remote entry on GitHub alone.
+# On failure it returns 1 with $obs_kind `pr-unreadable` and $obs_detail.
+# shellcheck disable=SC2034  # pr_obs, obs_kind and obs_detail are read by the callers
+sa_pr_of() {
+  local repo branch list pr sha runs checks
+  repo=$(jq -r '.repo // ""' <<<"$1") branch=$(jq -r '.branch // ""' <<<"$1")
+  if [ -z "$repo" ] || [ -z "$branch" ]; then pr_obs='{"number":null,"state":"none"}'; return 0; fi
   # A one-off failed read, with the next one fine, was measured on 2026-11-06,
   # so the read is tried twice before the PR is called unreadable.
   for _ in 1 2; do
@@ -186,10 +247,19 @@ sa_observe() {
     obs_kind='pr-unreadable' obs_detail=$(jq -cn --arg r "$repo" --arg b "$branch" '{repo: $r, branch: $b}'); return 1
   fi
   pr=$(jq -c '.[0] // null' <<<"$list")
-  obs=$(jq -c --argjson pr "$pr" '{status: .thread.status, run_count: .thread.runCount,
-    pending: .thread.pendingRequestCount,
-    gate: ([.messages[]? | select(.role == "assistant")] | last | (.text // "") | (test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+") and test("Unmet criteria"))),
-    pr: (if $pr == null then {number: null, state: "none"}
-         else {number: $pr.number, state: (if $pr.merged_at != null then "merged"
-           elif $pr.state == "closed" then "closed" else "open" end)} end)}' <<<"$line")
+  pr_obs=$(jq -cn --argjson pr "$pr" 'if $pr == null then {number: null, state: "none"}
+    else {number: $pr.number, state: (if $pr.merged_at != null then "merged"
+      elif $pr.state == "closed" then "closed" else "open" end)}
+      + (if $pr.merged_at != null then {merged_at: $pr.merged_at} else {} end) end')
+  [ -n "$(jq -r '.environment_id // empty' <<<"$1")" ] || return 0
+  checks=none
+  sha=$(jq -r '.head.sha // empty' <<<"$pr")
+  if [ "$(jq -r .state <<<"$pr_obs")" = open ] && [ -n "$sha" ]; then
+    runs=$(gh api "repos/$repo/commits/$sha/check-runs?per_page=100" 2>/dev/null </dev/null) || runs=''
+    if ! jq -e '(.check_runs | type) == "array"' <<<"$runs" >/dev/null 2>&1; then
+      obs_kind='pr-unreadable' obs_detail=$(jq -cn --arg r "$repo" --arg s "$sha" '{repo: $r, checks_of: $s}'); return 1
+    fi
+    checks=$(jq -r 'if (.check_runs | length) == 0 then "none" elif any(.check_runs[]; .status != "completed") then "pending" else "done" end' <<<"$runs")
+  fi
+  pr_obs=$(jq -c --arg c "$checks" --arg h "$sha" '. + {checks: $c, head: $h}' <<<"$pr_obs")
 }

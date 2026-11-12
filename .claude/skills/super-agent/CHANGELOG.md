@@ -7,6 +7,42 @@ released version. See
 
 <!-- version list -->
 
+## v0.20.0 (2026-11-12)
+
+### Features
+
+- **super-agent**: Merge-gate ruler, fixed resume step, notify command and the owner's rulings
+  ([#1168](https://github.com/Gharib89/skills/pull/1168),
+  [`aa551f5`](https://github.com/Gharib89/skills/commit/aa551f54532f355ebe381d6abe4e164d7e5f209f))
+
+
+## v0.19.0 (2026-11-12)
+
+### Features
+
+- **super-agent**: Reconcile prints the wake's actions, and fewer wakes
+  ([#1167](https://github.com/Gharib89/skills/pull/1167),
+  [`836c871`](https://github.com/Gharib89/skills/commit/836c871b8bf72167b30ed823c4cae9a310eab2bb))
+
+
+## v0.18.0 (2026-11-11)
+
+### Features
+
+- **super-agent**: An ordered waiting list with blockers, and ready rows from reconcile
+  ([#1166](https://github.com/Gharib89/skills/pull/1166),
+  [`8097dc4`](https://github.com/Gharib89/skills/commit/8097dc45492af9c799d5cc285979934faa3093b6))
+
+
+## v0.17.0 (2026-11-11)
+
+### Features
+
+- **super-agent**: Watch every launched thread to rest
+  ([#1161](https://github.com/Gharib89/skills/pull/1161),
+  [`6c42952`](https://github.com/Gharib89/skills/commit/6c4295282194d0a9a26e8212d6379803478bdfaf))
+
+
 ## v0.16.0 (2026-11-11)
 
 ### Features
