@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.2 (2026-11-12)
+
+### Chores
+
+- **creative-video**: Calibrate seven Gemini Egyptian voice rates
+  ([#1172](https://github.com/Gharib89/skills/pull/1172),
+  [`5385d6b`](https://github.com/Gharib89/skills/commit/5385d6bde02c43da5acfb1639b72dd9f4ae0048d))
+
+
 ## v0.22.1 (2026-11-12)
 
 ### Chores
