@@ -95,8 +95,12 @@ do to pass.
   may run beside an older ship (update-skills' `plan`).
 - A mechanic's host failure, driven through the Host fake, printing exactly one
   JSON object on stdout, per the `contract` gate.
-- A mechanic invoked in a skill's Markdown code span carrying every option its
-  usage line requires, per the `contract` gate.
+- A mechanic invoked in a skill's Markdown, in a code span or a `sh` fence,
+  carrying every option its usage line requires and a JSON value for a `<json>`
+  slot, per the `contract` gate. Name the script as the usage line does, with
+  or without `.sh` or a path. A fence of output (no language, `text`, `json`)
+  is not read; a sample of a call carries `contract-check: sample` on its line,
+  or on the line above its fence.
 - No `curl` without `--max-time` in a shell file under `skills/`, per the
   `contract` gate: a hung download hangs the run that called it.
 - No `bash -c`, `sh -c` or `eval` without an input redirect inside a
