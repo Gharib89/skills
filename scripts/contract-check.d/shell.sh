@@ -143,8 +143,9 @@ if [ -s "$work/required" ]; then
       function runline(s,   toks, nt, i, call) {
         if (s ~ /^ *#/) return
         nt = split(s, toks, " ")
-        for (i = 1; i <= nt; i++) if (mech(toks[i]) != "") break
-        if (i > nt) return
+        i = 1
+        while (i <= nt && (toks[i] ~ /^[A-Za-z_][A-Za-z0-9_]*=/ || toks[i] ~ /^(bash|sh|command|exec|env|sudo)$/)) i++
+        if (i > nt || mech(toks[i]) == "") return
         call = toks[i]
         for (i = i + 1; i <= nt; i++) {
           if (toks[i] ~ /^(\||\|\||&&|;|&)$/ || toks[i] ~ /^[0-9]*>/ || (toks[i] ~ /^</ && toks[i] !~ />$/)) break

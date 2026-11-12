@@ -90,6 +90,11 @@ scripts/quota.sh --fleet f --save f --wake w && true
 quota.sh --fleet=f --save f --wake w > out
 ```
 
+```sh
+shellcheck scripts/quota.sh scripts/route.sh
+git diff -- scripts/quota.sh README.md
+```
+
 By value: `ledger.sh --ledger l set k branch "\"main\""` and `ledger.sh --ledger l set k x [1]`.
 EOT
 run "$sa/scripts" "$sa"
