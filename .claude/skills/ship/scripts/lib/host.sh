@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Ship library: the host adapter interface every adapter defines, and the
-# --repo targeting. Sourced by ../_lib.sh, never run. Host detection and loading
-# stay in ../_lib.sh.
+# Ship library: the host adapter interface every adapter defines.
+# Sourced by ../_lib.sh, never run. Host detection and loading stay in
+# ../_lib.sh; --repo targeting is in target.sh.
 
 # Host adapter interface. Each mechanic sources exactly one of host/github.sh or
 # host/ado.sh, chosen from the origin remote rather than from a flag. An adapter

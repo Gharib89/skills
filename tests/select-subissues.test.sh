@@ -31,7 +31,7 @@ check "a parent with an open sub-issue is skipped for the next candidate" 11 "$(
 
 fresh 10
 printf '[]\n' > "$SHIP_FAKE/host_issue_subissues_open.1.json"
-check "an issue whose sub-issues are all closed, or that has none, is selected" 10 "$(sel | jq -r .selected)"
+check "an issue with no open sub-issue (all closed, or none) is selected" 10 "$(sel | jq -r .selected)"
 
 fresh 10
 printf '[12]\n' > "$SHIP_FAKE/host_issue_subissues_open.1.json"

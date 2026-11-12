@@ -116,8 +116,12 @@ done <<<"$vocab"
 
 # A default for a function the contract gives no object answer is a shape
 # nobody documented.
+# A number-list answer (`[n, ...]`) has no keys to hold, so its default is `[]`.
 for f in "$defaults"/*.json; do
   fn=$(basename "$f" .json)
+  if sed '/^[^#]/q' "$doc" | grep -Eq "^#   $fn .*-> \[n,"; then
+    check "$fn's default is an empty number list" '[]' "$(jq -c . "$f")"; continue
+  fi
   check "$fn's default answers a documented object shape" "$fn" \
     "$(awk -v f="$fn" '$1 == f {print $1}' <<<"$contract")"
 done
