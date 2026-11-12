@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.20.1 (2026-11-12)
+
+### Bug Fixes
+
+- **super-agent**: Read the ledger on stdin in launch-check and reconcile
+  ([#1176](https://github.com/Gharib89/skills/pull/1176),
+  [`5f904dd`](https://github.com/Gharib89/skills/commit/5f904dd956941abf7e20bf9ff4941876a5152012))
+
+
 ## v0.20.0 (2026-11-12)
 
 ### Features
