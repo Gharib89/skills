@@ -34,6 +34,14 @@ w v-bad-flags.sh 'a=$(gh api repos/o/r) || a=""
 if jq -c -e ".open" <<<"$a" >/dev/null; then echo open; fi'
 lint verdict "$fixture/v-bad-flags.sh"
 check_rc "jq -c -e is read as jq -e" 1 "$rc"
+w v-brace.sh 'a=$(gh api repos/o/r) || { echo unreadable >&2; exit 2; }
+if jq -e ".open" <<<"$a" >/dev/null; then echo open; fi'
+lint verdict "$fixture/v-brace.sh"
+check_rc "a || block that exits is a status check" 0 "$rc"
+w v-true.sh 'a=$(gh api repos/o/r) || true
+if jq -e ".open" <<<"$a" >/dev/null; then echo open; fi'
+lint verdict "$fixture/v-true.sh"
+check_rc "|| true is a fallback, so a later bare jq -e still fails" 1 "$rc"
 w v-decoy.sh 'a=$(gh api repos/o/r) || a=""
 [ -n "$a" ] || exit 2
 b=$(gh api repos/o/r); if [ $? -ne 0 ]; then exit 2; fi

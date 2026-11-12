@@ -11,10 +11,11 @@
 #   default files: every *.sh under skills/*/scripts
 #
 # verdict. A statement is one line, or the lines a trailing backslash joins.
-#  - A capture `v=$(gh|api|t3|ffmpeg|nvidia-smi ...)` fails with no `|| exit`
-#    (or return, continue, fail, tooling), not under `if`/`!`/`while`, and no
+#  - A capture `v=$(gh|api|t3|ffmpeg|nvidia-smi ...)` fails with no `||` that
+#    ends in exit, return, continue, break, fail, tooling, die, refuse or
+#    unavailable (alone or in a `{ ...; }` block), not under `if`/`!`/`while`, and no
 #    `$?`, `[ -n "$v" ]` or `! jq -e` read of it after. `api` is ship's wrapper
-#    over `gh api`. `|| v=''` is a deliberate answer, no bare capture, but a
+#    over `gh api`. `|| v=''` or `|| true` is a deliberate answer, no bare capture, but a
 #    later bare `jq -e` over `v` still fails. `jq` is not in that list: a `jq -r` over data the script already holds is not a
 #    read of the outside (255 such sites); the `jq -e` form below covers it.
 #  - A bare `if jq -e ... <<<"$v"` (not negated) fails when `v` was last
@@ -86,7 +87,7 @@ for f in "$@"; do
           a = substr(code, RSTART, RLENGTH); sub(/^[ \t;&|(]+/, "", a); sub(/^(local|declare|export)[ \t]+(-[A-Za-z]+[ \t]+)?/, "", a); sub(/=$/, "", a)
           rest = substr(code, RSTART + RLENGTH)
           if (rest ~ /^"?\$\(/) {
-            fallback = (code ~ /\|\|/ && code !~ /\|\|[ \t]*(exit|return|continue|break|fail|tooling|die|refuse|unavailable)([ \t;]|$)/)
+            fallback = (code ~ /\|\|/ && code !~ /\|\|[ \t]*(\{.*[ \t;])?(exit|return|continue|break|fail|tooling|die|refuse|unavailable)([ \t;}]|$)/)
             checked = ((code ~ /\|\|/ && !fallback) || code ~ /^[ \t]*(if|elif|while|until|!)[ \t]/ || code ~ /\$\?/)
             if (!checked && s < n && (st[s + 1] ~ /^[ \t]*(if[ \t]+)?(\[|\[\[|case|[A-Za-z_]*=)[^;]*\$\?/ || st[s + 1] ~ ("^[ \t]*(if|elif)[ \t]+![ \t]*jq[^<]*<<<[ \t]*\"?\\$\\{?" a "[^A-Za-z0-9_]") || st[s + 1] ~ ("^[ \t]*\\[\\[?[ \t]+-[nz][ \t]+\"?\\$\\{?" a "[^A-Za-z0-9_]"))) checked = 1
             state[a] = checked ? "checked" : "capture"
