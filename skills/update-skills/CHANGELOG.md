@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.3 (2026-11-12)
+
+### Bug Fixes
+
+- **skills**: Drop two history references, scope the wake rule, align the diff fence rule
+  ([#1198](https://github.com/Gharib89/skills/pull/1198),
+  [`83ff616`](https://github.com/Gharib89/skills/commit/83ff6161547cf48dbb7432e8a5d4efb3c1a42479))
+
+
 ## v0.10.2 (2026-10-30)
 
 ### Bug Fixes

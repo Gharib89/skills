@@ -6,7 +6,7 @@ description: >-
   smoke test in another checkout. Needs Herdr: a pane, or a server answering
   `herdr workspace list`.
 metadata:
-  version: 0.9.0
+  version: 0.9.1
 ---
 
 # drive-session
@@ -250,7 +250,10 @@ line names the parent and any merge allowance
    spec, a parent with PR-sized sub-issues, show it, and file it only on the
    user's word.
 
-Wake only on The run's background `watch`, never on `/loop` or a schedule.
+In a Herdr run, wake only on the run's background `watch`, never on `/loop` or a
+schedule: `watch` wakes on a tab's `done`, `idle`, `blocked` or `gone` event, so
+a timed wake only reads tabs with nothing to report. (`super-agent` runs in a T3
+thread and keeps its own backstop schedule.)
 
 ## Smoke tests
 

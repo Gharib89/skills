@@ -35,7 +35,7 @@
     "drive-session": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "c18ff48dbe29e515b16dbd073a55fd87f6340f86d938094f0c0921a5dfbbc75c"
+      "computedHash": "65fe256b263822850588abdc8d1cd13e2df8336c9f7082e577cc51338b4d1734"
     },
     "explainer-video": {
       "source": ".",
@@ -135,7 +135,7 @@
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "8c8b40cdac01b63f66ed00d9b5daebf075e494053a66a0de0aaa2b0ee7c6be5c"
+      "computedHash": "08311dd50c7e868f51d269441d240ca22c417cb67020806b234564ce896a186d"
     },
     "ship": {
       "source": ".",
@@ -185,7 +185,7 @@
     "update-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "d04fcd1be1bab12fb0e1ed690d0908d20937059139c7d0d9796ed9f711bdc644"
+      "computedHash": "848b5db7b889b1ee5d3d139d0651e6a9f930641b4d529ec73e5e8fc9ee958665"
     },
     "wayfinder": {
       "source": "mattpocock/skills",
