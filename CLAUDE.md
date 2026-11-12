@@ -55,13 +55,12 @@ by its next run.
 
 ### Harness
 
-`scripts/check.sh` is this repo's check entry point, with rungs
-`edit <file>...`, `turn` and `full`: its header says what each runs and what it
-prints. Hooks in
-`.claude/settings.json` run `edit` after every Edit or Write and `turn` at every
-stop, and the pre-commit runner is the commit rung. Harness profile:
-`docs/agents/harness.md`. Re-run `/setup-harness` after adding a stack, a member
-or a tool. Ship's gate, `scripts/local-gate.sh`, runs only `secrets` and
-`version-lines`, which need a base ref, and reports every `full` check
+`scripts/check.sh` is this repo's check entry point, with rungs `edit
+<file>...`, `turn` and `full`: its header says what each runs and what it
+prints. Hooks in `.claude/settings.json` run `edit` after every Edit or Write
+and `turn` at every stop, and the pre-commit runner is the commit rung. Harness
+profile: `docs/agents/harness.md`. Re-run `/setup-harness` after adding a stack,
+a member or a tool. Ship's gate, `scripts/local-gate.sh`, runs only `secrets`
+and `version-lines`, which need a base ref, and reports every `full` check
 `deferred-to-ci`: CI's `check-full` runs `full` on the PR head. Ship's phase 5
 runs that gate inline; outside Ship, `full` can run in the background.
