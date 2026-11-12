@@ -252,8 +252,8 @@ line names the parent and any merge allowance
 
 In a Herdr run, wake only on the run's background `watch`, never on `/loop` or a
 schedule: `watch` wakes on a tab's `done`, `idle`, `blocked` or `gone` event, so
-a timed wake only reads tabs with nothing to report. (`super-agent` keeps a
-backstop schedule because a T3 thread has no Herdr tab to watch.)
+a timed wake only reads tabs with nothing to report. (`super-agent` runs in a T3
+thread and keeps its own backstop schedule.)
 
 ## Smoke tests
 
