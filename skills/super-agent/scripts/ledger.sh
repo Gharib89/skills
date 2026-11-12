@@ -21,7 +21,7 @@
 #   ledger --ledger <file> briefed
 #   ledger --ledger <file> wait <key> --reason <text> [--order <n>] [--after <key>]
 #   ledger --ledger <file> unwait <key>
-#   ledger --ledger <file> need <key> --action <text>
+#   ledger --ledger <file> need <key> --action <text> [--reason <word>]
 #   ledger --ledger <file> pushed <key>
 #   ledger --ledger <file> unneed <key>
 #   ledger --ledger <file> limit <owner/name> --reviewer <name>
@@ -71,7 +71,8 @@
 # A `need` is something only the owner can settle: one row in `needs` per key
 # (the entry, or a waiting ticket), its one action, `since` when and whether its
 # push went out. A repeat with the same action keeps `since` and `pushed`, a new
-# action is a new need. `pushed` marks the push sent, `unneed` clears the need;
+# action is a new need. `--reason` names the cause it answers: only that
+# `escalate` row stays silent for it. `pushed` marks the push sent, `unneed` clears the need;
 # `status` reads the rows. `--instance` is the T3 provider instance the thread
 # launched on (route's `instance_id`), which `status` names on the Running row. A
 # `limit` records that a repo's hosted reviewer answered a review request with a
@@ -98,7 +99,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]] | allowed | briefed | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
+usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]] | allowed | briefed | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2

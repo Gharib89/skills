@@ -33,14 +33,15 @@ A settled entry is unwatched: a message to its thread goes unseen.
 
 A ship PR merged. Check it (the row's `pr`) against the issue's acceptance
 criteria, then `ledger.sh set <key> verify_owed false`. Unmet: record a need
-naming the gap first (the PR merged, so the owner decides, not the thread). A
-row in stage `merged` waits for its thread to rest, which settles it; do the
-check now.
+naming the gap first, with `--reason verify` (the PR merged, so the owner
+decides, not the thread). A row in stage `merged` waits for its thread to rest,
+which settles it; do the check now.
 
 ## escalate
 
 Only the owner can unblock it. Record one need per row with `ledger.sh need`
-(SKILL.md, Escalation format), which silences the row. By `reason`:
+(SKILL.md, Escalation format), adding `--reason <the row's reason>`: it silences
+that row only, so a later cause on the entry still prints. By `reason`:
 
 - `permission-hold` (`detail` the held requests): name the thread, the held call
   and your recommendation; a held thread is not a stall.

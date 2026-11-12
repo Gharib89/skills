@@ -137,6 +137,11 @@ check "the row names the thread" t-5 "$(jq -r '.escalate[0].thread' <<<"$out")"
 check "it repeats until the owner's need is recorded" "$repo#5 permission-hold" "$(esc "$(R)")"
 L need "$repo#5" --action "answer the permission dialog" >/dev/null
 check "an open need silences it" "" "$(esc "$(R)")"
+L need "$repo#5" --action "stall at the cap" --reason stall-cap >/dev/null
+check "a need for another cause leaves a new cause printing" "$repo#5 permission-hold" "$(esc "$(R)")"
+L need "$repo#5" --action "answer the permission dialog" --reason permission-hold >/dev/null
+check "a need for its own cause silences it" "" "$(esc "$(R)")"
+check "the need keeps its reason" permission-hold "$(L list | jq -r '.needs[0].reason')"
 fixture
 rm "$SA_FAKE/threads/t-5.json"
 out=$(R)

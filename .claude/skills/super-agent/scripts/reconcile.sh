@@ -73,7 +73,7 @@
 #         settled or closed entry still owing its cleanup (settle the thread, remove the
 #         worktree); `verify` one {key, repo, number, pr, stage} per merged ship PR whose
 #         criteria check is not recorded; `escalate` one {key, thread, reason, detail} per
-#         entry only the owner can unblock and with no open need: `permission-hold`
+#         entry only the owner can unblock and with no open need for its reason: `permission-hold`
 #         (detail the pending count), `fault` (detail the error kind), `stall-cap` (an
 #         entry at rest at 3 stalls), `pr-closed` or `issue-closed` (until its cleanup is
 #         done); `at_rest` one {key, thread}; `woke` one {key, thread, kind} per settled
@@ -252,7 +252,7 @@ ready=$(jq -c 'map(del(.repo))' <<<"$ready")
 jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson d "$doc" '
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
   def entries: [$d.entries[]?];
-  def needed($k): [($d.needs // [])[] | select((.key | ascii_downcase) == ($k | ascii_downcase))] | length > 0;
+  def needed($k; $r): [($d.needs // [])[] | select((.key | ascii_downcase) == ($k | ascii_downcase) and (.reason == null or .reason == $r))] | length > 0;
   {ledger: $l, checked: $n,
    entries: [$e[] | {key, from, stage, stalls, observed}],
    stalled: $st,
@@ -267,7 +267,7 @@ jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson
      | {key, thread, worktree, kind: (.kind // "ship"), stage, environment_id: (.environment_id // null)}],
    verify: [entries[] | select((.kind // "ship") == "ship" and .verify_owed == true and (.stage == "merged" or .stage == "settled"))
      | {key, repo, number, pr: .observed.pr.number, stage}],
-   escalate: [entries[] | select(needed(.key) | not)
+   escalate: [entries[]
      | (if .stage == "settled" then null
         elif .stage == "closed" then
           (if .cleanup_owed == true then {reason: (if .observed.pr.state == "closed" then "pr-closed" else "issue-closed" end), detail: null} else null end)
@@ -275,5 +275,5 @@ jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson
         elif .error != null then {reason: "fault", detail: .error}
         elif .stage == "at-rest" and (.stalls // 0) >= 3 then {reason: "stall-cap", detail: .stalls}
         else null end) as $r
-     | select($r != null) | {key, thread, reason: $r.reason, detail: $r.detail}],
+     | select($r != null and (needed(.key; $r.reason) | not)) | {key, thread, reason: $r.reason, detail: $r.detail}],
    errors: $errs}'
