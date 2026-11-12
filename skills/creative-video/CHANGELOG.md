@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.4 (2026-11-12)
+
+### Documentation
+
+- **creative-video**: Craft docs state the layout and reading gate rules
+  ([#1173](https://github.com/Gharib89/skills/pull/1173),
+  [`2667bd8`](https://github.com/Gharib89/skills/commit/2667bd88c1b338898036cedf62050e605e759011))
+
+
 ## v0.22.3 (2026-11-12)
 
 ### Chores
