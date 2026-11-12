@@ -14,12 +14,12 @@
 // on its last frame (gates/samples.mjs), and measures the samples with
 // HyperFrames' check, a text probe (one launch, over the samples and a 0.25 s
 // grid) and two snapshot launches, each frame that differs between them taken
-// again alone in two more (gates/determinism.mjs). Thirteen gates judge the project, each a hard
+// again alone in two more (gates/determinism.mjs). Fourteen gates judge the project, each a hard
 // fail: determinism (the same pixels twice), layout, contrast, reading time,
 // the caption band, anchors (an at() naming a word the narration lacks),
 // script errors (a scene's script that throws), sounds (each <audio> renders
-// at the start the gates judge, gates/sounds.mjs), licence and bed level (the
-// sound kit, gates/sound-kit.mjs), must and avoid, support (the
+// at the start the gates judge, gates/sounds.mjs), licence, bed level and effect
+// level (the sound kit, gates/sound-kit.mjs), must and avoid, support (the
 // claims check passed on the voiced narration) and the critic
 // (gates/critic.mjs), pending until each scene's verdict is written. Length,
 // loudness and voice QC are the voice and render stages' own. A video in

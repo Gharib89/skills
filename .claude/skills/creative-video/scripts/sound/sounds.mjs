@@ -129,12 +129,14 @@ async function fromOpenverse(query, medium) {
   // measures clean (lib/seam.mjs), of at most SEAMS downloaded to measure.
   let r;
   let failed;
+  const outcome = { unclean: 0, undecodable: 0, "download failed": 0 };
   for (const c of usable.slice(0, medium ? SEAMS : 1)) {
     const file = path.join(store, "openverse", `${c.id}.${ext(c)}`);
     try {
       await backend.download(c.url, file);
     } catch (e) {
       failed = `openverse download failed (${e.message})`;
+      outcome["download failed"]++;
       continue;
     }
     if (!medium) {
@@ -145,17 +147,23 @@ async function fromOpenverse(query, medium) {
     try {
       const { samples, rate } = await backend.pcm(file);
       clean = seam(samples, rate).clean;
+      if (!clean) outcome.unclean++;
     } catch (e) {
-      failed = `openverse bed could not be decoded (${e.message})`;
+      outcome.undecodable++;
     }
     if (clean) {
       r = c;
       break;
     }
     fs.rmSync(file, { force: true });
-    if (!failed?.includes("decoded"))
-      failed = `openverse found no result whose loop seam is clean (tried ${usable.slice(0, SEAMS).length})`;
   }
+  if (!r && (outcome.unclean || outcome.undecodable))
+    failed = `openverse found no result whose loop seam is clean (${Object.entries(
+      outcome,
+    )
+      .filter(([, n]) => n)
+      .map(([what, n]) => `${n} ${what}`)
+      .join(", ")})`;
   if (!r) return failed;
   const name = `${r.id}.${ext(r)}`;
   return {

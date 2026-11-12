@@ -5,8 +5,9 @@
 //                                  throws as the real search does, a list is
 //                                  its results; a query not named finds none
 //   CREATIVE_VIDEO_FAKE_SEAM       JSON: a file's loop seam by its name, `click`
-//                                  (a jump at the join) or `fade` (a quiet
-//                                  end); any other file loops clean
+//                                  (a jump at the join), `fade` (a quiet
+//                                  end) or `undecodable` (ffmpeg fails); any
+//                                  other file loops clean
 //   CREATIVE_VIDEO_FAKE_LOUD       JSON: a file's short-term loudness (LUFS) by
 //                                  its name, else narration.wav -16, any
 //                                  other file -20
@@ -66,6 +67,7 @@ export async function pcm(file) {
     (_, i) => 0.5 * Math.sin((2 * Math.PI * 200 * i) / rate),
   );
   const seam = JSON.parse(process.env.CREATIVE_VIDEO_FAKE_SEAM ?? "{}")[name];
+  if (seam === "undecodable") throw new Error(`ffmpeg ${name}: invalid data`);
   if (seam === "click")
     for (let i = 0; i < 40; i++) samples[samples.length - 1 - i] += 0.4;
   if (seam === "fade")

@@ -3,7 +3,7 @@
 The sibling of `explainer-video` whose scenes the agent authors freely, the `creative-video` skill. Terms it shares with `explainer-video`, such as excerpt and claim, keep their meaning from [Explainer video](explainer-video.md); its critic is its own, below.
 
 **Bed**:
-A recorded sound under a creative video's narration, drawn from the format concept's world (a kitchen's room tone, a studio crowd), kept well under the voice and taken out for the hardest step. It is not music unless the concept names a reason.
+A recorded sound under a creative video's narration, drawn from the format concept's world (a kitchen's room tone, a studio crowd), kept 15 to 20 LU under the voice, so it is heard but covers no word, and taken out for the hardest step. It is not music unless the concept names a reason.
 _Avoid_: score, soundtrack, background music
 
 **Brand**:
