@@ -142,5 +142,14 @@ L unlimit Gharib89/skills >/dev/null
 out=$(S)
 check "clearing the record changes the rows" true "$(jq .changed <<<"$out")"
 check "and the block no longer says it" 0 "$(S --digest | jq -r .block | grep -c 'Reviewer limit')"
+# --- the super agent's own instance: a line on a posted block, never a reason to post ------------------
+check "without --instance the block names no super agent line" 0 "$(S --digest | jq -r .block | grep -c '^Super agent')"
+check "--instance ends a posted block with the instance the super agent runs on" "Super agent on claude_small" "$(S --instance claude_small --digest | jq -r .block | tail -1)"
+check "it follows the Quota lines" "Quota claude_big: weekly 35%, 5 hour 90%|Super agent on claude_small" \
+  "$(S --quota "$tmp/q2.json" --instance claude_small --digest | jq -r .block | grep -E '^(Quota claude_big|Super agent)' | paste -sd'|')"
+check "a block with no row to post stays empty with it" "" "$(rm -f "$tmp/empty.json"; bash "$s/status.sh" --ledger "$tmp/empty.json" --instance claude_small --digest | jq -r .block)"
+out=$(S --instance claude_other); out=$(S --instance claude_small)
+check "a different instance alone posts no block" 'false ' "$(jq -r '"\(.changed) \(.block)"' <<<"$out")"
+check_rc "--instance with no value exits 2" 2 "$(S --instance >/dev/null 2>&1; echo $?)"
 
 finish

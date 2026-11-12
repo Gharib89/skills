@@ -5,7 +5,7 @@ The one agent the owner talks to about every open ticket in every repo: a pinned
 _Avoid_: router, orchestrator, chief of staff, dispatcher
 
 **Supervised thread**:
-One T3 thread the super agent launched, in its own worktree on whichever machine runs it, recorded as an entry of the ledger: for a ticket (kind `ship` or `triage`) or for any other job the owner asked for (kind **task**: a grill, a deploy, decks, a review). A thread someone else launched that the owner asks it to watch is **adopted**, with the same entry. Every one is watched until it is at rest, whatever its kind; the super agent touches no thread the ledger does not hold, except the probe threads it launches.
+One T3 thread the super agent launched, in its own worktree on whichever machine runs it, recorded as an entry of the ledger: for a ticket (kind `ship` or `triage`) or for any other job the owner asked for (kind **task**: a grill, a deploy, decks, a review). A thread someone else launched that the owner asks it to watch is **adopted**, with the same entry. Every one is watched until it is at rest, whatever its kind; the super agent touches no thread the ledger does not hold, except the probe threads it launches and, to settle them once at rest, the helper and review threads a supervised thread started.
 _Avoid_: worker, worker thread, child thread, held thread
 
 **Ledger**:
@@ -17,7 +17,7 @@ The ledger's `waiting` rows, in order: the owner's queue. A row is a ticket with
 _Avoid_: backlog, pending list, a queue kept in a scratch file
 
 **Status block**:
-The one report the owner reads, printed by the super agent's status script from the ledger alone and posted as printed: the rows `Needs you`, `Merged`, `Running` and `Waiting`, an empty row left out, each ticket a link and each task or adopted entry marked as one. A wake that changed no row posts none, and only a new open need sends a push; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
+The one report the owner reads, printed by the super agent's status script from the ledger alone and posted as printed: the rows `Needs you`, `Merged`, `Running` and `Waiting`, an empty row left out, each ticket a link and each task or adopted entry marked as one, ending on the provider instance the super agent itself runs on. A wake that changed no row posts none, and only a new open need sends a push; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
 _Avoid_: report (prose written fresh on each wake), summary, dashboard
 
 **Watcher**:
@@ -36,12 +36,24 @@ _Avoid_: todo, task (that is a ledger kind), notification
 A supervised thread at rest with its ticket not done: its run completed with no merged PR and no merge-gate summary, or no new run for the stall window. Each stall raises the ticket's stall count and each real step lowers it; the count decides whether the super agent nudges, re-briefs, or starts a fresh thread or escalates.
 _Avoid_: hang, idle (idle is a thread state, not a judgement), crash
 
+**Merge-gate ruler**:
+The fleet file's `merge_gate_ruler`: who rules on a merge-gate hold outside the merge allowance and the standing waivers, the owner (default) or the super agent, which then decides and reports to the owner. The launch brief says which. A hold on a failure the PR did not cause is never waived by either: the failure is filed as its own issue and ordered first, and the gate re-runs after its fix.
+_Avoid_: approver, gatekeeper
+
+**Notify command**:
+The fleet file's `notify` shell command and delay. When the watcher exits on an event and no reconcile follows within the delay, the command runs once, so a super agent that stopped is noticed by something other than itself. A reconcile within the delay runs nothing.
+_Avoid_: alert, heartbeat, backstop (that is the schedule that wakes the super agent)
+
+**Parents done**:
+Reconcile's `parents_done` list: an open parent issue (a spec) whose sub-issues are all closed, offered to the owner once. The super agent closes the parent only on the owner's word.
+_Avoid_: batch complete, epic done
+
 **Standing waiver**:
 A merge-gate hold the launch template waives in advance, with its condition written out, so a run that meets it merges without a round trip to the owner. The fleet file lists them and the launch brief carries each condition word for word. Any hold outside the listed waivers is still an escalation.
 _Avoid_: auto-merge, merge allowance (that is the launch permission to merge at all), exception
 
 **Fleet file**:
-The owner's user-scope file, written by the super agent's setup step and carried to every machine, that lists what the super agent may use: each linked machine with its capabilities and slot count, each provider instance with its quota read and auth result, the GitHub accounts, the active repos (each with its ship cap and brief lines) and the default standing waivers. The skill itself names none of these, so it stays the same for every owner.
+The owner's user-scope file, written by the super agent's setup step and carried to every machine, that lists what the super agent may use: each linked machine with its capabilities and slot count, each provider instance with its quota read and auth result, the GitHub accounts, the active repos (each with its ship cap, machine pin and brief lines), the default standing waivers, who rules on a merge-gate hold and the notify command. The skill itself names none of these, so it stays the same for every owner.
 _Avoid_: config, inventory, profile (a ship profile is per repo)
 
 **Provider instance**:
@@ -49,11 +61,11 @@ One T3 provider the super agent may launch on, named by T3's instance id: two Cl
 _Avoid_: account, provider (that is the driver), subscription
 
 **Slot**:
-One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling, less the slots it keeps for the owner's messages (`reserve`, 1 on the super agent's own machine); a launch still checks the machine's free memory and load before it takes a slot. A probe thread takes none. A slot bounds a machine; the **ship cap** bounds a repo.
+One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling, less the slots it keeps for the owner's messages (`reserve`, 1 on the super agent's own machine); a launch still checks the machine's free memory and load before it takes a slot. A probe thread takes none. The `fleet` script sets it. A slot bounds a machine; the **ship cap** bounds a repo.
 _Avoid_: worker, lane, seat
 
 **Placement**:
-Choosing the machine a launch runs on: the super agent's own machine first, a GPU machine for GPU work, the next reachable linked machine that fits when one is down, and a row in the ledger's waiting list when none does, a launch over its repo's ship cap included. A machine is reached only through its T3 environment id, and only if the owner already linked it.
+Choosing the machine a launch runs on: the super agent's own machine first, a GPU machine for GPU work, the next reachable linked machine that fits when one is down, and a row in the ledger's waiting list when none does, a launch over its repo's ship cap included. A repo the fleet file pins to a machine (a **machine pin**) is placed there alone, and waits when that machine is down or full. A machine is reached only through its T3 environment id, and only if the owner already linked it.
 _Avoid_: scheduling, load balancing
 
 **Ship cap**:

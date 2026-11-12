@@ -59,8 +59,15 @@
 # below stay in every answer until the super agent clears the field with
 # `ledger set <key> cleanup_owed false` (or `verify_owed false`).
 #
+# A merged ship entry whose ticket is a sub-issue gets one look at its parent (`parents_done`
+# below): when the ticket reads closed and every sub-issue of the open parent is closed, the
+# parent is offered to the owner; the super agent closes nothing itself.
+#
+# Each run stamps `<ledger>.reconciled` with its epoch second, which `notify` reads
+# to tell a super agent that answered a wake from one that did not.
+#
 # stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, ready,
-#         dropped, unqueued, cleanup, verify, escalate, errors}:
+#         dropped, unqueued, parents_done, cleanup, verify, escalate, errors}:
 #         `entries` one {key, from, stage, stalls, observed} per open entry that
 #         was read; `stalled` one {key, thread, stalls, reason} per stall counted
 #         now, `reason` `run-completed` or `stall-window`;
@@ -69,7 +76,9 @@
 #         `ready` one {key, order, after, reason, since} per waiting row that can launch;
 #         `dropped` one {key, reason: `issue-closed`} per waiting row removed now;
 #         `unqueued` one {key, title, created_at} per issue offered now (`[]` without
-#         --fleet); `cleanup` one {key, thread, worktree, kind, stage, environment_id} per
+#         --fleet); `parents_done` one {key, title, sub_issues} per open parent issue
+#         whose sub-issues are all closed, offered once (the ledger keeps `parents_offered`);
+#         `cleanup` one {key, thread, worktree, kind, stage, environment_id} per
 #         settled or closed entry still owing its cleanup (settle the thread, remove the
 #         worktree); `verify` one {key, repo, number, pr, stage} per merged ship PR whose
 #         criteria check is not recorded; `escalate` one {key, thread, reason, detail} per
@@ -198,27 +207,8 @@ while IFS= read -r entry; do
 done < <(jq -c '.entries[] | select(.stage == "settled" and .kind == "triage")' <<<"$doc")
 # Issues filed while a batch runs that nothing holds: offered once, then remembered.
 unqueued='[]'
-if [ -n "$fleet" ] && [ -n "$batch_since" ]; then
-  while IFS= read -r repo; do
-    [ -n "$repo" ] || continue
-    raw=$(gh api "repos/$repo/issues?state=open&sort=created&direction=desc&per_page=100" 2>/dev/null </dev/null) || raw=''
-    if ! jq -e 'type == "array"' <<<"$raw" >/dev/null 2>&1; then
-      errors=$(jq -c --arg r "$repo" '. + [{key: $r, kind: "repo-unreadable", detail: {repo: $r}}]' <<<"$errors"); continue
-    fi
-    while IFS= read -r issue; do
-      [ -n "$issue" ] || continue
-      key="$repo#$(jq -r .number <<<"$issue")"
-      if jq -e --arg k "$key" "$sa_jq_norm"'(.entries | keys | map(norm_repo)) + ((.waiting // []) | map(.key | norm_repo)) + ((.unqueued_offered // []) | map(norm_repo)) | index($k | norm_repo)' <<<"$doc" >/dev/null; then continue; fi
-      comments=$(gh api "repos/$repo/issues/$(jq -r .number <<<"$issue")/comments?per_page=100" 2>/dev/null </dev/null) || comments=''
-      if ! jq -e 'type == "array" and length < 100' <<<"$comments" >/dev/null 2>&1; then
-        errors=$(jq -c --arg k "$key" '. + [{key: $k, kind: "claim-unreadable", detail: {key: $k}}]' <<<"$errors"); continue
-      fi
-      if jq -e 'any(.[]; (.body // "") | test("^<!-- super-agent-claim "))' <<<"$comments" >/dev/null; then continue; fi
-      unqueued=$(jq -c --arg k "$key" --argjson i "$issue" '. + [{key: $k, title: $i.title, created_at: $i.created_at}]' <<<"$unqueued")
-      doc=$(jq -c --arg k "$key" '.unqueued_offered = ((.unqueued_offered // []) + [$k])' <<<"$doc")
-    done < <(jq -c --arg since "$batch_since" '.[] | select(.pull_request == null and .created_at >= $since)' <<<"$raw")
-  done < <(jq -r '(.active_repos // [])[]' "$fleet")
-fi
+source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/unqueued.sh" || sa_tooling "cannot source reconcile.d/unqueued.sh"
+reconcile_unqueued
 # The waiting list: the owner's queue. A closed issue drops its row; a row is
 # ready when its blocker merged and its repo has a free ship slot.
 ready='[]' dropped='[]'
@@ -247,9 +237,15 @@ while IFS= read -r row; do
   ready=$(jq -c --argjson r "$row" '. + [$r | {key, repo, order, after, reason, since}]' <<<"$ready")
 done < <(jq -c "$sa_jq_waiting"'waiting_list[]' <<<"$doc")
 ready=$(jq -c 'map(del(.repo))' <<<"$ready")
-[ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] && [ "$dropped" = '[]' ] || sa_write "$ledger" "$doc"
+# A merged ship entry's spec parent, offered once when its sub-issues are all closed.
+source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/parents.sh" || sa_tooling "cannot source reconcile.d/parents.sh"
+parents_done='[]' parents_changed=0
+reconcile_parents
+[ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] && [ "$dropped" = '[]' ] && [ "$parents_changed" -eq 0 ] || sa_write "$ledger" "$doc"
+# The stamp `notify` reads: a reconcile ran, so a super agent is answering its wakes.
+printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 
-jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson d "$doc" '
+jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" --argjson d "$doc" '
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
   def entries: [$d.entries[]?];
   def needed($k; $r): [($d.needs // [])[] | select((.key | ascii_downcase) == ($k | ascii_downcase) and (.reason == null or .reason == $r))] | length > 0;
@@ -263,6 +259,7 @@ jq -cn --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson
    ready: $rd,
    dropped: $dr,
    unqueued: $uq,
+   parents_done: $pd,
    cleanup: [entries[] | select((.stage == "settled" or .stage == "closed") and .cleanup_owed == true)
      | {key, thread, worktree, kind: (.kind // "ship"), stage, environment_id: (.environment_id // null)}],
    verify: [entries[] | select((.kind // "ship") == "ship" and .verify_owed == true and (.stage == "merged" or .stage == "settled"))

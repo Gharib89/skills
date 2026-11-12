@@ -18,6 +18,10 @@
 # linked machine from --readings, a file of `{<key>: {load1, free_gb}}` taken
 # from a probe thread run there: when the next candidate has no reading, the
 # answer is `need_reading` for it, and the caller probes it and asks again.
+# A repo pinned in the fleet file (`repos.<owner/name>.machine`, set by `fleet pin`) runs
+# only on that machine: every other one is `skipped:pinned`, and a pinned machine that
+# is down or full means the ticket waits, never that another machine takes it. A pin
+# naming a machine the fleet file lacks is refused.
 # --number records the outcome in the ledger: a ticket nothing fits is `wait`ed
 # (the morning report lists it), a placed one is `unwait`ed.
 #
@@ -28,7 +32,7 @@
 #         `gpu` when the work wanted a GPU and no machine with one is up;
 #         `need_reading` {machine, environment_id} or null; `considered` one
 #         {machine, outcome} per candidate looked at, `outcome` skipped:<why>
-#         (excluded, no-environment, unreachable, unknown, no-gpu, account, unmeasured)
+#         (excluded, pinned, no-environment, unreachable, unknown, no-gpu, account, unmeasured)
 #         or the refusals of `launch-check` (slots, load, ram, repo, cap); a `repo` or
 #         `cap` refusal ends the search with `waiting`, `reason` starting `same repo` or
 #         `ship cap`
@@ -60,6 +64,9 @@ done
 [ -n "$fleet" ] && [ -n "$ledger" ] && [ -n "$repo" ] || sa_tooling "$usage"
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file"
 jq -e '(.machines | type) == "object"' "$fleet" >/dev/null 2>&1 || sa_tooling "$fleet: not a fleet file (machines must be an object)"
+pinned=$(jq -r --arg r "$repo" "$sa_jq_norm"'[(.repos // {}) | to_entries[] | select(.key | norm_repo == ($r | norm_repo)) | .value.machine // empty] | first // empty' "$fleet" 2>/dev/null) \
+  || sa_tooling "$fleet: repos must be an object"
+[ -z "$pinned" ] || jq -e --arg m "$pinned" '.machines | has($m)' "$fleet" >/dev/null || sa_tooling "$fleet: $repo is pinned to $pinned, which is not in machines"
 [ -z "$readings" ] || jq -e 'type == "object"' "$readings" >/dev/null 2>&1 || sa_tooling "$readings: not a JSON object"
 [ -n "$own" ] || own=$(hostname 2>/dev/null) || sa_tooling "cannot read this machine's name: pass --own"
 sa_read "$ledger"
@@ -78,6 +85,7 @@ while IFS= read -r m; do
   mj=$(jq -c --arg m "$m" '.machines[$m]' "$fleet")
   id=$(jq -r '.environment_id // empty' <<<"$mj")
   if jq -e --arg m "$m" 'index($m)' <<<"$excluded" >/dev/null; then note "$m" skipped:excluded; continue; fi
+  if [ -n "$pinned" ] && [ "$m" != "$pinned" ]; then note "$m" skipped:pinned; continue; fi
   if [ "$m" != "$own" ]; then
     [ -n "$id" ] || { note "$m" skipped:no-environment; continue; }
     $reach_known || { note "$m" skipped:unknown; continue; }

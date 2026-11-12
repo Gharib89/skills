@@ -29,6 +29,20 @@ lists the fields; this file holds the rules behind them.
 - One watcher runs per ledger: a second start exits 1 with `running`, and the
   first is left alone.
 
+## The notify command
+
+Every alarm in the loop is the super agent, so a super agent that stopped (an
+access error, a closed session) wakes nothing. The fleet file's `notify` object
+is the one alarm outside it: `{"command": <shell text>, "delay": <whole seconds
+of 1 or more, 600 when unset>}`. A watcher started with `--fleet <fleet>` that
+exits on an event (any exit but `timeout`) leaves a detached `notify.sh`
+behind. It sleeps the delay, then reads `<ledger>.reconciled`, the epoch second
+of the last reconcile: a stamp at or after the watcher's exit runs nothing, no
+stamp or an older one runs the command once, with `SA_NOTIFY_MESSAGE` set. A
+fleet file with no `notify`, or a watcher started without `--fleet`, notifies
+nothing; a `notify` of the wrong shape is a tooling error at the watcher's
+start.
+
 ## The wake's actions
 
 `reconcile` marks an entry `cleanup_owed` when it settles or closes, and a ship

@@ -5,6 +5,8 @@
 - [Steps](#steps)
 - [Cursor and Grok](#cursor-and-grok)
 - [Fleet brief lines](#fleet-brief-lines)
+- [Fleet keys the owner sets](#fleet-keys-the-owner-sets)
+- [The super agent's own tier](#the-super-agents-own-tier)
 - [Re-runs](#re-runs)
 
 The fleet file is defined in SKILL.md's `## Setup`; `scripts/` is under this
@@ -92,6 +94,32 @@ that machine. A launch brief prints the lines that match its repo and the
 machine it is placed on under `Lines for this repo and machine:`. A one-off
 ruling is scoped the same way:
 `ledger.sh ruling <text> --brief --repo <r> --machine <m>`.
+
+## Fleet keys the owner sets
+
+Each is optional, and a fleet file without it
+behaves as before.
+
+- `merge_gate_ruler`: `owner` (default) or `super-agent`, who rules on a
+  merge-gate hold outside the merge allowance and the standing waivers. Any
+  other value is a tooling error from `brief.sh`. The launch brief says which
+  ([launch-brief](launch-brief.md)).
+- `notify`: `{"command": <shell text>, "delay": <whole seconds, 600 when
+  unset>}`, the alarm that runs when the watcher exited on an event and no
+  reconcile followed within the delay
+  ([watching](watching.md#the-notify-command)).
+- `repos.<owner/name>.machine`: pins the repo to one machine key
+  ([placement](placement.md#the-rules)). `machines.<m>.slots`: the machine's
+  slot count. Edit both with `scripts/fleet.sh`, not by hand.
+
+## The super agent's own tier
+
+Run the super agent's own thread on Sonnet with high effort: it routes, reads
+summaries and records, work that needs no larger tier. The owner sets it in T3
+Code, in the model selection of the super agent thread (or when launching it);
+a running super agent never changes its own model. The status block's
+`Super agent on <instance>` line shows which provider instance the thread runs
+on.
 
 ## Re-runs
 

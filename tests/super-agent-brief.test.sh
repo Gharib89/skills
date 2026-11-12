@@ -154,4 +154,25 @@ for f in bad1 bad2 bad3; do
   check "a $f fleet exits 2 with a named error" "2 1" "$rc $(jq -r .error <<<"$out" | grep -c 'array of text lines')"
 done
 
+# --- who rules on a hold outside the allowance: `merge_gate_ruler`, the owner by default ---
+out=$(B); b=$(jq -r .brief <<<"$out")
+check "with no ruler the owner decides, as before" '1 owner' "$(grep -c 'the super agent escalates it to the owner\.$' <<<"$b") $(jq -r .gate_ruler <<<"$out")"
+jq '.merge_gate_ruler = "owner"' "$fleet" > "$tmp/ruler-owner.json"
+check "an explicit owner reads the same as none" "$b" "$(bash "$s/brief.sh" --fleet "$tmp/ruler-owner.json" --ledger "$led" | jq -r .brief)"
+jq '.merge_gate_ruler = "super-agent"' "$fleet" > "$tmp/ruler-sa.json"
+out=$(bash "$s/brief.sh" --fleet "$tmp/ruler-sa.json" --ledger "$led"); b=$(jq -r .brief <<<"$out")
+check "super-agent: the hold goes to the super agent, which reports" '1 0 super-agent' \
+  "$(grep -c 'the super agent rules on it and reports to the owner\.$' <<<"$b") $(grep -c 'escalates it to the owner' <<<"$b") $(jq -r .gate_ruler <<<"$out")"
+check "the waivers are unchanged by the ruler" "3" "$(jq .waivers <<<"$out")"
+for v in '"operator"' 7 '""'; do
+  jq --argjson v "$v" '.merge_gate_ruler = $v' "$fleet" > "$tmp/ruler-bad.json"
+  out=$(bash "$s/brief.sh" --fleet "$tmp/ruler-bad.json" --ledger "$led"); rc=$?
+  check "a ruler of $v exits 2 naming the field" "2 1" "$rc $(jq -r .error <<<"$out" | grep -c 'merge_gate_ruler')"
+done
+
+# --- a supervisor's ruling never goes into a PR body ---------------------------------
+check "every brief tells the run to keep a ruling out of the PR body" 1 \
+  "$(B | jq -r .brief | grep -c '^A ruling from the super agent or the owner arrives in your thread: act on it, and never write it into a PR body')"
+check "the closing line is still last with it" "End your last message with the PR URL and the gate state." "$(B | jq -r .brief | tail -1)"
+
 finish

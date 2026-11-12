@@ -4,7 +4,7 @@
 # posts `block` as printed, never rewrites it, and posts nothing when `block` is
 # empty.
 #
-#   status --ledger <file> [--quota <file>] [--digest]
+#   status --ledger <file> [--quota <file>] [--instance <id>] [--digest]
 #
 # Rows, in this order, an empty row left out: `Needs you` (the ledger's open
 # needs, each its one action), `Merged` (a ship entry whose PR merged and that no
@@ -26,6 +26,10 @@
 # `unknown`. Those lines never make a block post: the figures move every wake, so
 # only a changed row does.
 #
+# With --instance <id>, the provider instance the super agent's own thread runs on
+# (`providerInstanceId` of `t3 thread show $T3CODE_THREAD_ID`), a posted block ends with
+# `Super agent on <id>`, after any Quota lines. Like them it never makes a block post.
+#
 # stdout: {block, changed, unpushed: [{key, action, since}]}: `block` the text to
 #         post ("" when nothing changed and no digest was asked, or when nothing
 #         is open), `changed` true when a row differs from the last printed
@@ -36,14 +40,15 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: status --ledger <file> [--quota <file>] [--digest]'
+usage='usage: status --ledger <file> [--quota <file>] [--instance <id>] [--digest]'
 sa_help "$usage" "$@"
-ledger='' digest=false quota=
+ledger='' digest=false quota='' instance=''
 while [ $# -gt 0 ]; do
   case $1 in
     --digest) digest=true; shift; continue ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2 ;;
     --quota) sa_flag_value "$usage" "${2:-}"; quota=$2 ;;
+    --instance) sa_flag_value "$usage" "${2:-}"; instance=$2 ;;
     *) sa_tooling "$usage" ;;
   esac
   shift 2
@@ -82,12 +87,12 @@ now=$(jq -c "$sa_jq_norm$sa_jq_waiting"'
 
 printed=$(jq -c '.status.rows // {}' <<<"$doc") || sa_tooling "$ledger: status is not an object"
 changed=$(jq -r --argjson p "$printed" '.rows != $p' <<<"$now")
-block=$(jq -r --argjson d "$digest" --argjson c "$changed" --argjson q "$qdoc" '
+block=$(jq -r --argjson d "$digest" --argjson c "$changed" --argjson q "$qdoc" --arg inst "$instance" '
   def pct: if . == null then "unknown" else "\((. * 100) | round)%" end;
   def bucket($p; $w): [$p.buckets[]? | select(if $w == "5h" then .window == "5h" else .window == "weekly" and (if $p.driver == "claude" then .id == "week" elif $p.driver == "pi" then ((.group // "") | startswith("Claude")) else true end) end)] | first | .remaining;
   ([("Needs you", "Merged", "Running", "Waiting", "Reviewer limit") as $n | .rows[$n] // empty]) as $rows
   | ([($q.providers // {}) | to_entries[] | "Quota \(.key): weekly \(bucket(.value; "weekly") | pct), 5 hour \(bucket(.value; "5h") | pct)"]) as $qlines
-  | if ($d or $c) and ($rows | length) > 0 then ($rows + $qlines) | join("\n") else "" end' <<<"$now") \
+  | if ($d or $c) and ($rows | length) > 0 then ($rows + $qlines + (if $inst == "" then [] else ["Super agent on \($inst)"] end)) | join("\n") else "" end' <<<"$now") \
   || sa_tooling "$quota: not a quota read"
 
 # What the next run compares with. A digest also counts its Merged tickets as

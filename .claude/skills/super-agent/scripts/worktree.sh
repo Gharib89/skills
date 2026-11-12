@@ -3,11 +3,12 @@
 # up. It removes only a clean one, and never forces: a worktree with uncommitted
 # or untracked files, or whose branch has commits on no remote and no merged PR,
 # is kept with a named reason for the super agent to report. The branch is left
-# alone (deleting branches is the owner's call).
+# alone unless `--delete-branch` is given (deleting branches is the owner's call, so
+# the super agent passes it only on the owner's word).
 #
-#   worktree remove --ledger <file> <key>
+#   worktree remove --ledger <file> <key> [--delete-branch]
 #   worktree remove --key <key> --path <worktree> --branch <name> --stage <stage>
-#                   --kind <ship|triage> --merged <true|false>
+#                   --kind <ship|triage> --merged <true|false> [--delete-branch]
 #
 # The first form reads the entry's fields from the ledger (`worktree`, `branch`,
 # `stage`, `kind`, and `observed.pr.state`, which `reconcile` wrote, for the PR). The
@@ -25,16 +26,22 @@
 # not the ledger's branch (another branch, or detached) is kept, since its commits
 # are not the ones checked. Removal is `git worktree
 # remove <path>` run from the main checkout, then `git worktree prune`.
+# `--delete-branch` then deletes the local branch with `git branch -D` (a squash merge
+# leaves it unmerged to git, so `-d` would refuse it), but only when the entry's PR
+# merged and the worktree was removed: a kept worktree, a closed PR and a `triage`
+# entry keep their branch.
 #
 # stdout: {key, removed, kept, reason}: `removed` true when the worktree is gone;
 #         `kept` true when it stays on purpose, `reason` then `dirty`, `unpushed`,
 #         `not a worktree`, `head is not <branch>`, `branch unreadable` or
-#         `remove failed: <git's line>`;
+#         `remove failed: <git's line>`, or, with the worktree removed,
+#         `branch delete failed: <git's line>`; with `--delete-branch` the answer adds
+#         `branch_deleted`, true when the branch is gone;
 #         a refusal is removed false, kept false, and the reason it names
 # exit: 0 removed or kept · 1 refused (an open stage, the main checkout), or a key
 #       the ledger does not hold · 2 usage, or an unreadable ledger
 set -uo pipefail
-usage='usage: worktree remove --ledger <file> <key> | --key <key> --path <worktree> --branch <name> --stage <stage> --kind <ship|triage> --merged <true|false>'
+usage='usage: worktree remove --ledger <file> <key> | --key <key> --path <worktree> --branch <name> --stage <stage> --kind <ship|triage> --merged <true|false> [--delete-branch]'
 # The `--key` form is self-contained, since the script text travels to a machine
 # with no checkout: it cannot source _lib.sh. The `--ledger` form sources it.
 fail() { jq -cn --arg e "$1" '{error: $e}'; printf '%s\n' "$1" >&2; exit "${2:-2}"; }
@@ -45,9 +52,10 @@ if [ "${1:-}" = --help ] && [ $# -eq 1 ]; then
 fi
 command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 [ "${1:-}" = remove ] || fail "$usage"; shift
-ledger='' key='' path='' branch='' stage='' kind='' merged=''
+ledger='' key='' path='' branch='' stage='' kind='' merged='' delete=false
 while [ $# -gt 0 ]; do
   case $1 in
+    --delete-branch) delete=true; shift ;;
     --ledger|--key|--path|--branch|--stage|--kind|--merged)
       case ${2:-} in -*|'') fail "$usage" ;; esac
       case $1 in --ledger) ledger=$2 ;; --key) key=$2 ;; --path) path=$2 ;; --branch) branch=$2 ;; --stage) stage=$2 ;; --kind) kind=$2 ;; --merged) merged=$2 ;; esac
@@ -71,9 +79,12 @@ else
   case $merged in true|false) ;; *) fail "$usage" ;; esac
 fi
 
-answer() { # <removed> <kept> <reason or empty>
-  jq -cn --arg k "$key" --argjson r "$1" --argjson p "$2" --arg why "$3" '{key: $k, removed: $r, kept: $p, reason: (if $why == "" then null else $why end)}'
+answer() { # <removed> <kept> <reason or empty> [<branch_deleted>]
+  jq -cn --arg k "$key" --argjson r "$1" --argjson p "$2" --arg why "$3" --arg bd "${4:-}" \
+    '{key: $k, removed: $r, kept: $p, reason: (if $why == "" then null else $why end)} + (if $bd == "" then {} else {branch_deleted: ($bd == "true")} end)'
 }
+# `--delete-branch` adds `branch_deleted` to every answer past the stage check
+bd() { if $delete; then printf %s "$1"; fi; }
 case $stage in
   settled|closed) ;;
   *) answer false false "stage $stage: only a settled or closed entry's worktree is removed"; exit 1 ;;
@@ -83,21 +94,26 @@ real=$(cd "$path" 2>/dev/null && pwd -P) || real=''
 listing=$([ -n "$real" ] && git -C "$real" worktree list --porcelain 2>/dev/null </dev/null | sed -n 's/^worktree //p')
 mainwt=$(head -1 <<<"$listing")
 if [ -z "$real" ] || [ -z "$listing" ] || ! grep -Fxq "$real" <<<"$listing"; then
-  answer false true "not a worktree"; exit 0
+  answer false true "not a worktree" "$(bd false)"; exit 0
 fi
-[ "$real" != "$mainwt" ] || { answer false false "refused: $path is the main checkout"; exit 1; }
-if [ -n "$(git -C "$real" status --porcelain 2>/dev/null </dev/null)" ]; then answer false true dirty; exit 0; fi
+[ "$real" != "$mainwt" ] || { answer false false "refused: $path is the main checkout" "$(bd false)"; exit 1; }
+if [ -n "$(git -C "$real" status --porcelain 2>/dev/null </dev/null)" ]; then answer false true dirty "$(bd false)"; exit 0; fi
 # the ledger's branch is what the checks below read, so the worktree must be on it: any other head may hold commits they never see
 cur=$(git -C "$real" symbolic-ref -q --short HEAD 2>/dev/null </dev/null) || cur=''
-[ "$cur" = "$branch" ] || { answer false true "head is not $branch"; exit 0; }
+[ "$cur" = "$branch" ] || { answer false true "head is not $branch" "$(bd false)"; exit 0; }
 if [ "$merged" != true ]; then
   if ! unpushed=$(git -C "$real" rev-list "refs/heads/$branch" --not --remotes 2>/dev/null </dev/null); then
-    answer false true "branch unreadable"; exit 0
+    answer false true "branch unreadable" "$(bd false)"; exit 0
   fi
-  [ -z "$unpushed" ] || { answer false true unpushed; exit 0; }
+  [ -z "$unpushed" ] || { answer false true unpushed "$(bd false)"; exit 0; }
 fi
 if ! err=$(git -C "$mainwt" worktree remove "$real" 2>&1 </dev/null); then
-  answer false true "remove failed: $(head -1 <<<"$err")"; exit 0
+  answer false true "remove failed: $(head -1 <<<"$err")" "$(bd false)"; exit 0
 fi
 git -C "$mainwt" worktree prune >/dev/null 2>&1 </dev/null
-answer true false ''
+if $delete && [ "$merged" = true ]; then
+  if err=$(git -C "$mainwt" branch -D "$branch" 2>&1 </dev/null); then answer true false '' true
+  else answer true false "branch delete failed: $(head -1 <<<"$err")" false; fi
+else
+  answer true false '' "$(bd false)"
+fi

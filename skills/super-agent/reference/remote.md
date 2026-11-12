@@ -25,8 +25,10 @@ checks on its head commit finishing (`checks-finished`), a merge and a close.
 
 1. **Record.** `launch.sh record` carries the launch's environment id onto the
    entry (a `--rethread` too, clearing it for a thread on this machine). Before
-   it runs, save the new thread's read as its reply file (step 2) and pass
-   `--remote` (step 3): its baseline reconcile reads it.
+   it runs, save the new thread's read as its reply file (step 2), pass
+   `--worktree <path>` from it and `--remote` (step 3), one per environment
+   holding an open remote entry, the new one included: its baseline reconcile
+   reads it.
 2. **Read.** On each wake, before `reconcile.sh`, read every open remote
    entry's thread with `t3_thread_read`, its
    `environmentId` the entry's `environment_id`, with a low `limit` and
