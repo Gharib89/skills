@@ -47,9 +47,20 @@ if (!src) {
   );
   process.exit(2);
 }
-const runs = +flag("runs", 5);
-const launches = +flag("launches", 2);
-const load = +flag("load", os.cpus().length);
+// A count flag is a whole number of at least `min`; anything else is usage.
+const count = (name, fallback, min) => {
+  const n = Number(flag(name, fallback));
+  if (!Number.isInteger(n) || n < min) {
+    console.error(
+      `determinism-probe: --${name} wants a whole number >= ${min}`,
+    );
+    process.exit(2);
+  }
+  return n;
+};
+const runs = count("runs", 5, 1);
+const launches = count("launches", 2, 2);
+const load = count("load", os.cpus().length, 0);
 const outRoot = path.resolve(
   flag("out", fs.mkdtempSync(path.join(os.tmpdir(), "determinism-probe-"))),
 );
@@ -67,7 +78,15 @@ const { timeline } = readTimeline(work, (m) => {
 });
 const uniq = (ts) => [...new Set(ts)].sort((a, b) => a - b);
 const sampled = flag("times")
-  ? flag("times").split(",").map(Number)
+  ? flag("times")
+      .split(",")
+      .map((t) => {
+        if (!t.trim() || !Number.isFinite(Number(t))) {
+          console.error(`determinism-probe: --times wants seconds, got "${t}"`);
+          process.exit(2);
+        }
+        return Number(t);
+      })
   : uniq(timeline.scenes.flatMap((sc) => Object.values(sampleTimes(sc))));
 const sceneAt = (t) =>
   timeline.scenes.find(
@@ -89,14 +108,18 @@ const launch = async (dir) =>
   );
 
 // RGB bytes of a PNG, for counting the pixels that moved.
-const rgb = (file) =>
-  spawnSync(
+const rgb = (file) => {
+  const r = spawnSync(
     "ffmpeg",
     ["-v", "error", "-i", file, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
-    {
-      maxBuffer: 1 << 28,
-    },
-  ).stdout;
+    { maxBuffer: 1 << 28 },
+  );
+  if (r.status !== 0)
+    throw new Error(
+      `ffmpeg could not decode ${file}: ${r.error?.message ?? r.stderr}`,
+    );
+  return r.stdout;
+};
 function moved(fa, fb) {
   const [x, y] = [rgb(fa), rgb(fb)];
   let n = 0;
