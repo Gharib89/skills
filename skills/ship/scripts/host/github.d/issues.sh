@@ -26,6 +26,10 @@ host_issue_comments() {
 host_issue_blockers_open() {
   api "$R/issues/$1/dependencies/blocked_by" --paginate --jq '.[] | select(.state == "open") | .number' | jq -s .
 }
+# Native sub-issues, the children a spec parent carries; a failed query is "unavailable".
+host_issue_subissues_open() {
+  api "$R/issues/$1/sub_issues" --paginate --jq '.[] | select(.state == "open") | .number' | jq -s .
+}
 # Cross-referenced timeline events hydrate each source PR in full, so the split
 # between "claims to close this issue" and "merely mentions it" costs no extra call.
 host_issue_linked_prs() {
