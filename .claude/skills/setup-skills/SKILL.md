@@ -106,7 +106,7 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and reviewer shapes are proven by ship's preflight in step 6 ([reference/reviewers.md](./reference/reviewers.md#validate)); show the human each reviewer-block fix it asks for before rewriting.
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it, except the reviewer shapes, which step 6's preflight proves. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and reviewer shapes are proven by ship's preflight in step 6 ([reference/reviewers.md](./reference/reviewers.md#validate)).
 
 Then: `Self-review cap:` is a whole number of 1 or more; every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 
@@ -143,7 +143,7 @@ Write every confirmed file. Then run ship's preflight against the new profile:
 .claude/skills/ship/scripts/preflight.sh none
 ```
 
-Report its `reasons`. The issueless call raises none of its own, so the list should be empty; any `profile missing`, `profile invalid`, `skill missing`, `skill off pin`, `skills lock unreadable` or `composes pin invalid` reason is yours to fix before finishing, the last by re-running the refresh line, since it means the installed `ship` copy is malformed. A `skill missing` or `skill off pin` reason names a composed skill step 1 left uninstalled or off its pin and carries the line that installs it: run that line. A `skills lock unreadable` reason comes before any install line: the skills CLI rewrites a lock it cannot parse holding only the new entry, so repair its JSON first.
+Report its `reasons`; a `profile invalid:` reason on a reviewer block is shown to the human as a proposed edit and rewritten once they confirm. The issueless call raises none of its own, so the list should be empty; any `profile missing`, `profile invalid`, `skill missing`, `skill off pin`, `skills lock unreadable` or `composes pin invalid` reason is yours to fix before finishing, the last by re-running the refresh line, since it means the installed `ship` copy is malformed. A `skill missing` or `skill off pin` reason names a composed skill step 1 left uninstalled or off its pin and carries the line that installs it: run that line. A `skills lock unreadable` reason comes before any install line: the skills CLI rewrites a lock it cannot parse holding only the new entry, so repair its JSON first.
 
 Ship calls `merge` by the relative path an allow rule matches, so tell them to add `Bash(.claude/skills/ship/scripts/merge.sh:*)` under `permissions.allow` in the repo's `.claude/settings.local.json`; without the rule auto mode may refuse the merge.
 
