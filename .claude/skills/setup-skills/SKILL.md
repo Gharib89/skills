@@ -80,7 +80,7 @@ Read the repo once, every section, before saying anything. The right-hand column
 
 Also record, for step 5, three things:
 
-- The per-repo ship script the generic mechanics supersede: `_lib` under `scripts/ship/`, the one a consumer repo (cc-otel) still holds.
+- The per-repo ship script the generic mechanics supersede: `_lib` under `scripts/ship/`, the one consumer repos still hold.
 - Which of `triage-labels.md`'s five role labels and [dimension-labels.md](./dimension-labels.md)'s fourteen dimension labels the host already carries, from `gh api --paginate "repos/{owner}/{repo}/labels" --jq '.[].name'`. Read it paginated rather than through `gh label list`, which fetches 30 by default and silently truncates. Match **case-insensitively**, because GitHub label names are: a label in another casing is recorded as a rename and not as a gap. On ADO a tag exists once it is used, so there is nothing to read.
 - Whether `docs/agents/triage-labels.md` already carries a `## Dimension labels` heading.
 
