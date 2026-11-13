@@ -21,7 +21,7 @@ commit_message = "chore(release): super-agent v{version}"
 # deliberate bump and not whatever npm resolves that morning.
 build_command = """
 set -e
-npx -y skills@1.7.0 add . --skill super-agent --agent claude-code -y
+npx -y skills@1.8.1 add . --skill super-agent --agent claude-code -y
 git add .claude/skills skills-lock.json
 """
 allow_zero_version = true

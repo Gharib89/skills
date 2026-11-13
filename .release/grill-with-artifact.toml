@@ -21,7 +21,7 @@ commit_message = "chore(release): grill-with-artifact v{version}"
 # deliberate bump and not whatever npm resolves that morning.
 build_command = """
 set -e
-npx -y skills@1.7.0 add . --skill grill-with-artifact --agent claude-code -y
+npx -y skills@1.8.1 add . --skill grill-with-artifact --agent claude-code -y
 git add .claude/skills skills-lock.json
 """
 allow_zero_version = true

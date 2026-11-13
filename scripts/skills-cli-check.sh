@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Every machine writes the same skills-lock.json only when every refresh and
 # install line runs the same skills CLI, so this repo pins one version, `$pin`
-# below. 1.8.1 writes lock version 2, and its v1-to-v2 migration blanks the
-# computedHash of every entry whose `.agents/skills/<name>/` folder is missing,
-# which every `--agent claude-code` install is; the CLI then reads that entry
-# as locally modified. 1.7.x refuses a version 2 lock outright. So this fails
+# below. 1.8.1 writes lock version 2, and its lock version 1 to 2 migration
+# blanks the computedHash of every entry whose `.agents/skills/<name>/` folder
+# is missing, as it is after every `--agent claude-code` install; the CLI then
+# reads that entry as locally modified. 1.7.x refuses a version 2 lock outright. So this fails
 # a lock that is not version 2, an entry with no 64-hex computedHash, and any
 # `npx skills` line in the files this repo writes that names no version or
 # another one. Changelogs and ADRs record past lines and are not read.
@@ -32,6 +32,11 @@ blank=$(jq -r --arg pin "$pin" '.skills | to_entries[]
 
 # `npx [-y] skills` then a space (no version) or `@<version>`; the word after
 # `skills` is the CLI's, so `npx skills-foo` is another package and no hit.
+# `.release` holds the refresh line the release run executes on main.
+paths=()
+for p in CLAUDE.md .github .release docs scripts skills; do [ ! -e "$p" ] || paths+=("$p"); done
+hits=$(grep -rHnoE 'npx (-y )?skills(@[^ `]+)? ' --exclude=CHANGELOG.md "${paths[@]}")
+[ $? -le 1 ] || { echo 'cannot search the tree for skills CLI lines' >&2; exit 2; }
 while IFS= read -r hit; do
   [ -n "$hit" ] || continue
   loc=${hit%%:npx*} cmd=${hit#"$loc":}
@@ -41,6 +46,5 @@ while IFS= read -r hit; do
          echo "$loc: npx $v, not the pinned npx $pin"; rc=1 ;;
     *) echo "$loc: unversioned npx skills, write npx $pin"; rc=1 ;;
   esac
-done < <(grep -rnoE 'npx (-y )?skills(@[^ `]+)? ' --exclude=CHANGELOG.md \
-           CLAUDE.md .github docs scripts skills 2>/dev/null | grep -v '^docs/adr/')
+done < <(grep -v '^docs/adr/' <<<"$hits")
 exit $rc
