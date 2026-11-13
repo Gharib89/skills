@@ -9,6 +9,13 @@ Tooling, identity and push permission. Azure DevOps has no cheap push probe, so
 preflight returns `unknown`, warns on stderr and continues: name the unproven
 check in the merge summary.
 
+The composed-skills guard refuses on the repo's own `.claude/skills` only, and
+beside it preflight's `warnings` lists, never refusing, each personal copy under
+`~/.claude/skills` that shadows ship or a skill it composes, as identical to or
+different from the project copy; record each as a Ship note once the Run file
+exists (`run-file note "Ship notes" "Ship-note: <warning>"`), so the merge
+summary shows the run executed a copy the lock does not describe.
+
 ## Admission
 
 Admission by label is `ready-for-agent` always and `ready-for-human` in an
