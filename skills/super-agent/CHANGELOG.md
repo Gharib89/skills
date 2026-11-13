@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.21.0 (2026-11-13)
+
+### Features
+
+- **super-agent**: Route M to Opus medium and L to Opus high
+  ([#1222](https://github.com/Gharib89/skills/pull/1222),
+  [`8a58dde`](https://github.com/Gharib89/skills/commit/8a58dde2ee139f5f37054ff71f337656f916ad79))
+
+
 ## v0.20.4 (2026-11-12)
 
 ### Chores
