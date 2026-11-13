@@ -47,12 +47,11 @@ Each row reads `run` (what the step leaves is missing: its first run),
 `re-run audit` (present but behind) or `done`, with the evidence it read. Matt's
 docs carry no schema to compare, so `matts-setup` reads only `run` or `done`.
 The **source repo** is `Gharib89/skills`, where these skills are written. The
-**chain set** is what setup-skills needs before it runs: `ship`, `cloud-ship`,
-`setup-skills`, `update-skills` and `setup-harness` from the source repo,
-`setup-matt-pocock-skills`, and every skill those compose, each at its pinned
-ref. A source-repo skill is behind when its version trails the source
-lock; a composed skill is behind when the lock records it at another source or
-ref than its pin.
+**chain set** is what setup-skills needs before it runs: the source-repo skills
+on step 5's first install line, `setup-matt-pocock-skills`, and every skill
+those compose, each at its pinned ref. A source-repo skill is behind when its
+version trails the source lock; a composed skill is behind when the lock records
+it at another source or ref than its pin.
 
 `scripts/setup-status.sh <root> [<source-lock>]` prints the rows, one JSON line
 each, reaching no host. `scripts/source-lock.sh` fetches the source lock: the
@@ -194,7 +193,7 @@ is handed to another session.
   chosen extras.
 
   ```sh
-  npx skills add Gharib89/skills --skill <each source-repo skill of the chain set> --agent claude-code -y
+  npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --agent claude-code -y
   npx skills add mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa --skill setup-matt-pocock-skills --skill code-review --skill codebase-design --agent claude-code -y
   npx skills add mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea --skill tdd --agent claude-code -y
   npx skills add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill writing-for-agents --agent claude-code -y

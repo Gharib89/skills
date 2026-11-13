@@ -214,6 +214,8 @@ for m in pom.xml build.gradle build.gradle.kts App.slnx; do
 no origin remote
 manifest $m" "$(evidence repo-and-remote "$d")"
 done
+check "a Java build checks no stack tool" "git jq node npx gh" "$(evidence tools "$fixture/manifest-pom.xml" | awk '{print $1}' | tr '\n' ' ' | sed 's/ $//')"
+check "a .slnx checks dotnet" "1" "$(evidence tools "$fixture/manifest-App.slnx" | grep -c '^dotnet ')"
 
 d=$fixture/fresh; mkdir -p "$d"; git -C "$d" init -q; git -C "$d" remote add origin https://github.com/o/r.git
 check "a repo with no commits and no manifest reads run" "run" "$(state repo-and-remote "$d")"

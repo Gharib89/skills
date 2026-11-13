@@ -112,13 +112,13 @@ else ev+=("no stack manifest"); state=run; fi
 row repo-and-remote "$state"
 
 # Installed skills: the chain set at project scope, each in the lock and on disk.
-# The source-repo skills of SKILL.md's chain set, the one place it is stated.
 lock=$root/skills-lock.json
 jq -e '.skills | type == "object"' "$lock" >/dev/null 2>&1 || lock=''
 entry() { [ -n "$lock" ] && jq -r --arg k "$1" '.skills[$k] // empty | "\(.source // "")#\(.ref // "none")"' "$lock"; }
 state='done'
 [ -n "$slock" ] || ev+=("versions not compared: no source lock")
 pins=$own
+# This list is the source-repo skills of SKILL.md's first install line.
 for s in ship cloud-ship setup-skills update-skills setup-harness; do
   e=$(entry "$s")
   if [ -z "$e" ] || [ ! -d "$root/.claude/skills/$s" ]; then ev+=("$s missing"); state=run; continue; fi

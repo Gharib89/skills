@@ -1,8 +1,7 @@
 # New folder: the `repo-and-remote` step
 
-Read this only when the `repo-and-remote` row names a missing piece, from
-SKILL.md step 5 (or step 3, for the stack table the interview offers). A row
-reading `done` never loads it.
+SKILL.md loads this when the `repo-and-remote` row names a missing piece, from
+its step 5 or, for the stack table, its step 3. "Step 4" below is SKILL.md's.
 
 **`repo-and-remote`**: act on each missing piece the row's evidence names, on
 its own, in this order, then commit:
