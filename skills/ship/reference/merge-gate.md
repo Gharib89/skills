@@ -241,11 +241,11 @@ for, so it does not hold the merge, and an `unlisted` check is profile drift
 for the human to add to `Legs:` or remove.
 
 **On explicit approval or a clean opted-in gate**, first record what admits the
-merge: `run-file gate admit clean <ci-wait.json, its full path beside the Run
-file> --head <head> --issue <issue|slug>` on a clean gate (it records only where
-`gate clean` is clean), or `run-file gate admit human --head <head> --issue
-<issue|slug>` on the human's word "merge" over a held gate; it covers unmet
-criteria, not a red leg (`checks-unsettled`). `<slug>` is `--run`'s. Any
+merge: `run-file gate admit clean <ci-file> --head <head> --issue <issue|slug>`
+on a clean gate (`<ci-file>`: the saved `ci-wait.json`'s full path; it records
+only where `gate clean` is clean), or `run-file gate admit human --head <head>
+--issue <issue|slug>` on the human's word "merge" over a held gate; it covers
+unmet criteria, not a red leg (`checks-unsettled`). `<slug>` is `--run`'s. Any
 `update-pr-body` or `update-pr-title` after the settled `ci-wait` re-fires
 every workflow that triggers on `edited` against the same head, so re-run
 `ci-wait <pr> --sha <head>` and save its answer before the admit step. Then
