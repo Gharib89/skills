@@ -17,6 +17,7 @@
 #   run-file gate read --head <sha> <where>
 #   run-file gate clean <ci-file|-> --head <sha> <where>
 #   run-file gate summary <pr> <where>
+#   run-file gate admit <clean <ci-file|->|human> --head <sha> <where>
 #   run-file timing <where>
 #   run-file ran <name>... <where>
 #   run-file prove <test> <path>... [--fix <commit>] <where> [-- <command>...]
@@ -26,8 +27,8 @@
 #   <where>: --file <path> | --issue <n|slug> [--scratchpad <dir>]
 #
 # The record root is `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>`,
-# shared by the main checkout and every worktree of it; `ship_record_root` in
-# _lib.sh says why it sits there. `--scratchpad <dir>` names another root;
+# shared by the main checkout and every worktree of it (`ship_record_root`,
+# _lib.sh). `--scratchpad <dir>` names another root;
 # outside a git checkout it is the only one. Under the root,
 # `ship-<issue>/run.md` is the Run file and `scratch-<issue>/` is the run's
 # Scratch directory, which `init` creates and returns as `scratch`; the roles'

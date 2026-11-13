@@ -187,9 +187,11 @@ Write the summary per that file, its `Host protections` line from `protections
 `Merge:` branch, waiting for an explicit "merge" by default, or merging when
 `Merge: on-clean-gate` or the run is inline lane and that answer reads `clean:
 true`; an unmet criterion needs the human's explicit waiver.
-On either authorization record the admission with `run-file gate admit
-clean|human --head <head>`, after a fresh `ci-wait <pr> --sha <head>` where
-`update-pr-body` or `update-pr-title` edited the PR since the last one
+On either authorization record the admission with `run-file gate admit clean
+<ci-file> --head <head> --issue <issue|slug>` or `run-file gate admit human
+--head <head> --issue <issue|slug>`, after a fresh `ci-wait <pr> --sha <head>`,
+its answer saved to `ci-wait.json`, where `update-pr-body` or `update-pr-title`
+edited the PR since the last one
 ([merge-gate.md](merge-gate.md#attended-post-then-wait)). Then run `merge <pr>
 <issue|none> <head> [--worktree <path>] [--run <slug>]`, `<head>` the gate's
 `head_sha`. Invoke it from the worktree root as

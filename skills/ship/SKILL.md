@@ -234,7 +234,7 @@ findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 | The branch fell behind its base before the merge | `stale-base: behind <n> on <base>` | attended: holds while you merge the base in; unattended: hand back |
 | The PR is closed at the merge gate | `pr-closed: <state>` | attended: ask; unattended: hand back |
 | The PR's head moved after the merge gate read it | `head-moved: <current> != <gated>` | attended: holds while the gate re-reads the new head; unattended: not reached, the lane runs no merge |
-| `merge` refused before the host call | `no-gate-record: ...`, `checks-unsettled: ...`, `cloud-sandbox: ...` | attended: holds while the admit step or `ci-wait` is re-run, a `cloud-sandbox` ends with the summary for a human to merge; unattended: not reached, the lane runs no merge | unchanged |
+| `merge` refused before the host call | `no-gate-record: ...`, `checks-unsettled: ...`, `cloud-sandbox: ...` | attended: holds while the admit step or `ci-wait` is re-run, a `cloud-sandbox` ends with the summary for a human to merge; unattended: not reached, the lane runs no merge |
 | `--inline` with `--unattended` or free text | `inline refused` | no claim |
 | `prepare` failed its Cloud lane `Bootstrap:` | `bootstrap-failed` | no claim |
 | Open PRs at or above the profile's `PR cap:` | `pr-queue-full` | no claim |
