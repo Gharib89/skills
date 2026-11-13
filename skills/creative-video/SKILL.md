@@ -327,8 +327,8 @@ Scenes are HyperFrames compositions. Authoring needs the `hyperframes` and
 with:
 
 ```
-npx skills add heygen-com/hyperframes#33304cff04a601f19128111f77f6538af340f306 --skill hyperframes --agent claude-code -y
-npx skills add heygen-com/hyperframes#33304cff04a601f19128111f77f6538af340f306 --skill media-use --agent claude-code -y
+npx skills@1.8.1 add heygen-com/hyperframes#33304cff04a601f19128111f77f6538af340f306 --skill hyperframes --agent claude-code -y
+npx skills@1.8.1 add heygen-com/hyperframes#33304cff04a601f19128111f77f6538af340f306 --skill media-use --agent claude-code -y
 ```
 
 ## Voice

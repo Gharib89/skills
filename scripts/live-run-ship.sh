@@ -8,7 +8,7 @@
 #   scripts/live-run-ship.sh <ship-source>
 #   <ship-source>: a checkout of this repo, usually a worktree, whose skills/ship
 #                  is the Ship under test; installed into the fixture with
-#                  `npx skills add <ship-source> --skill ship`, then each skill
+#                  `npx skills@1.8.1 add <ship-source> --skill ship`, then each skill
 #                  on ship's `composes` line that the seed lacks or holds at
 #                  another ref, installed at its pin
 #   LIVE_RUN_REPO: the fixture repo, default Gharib89/ship-fixture. Its `main`
@@ -199,7 +199,7 @@ gh repo clone "$repo" "$base" -- -q || unavailable "cannot clone $repo"
 # seed's versions back, so mark the edited tracked files skip-worktree and
 # exclude the new untracked ones, locally: the tree reads clean, the switch
 # keeps the files, and Ship's commits leave them out.
-(cd "$base" && npx -y skills add "$src" --skill ship --agent claude-code -y) >"$tmp/install.log" 2>&1 \
+(cd "$base" && npx -y skills@1.8.1 add "$src" --skill ship --agent claude-code -y) >"$tmp/install.log" 2>&1 \
   || { tail -n 40 "$tmp/install.log" >&2; unavailable "ship install from $src failed"; }
 composes=$(ship_frontmatter "$src/skills/ship/SKILL.md" composes)
 while IFS= read -r reason; do

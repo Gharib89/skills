@@ -2,7 +2,7 @@
 # Every pinned ref a skill states agrees with the ref this repo installed it at.
 # A pin is stated twice over: as a `metadata.composes` entry,
 # `<owner>/<repo>#<sha>:<skill>`, which ship's preflight prints as the install
-# line, and as a printed install line, `npx skills add <owner>/<repo>#<sha>
+# line, and as a printed install line, `npx skills@1.8.1 add <owner>/<repo>#<sha>
 # --skill <name>...` at the start of a line of a skill's SKILL.md or opening an
 # inline code span anywhere in one, which a skill hands a human. An install line
 # with no `#<sha>` is read only for a skill the lock pins, so a pin a line lost
@@ -36,7 +36,7 @@ pins() {
          for (i = 2; i <= NF; i++) { n = split($i, a, ":"); row(substr($i, 1, length($i) - length(a[n]) - 1), a[n], "pin") } }
        function install(text,  f, m, j) {
          m = split(text, f, " ")
-         if (f[1] != "npx" || f[2] != "skills" || f[3] != "add") return
+         if (f[1] != "npx" || (f[2] != "skills" && f[2] !~ /^skills@/) || f[3] != "add") return
          for (j = 5; j < m; j++) if (f[j] == "--skill") row(f[4], f[j + 1], "printed") }
        # A span opened by a run of backticks is still one span.
        !fm { line = $0; gsub(/`+/, "`", line); n = split(line, seg, "`"); for (i = 1; i <= n; i += (i == 1 ? 1 : 2)) install(seg[i]) }' "$1"

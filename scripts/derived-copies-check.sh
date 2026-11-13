@@ -90,4 +90,6 @@ done
 "$here/profile-schema-check.sh" . || rc=1
 # Every pinned ref a skill states against the lock's: scripts/pin-check.sh.
 "$here/pin-check.sh" . || rc=1
+# The lock's format and every `npx skills` line's CLI version: scripts/skills-cli-check.sh.
+"$here/skills-cli-check.sh" . || rc=1
 exit $rc

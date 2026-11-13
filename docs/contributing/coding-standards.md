@@ -7,14 +7,14 @@ reviewer section below whole, then the sub-file each area of your diff routes
 to, and only those.
 
 This repo ships bash and Markdown. Every file in it is read by an agent, so
-prose is the product as much as the scripts are. **The source is `skills/`,
-and `.claude/skills/` carries install output alone:** a change lands in
-`skills/<name>/` and reaches `.claude/skills/` only through
-`npx skills add . --skill <name> --agent claude-code -y`. **`.claude/skills/`
-is exempt from every rule here but the `derived-copies` gate**, which holds the
-copy of each skill this repo writes byte-identical to its source. The rest is
-install output from other people's repos and is refreshed rather than edited, so
-its prose and its em dashes are not this repo's to fix.
+prose is the product as much as the scripts are. **The source is `skills/`, and
+`.claude/skills/` carries install output alone:** a change lands in
+`skills/<name>/` and reaches `.claude/skills/` only through `npx skills@1.8.1
+add . --skill <name> --agent claude-code -y`. **`.claude/skills/` is exempt from
+every rule here but the `derived-copies` gate**, which holds the copy of each
+skill this repo writes byte-identical to its source. The rest is install output
+from other people's repos and is refreshed rather than edited, so its prose and
+its em dashes are not this repo's to fix.
 
 ## Reviewer section
 

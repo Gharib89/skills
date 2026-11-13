@@ -47,13 +47,13 @@ ship_missing_skill_reasons() {
       continue
     fi
     if ! [ -f "$root/.claude/skills/$skill/SKILL.md" ]; then
-      printf 'skill missing: %s; run npx skills add %s --skill %s --agent claude-code -y\n' \
+      printf 'skill missing: %s; run npx skills@1.8.1 add %s --skill %s --agent claude-code -y\n' \
         "$skill" "$source" "$skill"
       continue
     fi
     ref=$(jq -r --arg k "$skill" '(.skills[$k]?.ref? | select(type == "string" and . != "")) // "none"' <<<"$lock")
     [ "$ref" = "${source#*#}" ] && continue
-    printf 'skill off pin: %s at %s, pinned %s; run npx skills add %s --skill %s --agent claude-code -y\n' \
+    printf 'skill off pin: %s at %s, pinned %s; run npx skills@1.8.1 add %s --skill %s --agent claude-code -y\n' \
       "$skill" "$ref" "${source#*#}" "$source" "$skill"
   done
 }

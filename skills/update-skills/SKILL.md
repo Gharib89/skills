@@ -49,7 +49,7 @@ skill the lock records from `Gharib89/skills`, in any case: one left out keeps
 its old version, and step 3 then reads it as unmoved.
 
 ```sh
-flags=$(jq -er '[.skills | to_entries[] | select(.value.source | ascii_downcase == "gharib89/skills") | .key] + ["ship", "cloud-ship", "setup-skills", "update-skills"] | unique | map("--skill " + @sh) | join(" ")' skills-lock.json) && eval "npx skills add Gharib89/skills $flags --agent claude-code -y"
+flags=$(jq -er '[.skills | to_entries[] | select(.value.source | ascii_downcase == "gharib89/skills") | .key] + ["ship", "cloud-ship", "setup-skills", "update-skills"] | unique | map("--skill " + @sh) | join(" ")' skills-lock.json) && eval "npx skills@1.8.1 add Gharib89/skills $flags --agent claude-code -y"
 ```
 
 In the source repo, whose `skills-lock.json` records `ship`'s source as `.`,
@@ -71,19 +71,20 @@ every upstream failed: nothing was read, so stop and tell the owner. The plan's
 fields drive every later step; the header comment in `plan.sh` defines each one.
 
 Nothing moved (every `source_skills` entry at its old version, every
-`composed` entry's `old_ref` equal to its `pin`, `drift`, `others` and
+`composed` entry's `old_ref` equal to its `pin`, `drift`, `others`, `rehash` and
 `sections` empty, and no `unreachable` row): tell the owner the repo is
 current, run `$S/cleanup.sh none` from the main checkout, and stop.
 
 ### 4. Composed skills at their pins
 
-Run every `composed[].install` line, then `$S/preflight.sh none` and keep its
-`reasons`. Preflight exiting 1 with only a `worktree exists` reason naming this
-run's own worktree is the expected answer, not a failure. A profile reason is
-step 6's; any other carries the line that repairs it: run that, then preflight
-again. Another consumer repo never installs a drift row's `head`: that version
-is one nobody tested Ship against, and the row reaches the source repo in step 7
-instead.
+Run every `composed[].install` line and every `rehash[].install` line (each
+re-adds a skill at its own lock ref, filling the hash the CLI's lock migration
+blanked), then `$S/preflight.sh none` and keep its `reasons`. Preflight exiting
+1 with only a `worktree exists` reason naming this run's own worktree is the
+expected answer, not a failure. A profile reason is step 6's; any other carries
+the line that repairs it: run that, then preflight again. Another consumer repo
+never installs a drift row's `head`: that version is one nobody tested Ship
+against, and the row reaches the source repo in step 7 instead.
 
 ### 5. Other skills
 
