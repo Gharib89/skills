@@ -102,15 +102,15 @@ confirm: the project's name (a repository slug of ASCII letters, digits, `-`,
 `_` and `.`, with an `<org>/` prefix for an organization's repo, asked again
 until it is one), a one-paragraph description, its visibility (`private`,
 `public`, or `internal` for an organization's repo) and, where the evidence also
-reads `no stack manifest` exactly, its stack (a row of step 5's stack table, or
-another), and nothing else. With an origin and that evidence, ask the stack
-alone: `no stack manifest, history present` needs no stack. Show the answers
-under the table. Under it, offer the **extras**: each source-lock entry that
-step 5's install lines do not install, that is not `setup-project` itself (it
-stays at user scope), and that this repo's `skills-lock.json` does not hold yet,
-as opt-in choices beside an explicit "no extras". Confirm the table, the answers
-and the extras once. Every followed skill below still asks its own confirmations
-before it writes.
+reads `no stack manifest` exactly, its stack (a row of the stack table in
+`reference/new-folder.md`, or another), and nothing else. With an origin and
+that evidence, ask the stack alone: `no stack manifest, history present` needs
+no stack. Show the answers under the table. Under it, offer the **extras**: each
+source-lock entry that step 5's install lines do not install, that is not
+`setup-project` itself (it stays at user scope), and that this repo's
+`skills-lock.json` does not hold yet, as opt-in choices beside an explicit "no
+extras". Confirm the table, the answers and the extras once. Every followed
+skill below still asks its own confirmations before it writes.
 
 ### 4. Where the writes land
 
@@ -164,10 +164,10 @@ is handed to another session.
 
 - **`tools`**: when the row reads `run`, step 1 or step 3 named `curl` or `jq`
   not installed, or the interview chose a stack whose init tool (the stack table
-  below) is not on PATH, list each missing tool with the line that installs it
-  and confirm once, then run the user-space lines, `curl` first, since the
-  others need it. A line that needs sudo, or one for the owner's shell profile,
-  is printed for the owner and never run:
+  in `reference/new-folder.md`) is not on PATH, list each missing tool with the
+  line that installs it and confirm once, then run the user-space lines, `curl`
+  first, since the others need it. A line that needs sudo, or one for the
+  owner's shell profile, is printed for the owner and never run:
 
   | Tool | User-space install | Printed for the owner |
   |---|---|---|
@@ -187,55 +187,14 @@ is handed to another session.
   into a directory this shell's PATH lacks yet (`~/.bun/bin`, `~/.cargo/bin`,
   `~/.dotnet`) reads missing too: the owner opens a new terminal and reruns
   `/setup-project`.
-- **`repo-and-remote`**: act on each missing piece the row's evidence names, on
-  its own, in this order, then commit:
-  1. **`no .git`**: `git init -b main`, which keeps the files already there.
-  2. **`no origin remote`**: create the remote from the interview, on GitHub
-     only:
-
-     ```sh
-     gh repo create <name> --<visibility> --description '<summary>' --source . --remote origin
-     ```
-
-     `<name>` is the answer, its `<org>/` prefix included; `<visibility>` is the
-     answer as given; `<summary>` is the description's first sentence, each `'`
-     in it written as `'\''` so the shell passes it as typed. In a repo with
-     commits, add `--push`, then run `git remote set-head origin -a`, so its
-     history is the base step 4 reads. A project hosted elsewhere is the owner's
-     to create: they add its repo as `origin`, and the next run reads it.
-
-     Step 4 runs here, if it has not yet.
-  3. **`no origin remote`**, continued: write `README.md` (the name as its
-     title, the description under it) and `CLAUDE.md` (the name as its title,
-     the description as its overview), each only where absent. Create no
-     `GLOSSARY.md` or ADR: the domain model grows later.
-  4. **`no stack manifest`**, that evidence exactly: run the stack's own init,
-     after the seeding above (`bun init` writes a `CLAUDE.md` where none
-     exists):
-
-     | Stack | Init |
-     |---|---|
-     | Python | `uv init` |
-     | TypeScript or JavaScript | `bun init -y` |
-     | Rust | `cargo init` |
-     | Go | `go mod init <module>` |
-     | .NET | `dotnet new console` |
-
-     `<module>` is the origin URL's host and path, with no scheme, no `git@`, a
-     `:` before the path read as `/`, and no `.git`, so an HTTPS and an SSH
-     origin both give `github.com/<org>/<name>`. `uv init` writes its
-     `.gitignore` only when it creates the git repo itself, so after it, where
-     none exists, write `.venv`, `__pycache__/`, `*.py[oc]`, `build/`, `dist/`,
-     `wheels/` and `*.egg-info`, one per line. Any other stack: ask the owner
-     for its init command and run that; never pick one.
-
-  An origin that is neither GitHub nor Azure DevOps is the owner's to repoint:
-  print it and stop.
+- **`repo-and-remote`**: when the row names a missing piece, read
+  `reference/new-folder.md` and follow it, then commit; a row reading `done`
+  needs no read.
 - **`installed-skills` reading `run`**: run the install lines, then install the
   chosen extras.
 
   ```sh
-  npx skills add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --agent claude-code -y
+  npx skills add Gharib89/skills --skill <each source-repo skill of the chain set> --agent claude-code -y
   npx skills add mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa --skill setup-matt-pocock-skills --skill code-review --skill codebase-design --agent claude-code -y
   npx skills add mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea --skill tdd --agent claude-code -y
   npx skills add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill writing-for-agents --agent claude-code -y

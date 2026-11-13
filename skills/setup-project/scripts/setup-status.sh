@@ -112,6 +112,7 @@ else ev+=("no stack manifest"); state=run; fi
 row repo-and-remote "$state"
 
 # Installed skills: the chain set at project scope, each in the lock and on disk.
+# The source-repo skills of SKILL.md's chain set, the one place it is stated.
 lock=$root/skills-lock.json
 jq -e '.skills | type == "object"' "$lock" >/dev/null 2>&1 || lock=''
 entry() { [ -n "$lock" ] && jq -r --arg k "$1" '.skills[$k] // empty | "\(.source // "")#\(.ref // "none")"' "$lock"; }
