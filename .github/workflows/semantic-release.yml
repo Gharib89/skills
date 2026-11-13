@@ -13,9 +13,12 @@ name: semantic-release
 # command runs this repo's `npx skills add` refresh line so `.claude/skills/`
 # follows the bump and the `derived-copies` gate stays green on main.
 #
-# The default GITHUB_TOKEN rather than a PAT: a push made with it starts no
-# workflow run, which is what keeps the release commit from re-triggering this.
-# The job's `if` is the second guard, for a release commit pushed by hand.
+# Every push goes over a write deploy key, the repo secret RELEASE_DEPLOY_KEY,
+# not GITHUB_TOKEN: main's ruleset requires `check-full` and `bump-guard`, and on
+# a user-owned repo GitHub refuses the Actions app as a bypass actor (HTTP 422),
+# while a `DeployKey` bypass lets this push land. A deploy-key push, unlike a
+# GITHUB_TOKEN one, starts workflow runs, so the release commit does trigger this
+# workflow again: the job's `if` below is the only guard against recursion.
 
 on:
   push:
@@ -33,12 +36,16 @@ concurrency:
 
 jobs:
   release:
-    # A release commit is the bot's own, with one of the subjects the
-    # configurations generate. Both halves are needed: `bump-guard` admits a PR
-    # titled `chore(release): ship v7.1`, and such a PR must still release. A new
+    # A release commit is python-semantic-release's own (author `semantic-release`,
+    # its default), with one of the subjects the configurations generate. Both
+    # halves are needed: `bump-guard` admits a PR titled
+    # `chore(release): ship v7.1`, and such a PR must still release. A deploy-key
+    # push re-triggers this workflow, so this check is the recursion guard: the
+    # author name here, the awk filter and the `user.name` in the tag step below
+    # are one fact, python-semantic-release's author, and move together. A new
     # skill is added here as well as to SKILLS below.
     if: >-
-      ${{ !(github.event.head_commit.author.name == 'github-actions[bot]'
+      ${{ !(github.event.head_commit.author.name == 'semantic-release'
       && (startsWith(github.event.head_commit.message, 'chore(release): ship v')
       || startsWith(github.event.head_commit.message, 'chore(release): cloud-ship v')
       || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v')
@@ -67,7 +74,9 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.ref_name }}
-          # The tag step and the release push through this checkout's token.
+          # The tag step and the release push through this checkout's ssh remote
+          # and key, so the credentials stay configured.
+          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}
           persist-credentials: true
 
       # Without the tag its own `tag_format` names, python-semantic-release ignores
@@ -87,11 +96,13 @@ jobs:
       # history holds python-semantic-release's own commit for that exact version,
       # carrying that version, that commit is where the release would have tagged,
       # so it is tagged here, annotated and by the same tagger as the release's.
-      # GitHub refuses that push from this job's token when any workflow file at
-      # the release commit differs from main's, counting the new tag as a workflow
+      # GitHub refused that push from GITHUB_TOKEN when any workflow file at the
+      # release commit differed from main's, counting the new tag as a workflow
       # change, which needs the `workflows` permission no GITHUB_TOKEN can hold
-      # (run 129 for `ship-v0.18.0`). The refusal names the commit to tag by hand,
-      # from an account that holds it, before re-running.
+      # (run 129 for `ship-v0.18.0`). The deploy key is not that token, but whether
+      # its push clears the restriction is unmeasured, so the refusal path stays: it
+      # names the commit to tag by hand, from an account that holds it, before
+      # re-running.
       - name: Tag a new skill's baseline, refuse a missing one
         run: |
           for s in $SKILLS; do
@@ -132,9 +143,13 @@ jobs:
       # Sequential, because each release pushes. A skill untouched by the commits
       # since its own tag reports that and cuts nothing, so a push touching one
       # skill cuts one tag and a push touching none cuts none.
+      #
+      # No GH_TOKEN here, on purpose: python-semantic-release rebuilds its push
+      # remote as an HTTPS URL carrying that token when one is set, which would
+      # send the release commit and tags past the deploy key. Unset, it pushes to
+      # the checkout's ssh origin. `--no-vcs-release` makes no GitHub API call, so
+      # nothing else needs it.
       - name: Release each skill
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           for s in $SKILLS; do
             echo "::group::$s"
