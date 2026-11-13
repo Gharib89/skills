@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.59.0 (2026-11-13)
+
+### Features
+
+- **ship**: Warn when a personal skill copy shadows a composed skill
+  ([#1219](https://github.com/Gharib89/skills/pull/1219),
+  [`5f3ea96`](https://github.com/Gharib89/skills/commit/5f3ea9656e7ecf44003e13ab7bc2ec60f9abe8f6))
+
+
 ## v0.58.3 (2026-11-12)
 
 ### Bug Fixes
