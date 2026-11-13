@@ -14,10 +14,10 @@ fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 tree() {
   local d="$fixture/$1" s; rm -rf "$d"
   mkdir -p "$d/.github/workflows" "$d/.release" "$d/.claude/skills/tdd" || return 1
-  jq -n '{version: 1, skills: {
-    ship: {source: ".", sourceType: "local"},
-    "setup-skills": {source: ".", sourceType: "local"},
-    tdd: {source: "o/r", ref: "'"$(printf 'a%.0s' {1..40})"'", sourceType: "github"}}}' > "$d/skills-lock.json"
+  jq -n --arg h "$(printf 'f%.0s' {1..64})" '{version: 2, skills: {
+    ship: {source: ".", sourceType: "local", computedHash: $h},
+    "setup-skills": {source: ".", sourceType: "local", computedHash: $h},
+    tdd: {source: "o/r", ref: "'"$(printf 'a%.0s' {1..40})"'", sourceType: "github", computedHash: $h}}}' > "$d/skills-lock.json"
   mkdir -p "$d/skills/ship" "$d/skills/setup-skills"
   printf -- '---\nname: ship\nmetadata:\n  profile-schema: 3\n---\n\n# ship\n' > "$d/skills/ship/SKILL.md"
   printf -- '---\nname: setup-skills\n---\n\n# setup-skills\n' > "$d/skills/setup-skills/SKILL.md"
