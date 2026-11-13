@@ -1,6 +1,6 @@
 ---
 name: grill-with-artifact
-description: "Grill a plan on a private artifact page of question cards. Use when asked to grill on a page or an artifact, or by a wayfinder ticket's Notes."
+description: "Grill a plan on a private artifact page. Use when the human names grill-with-artifact, asks to grill on a page or an artifact, or a wayfinder ticket's Notes call for it."
 argument-hint: "[topic]"
 metadata:
   version: 0.6.0
@@ -43,9 +43,9 @@ chat format runs.
 ## 2 · Publish the page
 
 1. Take the topic from the invocation. A wayfinder `grilling` ticket's Notes
-   invoke this skill: its title is the topic and its body is the first
-   frontier's context, and its number goes in step 3's page description. Only
-   when no topic was given, ask the human for one in a few words.
+   invoke this skill: the ticket's title is the topic and its body is the first
+   frontier's context. Only when no topic was given, ask the human for one in a
+   few words.
 2. Copy `page.html` and its siblings (`page.css`, `page-core.js`,
    `page-boot.js`) into your scratchpad as `grill-<topic-slug>/` and replace
    the one `{{TOPIC}}` in `page.html` only with the topic, HTML-escaped (`&`,
@@ -101,10 +101,9 @@ A `submitted` typed in the chat rings the same bell.
    the turn.
 2. Apply each answer as `grilling` and `domain-modeling` say, writing any term
    or ADR it settles now, in the repo. One rule differs: `domain-modeling` only
-   offers an ADR, and here the session writes it, once the answer passes its
-   three tests, because the page has no chat to offer in and an offer would
-   cost a round. The ADR is listed in `docsWritten`, and a reopen or a Not yet
-   edits it.
+   offers an ADR, and here the session writes it once the answer passes its
+   three tests, because the Submit is the human's approval and an offer would
+   cost another round. A reopen or a Not yet edits the ADR.
 3. **Defer** puts the question back in the next round with `carriedFrom`
    reason `deferred`. **Reopen** (each id in `answers.reopen`) puts a settled
    question back with reason `reopened` and its answer as `earlier`. Recompute
@@ -128,9 +127,10 @@ and no Reopen: a Not yet comment names what to reopen.
 
 Any outward-facing step (filing issues, writing a spec) waits for the Confirm
 and for the human to ask for it. A wayfinder ticket is the exception: after the
-Confirm, resolve it as the repo's issue-tracker doc says (comment the closing
-summary, close the ticket, point the map's Decisions-so-far at it), with no
-further ask, since the ticket exists to be closed by this session. A next
+Confirm, resolve it with the Resolve operation in the repo's
+`docs/agents/issue-tracker.md` (comment the closing summary, close the
+ticket), with no further ask, since the ticket exists to be closed by this
+session. A next
 command the Skill tool cannot run, such as `/to-spec`, is named for the human to
 type.
 
