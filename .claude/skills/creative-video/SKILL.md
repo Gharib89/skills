@@ -1,12 +1,9 @@
 ---
 name: creative-video
 description: >-
-  Make a creative, engaging, animated narrated video that teaches a concept,
-  its scenes authored freely in HyperFrames, long ones in chapters. Use when
-  the user asks for a creative, engaging or animated video, a video that
-  teaches a concept, or a long video in chapters, or for its tools to be
-  checked or installed (`/creative-video setup`). A request for an "explainer
-  video" goes to `explainer-video`.
+  Make a creative, animated HyperFrames video, in chapters when long.
+  Use when asked for a creative, animated, chaptered or branded video; an
+  "explainer video" goes to `explainer-video`.
 metadata:
   version: 0.24.1
 ---
@@ -339,3 +336,4 @@ npx skills add heygen-com/hyperframes#33304cff04a601f19128111f77f6538af340f306 -
 To voice a `script.json` the user wrote in a run folder
 `creative-videos/<slug>`, read [reference/voice.md](reference/voice.md) and
 run its steps.
+Narration audio for text with no such run folder goes to `explainer-video`.

@@ -1,11 +1,8 @@
 ---
 name: explainer-video
 description: >-
-  Make a narrated explainer video from a repo, a document, a web page or a
-  topic, or voice a narration the user writes. Use when the user asks for an
-  explainer video or narration audio, for a style profile drawn from
-  screenshots, a website, a deck or a video, or for its tools to be checked or
-  installed (`/explainer-video setup`).
+  Make a narrated explainer video from a repo, document, page or topic. Use when
+  asked for an explainer video, narration audio or a style profile.
 metadata:
   version: 0.54.0
 ---
@@ -236,6 +233,9 @@ the pack's outline and the brief, then holds it to the **script gates**. Read
    then the Storyboard.
 
 ## Voice
+
+A `script.json` in a `creative-videos/<slug>` run folder belongs to the
+`creative-video` skill: load it and follow its Voice section.
 
 The voice stage turns each scene's narration into audio with every word timed,
 then runs **voice QC**, which blocks. It reads a **run folder**,
