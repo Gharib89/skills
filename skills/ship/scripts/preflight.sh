@@ -40,13 +40,16 @@
 # free-text runs are not the same run, so a `*-none` branch is no reason.
 #
 # stdout: {host, repo, identity, profile, ok, reasons[], mentions[], mentioned_by[],
-#          pruned[], reviewers[], self_review_cap, rework}
+#          pruned[], reviewers[], self_review_cap, rework, warnings[]}
 #   reasons use the stop names verbatim, detail after a colon:
 #   closed · is a pull request · already claimed · existing PR · existing branch
 #   · worktree exists · not triaged: run /triage first · ready-for-human:
 #   attended only · profile missing · profile invalid: <detail> · skill missing:
 #   <detail> · skill off pin: <detail> · skills lock unreadable: <detail> ·
 #   composes pin invalid: <detail> · not reworkable: <detail> · no feedback
+#   warnings[] holds one line per personal skill copy under ~/.claude/skills that
+#   shadows ship or a skill it composes (identical to or different from the
+#   project copy): never a reason, and the exit code is unchanged.
 #   mentions[] lists live PRs that name the issue without closing it: context
 #   for phase 1, and no kind of stop. mentioned_by[] is the same rows widened to
 #   {number, kind: issue|pr, state}, so a run learns whether a mention is an
@@ -217,6 +220,16 @@ while IFS= read -r reason; do
   reasons+=("$reason")
 done < <(ship_missing_skill_reasons "$here" "$(ship_frontmatter "$ship_skill" composes)")
 
+# A personal copy of a composed skill (or of ship) wins over the project copy the
+# lock describes: report it as a warning, never a reason. A cloud sandbox has no
+# personal folder, so it is skipped there.
+warnings=()
+if [ "${CLAUDE_CODE_REMOTE:-}" != true ]; then
+  while IFS= read -r warning; do
+    warnings+=("$warning")
+  done < <(ship_shadowed_skills "$here" "$(ship_frontmatter "$ship_skill" composes)" "${HOME:-/nonexistent}")
+fi
+
 # Prune rule in the header. The sha, not the branch name, decides: names get
 # reused, so a name match alone would delete a fresh worktree's unfinished work.
 pruned='[]'
@@ -346,7 +359,9 @@ printf '%s\n' "${reasons[@]+"${reasons[@]}"}" | jq -Rs --arg h "$SHIP_HOST" --ar
   --argjson id "$identity" --arg p "$profile" --argjson ok "$ok" --argjson m "$mentions" \
   --argjson mb "$mentioned_by" --argjson pr "$pruned" --argjson rv "$reviewers" \
   --argjson sc "$self_review_cap" --argjson rw "$rework_json" \
+  --arg w "$(printf '%s\n' "${warnings[@]+"${warnings[@]}"}")" \
   '{host: $h, repo: $r, identity: $id, profile: $p, ok: $ok,
     reasons: (split("\n") | map(select(. != ""))), mentions: $m, mentioned_by: $mb, pruned: $pr,
-    reviewers: $rv, self_review_cap: $sc, rework: $rw}'
+    reviewers: $rv, self_review_cap: $sc, rework: $rw,
+    warnings: ($w | split("\n") | map(select(. != "")))}'
 $ok

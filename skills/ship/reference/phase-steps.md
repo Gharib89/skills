@@ -23,8 +23,10 @@ the run enters that phase.
 The text below continues phase 0 in `SKILL.md`.
 
 Run `preflight <issue>` (`--unattended` in an unattended run):
-every `reasons` entry is a row of the stop table below. Then `read-issue
-<issue>` (reused for an issue), phase 1's input, from which the branch `<type>`
+every `reasons` entry is a row of the stop table below, and every `warnings`
+entry a Ship note recorded after `run-file init`
+([isolate.md](isolate.md#what-preflight-proves)). Then `read-issue <issue>`
+(reused for an issue), phase 1's input, from which the branch `<type>`
 (`feat`, `fix`, `docs`, ...) and `<slug>` are derived. Then `isolate <issue>
 <type> <slug>` with the profile's `Carry:` files, or `isolate ... --in-place`
 unattended. Attended, `EnterWorktree` with `path` set to that path comes right
