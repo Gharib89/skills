@@ -130,9 +130,8 @@ and for the human to ask for it. A wayfinder ticket is the exception: after the
 Confirm, resolve it with the Resolve operation in the repo's
 `docs/agents/issue-tracker.md` (comment the closing summary, close the
 ticket), with no further ask, since the ticket exists to be closed by this
-session. A next
-command the Skill tool cannot run, such as `/to-spec`, is named for the human to
-type.
+session. A next command the Skill tool cannot run, such as `/to-spec`, is
+named for the human to type.
 
 **Done when:** the human pressed Confirm, its thread is resolved, and the
 confirmed line is the turn's only text.
