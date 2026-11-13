@@ -69,11 +69,13 @@ the session.
 ## 3 · Post a grilling round
 
 1. Compute the frontier as `grilling` says.
-2. Draw the design tree as `treeSvg` and, where a mechanism or a comparison is
-   faster seen than read, a question's `figureSvg`, in round-data.md's figure
-   style contract. The first figure loads `artifact-diagramming` through the
-   Skill tool; the contract's classes win over its colours. Without that skill
-   the round goes out with no figures and stays on the page.
+2. Draw the design tree as `treeSvg`, every decision a node in its state, each
+   open node carrying `data-q` for its question, and the `hot` path named in
+   `treeCaption`. Where a mechanism or a comparison is faster seen than read,
+   add a question's `figureSvg`. Both follow the figure style contract in
+   [round-data.md](round-data.md). The first figure loads `artifact-diagramming`
+   through the Skill tool; the contract's classes win over its colours. Without
+   that skill the round goes out with no figures and stays on the page.
 3. Fill `settled` with one entry per question the previous round asked, and
    `docsWritten` with every glossary term and ADR written from its answers:
    both are empty arrays in round 1.
@@ -101,9 +103,10 @@ A `submitted` typed in the chat rings the same bell.
    the turn.
 2. Apply each answer as `grilling` and `domain-modeling` say, writing any term
    or ADR it settles now, in the repo. One rule differs: `domain-modeling` only
-   offers an ADR, and here the session writes it once the answer passes its
-   three tests, because the Submit is the human's approval and an offer would
-   cost another round. A reopen or a Not yet edits the ADR.
+   offers an ADR, and here the session writes it once the decision meets the
+   three conditions of `domain-modeling`'s "Offer ADRs sparingly", because the
+   Submit is the human's approval and an offer would cost another round. A
+   reopen or a Not yet edits the ADR.
 3. **Defer** puts the question back in the next round with `carriedFrom`
    reason `deferred`. **Reopen** (each id in `answers.reopen`) puts a settled
    question back with reason `reopened` and its answer as `earlier`. Recompute
@@ -122,11 +125,12 @@ reads `Round <n> posted. Closing summary.` The page shows Confirm and Not yet,
 and no Reopen: a Not yet comment names what to reopen.
 
 - **Not yet**: grill its comment as a new frontier from step 3.
-- **Confirm**: resolve its thread, print exactly `Session confirmed.
-  Decisions: <k>. Docs written: <m>.`, and end the turn.
+- **Confirm**: resolve its thread, resolve a wayfinder ticket (below), print
+  exactly `Session confirmed. Decisions: <k>. Docs written: <m>.`, and end the
+  turn.
 
 Any outward-facing step (filing issues, writing a spec) waits for the Confirm
-and for the human to ask for it. A wayfinder ticket is the exception: after the
+and for the human to ask for it. A wayfinder ticket is the exception: on the
 Confirm, resolve it with the Resolve operation in the repo's
 `docs/agents/issue-tracker.md` (comment the closing summary, close the
 ticket, append the context pointer to the map's Decisions-so-far), with no
@@ -134,5 +138,5 @@ further ask, since the ticket exists to be closed by this session. A next
 command the Skill tool cannot run, such as `/to-spec`, is named for the human to
 type.
 
-**Done when:** the human pressed Confirm, its thread is resolved, and the
-confirmed line is the turn's only text.
+**Done when:** the human pressed Confirm, its thread is resolved, a wayfinder
+ticket is resolved, and the confirmed line is the turn's only text.
