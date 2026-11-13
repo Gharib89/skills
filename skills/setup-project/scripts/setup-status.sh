@@ -65,8 +65,10 @@ issource=''; shopt -s nocasematch; [[ $host == github && $slug == gharib89/skill
 manifest='' tool=''
 for m in pyproject.toml package.json Cargo.toml go.mod; do [ -f "$root/$m" ] && { manifest=$m; break; }; done
 if [ -z "$manifest" ]; then
-  for m in "$root"/*.sln "$root"/*.csproj "$root"/*.fsproj; do [ -f "$m" ] && { manifest=${m##*/}; break; }; done
+  for m in "$root"/*.sln "$root"/*.slnx "$root"/*.csproj "$root"/*.fsproj; do [ -f "$m" ] && { manifest=${m##*/}; break; }; done
 fi
+# Java and Kotlin builds usually ship a wrapper, so no tool is checked for them.
+[ -n "$manifest" ] || for m in pom.xml build.gradle build.gradle.kts; do [ -f "$root/$m" ] && { manifest=$m; break; }; done
 # The stack's tool follows its lockfile, as setup-harness's catalog maps it, plus
 # bun's older bun.lockb.
 lockfor() { # <lockfile>:<tool>...: the tool of the first lockfile present
@@ -76,6 +78,7 @@ case $manifest in
   Cargo.toml) tool=cargo ;; go.mod) tool=go ;; '') ;;
   pyproject.toml) lockfor uv.lock:uv poetry.lock:poetry pdm.lock:pdm ;;
   package.json) lockfor pnpm-lock.yaml:pnpm package-lock.json:npm yarn.lock:yarn bun.lock:bun bun.lockb:bun ;;
+  pom.xml|build.gradle|build.gradle.kts) ;;
   *) tool=dotnet ;;
 esac
 
@@ -115,6 +118,7 @@ entry() { [ -n "$lock" ] && jq -r --arg k "$1" '.skills[$k] // empty | "\(.sourc
 state='done'
 [ -n "$slock" ] || ev+=("versions not compared: no source lock")
 pins=$own
+# This list is the source-repo skills of SKILL.md's first install line.
 for s in ship cloud-ship setup-skills update-skills setup-harness; do
   e=$(entry "$s")
   if [ -z "$e" ] || [ ! -d "$root/.claude/skills/$s" ]; then ev+=("$s missing"); state=run; continue; fi
