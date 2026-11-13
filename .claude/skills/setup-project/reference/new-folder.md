@@ -1,7 +1,8 @@
 # New folder: the `repo-and-remote` step
 
-SKILL.md loads this when the `repo-and-remote` row names a missing piece, from
-its step 5 or, for the stack table, its step 3. "Step 4" below is SKILL.md's.
+SKILL.md loads this when the `repo-and-remote` row reads `run`, from its step 3
+(the stack table), step 4 (its first two pieces) or step 5. "Step 4" below is
+SKILL.md's.
 
 **`repo-and-remote`**: act on each missing piece the row's evidence names, on
 its own, in this order, then commit:

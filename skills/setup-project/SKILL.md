@@ -186,7 +186,8 @@ is handed to another session.
   into a directory this shell's PATH lacks yet (`~/.bun/bin`, `~/.cargo/bin`,
   `~/.dotnet`) reads missing too: the owner opens a new terminal and reruns
   `/setup-project`.
-- **`repo-and-remote`**: when the row names a missing piece, read
+- **`repo-and-remote`**: when the row reads `run` (a missing piece, or an
+  origin that is neither GitHub nor Azure DevOps), read
   `reference/new-folder.md` and follow it, then commit; a row reading `done`
   needs no read.
 - **`installed-skills` reading `run`**: run the install lines, then install the
