@@ -21,5 +21,10 @@ check "SKILL.md links the reference's Ship-run steps" yes \
 for h in '## Source-repo mode' '## In a Ship run'; do
   check "the reference carries $h" 1 "$(grep -cxF "$h" "$ref" 2>/dev/null)"
 done
+# Phrases only the moved steps use: a copy left behind in SKILL.md is caught.
+for p in 'Read what moved' 'held back: <skill>' 'red-after-retry: heads'; do
+  check "SKILL.md no longer carries '$p'" 0 "$(grep -cF "$p" "$skill")"
+  check "the reference carries '$p'" 1 "$(grep -cF "$p" "$ref" 2>/dev/null)"
+done
 
 finish

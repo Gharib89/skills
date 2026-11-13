@@ -1,6 +1,6 @@
 ---
 name: update-skills
-description: "Refresh this repo's skills in one PR: the Gharib89/skills skills, the skills they compose at their pinned refs, and other repo-scoped skills the owner picks; report upstream drift and summarise what changed. In the source repo, move drifted pins instead. Attended only."
+description: "Refresh this repo's skills in one PR: Gharib89/skills skills, their composed skills at pinned refs, and other repo-scoped skills the owner picks; report upstream drift to the source repo and summarise the changes. In the source repo, move drifted pins instead. Attended only."
 disable-model-invocation: true
 metadata:
   version: 0.10.3
@@ -34,10 +34,11 @@ and `$U` are notation: write the paths out.
 
 From the main checkout, `$S/isolate.sh none chore update-skills-<YYYYMMDD>`,
 the run's date as `date +%Y%m%d` prints it, then work from the path it prints.
-Isolation refuses `worktree exists` while any free-text run's worktree (a
-folder ending `-none`) stands in its container, an earlier day's included, and
-nothing is deleted to make room. Note `git rev-parse HEAD` there as `<old>`:
-the tree before the refresh, which the plan reads as the old side. Note
+Isolation refuses when this date's branch already exists, and refuses
+`worktree exists` while any worktree folder ending `-none` stands beside the one
+isolate would make, an earlier day's included. Either refusal: hand the owner
+what it names and stop, deleting nothing. Note `git rev-parse HEAD` there as
+`<old>`: the tree before the refresh, which the plan reads as the old side. Note
 isolate's `worktree` and `branch` too, for step 8's cleanup line: the ship copy
 present after the merge may keep its worktrees elsewhere than this one did.
 
@@ -165,8 +166,9 @@ In the source repo there is nothing to sweep.
 `drift` non-empty, or in the source repo `others` non-empty: the source repo
 keeps one open issue for it. `$U/drift-body.sh <scratch>/plan.json` prints the
 issue's `table`, one row per `drift` entry and, in the source repo alone, per
-`others` entry: a consumer's other skills are its own. Write a body file holding
-a `## Drift` section with that table, then a `## Moving the pins` section of one
+`others` entry: another consumer repo's other skills are its own. Write a body
+file holding a `## Drift` section with that table, then a `## Moving the pins`
+section of one
 sentence: `A Ship run moves these pins by the "In a Ship run" section of
 update-skills' SKILL.md.` The source repo is public, so the body carries skill
 names and refs only: not this repo's name, nor anything else about it. Then:
@@ -188,7 +190,7 @@ $S/file-issue.sh --repo Gharib89/skills --title "Upstream drift: composed skills
   $S/update-issue-body.sh <n> --repo Gharib89/skills --section Drift --body-file <table>
   ```
 
-  With no candidate of that exact title, re-run `file-issue` with
+  Either repo, with no candidate of that exact title: re-run `file-issue` with
   `--distinct-from` naming every candidate.
 - Exit 1: the source repo is unreachable from here, which is every Azure
   DevOps repo without GitHub credentials. Print the answer's `command` for the
@@ -248,9 +250,10 @@ section carries the content below either way:
   the expected `worktree exists` reason, and the local gate `verdict`.
 - `## Review`: `None.`: no reviewer loop runs here.
 - `## Attribution`: the environment's footer, last.
-- A bare `Closes #` line: dropped in another consumer repo, `Closes #<n>` in
-  the source repo (step 9). Any other template section: what its comment asks
-  for.
+- A bare `Closes #` line: dropped in another consumer repo; in the source repo,
+  `Closes #<n>`, or `Refs #<n>` with a row held back, by
+  [source-repo mode](reference/source-repo.md#source-repo-mode). Any other
+  template section: what its comment asks for.
 
 Between the last content section and `## Attribution`, one collapsed block per
 `source_skills` entry whose version moved,
@@ -288,10 +291,9 @@ the way the repo merges anything.
 
 ### 9. Source-repo mode
 
-`mode` is `source`: this is Gharib89/skills, and each `drift` and `others` row
-is a pin to move in this one PR, before step 7, by
-[source-repo mode](reference/source-repo.md#source-repo-mode). In another
-consumer repo there is no step 9.
+In the source repo (`mode` is `source`), run
+[source-repo mode](reference/source-repo.md#source-repo-mode) before step 7;
+another consumer repo has no step 9.
 
 ## In a Ship run
 

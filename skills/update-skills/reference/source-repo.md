@@ -2,7 +2,8 @@
 
 The steps only the source repo, `Gharib89/skills`, runs: step 9 of
 [SKILL.md](../SKILL.md#9-source-repo-mode), and the steps a Ship run follows by
-hand on an upstream-drift issue. `$S` and `$U` are as SKILL.md defines them.
+hand on an upstream-drift issue. `$S` and `$U` are as SKILL.md defines them,
+and a bare step number names a SKILL.md step: read its steps 2 to 7 first.
 
 ## Source-repo mode
 
@@ -25,7 +26,7 @@ finds the drift issue this PR closes; steps 6 and 8 run unchanged. Per row:
    `CLAUDE.md`, `AGENTS.md`) name. A row that breaks is **held back**, with no
    prose reworked: re-run its install line at `#<from>` (a null `old_ref`
    restores its folder and lock entry from `<old>`), put `<from>` back on each
-   line step 2 edited, and record `held back: <skill>: <reliance it breaks>`.
+   line item 2 edited, and record `held back: <skill>: <reliance it breaks>`.
 
 Then the refresh line, and `scripts/check.sh full`, whose `derived-copies`
 check holds every pin to the lock and whose `tests` check runs the suite; the
@@ -40,11 +41,13 @@ run `$S/cleanup.sh none` from the main checkout.
 
 The title is scoped to the composing skill, so the release run records the move
 in its CHANGELOG, or for `others` rows alone to the skill whose printed line
-moved, else it reads `chore(skills): move <skills> to <short sha>`. Grade it by
-`docs/contributing/standards/release.md`: its composes bullet (moving a pin on
-ship's `composes` line is breaking, one on setup-skills' line or a printed line
-alone is not) and its `## The PR title and commits` (a 0.x break is titled
-`feat(ship): move <skill> to <short sha>`, carrying no breaking marker). State
+moved, else it reads `chore(skills): move <skills> to <short sha>`. The grade
+follows `docs/contributing/standards/release.md`'s composes bullet and its
+`## The PR title and commits`: a pin moved on ship's `composes` line breaks
+ship, so while ship is 0.x the title is `feat(ship): move <skill> to <short
+sha>`, with no `!` in the title or any commit (`bump-guard` reads commits), no
+`BREAKING CHANGE:` footer and no `major` label. A pin moved on setup-skills'
+line or on a printed line alone refuses nothing and takes no `!` either. State
 the break in plain words in the commit body and under
 `## Special things to note`.
 
@@ -64,10 +67,11 @@ mode moves every `others` row.
 4. Step 4: the composed install lines at their pins, then its preflight.
 5. Step 6, its `/setup-skills` re-run replaced by the record in the table
    below; the source repo has no retired terms to sweep.
-6. [Source-repo mode](#source-repo-mode) per `drift` and `others` row, then its
-   refresh line and its `scripts/check.sh full`, before Ship's phase 5: a red
-   check at the new pins is a hold-back, not a fix-and-retry; its title rule is
-   phase 6's title.
+6. [Source-repo mode](#source-repo-mode)'s per-row items and its check
+   paragraph, before Ship's phase 5: a red check at the new pins is a
+   hold-back, not a fix-and-retry; its title rule is phase 6's title. The PR
+   and hand-back lines below replace its step 8 and every-row-held-back
+   sentences.
 
 A held-back row hands the issue back to the owner. With some rows moved, phase
 6 runs `open-pr none --title <t> --body-file <f>`, `<f>` saying `Refs #<issue>`,
