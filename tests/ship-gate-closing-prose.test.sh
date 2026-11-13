@@ -18,7 +18,6 @@ isolate=$(flat < skills/ship/reference/isolate.md)
 rules=(
   "the merge gate leaves the worktree before cleanup removes it|gate|then \`ExitWorktree\` with \`action: \"keep\"\` (\`cleanup\` owns the removal)|then \`ExitWorktree\` with \`action: \"remove\"\` (\`cleanup\` owns the removal)"
   "the stop table names the issue-not-found reason|skill|\`issue #<n> not found or unreadable\`|\`issue #<n> found and readable\`"
-  "existing PR is a PR that closes the issue|isolate|\`existing PR\` is a live PR whose body **closes** this issue|\`existing PR\` is a live PR whose body **mentions** this issue"
   "a branch ending in the issue number is existing branch|isolate|a head branch on origin ending in \`-<issue>\` is \`existing branch\`|a head branch on origin ending in \`-<issue>\` is \`existing PR\`"
 )
 for r in "${rules[@]}"; do
