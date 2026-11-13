@@ -17,7 +17,7 @@ T=$'\t'  # the calls log separates arguments with a tab
 mech=$PWD/skills/ship/scripts/merge.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 origin=$work/github.com/owner/repo.git; repo=$work/repo; export SHIP_FAKE=$work/fake
-export SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
+export SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh SHIP_MERGE_CHECKS_GRACE=0
 mkdir -p "$SHIP_FAKE"
 git init -q --bare -b main "$origin"
 git init -q -b main "$work/seed"

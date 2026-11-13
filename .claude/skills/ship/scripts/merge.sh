@@ -141,6 +141,10 @@ else
     f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ (clean|human)[ \t\r]*$/ { s = $3; if (index(s, h) == 1 || index(h, s) == 1) hit = $4 }
     END { print hit }' "$root/ship-$run_id/run.md" 2>/dev/null)
   [ -n "$record" ] || ship_fail "no-gate-record: no clean gate verdict or merge word recorded for $gated in $root/ship-$run_id/run.md"
+  # A PR body or title edit re-fires `edited` workflows, and GitHub registered the new
+  # run about 3.5s after the edit returned (measured, #1204), so a read straight after
+  # an edit sees only the old success. The grace puts the read past that window.
+  sleep "${SHIP_MERGE_CHECKS_GRACE:-6}"
   cks=$(host_pr_checks "$pr" "$gated" 2>/dev/null) && jq -e 'type == "array"' <<<"$cks" >/dev/null 2>&1 \
     || ship_tooling "cannot read the checks on $gated"
   unsettled=$(ship_unsettled_checks "$cks" "$profile" | paste -sd, - | sed 's/,/, /g')
