@@ -14,14 +14,14 @@ gate=$(flat < skills/ship/reference/merge-gate.md)
 skill=$(flat < skills/ship/SKILL.md)
 isolate=$(flat < skills/ship/reference/isolate.md)
 
-# <case>|<text read>|<clause it must hold>|<the clause with its meaning negated>
+# <case>¦<text read>¦<clause it must hold>¦<the clause with its meaning negated>
 rules=(
-  "the merge gate leaves the worktree before cleanup removes it|gate|then \`ExitWorktree\` with \`action: \"keep\"\` (\`cleanup\` owns the removal)|then \`ExitWorktree\` with \`action: \"remove\"\` (\`cleanup\` owns the removal)"
-  "the stop table names the issue-not-found reason|skill|\`issue #<n> not found or unreadable\`|\`issue #<n> found and readable\`"
-  "a branch ending in the issue number is existing branch|isolate|a head branch on origin ending in \`-<issue>\` is \`existing branch\`|a head branch on origin ending in \`-<issue>\` is \`existing PR\`"
+  "the merge gate leaves the worktree before cleanup removes it¦gate¦then \`ExitWorktree\` with \`action: \"keep\"\` (\`cleanup\` owns the removal), and last \`cleanup <issue|none>\`¦then \`cleanup <issue|none>\`, and last \`ExitWorktree\` with \`action: \"keep\"\` (\`cleanup\` owns the removal)"
+  "the stop table names the issue-not-found reason¦skill¦\`issue #<n> not found or unreadable\`¦\`issue #<n> found and readable\`"
+  "a branch ending in the issue number is existing branch¦isolate¦a head branch on origin ending in \`-<issue>\` is \`existing branch\`¦a head branch on origin ending in \`-<issue>\` is \`existing PR\`"
 )
 for r in "${rules[@]}"; do
-  IFS='|' read -r name where clause negated <<<"$r"
+  IFS='¦' read -r name where clause negated <<<"$r"
   case $where in gate) text=$gate ;; skill) text=$skill ;; isolate) text=$isolate ;; esac
   check "$name" yes "$(has "$text" "$clause")"
   check "$name: the negated clause is refused" no "$(has "$negated" "$clause")"
