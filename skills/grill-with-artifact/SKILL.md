@@ -1,6 +1,6 @@
 ---
 name: grill-with-artifact
-description: "Grill a plan or design on a private artifact page: each grilling round arrives as question cards the human answers and Submits, and the glossary and ADRs are written as answers settle. Use when the human asks for grilling on a page or an artifact, or names grill-with-artifact, a wayfinder ticket's Notes included."
+description: "Grill a plan on a private artifact page of question cards. Use when asked to grill on a page or an artifact, or by a wayfinder ticket's Notes."
 argument-hint: "[topic]"
 metadata:
   version: 0.6.0
@@ -42,8 +42,10 @@ chat format runs.
 
 ## 2 · Publish the page
 
-1. Take the topic from the invocation; only when none was given, ask the human
-   for one in a few words.
+1. Take the topic from the invocation. A wayfinder `grilling` ticket's Notes
+   invoke this skill: its title is the topic and its body is the first
+   frontier's context, and its number goes in step 3's page description. Only
+   when no topic was given, ask the human for one in a few words.
 2. Copy `page.html` and its siblings (`page.css`, `page-core.js`,
    `page-boot.js`) into your scratchpad as `grill-<topic-slug>/` and replace
    the one `{{TOPIC}}` in `page.html` only with the topic, HTML-escaped (`&`,
@@ -67,22 +69,17 @@ the session.
 ## 3 · Post a grilling round
 
 1. Compute the frontier as `grilling` says.
-2. Draw the design tree as `treeSvg`: every decision as a node in its state
-   (`n-settled`, `n-open`, `n-blocked`, `n-deferred`), each open node carrying
-   `data-q` for its question, and `hot` on the edge or node with the most riding
-   on it, named in `treeCaption`.
-3. Give a question a `figureSvg` only where a mechanism or a comparison is
-   faster seen than read. The first time one earns a figure, load
-   `artifact-diagramming` through the Skill tool, and draw it with the figure
-   style contract's classes, which win over any colours that skill suggests.
-   With `artifact-diagramming` not installed, the round goes out with no
-   figures and stays on the page.
-4. Fill `settled` with one entry per question the previous round asked, and
+2. Draw the design tree as `treeSvg` and, where a mechanism or a comparison is
+   faster seen than read, a question's `figureSvg`, in round-data.md's figure
+   style contract. The first figure loads `artifact-diagramming` through the
+   Skill tool; the contract's classes win over its colours. Without that skill
+   the round goes out with no figures.
+3. Fill `settled` with one entry per question the previous round asked, and
    `docsWritten` with every glossary term and ADR written from its answers:
    both are empty arrays in round 1.
-5. Write the round with `ArtifactData` `set`, collection `rounds`, doc id the
+4. Write the round with `ArtifactData` `set`, collection `rounds`, doc id the
    round number.
-6. Resolve the Submit thread that started this turn, if one did, so an open
+5. Resolve the Submit thread that started this turn, if one did, so an open
    thread always means still working. Then print one status line,
    `Round <n> posted. Questions: <k>.`, and end the turn. The questions and
    what settled them live on the page only.
@@ -103,7 +100,11 @@ A `submitted` typed in the chat rings the same bell.
    is the human talking: answer it in the chat, resolve its thread, and end
    the turn.
 2. Apply each answer as `grilling` and `domain-modeling` say, writing any term
-   or ADR it settles now, in the repo.
+   or ADR it settles now, in the repo. One rule differs: `domain-modeling` only
+   offers an ADR, and here the session writes it, once the answer passes its
+   three tests, because the page has no chat to offer in and an offer would
+   cost a round. The ADR is listed in `docsWritten`, and a reopen or a Not yet
+   edits it.
 3. **Defer** puts the question back in the next round with `carriedFrom`
    reason `deferred`. **Reopen** (each id in `answers.reopen`) puts a settled
    question back with reason `reopened` and its answer as `earlier`. Recompute
@@ -126,8 +127,12 @@ and no Reopen: a Not yet comment names what to reopen.
   Decisions: <k>. Docs written: <m>.`, and end the turn.
 
 Any outward-facing step (filing issues, writing a spec) waits for the Confirm
-and for the human to ask for it. A next command the Skill tool cannot run, such
-as `/to-spec`, is named for the human to type.
+and for the human to ask for it. A wayfinder ticket is the exception: after the
+Confirm, resolve it as the repo's issue-tracker doc says (comment the closing
+summary, close the ticket, point the map's Decisions-so-far at it), with no
+further ask, since the ticket exists to be closed by this session. A next
+command the Skill tool cannot run, such as `/to-spec`, is named for the human to
+type.
 
 **Done when:** the human pressed Confirm, its thread is resolved, and the
 confirmed line is the turn's only text.
