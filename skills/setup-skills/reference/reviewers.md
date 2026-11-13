@@ -20,7 +20,7 @@ Step 4's reviewer walk: each detected reviewer with its inferred trigger; then "
 
 ## Validate
 
-The draft must be clear of every reviewer shape ship's preflight refuses. The list is not kept here, because a copy drifts from the code: preflight is the authority, and each refusal is a `profile invalid:` reason that step 6's run reports. Draft each block from the labels `ship-profile.md` lists, and fix every such reason before finishing.
+The draft must be clear of every reviewer shape ship's preflight refuses. The list is not kept here, because a copy drifts from the code: preflight is the authority, and each refusal is a `profile invalid:` reason that step 6's run reports. Draft each block from the labels `ship-profile.md` lists; the human confirms each fix a reason asks for before it is written.
 
 ## Scaffold
 

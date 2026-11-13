@@ -80,7 +80,7 @@ Read the repo once, every section, before saying anything. The right-hand column
 
 Also record, for step 5, three things:
 
-- The per-repo ship script the generic mechanics supersede: `_lib` under `scripts/ship/`, the one consumer repos still hold.
+- The per-repo ship script the generic mechanics supersede: `_lib` under `scripts/ship/`.
 - Which of `triage-labels.md`'s five role labels and [dimension-labels.md](./dimension-labels.md)'s fourteen dimension labels the host already carries, from `gh api --paginate "repos/{owner}/{repo}/labels" --jq '.[].name'`. Read it paginated rather than through `gh label list`, which fetches 30 by default and silently truncates. Match **case-insensitively**, because GitHub label names are: a label in another casing is recorded as a rename and not as a gap. On ADO a tag exists once it is used, so there is nothing to read.
 - Whether `docs/agents/triage-labels.md` already carries a `## Dimension labels` heading.
 
@@ -106,7 +106,7 @@ Walk order and the recommendation to lead with:
 
 ### 5. Confirm and edit
 
-Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and the draft is clear of every reviewer shape ship's preflight refuses ([reference/reviewers.md](./reference/reviewers.md#validate)).
+Show the full draft of everything below, then let the user edit before writing. Field-level validation happens here, the one moment a human is present to fix it. Every reviewer block carries every `Label:` line the template lists, `Cap:` included, and reviewer shapes are proven by ship's preflight in step 6 ([reference/reviewers.md](./reference/reviewers.md#validate)); show the human each reviewer-block fix it asks for before rewriting.
 
 Then: `Self-review cap:` is a whole number of 1 or more; every `Also proven by CI:` names a leg defined in `## CI`; `defer-to-ci` appears only with such a leg; `Host:` matches step 2; fourteen headings in order; the `Schema:` line equals ship's `metadata.profile-schema`.
 
