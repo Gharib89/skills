@@ -27,7 +27,7 @@ json() { sed '$d' <<<"$out"; }
 warnings() { json | jq -c .warnings; }
 verdict() { json | jq -c '[.ok, .reasons]'; }
 
-out=$(preflight); base=$(verdict)
+out=$(preflight); base=$(verdict); base_rc=$(tail -n1 <<<"$out")
 check "no personal copy: no warnings" '[]' "$(warnings)"
 
 mkdir -p "$home/.claude/skills/tdd"; echo project > "$home/.claude/skills/tdd/SKILL.md"
@@ -35,13 +35,14 @@ out=$(preflight)
 check "an identical copy is reported as identical" \
   '["personal skill copy shadows tdd (~/.claude/skills/tdd): identical to the project copy"]' "$(warnings)"
 check "and ok and reasons are unchanged" "$base" "$(verdict)"
-check "and the exit code is unchanged" "$(tail -n1 <<<"$(preflight)")" "$(tail -n1 <<<"$out")"
+check "and the exit code is unchanged" "$base_rc" "$(tail -n1 <<<"$out")"
 
 echo personal > "$home/.claude/skills/tdd/SKILL.md"
 out=$(preflight)
 check "a differing copy is reported as different" \
   '["personal skill copy shadows tdd (~/.claude/skills/tdd): different from the project copy"]' "$(warnings)"
 check "and ok and reasons are unchanged" "$base" "$(verdict)"
+check "and the exit code is unchanged" "$base_rc" "$(tail -n1 <<<"$out")"
 
 out=$(CLAUDE_CODE_REMOTE=true preflight)
 check "a cloud sandbox reports none" '[]' "$(warnings)"

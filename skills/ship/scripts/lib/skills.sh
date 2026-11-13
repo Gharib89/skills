@@ -73,12 +73,13 @@ ship_shadowed_skills() {
   for skill in ship ${entries[@]+"${entries[@]}"}; do
     skill=${skill##*:}
     [ -f "$home/.claude/skills/$skill/SKILL.md" ] || continue
-    # diff's exit 2 is a read that failed, not a difference: report neither.
+    # diff's exit 2 is a read that failed, not a difference: say the comparison is
+    # unavailable, since the personal copy still shadows the project one.
     diff -rq "$home/.claude/skills/$skill" "$root/.claude/skills/$skill" >/dev/null 2>&1
     case $? in
       0) state='identical to' ;;
       1) state='different from' ;;
-      *) continue ;;
+      *) state='comparison unavailable with' ;;
     esac
     printf 'personal skill copy shadows %s (~/.claude/skills/%s): %s the project copy\n' \
       "$skill" "$skill" "$state"

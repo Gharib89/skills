@@ -150,4 +150,11 @@ check "ship's own personal copy is covered, though composes does not name it" \
   'personal skill copy shadows ship (~/.claude/skills/ship): identical to the project copy
 personal skill copy shadows tdd (~/.claude/skills/tdd): different from the project copy' "$(shadow)"
 
+# diff cannot read a project copy that is absent: the personal copy still wins,
+# so the line stays and says the comparison failed rather than guessing.
+rm -rf "$root/.claude/skills/ship"
+check "a failed comparison is reported as unavailable, not dropped" \
+  'personal skill copy shadows ship (~/.claude/skills/ship): comparison unavailable with the project copy
+personal skill copy shadows tdd (~/.claude/skills/tdd): different from the project copy' "$(shadow)"
+
 finish
