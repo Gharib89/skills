@@ -8,7 +8,7 @@ description: >-
   checked or installed (`/creative-video setup`). A request for an "explainer
   video" goes to `explainer-video`.
 metadata:
-  version: 0.24.0
+  version: 0.24.1
 ---
 
 # creative-video
@@ -18,7 +18,7 @@ authored freely in HyperFrames rather than drawn from a fixed set of
 components, a long one split into **chapters**. Given a concept, a topic, a
 repo or a document (and optionally a language and a length), make one under
 [The stance](#the-stance), by the steps of [Make a video](#make-a-video). A
-video runs from about one minute to about 30 minutes, in chapters past about
+video runs from about one minute upward, in chapters past about
 six minutes, so a fix re-renders one chapter, not the whole video: one video,
 never offered in parts. Run setup alone only when asked (`/creative-video
 setup`).
@@ -100,14 +100,13 @@ you would have written an adjective. At least:
 - **Motion**: the event rate, the easing family, what moves on which word.
 - **Type**: faces and sizes.
 
-The `hyperframes` skill is your engine and its craft; `hyperframes-cli` is its
-command line, run through this skill's pinned copy (`hf.mjs`,
+The `hyperframes` skill is your engine and its craft, its CLI this skill's
+pinned copy (`hf.mjs`,
 [reference/authoring.md](reference/authoring.md#the-pinned-cli)). Read the
-`hyperframes` `SKILL.md` and the references you need. Its BANNED list (the
-dark navy void with a glow, neon, floating particles, purple and blue
-gradients, everything centred and fading in) stays banned, with one more way
-out: the format concept needs it, and `SPEC.md` says why in one line. "It
-looks techy" is not a reason.
+`hyperframes` `SKILL.md` and the references you need. Its BANNED list
+(`references/spec.md` there) stays banned, with one more way out: the concept
+needs it, and `SPEC.md` says why in one line. "It looks techy" is not a
+reason.
 Where the `hyperframes` loop and [Make a video](#make-a-video) differ, these
 steps win: `DIRECTIONS.md` is its storylines, the stills review of step 10 is
 its review (no `REVIEW.md`, nothing but the sheets to the reviewer), the
@@ -115,7 +114,10 @@ storyboard of step 11 is its one stop, the gates and the render follow it with
 no stop at a Studio preview,
 every command but the gates and the render (`gates.mjs`, `render.mjs`) runs
 through `hf.mjs`, and a registry block is raw material you edit into the
-concept's look, never a look to pick.
+concept's look, never a look to pick. Send neither telemetry call
+(`npx hyperframes events`, `usage --json`): both use an unpinned CLI. Voice
+and music are this skill's stages, not `/media-use`'s; it stays installed
+because `hyperframes` points to it.
 
 ### Look at what you made
 
@@ -322,10 +324,10 @@ To remove the tools, the user deletes the `creative-video` folders that the
 
 ## Composed skills
 
-Scenes are HyperFrames compositions, authored with the `hyperframes` skill;
-media is found or made with `media-use`. Both are pinned to the HyperFrames
-release this skill's `package.json` installs. Authoring needs both; when
-either is missing, ask once, then install it with:
+Scenes are HyperFrames compositions. Authoring needs the `hyperframes` and
+`media-use` skills, pinned to the HyperFrames release this skill's
+`package.json` installs; when either is missing, ask once, then install it
+with:
 
 ```
 npx skills add heygen-com/hyperframes#33304cff04a601f19128111f77f6538af340f306 --skill hyperframes --agent claude-code -y
