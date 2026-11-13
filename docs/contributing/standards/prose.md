@@ -95,8 +95,9 @@ these rules bind as hard as the shell ones.
   another file or a mechanic's output, beside the lines it wrote. A retro tends
   to add a clause without deleting one, so the prose a run reads grows unless
   each change shows its direction; one that adds more than it removes says why
-  in that bullet. The `prose-budget` cap bounds SKILL.md alone, and this check
-  covers the reference files too.
+  in that bullet. The `prose-budget` caps bound SKILL.md and ship's always-read
+  set, and this check covers each reference file too, a branch-only one
+  included.
 - **A fix to a skill, a profile or a memory names its
   [Fix scope](../../glossary/profiles.md) and the run that exposed it.** The
   scope is **procedure** or **domain**; the run is a PR, an issue, a session or

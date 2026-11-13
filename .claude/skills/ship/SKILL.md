@@ -133,7 +133,7 @@ skipped it.
 edits as part of the diff. **Docs-sync fires only when the public surface or
 observable behavior changed**: bring the profile's `Targets:` in line, folding
 the edits into this change, a tracker issue's as a
-[drafted section](reference/merge-gate.md#a-tracker-issue-on-targets). Skip it
+[drafted section](reference/tracker-targets.md). Skip it
 for internal refactors, a bugfix restoring documented behavior, test-only or
 tooling changes, and comments, and say so in one line at the merge gate.
 **The `writing-for-agents` pass has a trigger of its own**, firing even where
@@ -174,14 +174,16 @@ ones the body owes. Then `reflect <issue> <pr>`.
 body owes, and `reflect` posted.
 
 **7 · Reviewers.** [reference/review-loop.md](reference/review-loop.md) carries
-the round per trigger, the cap as a budget, reading a round, the exit lines and
-fallbacks.
+the round per trigger, the cap as a budget, reading a round and the exit lines;
+[review-unconverged.md](reference/review-unconverged.md) carries the local
+review and fallbacks, read when a capped, docs-only or not-landed round changed
+the tree or a primary's exit drives its fallback.
 Best-effort: each reviewer under `## Reviewers` gets its rounds, every
 reviewer whose `Fallback-for:` reads `None.` first, then the fallbacks; a
 round starts by the block's `Trigger:`, waits one `poll-pr --brief` window,
-triages what landed, pushes the fixes once and answers each thread. Steps,
-exit words and exit write-up:
-[phase-steps.md](reference/phase-steps.md#phase-7-reviewers).
+triages what landed, pushes the fixes once and answers each thread. Steps:
+[phase-steps.md](reference/phase-steps.md#phase-7-reviewers); exit words and
+exit write-up: [review-loop.md](reference/review-loop.md#the-exit).
 **Done when:** every reviewer carries an exit word, every thread `poll-pr`
 returned is replied to and resolved per `Resolve:`, every section the rounds
 grew is rewritten, the title matches `Grade:`, any local review a cap, docs-only
@@ -197,8 +199,10 @@ is in [phase-steps.md](reference/phase-steps.md#phase-8-ci).
 `No-checks legal:` admits, or `no-checks` where it admits that.
 
 **9 · Merge gate.** [reference/merge-gate.md](reference/merge-gate.md) carries
-the summary's shape, what `merge` does, its refusals and the tracker drafts.
-Write the summary per that file; the steps from the merge authorization to
+the summary's shape and what `merge` does; its refusals, a human's changes and
+"file defects" are in
+[merge-gate-branches.md](reference/merge-gate-branches.md), read on that branch.
+Write the summary per merge-gate.md; the steps from the merge authorization to
 the return are in [phase-steps.md](reference/phase-steps.md#phase-9-merge-gate).
 **Done when:** attended, `merge` and every `update-issue-body` exited 0 with no
 `false`, then `close 9`, then `ExitWorktree`, then `cleanup

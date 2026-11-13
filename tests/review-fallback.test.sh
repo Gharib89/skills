@@ -78,7 +78,7 @@ primary_exit() {
   if [ "$(jq -r .not_reviewed <<<"$out")" = null ]; then echo reviewed
   else echo "not reviewed: $(jq -r .not_reviewed <<<"$out")"; fi
 }
-# review-loop.md's Fallbacks: request the fallback on a `not reviewed` primary,
+# review-unconverged.md's Fallbacks: request the fallback on a `not reviewed` primary,
 # report it `not invoked` on a reviewed one. Prints both exits, one per line.
 loop() {
   local p; p=$(primary_exit); echo "$p"

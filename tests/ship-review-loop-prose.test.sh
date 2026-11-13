@@ -24,7 +24,7 @@ rules=(
   "the stale-head re-poll needs no landed round|loop|bar \`unreachable\` with \`landed_by\` null on a \`head_sha\`|bar \`unreachable\` on a \`head_sha\`"
   "a round after a tree-changing fix stops not landed|loop|\`Stop: <reviewer>: not landed\`|\`Stop: <reviewer>: tree unchanged\`"
   "the stop is final|loop|that exit is final|that exit is not final"
-  "the fallback that names it is driven per Fallbacks|loop|reviewer that names it, if any, is driven per [Fallbacks](#fallbacks)|reviewer that names it, if any, is not driven per [Fallbacks](#fallbacks)"
+  "the fallback that names it is driven per Fallbacks|loop|reviewer that names it, if any, is driven per [Fallbacks](review-unconverged.md#fallbacks)|reviewer that names it, if any, is not driven per [Fallbacks](review-unconverged.md#fallbacks)"
   "phase 7 points at the section|steps|A window that closes with no round|A window that closes with a round"
   "a turn never ends on a plan line|skill|A turn never ends on a plan line|A turn may end on a plan line"
   "a background job's end is announced in one line|skill|announce its end in one line|announce its end in a paragraph"
