@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.10.4 (2026-11-13)
+
+### Bug Fixes
+
+- **update-skills**: Fix isolation, consumer-repo and Ship-run prose, move source-repo steps to a
+  reference ([#1226](https://github.com/Gharib89/skills/pull/1226),
+  [`7459fec`](https://github.com/Gharib89/skills/commit/7459fec6825160c6c3cfdf0928bee585d5b25972))
+
+
 ## v0.10.3 (2026-11-12)
 
 ### Bug Fixes
