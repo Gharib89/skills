@@ -5,7 +5,7 @@ description: >-
   Use when asked for a creative, animated, chaptered or branded video; an
   "explainer video" goes to `explainer-video`.
 metadata:
-  version: 0.25.0
+  version: 0.26.0
 ---
 
 # creative-video
