@@ -35,6 +35,7 @@ tree() {
   rm -rf "$d"; mkdir -p "$d/docs/agents" || return 1
   git -C "$d" init -q && git -C "$d" remote add origin https://github.com/o/r.git || return 1
   printf '{}\n' > "$d/package.json"
+  # This list is the source-repo skills of setup-project's SKILL.md first install line.
   for s in ship cloud-ship setup-skills update-skills setup-harness; do
     mkdir -p "$d/.claude/skills/$s"
     printf -- '---\nname: %s\nmetadata:\n  version: 0.2.0\n---\n' "$s" > "$d/.claude/skills/$s/SKILL.md"
@@ -207,6 +208,16 @@ check "and checks the stack's own tool by its lockfile" "bun 1.1.30" "$(evidence
 # has whatever stack it has, so its absence alone does not make the row run.
 d=$(tree nomanifest); git -C "$d" rm -q package.json && git -C "$d" -c user.name=t -c user.email=t@t commit -qm rm
 check "a repo with commits and no manifest still reads done" "done" "$(state repo-and-remote "$d")"
+# Manifests of the Java, Kotlin and .NET stacks the harness catalog lists.
+for m in pom.xml build.gradle build.gradle.kts App.slnx; do
+  d=$fixture/manifest-$m; mkdir -p "$d"; : > "$d/$m"
+  check "$m counts as the stack manifest" "no .git
+no origin remote
+manifest $m" "$(evidence repo-and-remote "$d")"
+done
+check "a Java build checks no stack tool" "git jq node npx gh" "$(evidence tools "$fixture/manifest-pom.xml" | awk '{print $1}' | tr '\n' ' ' | sed 's/ $//')"
+check "a .slnx checks dotnet" "1" "$(evidence tools "$fixture/manifest-App.slnx" | grep -c '^dotnet ')"
+
 d=$fixture/fresh; mkdir -p "$d"; git -C "$d" init -q; git -C "$d" remote add origin https://github.com/o/r.git
 check "a repo with no commits and no manifest reads run" "run" "$(state repo-and-remote "$d")"
 

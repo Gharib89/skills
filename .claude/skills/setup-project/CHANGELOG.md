@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.5.1 (2026-11-13)
+
+### Bug Fixes
+
+- **setup-project**: Detect pom.xml, build.gradle and slnx, keep the chain set in one place
+  ([#1230](https://github.com/Gharib89/skills/pull/1230),
+  [`4a9413f`](https://github.com/Gharib89/skills/commit/4a9413fa27e0c9a3d919ce582a14f80c6ee7b6d2))
+
+
 ## v0.5.0 (2026-11-11)
 
 ### Features
