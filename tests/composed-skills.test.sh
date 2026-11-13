@@ -120,4 +120,41 @@ check "a space-separated value whole" 'mattpocock/skills:tdd upstash/context7:fi
 check "a quoted value without its quotes" '5' "$(ship_frontmatter "$fm" profile-schema)"
 check "a key the frontmatter lacks"   ''      "$(ship_frontmatter "$fm" missing-key)"
 
+# ship_shadowed_skills: a personal copy under <home>/.claude/skills wins over the
+# project copy, so the run reports it. A warning: the exit code stays 0 whether
+# or not a copy exists, and a line carries `~/.claude/skills/<name>`, never the
+# home path.
+home=$(mktemp -d) || exit 2
+trap 'rm -rf "$root" "$home"; rm -f "$fm"' EXIT
+install tdd; install find-docs; install ship
+shadow() { ship_shadowed_skills "$root" "$composes" "$home"; }
+out=$(shadow); rc=$?
+check "no personal copy prints nothing" '' "$out"
+check_rc "no personal copy exits 0" 0 "$rc"
+
+mkdir -p "$home/.claude/skills/tdd"; touch "$home/.claude/skills/tdd/SKILL.md"
+out=$(shadow); rc=$?
+check "an identical personal copy is reported as identical" \
+  'personal skill copy shadows tdd (~/.claude/skills/tdd): identical to the project copy' "$out"
+check_rc "an identical copy exits 0" 0 "$rc"
+
+echo changed > "$home/.claude/skills/tdd/SKILL.md"
+out=$(shadow); rc=$?
+check "a differing personal copy is reported as different" \
+  'personal skill copy shadows tdd (~/.claude/skills/tdd): different from the project copy' "$out"
+check_rc "a differing copy exits 0" 0 "$rc"
+check "the line holds no home path" '0' "$(grep -c -F "$home" <<<"$out")"
+
+mkdir -p "$home/.claude/skills/ship"; touch "$home/.claude/skills/ship/SKILL.md"
+check "ship's own personal copy is covered, though composes does not name it" \
+  'personal skill copy shadows ship (~/.claude/skills/ship): identical to the project copy
+personal skill copy shadows tdd (~/.claude/skills/tdd): different from the project copy' "$(shadow)"
+
+# diff cannot read a project copy that is absent: the personal copy still wins,
+# so the line stays and says the comparison failed rather than guessing.
+rm -rf "$root/.claude/skills/ship"
+check "a failed comparison is reported as unavailable, not dropped" \
+  'personal skill copy shadows ship (~/.claude/skills/ship): comparison unavailable with the project copy
+personal skill copy shadows tdd (~/.claude/skills/tdd): different from the project copy' "$(shadow)"
+
 finish
