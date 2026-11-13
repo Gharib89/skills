@@ -8,7 +8,7 @@ description: >-
   to catch a repo up.
 disable-model-invocation: true
 metadata:
-  version: 0.5.1
+  version: 0.6.0
   composes: mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa:setup-matt-pocock-skills
 ---
 
