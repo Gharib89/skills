@@ -32,7 +32,7 @@ Read `docs/agents/harness.md` if it exists; a repo without one is a first run, a
 
 - `Schema:` equal to this skill's `metadata.harness-schema`: read its choices (`## Budgets` overrides, the `## Cloud` verdict and `Allowlist:`, `Excluded:`, `Root:`, `Local-only:` and `Declined:` lines) and honour them without re-asking; removed or stale lines re-open per gap-report.md `## Deleted pieces and standing choices`. A `Proof: <sha>` stands or is stale per [reference/cloud.md](reference/cloud.md) `## Recording the proof`.
 - `Schema:` behind: read and honour its choices as on an equal schema; the migration is the first, undroppable row of the confirm step, applied entry by entry from [harness-schema.md](harness-schema.md), `Schema:` rewritten last.
-- `Schema:` ahead: stop. That repo was set up by a newer setup-harness; print `npx skills add Gharib89/skills --skill setup-harness --agent claude-code -y` and "then rerun `/setup-harness`".
+- `Schema:` ahead: stop. That repo was set up by a newer setup-harness; print `npx skills@1.8.1 add Gharib89/skills --skill setup-harness --agent claude-code -y` and "then rerun `/setup-harness`".
 
 ### 3. Explore
 
