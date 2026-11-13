@@ -42,7 +42,7 @@ sa_instances "$tmp/unauth.json" claudeAgent:claudeAgent:unauth claudeAgent_b:cla
 chain "$tmp/unauth.json"
 sa_account claude b 0 "$(week 20)"
 check "setup recorded the signed-out instance as auth failed" failed "$(jq -r '.providers.claudeAgent.auth' "$fleet")"
-check "the launch goes to the healthy instance, with its model and effort" '{"instance_id":"claudeAgent_b","model":"sonnet","options":[{"id":"effort","value":"medium"}]}' "$(launch M)"
+check "the launch goes to the healthy instance, with its model and effort" '{"instance_id":"claudeAgent_b","model":"opus","options":[{"id":"effort","value":"medium"}]}' "$(launch M)"
 
 # --- both signed in, A at 0% weekly, B healthy: B launches ------------------------------------------
 sa_instances "$tmp/empty.json" claudeAgent:claudeAgent:home=/acct/a claudeAgent_b:claudeAgent:home=/acct/b
