@@ -3,9 +3,10 @@
 # at load, so a file that outgrows its budget buries the pipeline behind its own
 # reference material, and a reference file long enough to scroll needs a map at
 # the top rather than at the point a reader gives up. The thresholds and the
-# paths, whole: `skills/*/SKILL.md` at most 3500 words, and every
-# `skills/*/reference/*.md` over 100 lines opening with a `## Contents` heading
-# inside its first 15 lines whose list matches the file's `## ` headings.
+# paths, whole: `skills/*/SKILL.md` at most 3500 words, ship's always-read set at
+# most 18500 words in sum, and every `skills/*/reference/*.md` over 100 lines
+# opening with a `## Contents` heading inside its first 15 lines whose list
+# matches the file's `## ` headings.
 # `scripts/check.sh full` runs this as its `prose-budget` row, which
 # scripts/local-gate.sh reports under the same name, in every lane.
 # The SKILL.md budget counts words, split on whitespace as `wc -w` splits them,
@@ -13,6 +14,15 @@
 # in 184 lines under the old 350-line cap. 3500 is ship's SKILL.md at 3,330 words
 # (#606), rounded up to the next 500: a ratchet, so prose that regrows fails here
 # instead of accumulating again.
+#
+# Ship's always-read set has a word budget of its own, 18500: `skills/ship/SKILL.md`
+# plus every `skills/ship/reference/*.md` but the files a run reads only on their
+# branch (the case list below). A full-lane run reads that whole set, so a rule
+# moved out of SKILL.md into a reference file still costs every run; the per-file
+# caps never bounded the sum. 18500 is the set at 18,396 words after branch-only
+# material moved out (#1212), rounded up to the next 500, the same ratchet. A
+# reference file the list does not name counts, so a new file is in the sum
+# until it is declared branch-only here.
 #
 # The ship profile's `## Local gate` section, `docs/agents/ship.md`, has a byte
 # budget of its own, 11000: every run reads the profile at its start, and the
@@ -153,6 +163,18 @@ for f in "$root"/skills/*/SKILL.md; do
   [ "$n" -le 3500 ] \
     || { printf '%s: %s words, over the 3500-word budget\n' "${f#"$root"/}" "$n"; rc=1; }
 done
+if [ -f "$root/skills/ship/SKILL.md" ]; then
+  sum=0
+  for f in "$root"/skills/ship/SKILL.md "$root"/skills/ship/reference/*.md; do
+    case ${f##*/} in
+      rework.md|small-lane.md|unattended.md|review-loop-examples.md|merge-gate-branches.md|review-unconverged.md|spec-gaps.md|tracker-targets.md) continue ;;
+    esac
+    n=$(words "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
+    sum=$((sum + n))
+  done
+  [ "$sum" -le 18500 ] \
+    || { printf 'skills/ship: the always-read set is %s words, over the 18500-word budget\n' "$sum"; rc=1; }
+fi
 for f in "$root"/skills/*/reference/*.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
   [ "$n" -gt 100 ] || continue

@@ -14,8 +14,7 @@ different pipeline: the same ten phases, with three things fixed by the flag.
    hands the issue back, and leaves no issue claimed and spinning. Admission is
    narrower too: `ready-for-human` is the stop `ready-for-human: attended only`.
 3. **The merge gate posts and returns**, as
-   [merge-gate.md](merge-gate.md#unattended-post-to-the-pr-then-return)
-   carries it.
+   [below](#the-merge-gate-post-to-the-pr-then-return) carries it.
 
 Before any of it, **`prepare --unattended`**, which in this lane runs whether
 or not the run is in a cloud sandbox, so a local `ship --unattended` still
@@ -53,3 +52,22 @@ leave no trace on any issue.
 
 The repo is derived from the clone's `origin` remote; no repo name is passed
 anywhere.
+
+## The merge gate: post to the PR, then return
+
+First the final head's gate, as the attended lane runs it: `run-file gate read
+--head <head_sha>`, and on `current: false` the re-run and record
+[merge-gate.md](merge-gate.md#attended-post-then-wait), so the `Local gate`
+item describes the head a human merges. A `fail` there takes phase 5's fix
+loop; `unavailable` hands back
+`local gate unavailable: <gates>` with the PR left open. Then `comment-pr <pr>
+--body-file` with the summary, `run-file close 9` with the task set to the
+returned `mirror`, then **return** with the PR link. Do not wait, poll, or
+merge; the claim stays on the issue, which carries the open PR, so later fires
+skip it until a human merges. The last line becomes "Ready to merge: a human
+merges from the PR.", and with an unmet criterion it adds "Waive each unmet
+criterion, or take its action, before merging." A Ship defect's draft is never
+filed from here, and the comment drops the "file defects" line: it carries each
+draft verbatim under the command a human runs from a file they save it to,
+`.claude/skills/ship/scripts/file-issue.sh --repo Gharib89/skills --title
+"<title>" --body-file <file> --label needs-triage`.

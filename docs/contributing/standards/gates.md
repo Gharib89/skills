@@ -115,7 +115,9 @@ do to pass.
   `skills/`, `scripts/`, `tests/` and `.claude/hooks/`, per the `contract` gate:
   the writer's SIGPIPE reads as no match.
 - The skills' own documents inside their prose budget, per the `prose-budget`
-  gate: `skills/*/SKILL.md` at most 3500 words, and every
+  gate: `skills/*/SKILL.md` at most 3500 words, ship's always-read set
+  (SKILL.md and every reference file not read only on its branch) at most 18500
+  words in sum, and every
   `skills/*/reference/*.md` over 100 lines opening with a `## Contents` list
   that matches its `## ` headings both ways. The profile's `## Local gate`
   section stays at 11000 bytes or fewer. A rule that outgrows the file it lives
