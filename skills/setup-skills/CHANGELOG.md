@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.30.0 (2026-11-13)
+
+### Features
+
+- **ship**: Merge refuses unsettled checks, a head with no admission record, and a sandbox that does
+  not merge ([#1221](https://github.com/Gharib89/skills/pull/1221),
+  [`990dde0`](https://github.com/Gharib89/skills/commit/990dde0ac1073f6dac7008a861783783a8ea82c4))
+
+
 ## v0.29.1 (2026-11-12)
 
 ### Bug Fixes
