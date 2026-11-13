@@ -77,6 +77,7 @@ stub_head_moved() { # <attempt>
   [ "$(git -C "$origin" rev-parse -q --verify refs/heads/fix/x)" = "$a" ] || echo "branch: not kept on origin" >> "$stub_failed"
   # The control: the same PR at the gated head still merges (ADR 0009).
   rm -rf "$fake"; mkdir -p "$fake"; pr open "$a" 1; pr merged "$a" 2
+  printf '[{"name":"build","status":"success"}]\n' > "$fake/host_pr_checks.1.json"
   merge >/dev/null; rc=$?
   [ "$rc" -eq 0 ] || echo "control: a PR at its gated head exited $rc, want 0" >> "$stub_failed"
 }
