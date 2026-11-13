@@ -76,7 +76,7 @@ check "it launches a ship of the labelled size, on a fresh claim" '{"launch":tru
 check "the title is the repo and the slug" "widgets#7 add-a-frobnicator-to-the" "$(jq -r .args.title <<<"$out")"
 check "the worktree strategy names the base and the branch /ship would" \
   '{"type":"worktree","baseRef":"main","branch":"fix/add-a-frobnicator-to-the-7","startFromOrigin":true}' "$(jq -c .args.workspaceStrategy <<<"$out")"
-check "L starts on the second rung, on route's instance, options an array" \
+check "L starts on the third rung, on route's instance, options an array" \
   '{"instanceId":"claudeAgent","model":"opus","options":[{"id":"effort","value":"high"}]}' "$(jq -c .args.modelSelection <<<"$out")"
 check "a local launch carries no environment id" false "$(jq '.args | has("environmentId")' <<<"$out")"
 check "the message opens with the owner-skill invocation" "/ship 7" "$(jq -r .args.message <<<"$out" | sed -n 1p)"
