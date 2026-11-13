@@ -35,6 +35,7 @@ tree() {
   rm -rf "$d"; mkdir -p "$d/docs/agents" || return 1
   git -C "$d" init -q && git -C "$d" remote add origin https://github.com/o/r.git || return 1
   printf '{}\n' > "$d/package.json"
+  # This list is the source-repo skills of setup-project's SKILL.md first install line.
   for s in ship cloud-ship setup-skills update-skills setup-harness; do
     mkdir -p "$d/.claude/skills/$s"
     printf -- '---\nname: %s\nmetadata:\n  version: 0.2.0\n---\n' "$s" > "$d/.claude/skills/$s/SKILL.md"
