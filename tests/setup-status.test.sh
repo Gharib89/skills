@@ -207,6 +207,14 @@ check "and checks the stack's own tool by its lockfile" "bun 1.1.30" "$(evidence
 # has whatever stack it has, so its absence alone does not make the row run.
 d=$(tree nomanifest); git -C "$d" rm -q package.json && git -C "$d" -c user.name=t -c user.email=t@t commit -qm rm
 check "a repo with commits and no manifest still reads done" "done" "$(state repo-and-remote "$d")"
+# Manifests of the Java, Kotlin and .NET stacks the harness catalog lists.
+for m in pom.xml build.gradle build.gradle.kts App.slnx; do
+  d=$fixture/manifest-$m; mkdir -p "$d"; : > "$d/$m"
+  check "$m counts as the stack manifest" "no .git
+no origin remote
+manifest $m" "$(evidence repo-and-remote "$d")"
+done
+
 d=$fixture/fresh; mkdir -p "$d"; git -C "$d" init -q; git -C "$d" remote add origin https://github.com/o/r.git
 check "a repo with no commits and no manifest reads run" "run" "$(state repo-and-remote "$d")"
 
