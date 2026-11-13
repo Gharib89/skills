@@ -37,8 +37,12 @@ concurrency:
 jobs:
   release:
     # A release commit is python-semantic-release's own (author `semantic-release`,
-    # its default), with one of the subjects the configurations generate. Both halves are needed: `bump-guard` admits a PR
-    # titled `chore(release): ship v7.1`, and such a PR must still release. A new
+    # its default), with one of the subjects the configurations generate. Both
+    # halves are needed: `bump-guard` admits a PR titled
+    # `chore(release): ship v7.1`, and such a PR must still release. A deploy-key
+    # push re-triggers this workflow, so this check is the recursion guard: the
+    # author name here, the awk filter and the `user.name` in the tag step below
+    # are one fact, python-semantic-release's author, and move together. A new
     # skill is added here as well as to SKILLS below.
     if: >-
       ${{ !(github.event.head_commit.author.name == 'semantic-release'
