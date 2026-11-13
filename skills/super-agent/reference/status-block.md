@@ -3,6 +3,7 @@
 ## Contents
 
 - [Every wake](#every-wake)
+- [A reviewer usage limit](#a-reviewer-usage-limit)
 - [A need](#a-need)
 - [A ruling](#a-ruling)
 - [The digest](#the-digest)
@@ -51,7 +52,10 @@ as landed, or the owner says it is back.
 ## A need
 
 Record one when you escalate: `ledger.sh --ledger <ledger> need <key> --action
-<text>`, `<key>` the entry (or the waiting ticket) and `<text>` the one action.
+<text> --reason <word>`, `<key>` the entry (or the waiting ticket), `<text>` the
+one action and `<word>` the `escalate` row's `reason`, or for a need no row
+raised a word naming its cause (`verify`, `merge-gate`, `route`). A need with no
+reason silences every later `escalate` row of its entry until `unneed`.
 Clear it with `ledger.sh --ledger <ledger> unneed <key>` once the owner has
 answered, its ticket settles, or its stall resets, since nothing else clears
 one. A `closed` ticket's need stays until the owner answers. Repeating `need`

@@ -142,6 +142,10 @@ check "a need for another cause leaves a new cause printing" "$repo#5 permission
 L need "$repo#5" --action "answer the permission dialog" --reason permission-hold >/dev/null
 check "a need for its own cause silences it" "" "$(esc "$(R)")"
 check "the need keeps its reason" permission-hold "$(L list | jq -r '.needs[0].reason')"
+# A need with no --reason silences every later escalate row of its entry, so
+# every `need` call the skill's prose shows carries one, within its sentence.
+bare=$(perl -0777 -ne 's/\s+/ /g; while (/(ledger\.sh(?: --ledger <ledger>)? need\b.*?(?:\.(?: |$)|$))/g) { print "$ARGV: $1\n" unless $1 =~ /--reason/ }' skills/super-agent/SKILL.md skills/super-agent/reference/*.md)
+check "every need call the prose shows carries --reason" "" "$bare"
 fixture
 rm "$SA_FAKE/threads/t-5.json"
 out=$(R)

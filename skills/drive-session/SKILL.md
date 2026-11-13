@@ -19,7 +19,8 @@ Herdr is this skill's subject: the skill needs herdr 0.9.3 or newer. A
 supervisor outside Herdr (a T3 Code thread) runs the same scripts while a Herdr
 server answers `herdr workspace list`: with no tab of its own, `spawn` opens
 each tab in the workspace labelled with the repo's name, creating it when none
-is.
+is. Supervising T3 threads rather than Herdr tabs (the owner's tickets from a
+pinned T3 thread) is the `super-agent` skill's job.
 
 ## The scripts
 

@@ -69,10 +69,11 @@ that row only, so a later cause on the entry still prints. By `reason`:
 
 A run's hold outside the merge allowance and the standing waivers follows the
 fleet file's `merge_gate_ruler`. `owner` (the default, and a fleet file without
-the key): record a need with `ledger.sh need`. `super-agent`: you rule on the
-hold, record it with `ledger.sh ruling`, tell the run in its thread (the run
-acts on it and writes nothing of it into a PR body), and say it in the next
-status block. A ruling you cannot defend is the owner's: record a need.
+the key): record a need with `ledger.sh need --reason merge-gate`.
+`super-agent`: you rule on the hold, record it with `ledger.sh ruling`, tell the
+run in its thread (the run acts on it and writes nothing of it into a PR body),
+and say it in the next status block. A ruling you cannot defend is the owner's:
+record a need.
 
 A hold on a failure the PR did not cause (a red check on the base, a script the
 PR never touched) is never waived, whichever way the ruler is set, and no
