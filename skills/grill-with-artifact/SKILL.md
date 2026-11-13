@@ -1,6 +1,6 @@
 ---
 name: grill-with-artifact
-description: "Grill a plan on a private artifact page. Use when the human names grill-with-artifact, asks to grill on a page or an artifact, or a wayfinder ticket's Notes call for it."
+description: "Grill a plan or design on a private artifact page. Use when the human names grill-with-artifact, asks to grill on a page or an artifact, or a wayfinder ticket's Notes call for it."
 argument-hint: "[topic]"
 metadata:
   version: 0.6.0
@@ -73,7 +73,7 @@ the session.
    faster seen than read, a question's `figureSvg`, in round-data.md's figure
    style contract. The first figure loads `artifact-diagramming` through the
    Skill tool; the contract's classes win over its colours. Without that skill
-   the round goes out with no figures.
+   the round goes out with no figures and stays on the page.
 3. Fill `settled` with one entry per question the previous round asked, and
    `docsWritten` with every glossary term and ADR written from its answers:
    both are empty arrays in round 1.
@@ -129,9 +129,10 @@ Any outward-facing step (filing issues, writing a spec) waits for the Confirm
 and for the human to ask for it. A wayfinder ticket is the exception: after the
 Confirm, resolve it with the Resolve operation in the repo's
 `docs/agents/issue-tracker.md` (comment the closing summary, close the
-ticket), with no further ask, since the ticket exists to be closed by this
-session. A next command the Skill tool cannot run, such as `/to-spec`, is
-named for the human to type.
+ticket, append the context pointer to the map's Decisions-so-far), with no
+further ask, since the ticket exists to be closed by this session. A next
+command the Skill tool cannot run, such as `/to-spec`, is named for the human to
+type.
 
 **Done when:** the human pressed Confirm, its thread is resolved, and the
 confirmed line is the turn's only text.
