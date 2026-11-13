@@ -240,13 +240,21 @@ is `null`. `non_leg_failing` on the `CI` item is red the profile does not ask
 for, so it does not hold the merge, and an `unlisted` check is profile drift
 for the human to add to `Legs:` or remove.
 
-**On explicit approval or a clean opted-in gate**, from the worktree, `merge
-<pr> <issue|none> <head> [--worktree <path>]`, `<head>` the `head_sha` this
-gate read from `read-pr`, so the merge lands only the head the summary
-describes. Its header carries what it does and
-what each refusal protects against: `pr-closed: <state>`, `head-moved: <current>
-!= <gated>` and `stale-base: behind <n> on <base>` merge nothing and stop at
-this gate, including after a clean-gate decision. Two of them come back here:
+**On explicit approval or a clean opted-in gate**, first record what admits the
+merge, from the worktree: `run-file gate admit clean ci-wait.json --head <head>
+--issue <issue>` on a clean gate (it records only where `gate clean` is clean),
+or `run-file gate admit human --head <head> --issue <issue>` on the human's word
+"merge" over a held gate, a waiver included. Any `update-pr-body` or
+`update-pr-title` after the settled `ci-wait` re-fires every workflow that
+triggers on `edited` against the same head, so re-run `ci-wait <pr> --sha
+<head>` and save its answer before the admit step. Then `merge <pr> <issue|none>
+<head> [--worktree <path>] [--run <slug>]`, `<head>` the `head_sha` this gate
+read from `read-pr`, so the merge lands only the head the summary describes; a
+`none` run names its Run file's slug with `--run`. Its header carries what it
+does and what each refusal protects against: `pr-closed: <state>`, `head-moved:
+<current> != <gated>`, `stale-base: behind <n> on <base>`, `cloud-sandbox`,
+`no-gate-record` and `checks-unsettled` merge nothing and stop at this gate,
+including after a clean-gate decision. These come back here:
 
 - `head-moved`: the earlier approval covered the old head only. Re-run
   `read-pr`, read the new commits, cite or re-run the gate for the new
@@ -254,6 +262,14 @@ this gate, including after a clean-gate decision. Two of them come back here:
   its settled answer to `ci-wait.json`, re-run `run-file gate summary <pr>`,
   rewrite the summary from that answer and ask again, or decide on it when
   opted in.
+- `no-gate-record`: no admit record covers that head (an older head's does
+  not). Run the admit step for the head this gate read, merge again.
+- `checks-unsettled: <check>: <state>`: the head's checks, read by the merge
+  call, hold one `pending`, `failure` or `missing` within the profile's `Legs:`
+  and `No-checks legal:`. Re-run `ci-wait <pr> --sha <head>` and merge again; a
+  red check is the fix loop's, not a waiver's.
+- `cloud-sandbox`: `CLAUDE_CODE_REMOTE=true` and no `Sandbox merge: yes` under
+  the profile's `## Cloud lane`. Post the summary and stop: a human merges.
 - `stale-base`: merge the base in, re-run the local gate, save the new head's
   settled `ci-wait` answer and come back to this gate for `gate summary`. A
   merge with no conflict to resolve leaves the reviewer stops and Verification

@@ -94,6 +94,7 @@ contract.
 | `update-issue-body` | 1, once per section an anchor the tree contradicts sits in; 9, after `merge` answers `merged: true`, once per tracker draft |
 | `resolve-thread` | 7 |
 | `ci-wait` | 8 |
+| `run-file gate admit` | 9, just before `merge`: `clean` on a clean gate, `human` on the human's "merge" |
 | `merge` | 9, on explicit approval or a clean opted-in gate |
 | `cleanup` | 9, after merge |
 | `list-prs` and `select` | unattended lane |

@@ -63,7 +63,11 @@ stub_head_moved() { # <attempt>
     && git -C "$repo" push -q -f origin "$a:refs/heads/fix/x" || unavailable "cannot build the head-moved stub"
   pr() { jq -n --arg s "$1" --arg h "$2" '{number: 7, title: "fix: x", head_sha: $h, head_ref: "fix/x", base_ref: "main", state: $s}' \
     > "$fake/host_pr_get.$3.json"; }
-  merge() { (cd "$repo" && SHIP_FAKE=$fake SHIP_HOST_ADAPTER=$here/../tests/host-fake.sh bash "$src/skills/ship/scripts/merge.sh" 7 none "$a" 2>/dev/null); }
+  merge() { (cd "$repo" && XDG_STATE_HOME=$w/state SHIP_FAKE=$fake SHIP_HOST_ADAPTER=$here/../tests/host-fake.sh bash "$src/skills/ship/scripts/merge.sh" 7 none "$a" --run stub 2>/dev/null); }
+  # The gated head carries its admission record, so only the head check can refuse the moved one.
+  (cd "$repo" && XDG_STATE_HOME=$w/state bash "$src/skills/ship/scripts/run-file.sh" init stub >/dev/null 2>&1 \
+    && XDG_STATE_HOME=$w/state bash "$src/skills/ship/scripts/run-file.sh" gate admit human --head "$a" --issue stub >/dev/null 2>&1) \
+    || echo "control: cannot record the admission" >> "$stub_failed"
   # The host now reports a head past the one the merge gate read.
   pr open "$c" 1
   out=$(merge); rc=$?

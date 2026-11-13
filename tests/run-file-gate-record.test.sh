@@ -118,5 +118,14 @@ check_rc "gate record refuses a 6-digit head" 2 "$(printf '{"verdict":"pass"}' |
 check_rc "gate read needs --head" 2 "$(inrc "$repo" gate read --file "$fr")"
 check_rc "gate with no subcommand is malformed" 2 "$(inrc "$repo" gate)"
 
+# --- gate admit: the record `merge` reads (#1204) ----------------------------------
+
+fa=$(at "$repo" init 44 | jq -r .run_file)
+ad=$(at "$repo" gate admit human --head "$first" --file "$fa")
+check "gate admit human answers the head and the word" "$first human" "$(jq -r '[.head, .admitted] | join(" ")' <<<"$ad")"
+check "the line is clock, sha, word, in its own section" 1 "$(awk '/^## Merge admission$/{f=1;next} /^## /{f=0} f' "$fa" | grep -cE "^- [0-9]{2}:[0-9]{2} $first human$")"
+check_rc "gate admit needs --head" 2 "$(inrc "$repo" gate admit human --file "$fa")"
+check_rc "gate admit takes clean or human only" 2 "$(inrc "$repo" gate admit maybe --head "$first" --file "$fa")"
+check_rc "gate admit clean needs the CI answer" 2 "$(inrc "$repo" gate admit clean --head "$first" --file "$fa")"
 
 finish

@@ -187,8 +187,12 @@ Write the summary per that file, its `Host protections` line from `protections
 `Merge:` branch, waiting for an explicit "merge" by default, or merging when
 `Merge: on-clean-gate` or the run is inline lane and that answer reads `clean:
 true`; an unmet criterion needs the human's explicit waiver.
-On either authorization run `merge <pr> <issue|none> <head> [--worktree
-<path>]`, `<head>` the gate's `head_sha`. Invoke it from the worktree root as
+On either authorization record the admission with `run-file gate admit
+clean|human --head <head>`, after a fresh `ci-wait <pr> --sha <head>` where
+`update-pr-body` or `update-pr-title` edited the PR since the last one
+([merge-gate.md](merge-gate.md#attended-post-then-wait)). Then run `merge <pr>
+<issue|none> <head> [--worktree <path>] [--run <slug>]`, `<head>` the gate's
+`head_sha`. Invoke it from the worktree root as
 `.claude/skills/ship/scripts/merge.sh` where Ship is installed at project scope,
 since auto mode has refused the absolute form on a clean gate; the absolute
 base-directory path is for an install with no project copy (a global install).

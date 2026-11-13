@@ -164,6 +164,15 @@ else
     reasons+=("profile invalid: Self-review cap: ${line#=} is not a whole number of rounds, 1 or more")
   fi
 
+  # The optional cloud-lane merge line, which `merge` reads as yes or no. Any
+  # other word is refused rather than read as the default no: a typo there would
+  # silently keep a sandbox from merging.
+  line=$(ship_sandbox_merge "$(cat "$profile")")
+  case $line in
+    '' | yes | no) ;;
+    *) reasons+=("profile invalid: Sandbox merge: $line is not yes or no") ;;
+  esac
+
   # The reviewer blocks, through the one parser. Refused here rather than at
   # phase 7 because a run that reaches phase 7 has already spent itself, and
   # because a fallback naming nobody would sit there unfired: the loop would
