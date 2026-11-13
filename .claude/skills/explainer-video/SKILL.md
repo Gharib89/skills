@@ -234,8 +234,8 @@ the pack's outline and the brief, then holds it to the **script gates**. Read
 
 ## Voice
 
-A `script.json` in a `creative-videos/<slug>` run folder is `creative-video`'s:
-use that skill's `reference/voice.md`.
+A `script.json` in a `creative-videos/<slug>` run folder belongs to the
+`creative-video` skill: load it and follow its Voice section.
 
 The voice stage turns each scene's narration into audio with every word timed,
 then runs **voice QC**, which blocks. It reads a **run folder**,

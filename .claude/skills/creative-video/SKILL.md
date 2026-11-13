@@ -1,7 +1,7 @@
 ---
 name: creative-video
 description: >-
-  Make a creative animated video teaching a concept, in chapters when long.
+  Make a creative, animated HyperFrames video, in chapters when long.
   Use when asked for a creative, animated, chaptered or branded video; an
   "explainer video" goes to `explainer-video`.
 metadata:
