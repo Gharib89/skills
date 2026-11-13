@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.21.1 (2026-11-13)
+
+### Bug Fixes
+
+- **super-agent**: Need rows carry --reason, backstop carries --remote, watch --help lists all
+  events ([#1225](https://github.com/Gharib89/skills/pull/1225),
+  [`e8f0874`](https://github.com/Gharib89/skills/commit/e8f0874cc0185d6e7ec3557eab4f1e045215514f))
+
+
 ## v0.21.0 (2026-11-13)
 
 ### Features
