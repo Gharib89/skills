@@ -151,9 +151,10 @@ On either authorization record the admission with `run-file gate admit clean
 `.claude/skills/ship/scripts/merge.sh` where Ship is installed at project scope,
 since auto mode has refused the absolute form on a clean gate; the absolute
 base-directory path is for an install with no project copy (a global install).
-Then the closing sequence in the last paragraphs of
-[merge-gate.md](merge-gate.md#attended-post-then-wait), `cleanup` last as it
-removes the Run file; a nonzero exit, or a `false` in `merge`'s or
+Then run the closing sequence in
+[merge-gate.md](merge-gate.md#attended-post-then-wait)'s paragraph opening
+"Then each drafted tracker section", `cleanup` last as it removes the Run
+file; a nonzero exit, or a `false` in `merge`'s or
 `cleanup`'s JSON, re-runs the mechanic that owns the step; a step no mechanic
 re-does is a Ship defect for the summary. Unattended: the
 final head's gate, then `comment-pr <pr> --body-file` with the summary,
