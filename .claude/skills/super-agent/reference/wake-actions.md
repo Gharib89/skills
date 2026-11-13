@@ -93,7 +93,7 @@ ruling or run may waive it. Per hold:
 ## parents_done
 
 An open parent issue whose sub-issues are all closed, listed once per parent
-(the ledger keeps `parents_offered`). Say it in one chat line, key and title,
-and offer to close it. Close it only on the owner's word, with `gh api -X PATCH
-repos/<owner/name>/issues/<n> -f state=closed -f state_reason=completed`, and
-verify `state` closed by REST.
+(the ledger keeps `parents_offered`). Close it yourself, without asking (owner
+ruling 2026-11-13), with `gh api -X PATCH repos/<owner/name>/issues/<n> -f
+state=closed -f state_reason=completed`, verify `state` closed by REST, and say
+it in one chat line, key and title.

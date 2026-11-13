@@ -61,7 +61,7 @@
 #
 # A merged ship entry whose ticket is a sub-issue gets one look at its parent (`parents_done`
 # below): when the ticket reads closed and every sub-issue of the open parent is closed, the
-# parent is offered to the owner; the super agent closes nothing itself.
+# parent is listed once, for the super agent to close (reconcile itself closes nothing).
 #
 # Each run stamps `<ledger>.reconciled` with its epoch second, which `notify` reads
 # to tell a super agent that answered a wake from one that did not.
@@ -77,7 +77,7 @@
 #         `dropped` one {key, reason: `issue-closed`} per waiting row removed now;
 #         `unqueued` one {key, title, created_at} per issue offered now (`[]` without
 #         --fleet); `parents_done` one {key, title, sub_issues} per open parent issue
-#         whose sub-issues are all closed, offered once (the ledger keeps `parents_offered`);
+#         whose sub-issues are all closed, listed once (the ledger keeps `parents_offered`);
 #         `cleanup` one {key, thread, worktree, kind, stage, environment_id} per
 #         settled or closed entry still owing its cleanup (settle the thread, remove the
 #         worktree); `verify` one {key, repo, number, pr, stage} per merged ship PR whose
@@ -237,7 +237,7 @@ while IFS= read -r row; do
   ready=$(jq -c --argjson r "$row" '. + [$r | {key, repo, order, after, reason, since}]' <<<"$ready")
 done < <(jq -c "$sa_jq_waiting"'waiting_list[]' <<<"$doc")
 ready=$(jq -c 'map(del(.repo))' <<<"$ready")
-# A merged ship entry's spec parent, offered once when its sub-issues are all closed.
+# A merged ship entry's spec parent, listed once when its sub-issues are all closed.
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/parents.sh" || sa_tooling "cannot source reconcile.d/parents.sh"
 parents_done='[]' parents_changed=0
 reconcile_parents

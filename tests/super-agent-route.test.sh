@@ -200,4 +200,12 @@ quotas "$(inst claudeAgent claude 0.3 ok)" "$(inst claudeAgent_b claude 0.8 fail
 check "an instance that is signed out gives no room" "agy claude" "$(job)"
 
 
+# --- a Claude instance launches on the exact model id its fleet entry maps, the alias where it maps none ---
+quotas "$(inst claudeAgent claude 0.9 ok '{"models": {"sonnet": "claude-sonnet-5-5", "opus": "claude-opus-5-5"}}')"
+check "a mapped tier launches on the exact id, the wanted one too" 'claude-opus-5-5 claude-opus-5-5 opus' \
+  "$(R --size M --quota "$tmp/q.json" | jq -r '"\(.model) \(.wanted_model) \(.tier.model)"')"
+quotas "$(inst claudeAgent claude 0.9 ok '{"models": {"sonnet": "claude-sonnet-5-5"}}')"
+check "a tier the map names no id for falls back to the alias" 'claude-sonnet-5-5 opus' \
+  "$(echo "$(R --size S --quota "$tmp/q.json" | jq -r .model) $(R --size M --quota "$tmp/q.json" | jq -r .model)")"
+
 finish

@@ -208,13 +208,15 @@ sa_claude_auth() { printf '%s\n' "$2" > "$SA_FAKE/provider/claude-auth@$1.rc"; }
 # sa_instances <file> <id>:<driverKind>[:disabled|:unauth|:home=<path>]...: the saved
 # `orchestrator_capabilities` answer, in the shape measured on 2026-11-08: one row per
 # instance with `providerInstanceId`, `driverKind`, `models` and `constraints`, and no
-# `enabled` flag (a disabled row says so in `constraints`). A pi row lists the agy models.
+# `enabled` flag (a disabled row says so in `constraints`). A pi row lists the agy models,
+# a claudeAgent row the exact Claude ids (measured 2026-11-13).
 sa_instances() {
   local f=$1 spec id kind flag rows='[]'; shift
   for spec in "$@"; do
     IFS=: read -r id kind flag <<<"$spec"
     rows=$(jq -c --arg id "$id" --arg k "$kind" --arg f "${flag:-}" '. + [{providerInstanceId: $id, driverKind: $k, displayName: $id,
       models: (if $k == "pi" then [{id: "default"}, {id: "antigravity/claude-opus-4-6"}, {id: "antigravity/claude-sonnet-4-6"}, {id: "antigravity/gemini-3.8-flash"}]
+               elif $k == "claudeAgent" then [{id: "claude-opus-5-5"}, {id: "claude-sonnet-5-5"}, {id: "claude-haiku-5-5"}]
                else [{id: "model-a"}] end),
       constraints: (if $f == "disabled" then ["Provider instance is disabled."]
                     elif $f == "unauth" then ["Provider is not authenticated."] else [] end)}
