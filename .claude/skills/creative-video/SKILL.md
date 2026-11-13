@@ -100,11 +100,11 @@ you would have written an adjective. At least:
 - **Motion**: the event rate, the easing family, what moves on which word.
 - **Type**: faces and sizes.
 
-The `hyperframes` skill is your engine and its craft; its commands run through
-this skill's pinned copy (`hf.mjs`,
+The `hyperframes` skill is your engine and its craft, its CLI this skill's
+pinned copy (`hf.mjs`,
 [reference/authoring.md](reference/authoring.md#the-pinned-cli)). Read the
 `hyperframes` `SKILL.md` and the references you need. Its BANNED list
-(`spec.md`) stays banned, with one more way out: the concept
+(`references/spec.md` there) stays banned, with one more way out: the concept
 needs it, and `SPEC.md` says why in one line. "It looks techy" is not a
 reason.
 Where the `hyperframes` loop and [Make a video](#make-a-video) differ, these
@@ -114,10 +114,10 @@ storyboard of step 11 is its one stop, the gates and the render follow it with
 no stop at a Studio preview,
 every command but the gates and the render (`gates.mjs`, `render.mjs`) runs
 through `hf.mjs`, and a registry block is raw material you edit into the
-concept's look, never a look to pick. Send neither upstream telemetry call
+concept's look, never a look to pick. Send neither telemetry call
 (`npx hyperframes events`, `usage --json`): both use an unpinned CLI. Voice
-and music are this skill's stages, not `/media-use`, installed because
-HyperFrames points to it.
+and music are this skill's stages, not `/media-use`'s; it stays installed
+because `hyperframes` points to it.
 
 ### Look at what you made
 
