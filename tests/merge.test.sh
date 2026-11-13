@@ -196,6 +196,14 @@ profile $'## Cloud lane\n\nPR cap: 3\nSandbox merge: yes\nBootstrap: None.'
 reset; push_at "$A"; pr 1 open "$A"; pr 2 merged "$A"
 sandbox 7 none "$A" >/dev/null 2>&1; rc=$?
 check_rc "a cloud sandbox whose profile says yes merges" 0 "$rc"
+# The profile is the main checkout's: a feature worktree that grants itself the merge is refused.
+profile $'## Cloud lane\n\nPR cap: 3\nSandbox merge: no\nBootstrap: None.'
+g worktree add -q -b feat-y "$work/feat" "$A"
+mkdir -p "$work/feat/docs/agents"; printf '## Cloud lane\n\nSandbox merge: yes\n' > "$work/feat/docs/agents/ship.md"
+reset; push_at "$A"; pr 1 open "$A"
+(cd "$work/feat" && CLAUDE_CODE_REMOTE=true bash "$mech" 7 none "$A" --worktree "$work/feat" --run t) >/dev/null 2>&1; rc=$?
+check_rc "a feature branch that says Sandbox merge: yes itself does not admit its own merge" 1 "$rc"
+no_merge "a self-granted sandbox merge"
 no_profile
 
 finish

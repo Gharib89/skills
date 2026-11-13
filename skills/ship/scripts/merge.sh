@@ -37,7 +37,8 @@
 # endpoint admits a token that bypasses the repo's required checks and a body edit
 # after `ci-wait` re-fires a workflow on the same head (#1204). The sandbox
 # marker `CLAUDE_CODE_REMOTE=true` with no `Sandbox merge: yes` under the
-# profile's `## Cloud lane` is `cloud-sandbox`. A head with no admission record
+# profile's `## Cloud lane` is `cloud-sandbox`; every profile line here is read
+# from the main checkout, not the feature branch under the gate. A head with no admission record
 # in the Run file (`run-file gate admit`: `clean` when the clean gate read that
 # head, `human` when the human said "merge") is `no-gate-record`. The record
 # is read under the default record root only: a run started with `--scratchpad`
@@ -127,7 +128,9 @@ else
   stale=$(ship_stale_base_reason "$fresh")
   [ -z "$stale" ] || ship_fail "$stale"
   # The #1204 refusals, after every cheaper one and just before the host call.
-  profile=""; pf=$(cd "${wt:-.}" && ship_profile_path 2>/dev/null) && [ -f "$pf" ] && profile=$(cat "$pf")
+  # The profile is the main checkout's, never the feature branch's: the PR under the
+  # gate must not grant its own sandbox merge or drop a leg from `Legs:`.
+  profile=""; [ -f "$main/docs/agents/ship.md" ] && profile=$(cat "$main/docs/agents/ship.md")
   if [ "${CLAUDE_CODE_REMOTE:-}" = true ] && [ "$(ship_sandbox_merge "$profile")" != yes ]; then
     ship_fail "cloud-sandbox: CLAUDE_CODE_REMOTE=true and the profile's Cloud lane has no 'Sandbox merge: yes'; this lane does not merge, a human merges"
   fi
