@@ -138,5 +138,5 @@ further ask, since the ticket exists to be closed by this session. A next
 command the Skill tool cannot run, such as `/to-spec`, is named for the human to
 type.
 
-**Done when:** the human pressed Confirm, its thread is resolved, a wayfinder
+**Done when:** the human pressed Confirm, its thread is resolved, any wayfinder
 ticket is resolved, and the confirmed line is the turn's only text.
