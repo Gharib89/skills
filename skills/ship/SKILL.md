@@ -26,8 +26,8 @@ which ship produced it.
 
 `$ARGUMENTS`:
 
-- `<issue>`: the issue number (work item id on Azure DevOps); `prepare` alone
-  takes none. Omitted with no flag: ask which issue.
+- `<issue>`: the issue number (work item id on Azure DevOps); `--unattended`
+  alone takes none, the no-issue lane. Omitted with no flag: ask which issue.
 - Free text instead of a number: the task spec itself. No issue fetch, claim,
   `Closes` or reflect, nor the `Done when:` clauses naming them; `none` is the
   issue argument to `preflight`, `isolate`, `open-pr`, `merge` and `cleanup`.
@@ -221,7 +221,7 @@ findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 |---|---|---|
 | Profile missing or invalid, host unreachable | `profile missing`, `profile invalid: <detail>`, `host-unreachable` | no claim |
 | A skill ship composes is not installed at its pin, or its pin is malformed | `skill missing: <skill>; run <install line>`, `skill off pin: <skill> at <ref>, pinned <sha>; run <install line>`, `skills lock unreadable: skills-lock.json; repair it, then re-run preflight`, `composes pin invalid: <entry>; want <form>` | no claim |
-| Preflight not actionable | `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | no claim |
+| Preflight not actionable | `issue #<n> not found or unreadable`, `closed`, `is a pull request`, `already claimed`, `existing PR`, `existing branch`, `worktree exists`, `not triaged: run /triage first`, `ready-for-human: attended only` | no claim |
 | Issue too vague to plan | `ambiguous` | no claim |
 | Another run claimed it after preflight | `contested: <others>`, `held: another run of this identity holds it` | `contested`: no claim; `held`: the other run's |
 | A `--rework` run not admitted, or with nothing to rework | `not reworkable: <detail>`, `no feedback` | unchanged |

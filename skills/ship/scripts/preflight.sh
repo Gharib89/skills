@@ -42,7 +42,7 @@
 # stdout: {host, repo, identity, profile, ok, reasons[], mentions[], mentioned_by[],
 #          pruned[], reviewers[], self_review_cap, rework, warnings[]}
 #   reasons use the stop names verbatim, detail after a colon:
-#   closed · is a pull request · already claimed · existing PR · existing branch
+#   issue #<n> not found or unreadable · closed · is a pull request · already claimed · existing PR · existing branch
 #   · worktree exists · not triaged: run /triage first · ready-for-human:
 #   attended only · profile missing · profile invalid: <detail> · skill missing:
 #   <detail> · skill off pin: <detail> · skills lock unreadable: <detail> ·
