@@ -1,9 +1,9 @@
 ---
 name: creative-video
 description: >-
-  Make a creative animated video teaching a concept, in a brand's look if named.
-  Use when asked for a creative, animated or chaptered video; an "explainer
-  video" goes to `explainer-video`.
+  Make a creative animated video teaching a concept, in chapters when long.
+  Use when asked for a creative, animated, chaptered or branded video; an
+  "explainer video" goes to `explainer-video`.
 metadata:
   version: 0.24.1
 ---
