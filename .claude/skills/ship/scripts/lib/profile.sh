@@ -78,11 +78,12 @@ ship_profile_legs() { # <profile-body>
 }
 
 # ship_sandbox_merge <profile-body>: the `Sandbox merge:` value under `## Cloud
-# lane`, one word, empty where the line is absent. `merge` reads `yes` as the
-# profile saying a cloud sandbox may merge; absent or any other word is no.
+# lane`, one word, empty where the line is absent; a fenced example is not the
+# line. `merge` reads `yes` as the profile saying a cloud sandbox may merge;
+# absent or any other word is no.
 ship_sandbox_merge() { # <profile-body>
-  awk '/^## /{f = ($0 ~ /^## Cloud lane[ \t\r]*$/)}
-    f && /^Sandbox merge:/ { sub(/^Sandbox merge:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit }' <<<"$1"
+  ship_unfenced "$1" | awk '/^## /{f = ($0 ~ /^## Cloud lane[ \t\r]*$/)}
+    f && /^Sandbox merge:/ { sub(/^Sandbox merge:[ \t]*/, ""); sub(/[ \t\r]+$/, ""); print; exit }'
 }
 
 # ship_unsettled_checks <checks-json> <profile-body>: why the head's checks do

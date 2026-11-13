@@ -131,6 +131,13 @@ rm -f "$SHIP_FAKE/host_pr_get.2.json"; pr 1 open "$A"; pr 2 merged "$A"
 run 7 none "$A" >/dev/null 2>&1; rc2=$?
 check "an edit-fired check refuses the first call, and the settled re-read merges" "1 0" "$rc1 $rc2"
 
+# A partial row is no verdict: the grader must not read past it into an empty answer.
+reset; push_at "$A"; pr 1 open "$A"
+printf '[1]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
+run 7 none "$A" >/dev/null 2>&1; rc=$?
+check_rc "a checks answer holding a malformed row is a tooling error" 2 "$rc"
+no_merge "a malformed check row"
+
 profile $'## CI\n\nLegs: build: the build\nNo-checks legal: no'
 reset; push_at "$A"; pr 1 open "$A"
 printf '[{"name":"other","status":"success"}]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
@@ -158,6 +165,12 @@ out=$(runas u 7 none "$A" 2>/dev/null); rc=$?
 check_rc "a Run file with no admission record is refused" 1 "$rc"
 check "the refusal names the head and the missing record" true "$(err=$(jq -r .error <<<"$out"); grep -qF "no-gate-record: no clean gate verdict or merge word recorded for $A in " <<<"$err" && echo true)"
 no_merge "no record"
+
+reset; push_at "$A"; pr 1 open "$A"
+mkdir -p "$rr/ship-w"; printf '## Merge admission\n```\n- 10:00 %s human\n```\n' "$A" > "$rr/ship-w/run.md"
+runas w 7 none "$A" >/dev/null 2>&1; rc=$?
+check_rc "an admission line inside a fence is an example, not a record" 1 "$rc"
+no_merge "a fenced record"
 
 reset; push_at "$A"; pr 1 open "$A"
 out=$(runas nope 7 none "$A" 2>/dev/null); rc=$?
@@ -204,6 +217,11 @@ reset; push_at "$A"; pr 1 open "$A"
 (cd "$work/feat" && CLAUDE_CODE_REMOTE=true bash "$mech" 7 none "$A" --worktree "$work/feat" --run t) >/dev/null 2>&1; rc=$?
 check_rc "a feature branch that says Sandbox merge: yes itself does not admit its own merge" 1 "$rc"
 no_merge "a self-granted sandbox merge"
+profile $'## Cloud lane\n\n```text\nSandbox merge: yes\n```'
+reset; push_at "$A"; pr 1 open "$A"
+sandbox 7 none "$A" >/dev/null 2>&1; rc=$?
+check_rc "a Sandbox merge: yes inside a fence is an example, not the line" 1 "$rc"
+no_merge "a fenced sandbox line"
 no_profile
 
 finish

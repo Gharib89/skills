@@ -137,17 +137,21 @@ else
   # A task-spec run has no issue to name the Run file, so `none` must say its slug.
   [ "$run_id" != none ] || ship_tooling "merge none needs --run <slug>, the Run file holding the admission record"
   root=$(cd "${wt:-.}" && ship_record_root) || ship_tooling "cannot locate the Run file root"
-  record=$(awk -v h="$gated" '/^## /{f = ($0 ~ /^## Merge admission[ \t\r]*$/)}
+  # A fenced example in the Run file is not a record, so fenced lines come out first.
+  record=$(ship_unfenced "$(cat "$root/ship-$run_id/run.md" 2>/dev/null)" | awk -v h="$gated" '/^## /{f = ($0 ~ /^## Merge admission[ \t\r]*$/)}
     f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ (clean|human)[ \t\r]*$/ { s = $3; if (index(s, h) == 1 || index(h, s) == 1) hit = $4 }
-    END { print hit }' "$root/ship-$run_id/run.md" 2>/dev/null)
+    END { print hit }')
   [ -n "$record" ] || ship_fail "no-gate-record: no clean gate verdict or merge word recorded for $gated in $root/ship-$run_id/run.md"
   # A PR body or title edit re-fires `edited` workflows, and GitHub registered the new
   # run about 3.5s after the edit returned (measured, #1204), so a read straight after
   # an edit sees only the old success. The grace puts the read past that window.
   sleep "${SHIP_MERGE_CHECKS_GRACE:-6}"
-  cks=$(host_pr_checks "$pr" "$gated" 2>/dev/null) && jq -e 'type == "array"' <<<"$cks" >/dev/null 2>&1 \
+  # Every row must carry a string name and status: a partial row is no verdict.
+  cks=$(host_pr_checks "$pr" "$gated" 2>/dev/null) \
+    && jq -e 'type == "array" and all(.[]; type == "object" and (.name | type) == "string" and (.status | type) == "string")' <<<"$cks" >/dev/null 2>&1 \
     || ship_tooling "cannot read the checks on $gated"
-  unsettled=$(ship_unsettled_checks "$cks" "$profile" | paste -sd, - | sed 's/,/, /g')
+  unsettled=$(ship_unsettled_checks "$cks" "$profile") || ship_tooling "cannot grade the checks on $gated"
+  unsettled=$(paste -sd, - <<<"$unsettled" | sed 's/,/, /g')
   [ -z "$unsettled" ] || ship_fail "checks-unsettled: $unsettled"
   host_pr_merge "$pr" "$title (#$pr)" "$gated" >/dev/null 2>&1 || echo "merge call failed; verifying state anyway" >&2
   # Azure DevOps completes asynchronously: the completion PATCH returns the
