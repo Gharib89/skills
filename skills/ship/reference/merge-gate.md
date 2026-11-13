@@ -60,8 +60,8 @@ references call each item, not a layout:
 - **Timing**: `run-file timing`'s `row`, verbatim.
 - **Host protections**: `protections <pr>`'s `line`, verbatim: what the host
   itself enforces on the base branch (protection, required checks and reviews,
-  admin bypass), read-only. Its reader is the human who answers the merge word,
-  as evidence beside Ship's own gate: no script reads it, so `unknown` or `no`
+  admin bypass), read-only. Its reader is the human who answers the merge word:
+  no script reads it, so `unknown` or `no`
   adds no stop and no prompt, and a repo that opts into unattended merge has
   already chosen its policy (ADR 0011).
 - **Clean gate held by**: `gate summary`'s `clean_gate_held_by_line`, `none`
@@ -81,7 +81,7 @@ Merged on a clean gate: <PR url>
 
 A posted message cannot be edited, so the run posts the summary with no reply
 line, runs the merge sequence, then posts that line
-as the last line of the closing message. In an opted-in run the reply lines
+last. In an opted-in run the reply lines
 appear only on `clean: false` or when `merge` refuses, the refusal named under
 them. A step after the merge that fails (a tracker write, cleanup) is reported
 beneath the merged line; report a completed merge only after the mechanic
@@ -281,8 +281,8 @@ Then each drafted tracker section. A Ship defect draft not yet filed goes into
 the closing message the way the [unattended
 lane](#unattended-post-to-the-pr-then-return) carries it, because `cleanup`
 deletes the directory the drafts live in; nothing waits on it. Then `run-file
-close 9` and set the task to the returned `mirror`, and last `cleanup
-<issue|none>`.
+close 9` and set the task to the returned `mirror`, then `ExitWorktree` with
+`action: "keep"` (`cleanup` owns the removal), and last `cleanup <issue|none>`.
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, save the new head's
