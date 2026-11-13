@@ -4,10 +4,10 @@
 # below. 1.8.1 writes lock version 2, and its lock version 1 to 2 migration
 # blanks the computedHash of every entry whose `.agents/skills/<name>/` folder
 # is missing, as it is after every `--agent claude-code` install; the CLI then
-# reads that entry as locally modified. 1.7.x refuses a version 2 lock outright. So this fails
-# a lock that is not version 2, an entry with no 64-hex computedHash, and any
-# `npx skills` line in the files this repo writes that names no version or
-# another one. Changelogs and ADRs record past lines and are not read.
+# reads that entry as locally modified. 1.7.x refuses a version 2 lock
+# outright. So this fails a lock that is not version 2, an entry with no 64-hex
+# computedHash, and any `npx skills` line in the files this repo writes that
+# names no version or another one. Changelogs and ADRs record past lines and are not read.
 # `scripts/derived-copies-check.sh` runs this, so it reports under
 # `scripts/check.sh full`'s `derived-copies` row.
 #
