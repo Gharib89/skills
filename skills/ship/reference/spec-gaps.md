@@ -1,4 +1,4 @@
-# Phases 1 and 2: when the issue and the tree disagree
+# Phases 1 and 2: when the issue and the tree disagree, or outgrow one PR
 
 Read this file only on its branch: an anchor the tree contradicts that changes
 a criterion, a criterion asking for a host action no mechanic performs, or a

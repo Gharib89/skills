@@ -64,7 +64,7 @@ contract.
 | `run-file init` | the first write, placed by SKILL.md's pipeline step |
 | `run-file next`, `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing` item |
 | `run-file gate` | 5, `record` after each gate run; 9, `read` against the PR head, `summary` for the attended summary's `Unmet criteria` and `Clean gate held by` lines (the saved `ci-wait.json` and `read-pr`'s head), and, attended with `Merge: on-clean-gate` or in the inline lane, `clean` against the recorded results and `ci-wait` JSON |
-| `run-file close 5` | 5, refused while a `## Criteria` entry is unsettled |
+| `run-file close 5` | 5, refused while a `## Criteria` entry has no line or a placeholder `not met` |
 | `run-file grade` | 2, the version grade `open-pr` and `update-pr-title` hold the title type to |
 | `preflight` | 0 |
 | `read-issue` | 0; an issue's run reads it before `run-file init`, and 0 reuses that read |

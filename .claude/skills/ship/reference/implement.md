@@ -78,10 +78,11 @@ never by the summary's account of them: one the run declined, deferred or
 covered with a "gap" is `not met`, and `run-file gate clean` holds the merge on
 it ([merge-gate.md](merge-gate.md#unmet-criteria)).
 
-`run-file close 5` refuses an unsettled entry. One settling after phase 5 is
-written at that close `Criterion <n>: not met: <what is outstanding, and the
-step or human action that settles it>`; that step writes `met: <proof>`,
-replacing it.
+`run-file close 5` refuses an unsettled entry: one with no line, or a `not met`
+whose reason is a placeholder `run-file --help` lists. One settling after
+phase 5 is written at that close `Criterion <n>: not met: <what is outstanding,
+and the step or human action that settles it>`; that step writes
+`met: <proof>`, replacing it.
 
 ## Phase 2: classify, then implement test-first
 

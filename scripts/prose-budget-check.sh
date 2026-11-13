@@ -19,7 +19,7 @@
 # plus every `skills/ship/reference/*.md` but the files a run reads only on their
 # branch (the case list below). A full-lane run reads that whole set, so a rule
 # moved out of SKILL.md into a reference file still costs every run; the per-file
-# caps never bounded the sum. 18500 is the set at 18,396 words after branch-only
+# caps never bounded the sum. 18500 is the set at 18,421 words after branch-only
 # material moved out (#1212), rounded up to the next 500, the same ratchet. A
 # reference file the list does not name counts, so a new file is in the sum
 # until it is declared branch-only here.

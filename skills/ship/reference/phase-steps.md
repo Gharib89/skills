@@ -95,8 +95,8 @@ Small lane: dispatch the axes, then run this pass inline.
 predates a merge still goes green while every "does this exist?" answer taken
 from the worktree was pre-merge. A `Carry:` file differing from the main
 checkout's copy is `carried file modified`, because ship never edits untracked
-secrets. Small lane: small-lane.md. The gate's JSON holds `verdict`
-`pass|fail|unavailable`, per-gate statuses
+secrets. Small lane: the gate runs per [small-lane.md](small-lane.md). The
+gate's JSON holds `verdict` `pass|fail|unavailable`, per-gate statuses
 `pass|fail|deferred-to-ci|unavailable` and `gates.secrets` in every lane;
 unparseable output or a missing `secrets` key reads as `unavailable`. `fail`:
 fix loop. `deferred-to-ci`: proceed, the merge summary naming each deferred
@@ -151,15 +151,15 @@ On either authorization record the admission with `run-file gate admit clean
 `.claude/skills/ship/scripts/merge.sh` where Ship is installed at project scope,
 since auto mode has refused the absolute form on a clean gate; the absolute
 base-directory path is for an install with no project copy (a global install).
-Then `update-issue-body` per tracker draft, file Ship defect
-drafts on the human's word, `run-file close 9`, `ExitWorktree` with `action:
-"keep"` (`cleanup` owns the removal) so the session is not left in a deleted
-folder, then `cleanup
-<issue|none>`, last, as it removes the Run file; a nonzero exit, or a `false`
-in `merge`'s or `cleanup`'s JSON, re-runs the mechanic that owns the step; a
-step no mechanic re-does is a Ship defect for the summary. Unattended: the
+Then the closing sequence
+[merge-gate.md](merge-gate.md#attended-post-then-wait) ends on, `cleanup` last
+as it removes the Run file; a nonzero exit, or a `false` in `merge`'s or
+`cleanup`'s JSON, re-runs the mechanic that owns the step; a step no mechanic
+re-does is a Ship defect for the summary. Unattended: the
 final head's gate, then `comment-pr <pr> --body-file` with the summary,
-`run-file close 9`. Either lane then returns.
+`run-file close 9`, per
+[unattended.md](unattended.md#the-merge-gate-post-to-the-pr-then-return).
+Either lane then returns.
 
 ## Hand-back
 

@@ -29,7 +29,7 @@ Each refusal merges nothing and comes back to the gate:
 - `cloud-sandbox`: `CLAUDE_CODE_REMOTE=true`, no `Sandbox merge: yes` in the
   profile. Post the summary and stop: a human merges.
 - `stale-base`: merge the base in, re-run the local gate, save the new head's
-  settled `ci-wait` answer and come back to this gate for `gate summary`. A
+  settled `ci-wait` answer and come back to the merge gate for `gate summary`. A
   merge with no conflict to resolve leaves the reviewer stops and Verification
   passes covering the new head; one that resolved a conflict breaks that
   coverage.
@@ -38,16 +38,17 @@ Each refusal merges nothing and comes back to the gate:
 
 **If the human says no or wants changes**, treat the note as the next round of
 work: apply it on the same branch, re-run the local gate, save the new head's
-settled `ci-wait` answer, come back to this gate and re-run `gate summary`. Do
-not re-open the whole pipeline. Under `Merge: on-clean-gate` the
-change breaks coverage, so `gate clean` holds, naming each piece of evidence
+settled `ci-wait` answer, come back to the merge gate and re-run
+`gate summary`. Do not re-open the whole pipeline. Under
+`Merge: on-clean-gate` the change breaks coverage, so `gate clean` holds,
+naming each piece of evidence
 with both heads: every reviewer stop, until an on-push reviewer's own round on
 the new head records a new stop
 ([review-loop.md](review-loop.md#the-round)), and every Verification pass whose
 `Paths:` the change touched, or that has none or one matching no file, until
 its re-run per
-[verify.md](verify.md)'s **Head** records it again. Request no new review from
-here; while a stop holds, the run waits for "merge".
+[verify.md](verify.md)'s **Head** records it again. Request no new review at
+the gate; while a stop holds, the run waits for "merge".
 
 ## Filing a Ship defect
 

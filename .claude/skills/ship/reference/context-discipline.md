@@ -145,7 +145,8 @@ pass it to `close 3` with the rest, never to `skip 3`, which settles only those
 init named. After phase 3 has closed or been skipped, a Verification heading a
 later phase's fix adds, or a re-run of one already recorded, takes the same
 `close 3 --result`. Close a phase only once its `Done when:` holds: the
-mechanic stamps whatever close it is given, bar the lines
+mechanic stamps whatever close it is given, except that `close 3` refuses a
+missing result, and `close 4` and `close 7` refuse without the lines
 [evidence-lines.md](evidence-lines.md) and
 [review-loop.md](review-loop.md#the-exit) format. A **small-lane** run keeps
 all ten items and `skip`s each collapsed phase, so the record shows a decision
