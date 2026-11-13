@@ -171,7 +171,7 @@ pulse, save their `t3_thread_read` and pass `--remote`
 
 **The owner steps into a supervised thread.** A message of theirs there leaves
 its entry in the ledger and watched: never unwatch, settle or rethread it for
-that. Record a need when the thread ends needing them.
+that. Record a need (`--reason owner`) when the thread ends needing them.
 
 Wait only through the watcher: a `sleep` or a poll in your own turn spends
 context on nothing. Read a thread's messages only in small slices

@@ -23,7 +23,7 @@ An entry ended and its thread and worktree are yours to close. Per row:
    `settled`. Of kind `task`, first read its last message in a small slice and
    say its outcome in one chat line. Of kind `triage`, first confirm the issue
    now carries a ready label or the owner skill's other outcome; with none,
-   record a need naming the gap and go on.
+   record a need naming the gap, with `--reason triage`, and go on.
 2. Settle the threads the entry's thread started (its helper and review
    threads): `t3_thread_list` with `includeSubagents` and the entry's
    `environment_id`, each row whose `parentThreadId` is the entry's thread.
@@ -34,9 +34,9 @@ An entry ended and its thread and worktree are yours to close. Per row:
 3. Run `scripts/worktree.sh remove --ledger <ledger> <key>` (a remote entry:
    [remote](remote.md)); a `task` entry holding no worktree has nothing to
    remove. A `kept: true` result posts nothing; on a refusal (exit 1) record a
-   need and skip step 4, so the row stays. Add `--delete-branch` only when the
-   owner asked to delete the branch: it deletes a merged PR's local branch
-   after the worktree goes, and never otherwise.
+   need with `--reason cleanup` and skip step 4, so the row stays. Add
+   `--delete-branch` only when the owner asked to delete the branch: it deletes
+   a merged PR's local branch after the worktree goes, and never otherwise.
 4. Run `scripts/ledger.sh --ledger <ledger> set <key> cleanup_owed false`.
 
 A settled entry is unwatched: a message to its thread goes unseen.
@@ -73,7 +73,7 @@ the key): record a need with `ledger.sh need --reason merge-gate`.
 `super-agent`: you rule on the hold, record it with `ledger.sh ruling`, tell the
 run in its thread (the run acts on it and writes nothing of it into a PR body),
 and say it in the next status block. A ruling you cannot defend is the owner's:
-record a need.
+record a need with `--reason merge-gate`.
 
 A hold on a failure the PR did not cause (a red check on the base, a script the
 PR never touched) is never waived, whichever way the ruler is set, and no
