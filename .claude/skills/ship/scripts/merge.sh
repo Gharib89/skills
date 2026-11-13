@@ -39,7 +39,9 @@
 # marker `CLAUDE_CODE_REMOTE=true` with no `Sandbox merge: yes` under the
 # profile's `## Cloud lane` is `cloud-sandbox`. A head with no admission record
 # in the Run file (`run-file gate admit`: `clean` when the clean gate read that
-# head, `human` when the human said "merge") is `no-gate-record`. A head whose
+# head, `human` when the human said "merge") is `no-gate-record`. The record
+# is read under the default record root only: a run started with `--scratchpad`
+# keeps its record elsewhere and a human merges it. A head whose
 # checks, read just now through the host seam, are not all settled and passing
 # within the profile's `Legs:` and `No-checks legal:` is `checks-unsettled`.
 # Each is exit 1 with nothing merged, closed or deleted. An already-merged PR

@@ -133,5 +133,8 @@ base; change_run 's/Stop: fallback: not reviewed/Stop: fallback: tree unchanged 
 admit_clean >/dev/null; rc=$?
 check_rc "gate admit clean on a held gate exits 1" 1 "$rc"
 check "and writes no record" 0 "$(admitted)"
+base; out=$(admit_clean)
+check "gate admit clean prints one object, admitted and the gate answer" "clean true" \
+  "$(jq -rs 'if length == 1 then "\(.[0].admitted) \(.[0].clean.clean)" else "many" end' <<<"$out")"
 
 finish
