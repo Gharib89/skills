@@ -190,8 +190,9 @@ The skills CLI (`npx skills@latest`) is unpinned and its behaviour is load-beari
 ## Cloud lane
 
 PR cap: 3
+Sandbox merge: no
 Bootstrap: scripts/cloud-ship-bootstrap.sh
 
-`Bootstrap:` runs in any cloud sandbox, attended or unattended: `prepare` runs it after `tooling --install` at the start of every run there and of any `--unattended` run, local included, so an attended `/ship` from a cloud session gets the same tools a fire does. `PR cap:` is the fire's alone, read only by the unattended lane before it selects.
+`Bootstrap:` runs in any cloud sandbox, attended or unattended: `prepare` runs it after `tooling --install` at the start of every run there and of any `--unattended` run, local included, so an attended `/ship` from a cloud session gets the same tools a fire does. `PR cap:` is the fire's alone, read only by the unattended lane before it selects. `Sandbox merge:` is `yes` or `no`, `no` where the line is absent: `merge` reads it, and in a cloud sandbox (`CLAUDE_CODE_REMOTE=true`, attended or unattended) it refuses `cloud-sandbox` unless it says `yes`, so a cloud session posts the summary and a human merges. A local `--unattended` run is not a sandbox and never reaches `merge`.
 
 The sandbox image lacks `gitleaks`, and its proxy refuses a release-asset download. Without this bootstrap every cloud run stops `local gate unavailable: secrets`. The script runs the harness profile's `Setup:` (`.claude/hooks/cloud-setup.sh`, idempotent) and then apt-installs a missing `gitleaks`, so it is safe to rerun. It is a no-op outside a cloud session, so a local `--unattended` run needs `gitleaks` on PATH already. The `SessionStart` command in `.claude/settings.json` runs it silently, then calls `cloud-setup.sh` again, a fast no-op, to print `harness cloud setup: ok`.

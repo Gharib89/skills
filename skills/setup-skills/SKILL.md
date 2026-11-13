@@ -76,7 +76,7 @@ Read the repo once, every section, before saying anything. The right-hand column
 | Triage | copied from the `needs-triage` row's right-hand column in `triage-labels.md` | yes |
 | Docs sync | `README.md`, `docs/`, `GLOSSARY.md`, skills the repo ships; `Agent-facing:` `docs/agents/`, `.claude/skills/` | yes, confirm |
 | Current docs | context7 always; Microsoft Learn when a Microsoft stack shows (D365, Azure, Power BI, .NET); `Pinned:` | walked |
-| Cloud lane | `PR cap: 3`; `Bootstrap:` `scripts/cloud-ship-bootstrap.sh` with a harness, which step 5's **Cloud bootstrap** writes; without one, that path when the file exists, else `None.` | yes |
+| Cloud lane | `PR cap: 3`; `Sandbox merge: no`; `Bootstrap:` `scripts/cloud-ship-bootstrap.sh` with a harness, which step 5's **Cloud bootstrap** writes; without one, that path when the file exists, else `None.` | yes |
 
 Also record, for step 5, three things:
 

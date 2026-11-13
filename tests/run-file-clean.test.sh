@@ -123,4 +123,18 @@ base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: prim
 base; change_run 's/Stop: fallback: not reviewed/Stop: fallback: not reviewed: the primary reviewed/'; clean 'a not-reviewed fallback with a reason behind a settled primary'
 base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: cap/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held 'cap is not rescued by fallback' 'reviewer primary: cap'
 
+# gate admit clean: the record `merge` reads, written only where the gate is clean (#1204).
+admit_clean() { (cd "$repo" && bash "$m" gate admit clean "$ci" --head "$head" --file "$f" 2>/dev/null); }
+admitted() { awk '/^## Merge admission$/{f=1;next} /^## /{f=0} f' "$f" | grep -cE "^- [0-9]{2}:[0-9]{2} $head clean$"; }
+base; admit_clean >/dev/null; rc=$?
+check_rc "gate admit clean on a clean gate exits 0" 0 "$rc"
+check "and records one clean line for the head" 1 "$(admitted)"
+base; change_run 's/Stop: fallback: not reviewed/Stop: fallback: tree unchanged at abcdef0123456789/;s/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: cap/'
+admit_clean >/dev/null; rc=$?
+check_rc "gate admit clean on a held gate exits 1" 1 "$rc"
+check "and writes no record" 0 "$(admitted)"
+base; out=$(admit_clean)
+check "gate admit clean prints one object, admitted and the gate answer" "clean true" \
+  "$(jq -rs 'if length == 1 then "\(.[0].admitted) \(.[0].clean.clean)" else "many" end' <<<"$out")"
+
 finish
