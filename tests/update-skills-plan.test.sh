@@ -89,15 +89,28 @@ check "each source-repo skill carries its old and new version and its changelog"
   "$(jq -c .source_skills <<<"$out")"
 
 check "every composed skill refreshes at its first composes pin, from the old tree's lock ref; an unpinned entry is none" \
-  '[{"skill":"code-review","source":"o/r","pin":"'$B'","old_ref":null,"install":"npx skills add o/r#'$B' --skill code-review --agent claude-code -y </dev/null"},{"skill":"tdd","source":"o/r","pin":"'$B'","old_ref":"'$A'","install":"npx skills add o/r#'$B' --skill tdd --agent claude-code -y </dev/null"},{"skill":"triage","source":"o/r","pin":"'$A'","old_ref":"'$A'","install":"npx skills add o/r#'$A' --skill triage --agent claude-code -y </dev/null"}]' \
+  '[{"skill":"code-review","source":"o/r","pin":"'$B'","old_ref":null,"install":"npx skills@1.8.1 add o/r#'$B' --skill code-review --agent claude-code -y </dev/null"},{"skill":"tdd","source":"o/r","pin":"'$B'","old_ref":"'$A'","install":"npx skills@1.8.1 add o/r#'$B' --skill tdd --agent claude-code -y </dev/null"},{"skill":"triage","source":"o/r","pin":"'$A'","old_ref":"'$A'","install":"npx skills@1.8.1 add o/r#'$A' --skill triage --agent claude-code -y </dev/null"}]' \
   "$(jq -c .composed <<<"$out")"
 
 check "a composed skill whose upstream head is past its pin is a drift row; one at its pin, or with no head, is not" \
   '[{"skill":"tdd","pin":"'$B'","head":"'$C'"}]' "$(jq -c .drift <<<"$out")"
 
 check "an other skill whose head differs from its old ref is offered at the head; one at its head is not" \
-  '[{"skill":"grilling","source":"o/r","old_ref":"'$A'","head":"'$D'","install":"npx skills add o/r#'$D' --skill grilling --agent claude-code -y </dev/null"}]' \
+  '[{"skill":"grilling","source":"o/r","old_ref":"'$A'","head":"'$D'","install":"npx skills@1.8.1 add o/r#'$D' --skill grilling --agent claude-code -y </dev/null"}]' \
   "$(jq -c .others <<<"$out")"
+
+# The CLI's version 1 to 2 lock migration blanks the computedHash of every
+# entry it did not just install. Each blank entry with a ref, outside the
+# source repo and the composed set (step 4 re-installs those), is re-added at
+# its own lock ref, so the refresh moves no version; one with no ref has no ref
+# to re-add at and is left to `others`.
+jq '.version = 2 | .skills |= with_entries(.value.computedHash = (if .key == "ship" or .key == "triage" or .key == "research" or .key == "code-review" then "" else "'"$(printf 'e%.0s' {1..64})"'" end))' \
+  "$repo/skills-lock.json" > "$tmp/l" && cp "$repo/skills-lock.json" "$tmp/l.keep" && mv "$tmp/l" "$repo/skills-lock.json"
+check "a blank-hash entry outside the source repo and the composed set is re-added at its lock ref" \
+  '[{"skill":"research","source":"o/r","ref":"'$A'","install":"npx skills@1.8.1 add o/r#'$A' --skill research --agent claude-code -y </dev/null"}]' \
+  "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -c .rehash)"
+mv "$tmp/l.keep" "$repo/skills-lock.json"
+check "a lock with every hash filled re-adds nothing" '[]' "$(jq -c .rehash <<<"$out")"
 
 check "a changed template file names its setup-skills section; a changed SKILL.md alone names none" \
   '[{"section":"pr-template","template":"pull_request_template.md"}]' "$(jq -c .sections <<<"$out")"

@@ -75,6 +75,13 @@ check "a printed install line is checked per --skill, unpinned lines skipped" \
 pin drift: triage is pinned at o/r#$B in skills/setup-skills/SKILL.md, the lock installed o/r#$A" \
   "$(out_of "$d")"
 
+# The repo's lines name the pinned CLI version, `npx skills@<v> add`; a line in
+# that form is still a pin.
+body=$(printf '%s\n\n```sh\nnpx skills@1.8.1 add o/r#%s --skill tdd --agent claude-code -y\n```\n' "$setup" "$B")
+check "a printed line naming the CLI version is checked too" \
+  "pin drift: tdd is pinned at o/r#$B in skills/setup-skills/SKILL.md, the lock installed o/r#$A" \
+  "$(out_of "$(tree versioned "$ship" "$body" "$lock")")"
+
 # An unpinned composes entry is drift, named by its skill: preflight refuses the
 # form, and this check must not read the source as the skill.
 d=$(tree nopin "$(skill_file "o/r:tdd u/c#$B:find-docs")" "$setup" "$lock")

@@ -26,8 +26,8 @@ check "an in-sync seed installs ship alone" "1" "$(wc -l < "$LIVE_STUB/npx.log")
 pin() { local e; for e in "${composes[@]}"; do [ "${e##*:}" != "$1" ] || echo "${e%:*}"; done; }
 check "each composed skill the seed lacks or holds off its pin is installed at its pin" '{"result":"pass","failed":[],"retried":[]}
 rc=0
-skills add '"$(pin tdd) --skill tdd --agent claude-code -y
-skills add $(pin find-docs) --skill find-docs --agent claude-code -y" \
+skills@1.8.1 add '"$(pin tdd) --skill tdd --agent claude-code -y
+skills@1.8.1 add $(pin find-docs) --skill find-docs --agent claude-code -y" \
   "$(MISSING=tdd OFF_PIN=find-docs drive happy ambiguous; tail -n +2 "$LIVE_STUB/npx.log")"
 src=$(pin find-docs)
 off_pin_reason="skill off pin: find-docs at $off_ref, pinned ${src#*#}"
@@ -39,7 +39,7 @@ check "a failed composed-skill install is unavailable" \
   "{\"result\":\"unavailable\",\"reason\":\"composed skill install failed: $off_pin_reason\"}
 rc=2" "$(OFF_PIN=find-docs NPX_FAILS=find-docs drive happy ambiguous)"
 check "an install that exits 0 off its pin is unavailable" \
-  "{\"result\":\"unavailable\",\"reason\":\"fixture clone fails ship's skill check: $off_pin_reason; run npx skills add $src --skill find-docs --agent claude-code -y\"}
+  "{\"result\":\"unavailable\",\"reason\":\"fixture clone fails ship's skill check: $off_pin_reason; run npx skills@1.8.1 add $src --skill find-docs --agent claude-code -y\"}
 rc=2" "$(OFF_PIN=find-docs NPX_NOOP=find-docs drive happy ambiguous)"
 check "a clone the installs leave dirty is unavailable" \
   '{"result":"unavailable","reason":"the fixture clone is not clean after the installs"}

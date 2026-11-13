@@ -185,7 +185,7 @@ A diff touching nothing on the `Agent-facing:` line, such as a `.github/` workfl
 Sources: context7
 Pinned: None.
 
-The skills CLI (`npx skills@latest`) is unpinned and its behaviour is load-bearing: it decides what a derived copy is and what `skills-lock.json` records. Check its `--help` rather than assuming a flag.
+The skills CLI is pinned to one version, `npx skills@1.8.1`, in every line this repo writes or prints (changelogs and ADRs, which record past lines, aside), because its behaviour is load-bearing: it decides what a derived copy is and what `skills-lock.json` records, and another version writes another lock format. `scripts/skills-cli-check.sh` holds the lines and the lock to that pin. Check the CLI's `--help` rather than assuming a flag.
 
 ## Cloud lane
 

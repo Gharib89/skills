@@ -10,7 +10,7 @@ name: semantic-release
 #
 # The CLI rather than python-semantic-release's own action: that action runs in a
 # `python:slim` container carrying no node, and every configuration's build
-# command runs this repo's `npx skills add` refresh line so `.claude/skills/`
+# command runs this repo's `npx skills@1.8.1 add` refresh line so `.claude/skills/`
 # follows the bump and the `derived-copies` gate stays green on main.
 #
 # Every push goes over a write deploy key, the repo secret RELEASE_DEPLOY_KEY,
