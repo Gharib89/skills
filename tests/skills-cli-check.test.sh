@@ -69,11 +69,16 @@ check "and names the file, the version and the pin" \
   ".release/ship.toml:1: npx skills@1.7.0, not the pinned npx skills@1.8.1" \
   "$(out_of "$d")"
 
-# A file the search cannot read is a failed read, never a clean pass.
-d=$(tree unreadable 2 "$H" docs/x.md 'npx skills@1.8.1 add o/r --skill x')
-chmod 000 "$d/docs/x.md"
-check_rc "a search that cannot read a file is tooling" 2 "$(rc_of "$d")"
-chmod 644 "$d/docs/x.md"
+# A file the search cannot read is a failed read, never a clean pass. Root
+# reads a mode-000 file, so the case only runs where the mode bits bind.
+if [ "$(id -u)" -ne 0 ]; then
+  d=$(tree unreadable 2 "$H" docs/x.md 'npx skills@1.8.1 add o/r --skill x')
+  chmod 000 "$d/docs/x.md"
+  check_rc "a search that cannot read a file is tooling" 2 "$(rc_of "$d")"
+  chmod 644 "$d/docs/x.md"
+else
+  skipped "a search that cannot read a file is tooling"
+fi
 
 # A changelog records the lines as they were; it is history, not an invocation.
 check_rc "a changelog line is not read" 0 \

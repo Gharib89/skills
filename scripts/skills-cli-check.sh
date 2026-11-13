@@ -7,7 +7,8 @@
 # reads that entry as locally modified. 1.7.x refuses a version 2 lock
 # outright. So this fails a lock that is not version 2, an entry with no 64-hex
 # computedHash, and any `npx skills` line in the files this repo writes that
-# names no version or another one. Changelogs and ADRs record past lines and are not read.
+# names no version or another one. Changelogs and ADRs record past lines and
+# are not read.
 # `scripts/derived-copies-check.sh` runs this, so it reports under
 # `scripts/check.sh full`'s `derived-copies` row.
 #
