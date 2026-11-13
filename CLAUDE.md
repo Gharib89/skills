@@ -1,3 +1,10 @@
+Claude sessions wrote most of this codebase, and agents file and triage its
+tickets. Treat existing structure as earlier agent work, not as a human's design
+to preserve: when your change would add a second copy of existing logic,
+consolidate it in the same diff and name it in the PR body. A ticket's premise
+and proposed wording are an agent's claims to measure; its acceptance criteria
+still bound the diff. Design forks go to the owner.
+
 ## Agent skills
 
 ### Issue tracker
