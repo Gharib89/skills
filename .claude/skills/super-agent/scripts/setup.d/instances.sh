@@ -26,7 +26,8 @@ probe_instance() { # <row json>
   e=$(jq -c --arg k "$key" '.providers[$k] // {}' <<<"$existing")
   cmd='' test='' cli='' authcmd=''
   case $drv in
-    claude) cmd=$claude_cmd test=$claude_test cli=claude authcmd='claude auth status' ;;
+    claude) cmd=$claude_cmd test=$claude_test cli=claude authcmd='claude auth status'
+      extra=$(jq -cn --argjson r "$row" '{models: ({sonnet: ([$r.models[]?.id | select(test("^claude-sonnet"))] | first), opus: ([$r.models[]?.id | select(test("^claude-opus"))] | first)} | with_entries(select(.value != null)))} | select(.models != {}) // {}') ;;
     codex) cmd=$codex_cmd test=$codex_test cli=codex ;;
     # no plan-usage read exists for these (`grok usage` exits 1: run /usage inside grok); grok prints a
     # signed-in or signed-out line and exits 0 either way, so auth greps it. Cursor gets no CLI check: `agent`

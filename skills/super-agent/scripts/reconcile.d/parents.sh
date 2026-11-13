@@ -1,6 +1,6 @@
 # The look at a spec parent that `reconcile` takes once per merged ship entry,
 # sourced by it. A merged PR whose ticket is a sub-issue: once the ticket reads
-# closed and every sub-issue of the open parent is closed, the parent is offered,
+# closed and every sub-issue of the open parent is closed, the parent is listed,
 # once (the ledger keeps `parents_offered`). The entry's `parent_checked` ends its
 # look; an unreadable ticket or parent is retried on a later wake. It reads the
 # caller's $doc, sets its $parents_done and $parents_changed, and calls its

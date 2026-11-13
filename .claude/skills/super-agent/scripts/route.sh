@@ -49,8 +49,9 @@
 #         what to launch now and `ask` true when `wanted` needs the owner's yes
 #         first; `bucket` the weekly bucket read, {provider (the instance id),
 #         id, remaining}, null when unknown; `instance_id` the T3 instance to
-#         launch on, `model` the model id to send there (the tier's model on a
-#         Claude instance, the mapped one on a Pi instance) and `options` the
+#         launch on, `model` the model id to send there (the exact id the
+#         instance's `models` map gives the tier, the tier's alias on a Claude
+#         instance whose map names none) and `options` the
 #         `modelSelection` options for it, `wanted_model` and `wanted_options` the
 #         same for `wanted` (what to send on the owner's yes); a Pi instance
 #         always thinks `high`; `reason` one line, naming each instance skipped
@@ -137,7 +138,7 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
   | ([$cands[] | select(.skip != null and (.skip | test("floor|reserve"))) | "\(.key) \(.skip)"] | join(", ")) as $floored
   | ($w > $d and $bucket != null and $bucket.remaining < $low) as $ask
   | (if $w > $d and ($bucket == null or $ask) then $ladder[$d] else $ladder[$w] end) as $tier
-  | def model($t): if $pick == null then null elif $pick.lr then ($pick.value.models[$t.model] // null) elif $pick.driver == "pi" then $pick.value.models[$t.model] else $t.model end;
+  | def model($t): if $pick == null then null elif $pick.lr then ($pick.value.models[$t.model] // null) else ($pick.value.models[$t.model] // $t.model) end;
     def options($t): if $pick == null or $pick.lr then null elif $pick.driver == "pi" then [{id: "thinking", value: "high"}] else [{id: "effort", value: $t.effort}] end;
     {size: $size, raise: $raise, default: $ladder[$d], wanted: $ladder[$w],
      tier: $tier,

@@ -94,6 +94,11 @@ check "a refactor ticket branches as refactor, the type its label names" "refact
 issue 14 "widgets: bump a tool" ready-for-agent S chore
 check "a chore ticket branches as chore" "chore/bump-a-tool-14" "$(L 14 --area skills/widgets | jq -r .args.workspaceStrategy.branch)"
 
+jq '.providers.claudeAgent.models = {opus: "claude-opus-5-5"}' "$quota" > "$tmp/qm.json"
+reset; issue 7 "widgets: add a frobnicator to the pipeline and more" ready-for-agent L bug
+check "the exact id the fleet entry maps for the tier rides into modelSelection" claude-opus-5-5 \
+  "$(L 7 --area skills/widgets --quota "$tmp/qm.json" | jq -r .args.modelSelection.model)"
+
 # --- a triage ticket with no Size label ------------------------------------------
 issue 11 "Something is off" needs-triage
 out=$(L 11)

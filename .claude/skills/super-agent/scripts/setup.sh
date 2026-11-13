@@ -58,6 +58,8 @@
 # `five_hour_floor` 0.1 and `weekly_reserve` 0.05 (fractions under which `route`
 # skips an instance); a re-run keeps the owner's values, the instances answer
 # carries each `weekly_weight`.
+# A `claude` instance also gets `models`, the exact `sonnet` and `opus` ids its
+# row lists, for `route` to launch on (re-run setup after a model release).
 # A `pi` instance also gets `route` false (the
 # owner's allowance to place a tier on it) and `models`, its `sonnet` and `opus`
 # agy model ids; its quota is agy's. The legacy CLI-named `claude` and `codex`

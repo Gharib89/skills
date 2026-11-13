@@ -30,8 +30,8 @@
 # saved file holds that wake id is printed as saved, with no command run, and a
 # new wake id reads again and replaces the file. The caller makes one id per
 # wake, so every launch of that wake routes on the same read.
-# The fleet file's `weekly_weight` (a number above 0) on a provider entry is
-# carried to that provider's answer, and its top-level `five_hour_floor` and
+# The fleet file's `weekly_weight` (a number above 0), `models` and `route` on a
+# provider entry are carried to that provider's answer, and its top-level `five_hour_floor` and
 # `weekly_reserve` (fractions 0 to 1) to `floors`, for `route` to rank and skip by.
 #
 # stdout: {read_at, wake, floors, providers: {<instance id>: {driver, status, reason, auth, auth_reason,
@@ -40,7 +40,7 @@
 #         `buckets` one {id, window, remaining, resets} per bucket, `window` `5h`
 #         or `weekly`, `remaining` a fraction 0 to 1 (agy's buckets add `group`),
 #         `resets` the provider's own reset time as text; a provider also
-#         holds `weekly_weight` when the fleet entry sets one; `floors` is
+#         holds `weekly_weight`, `models` and `route` where the fleet entry sets them; `floors` is
 #         {five_hour, weekly_reserve}, a key only where the file sets it;
 #         `read_at` the UTC time of the read, `wake` the --wake id or null. Claude's ids are
 #         `session`, `week` (all models) and `week-<model>`; Codex's are `session`
@@ -135,10 +135,10 @@ for name in ${names[@]+"${names[@]}"}; do
       else [ -n "$reason" ] || reason='quota command printed no quota'; fi
     fi
   fi
-  out=$(jq -c --arg n "$name" --arg d "$driver" --arg s "$status" --arg r "$reason" --arg a "$auth" --arg ar "$auth_reason" --argjson b "$buckets" --argjson w "$(jq -c '.weekly_weight // null' <<<"$cfg")" \
+  out=$(jq -c --arg n "$name" --arg d "$driver" --arg s "$status" --arg r "$reason" --arg a "$auth" --arg ar "$auth_reason" --argjson b "$buckets" --argjson c "$cfg" \
     '.[$n] = {driver: $d, status: $s, reason: (if $r == "" then null else $r end),
       auth: $a, auth_reason: (if $ar == "" then null else $ar end), buckets: $b}
-      + (if $w == null then {} else {weekly_weight: $w} end)' <<<"$out")
+      + ($c | {weekly_weight, models, route} | with_entries(select(.value != null)))' <<<"$out")
 done
 result=$(jq -cn --argjson p "$out" --argjson now "$(sa_epoch)" --arg w "$wake" \
   --slurpfile f "$fleet_file" '{read_at: (($now // now) | strftime("%Y-%m-%dT%H:%M:%SZ")), wake: (if $w == "" then null else $w end),

@@ -66,6 +66,8 @@ check "the auth command ran under the instance's account" 1 "$(grep -c '^claude 
 check "Pi is a provider with its agy quota command, not routed until the owner allows it" 'pi false agy -p /usage --output-format json' \
   "$(jq -r '.providers.pi | "\(.driver) \(.route) \(.quota_command)"' <<<"$f")"
 check "its sonnet and opus come from the agy models it lists" '{"sonnet":"antigravity/claude-sonnet-4-6","opus":"antigravity/claude-opus-4-6"}' "$(jq -c .providers.pi.models <<<"$f")"
+check "a Claude instance's sonnet and opus are the exact ids it lists, and it gets no route allowance" '{"sonnet":"claude-sonnet-5-5","opus":"claude-opus-5-5"} null' \
+  "$(jq -c .providers.claudeAgent.models <<<"$f") $(jq -c .providers.claudeAgent.route <<<"$f")"
 check "its quota was read through agy" available "$(jq -r .providers.pi.status <<<"$f")"
 check "the proposal lists each instance with driver, quota source and auth result" \
   'claudeAgent|claude|the default account|failed claudeAgent_b|claude|CLAUDE_CONFIG_DIR=/acct/b|ok pi|pi|the caller'"'"'s own account|unknown' \

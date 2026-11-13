@@ -209,11 +209,13 @@ check "env on a provider that sets none is left to the caller's own" available "
 # --- the fleet file's weekly_weight and floors ride the read; a read is saved per wake --------------
 reset
 jq -n '{five_hour_floor: 0.2, weekly_reserve: 0.1, providers: {
-  big: {driver: "claude", weekly_weight: 3, quota_command: "claude -p \"/usage\" --output-format json"},
+  big: {driver: "claude", weekly_weight: 3, models: {sonnet: "claude-sonnet-5-5"}, route: true, quota_command: "claude -p \"/usage\" --output-format json"},
   small: {driver: "claude", quota_command: "claude -p \"/usage\" --output-format json"}}}' > "$tmp/w.json"
 out=$(bash "$s/quota.sh" --fleet "$tmp/w.json")
 check "a provider's weekly_weight is carried to its answer, none where the entry sets none" '3 null' \
   "$(jq -r '.providers | "\(.big.weekly_weight) \(.small.weekly_weight)"' <<<"$out")"
+check "a provider's models map and route allowance are carried for route to read, none where the entry sets none" '{"sonnet":"claude-sonnet-5-5"} true null null' \
+  "$(jq -r '.providers | "\(.big.models | tojson) \(.big.route) \(.small.models) \(.small.route)"' <<<"$out")"
 check "the fleet file's floors are carried as floors" '{"five_hour":0.2,"weekly_reserve":0.1}' "$(jq -c .floors <<<"$out")"
 check "a fleet file with neither carries empty floors" '{}' "$(Q | jq -c .floors)"
 jq -n '{providers: {big: {driver: "claude", weekly_weight: 0, quota_command: "x"}}}' > "$tmp/bw.json"

@@ -208,8 +208,8 @@ The other lists report:
   with its title, and ask whether to launch any: reconcile lists each once.
   Launch one only on the owner's go.
 - `parents_done`: an open spec parent whose sub-issues are all closed, listed
-  once. Offer to close it in one chat line; close it only on the owner's word
-  ([wake-actions](reference/wake-actions.md#parents_done)).
+  once. Close it as completed yourself, verify by REST, and say so in one chat
+  line ([wake-actions](reference/wake-actions.md#parents_done)).
 - `woke`: a settled triage thread reran; `Running` shows it again.
 - `at_rest` with a merge-gate summary is no stall: an allowed merge needs
   nothing from you, and a hold outside the merge allowance and the standing
