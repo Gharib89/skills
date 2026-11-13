@@ -77,7 +77,7 @@ check "the title is the repo and the slug" "widgets#7 add-a-frobnicator-to-the" 
 check "the worktree strategy names the base and the branch /ship would" \
   '{"type":"worktree","baseRef":"main","branch":"fix/add-a-frobnicator-to-the-7","startFromOrigin":true}' "$(jq -c .args.workspaceStrategy <<<"$out")"
 check "L starts on the second rung, on route's instance, options an array" \
-  '{"instanceId":"claudeAgent","model":"sonnet","options":[{"id":"effort","value":"high"}]}' "$(jq -c .args.modelSelection <<<"$out")"
+  '{"instanceId":"claudeAgent","model":"opus","options":[{"id":"effort","value":"high"}]}' "$(jq -c .args.modelSelection <<<"$out")"
 check "a local launch carries no environment id" false "$(jq '.args | has("environmentId")' <<<"$out")"
 check "the message opens with the owner-skill invocation" "/ship 7" "$(jq -r .args.message <<<"$out" | sed -n 1p)"
 check "then the brief, waiver word for word" 1 "$(jq -r .args.message <<<"$out" | grep -cF 'Codex answers with a usage-limit notice: record it as not landed.')"
@@ -85,7 +85,7 @@ check "the brief carries the repo's cap-scoped line, the machine's line and the 
   "$(jq -r .args.message <<<"$out" | grep -cE '^  (Repo line: run the widget|Machine line: the home box|Mind the flaky)')"
 check "the argument only an MCP read fills is named" '["projectId"]' "$(jq -c .needs <<<"$out")"
 check "the record block holds what the ledger will carry" \
-  '{"key":"acme/widgets#7","kind":"ship","machine":"home","environment_id":null,"instance_id":"claudeAgent","model":"sonnet","effort":"high","areas":["skills/widgets"],"branch":"fix/add-a-frobnicator-to-the-7"}' "$(jq -c .record <<<"$out")"
+  '{"key":"acme/widgets#7","kind":"ship","machine":"home","environment_id":null,"instance_id":"claudeAgent","model":"opus","effort":"high","areas":["skills/widgets"],"branch":"fix/add-a-frobnicator-to-the-7"}' "$(jq -c .record <<<"$out")"
 check "--out wrote the same answer" "$(jq -c . <<<"$out")" "$(jq -c . "$out_f")"
 check "the claim comment was posted" 1 "$(grep -c -- '-X POST' "$SA_FAKE/calls")"
 check "and nothing was assigned" 0 "$(grep -c 'assignees' "$SA_FAKE/calls")"
@@ -129,14 +129,14 @@ check "and no argument object is printed" false "$(jq 'has("args")' <<<"$out")"
 sa_route "repos/$repo/issues/9/comments" "$(jq -cn '[{id: 5, created_at: "2026-10-01T11:00:00Z", user: {login: "octo"}, body: "<!-- super-agent-claim machine=other thread=th-o -->\nClaimed."}]')"
 check "a claim past the stale window is stale" stale "$(L 9 | jq -r .reason)"
 
-issue 12 "Owner decides" ready-for-agent L
+issue 12 "Owner decides" ready-for-agent S
 quota_with 0.3
 out=$(L 12 --raise 1)
 check "a raise the quota cannot afford asks, with the wanted tier and no argument object" '{"launch":false,"reason":"ask","wanted":"opus","tier":"sonnet","args":false}' \
   "$(jq -c '{launch, reason, wanted: .detail.wanted.model, tier: .detail.tier.model, args: has("args")}' <<<"$out")"
-check "--wanted yes launches the wanted tier" '{"model":"opus","effort":"high"}' "$(L 12 --raise 1 --wanted yes | jq -c '{model: .args.modelSelection.model, effort: .args.modelSelection.options[0].value}')"
-check "--wanted no launches the default tier" '{"model":"sonnet","effort":"high"}' "$(L 12 --raise 1 --wanted no | jq -c '{model: .args.modelSelection.model, effort: .args.modelSelection.options[0].value}')"
-check "the ledger entry for it carries the tier launched" '{"model":"opus","effort":"high"}' "$(L 12 --raise 1 --wanted yes | jq -c '.record | {model, effort}')"
+check "--wanted yes launches the wanted tier" '{"model":"opus","effort":"medium"}' "$(L 12 --raise 1 --wanted yes | jq -c '{model: .args.modelSelection.model, effort: .args.modelSelection.options[0].value}')"
+check "--wanted no launches the default tier" '{"model":"sonnet","effort":"medium"}' "$(L 12 --raise 1 --wanted no | jq -c '{model: .args.modelSelection.model, effort: .args.modelSelection.options[0].value}')"
+check "the ledger entry for it carries the tier launched" '{"model":"opus","effort":"medium"}' "$(L 12 --raise 1 --wanted yes | jq -c '.record | {model, effort}')"
 
 quota_with 0.8 failed
 check "no instance able to launch is no_instance, with route's reason" no_instance "$(L 7 | jq -r .reason)"
@@ -177,7 +177,7 @@ check_rc "record exits 0" 0 "$rc"
 e=$(bash "$s/ledger.sh" --ledger "$led" get "$repo#7")
 check "the entry holds the thread, the worktree read from T3 and the branch" '["t-7","/wt/seven","fix/add-a-frobnicator-to-the-7"]' "$(jq -c '[.thread, .worktree, .branch]' <<<"$e")"
 check "the fleet's machine key, instance, kind and areas" '["home","claudeAgent","ship",["skills/widgets"]]' "$(jq -c '[.machine, .instance_id, .kind, .areas]' <<<"$e")"
-check "the routed tier's model and effort, one spelling" '["sonnet","high"]' "$(jq -c '[.model, .effort]' <<<"$e")"
+check "the routed tier's model and effort, one spelling" '["opus","high"]' "$(jq -c '[.model, .effort]' <<<"$e")"
 check "the baseline reconcile ran: the entry is observed" '{"stage":"running","observed":true}' "$(jq -c '{stage, observed: (.observed != null)}' <<<"$e")"
 check "the answer reports the reconcile" '{"checked":1,"errors":[]}' "$(jq -c .reconcile <<<"$out")"
 out=$(bash "$s/launch.sh" record --launch "$out_f" --thread t-7 --ledger "$led"); rc=$?
