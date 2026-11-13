@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.22.0 (2026-11-13)
+
+### Features
+
+- **super-agent**: Launch on exact model ids from the fleet file, close a finished spec parent
+  without asking ([#1236](https://github.com/Gharib89/skills/pull/1236),
+  [`a908773`](https://github.com/Gharib89/skills/commit/a908773464f11581c71d5fa5f9b2e91cd99566e0))
+
+
 ## v0.21.1 (2026-11-13)
 
 ### Bug Fixes
