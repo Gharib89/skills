@@ -47,7 +47,8 @@ follows `docs/contributing/standards/release.md`'s composes bullet and its
 ship, so while ship is 0.x the title is `feat(ship): move <skill> to <short
 sha>`, with no `!` in the title or any commit (`bump-guard` reads commits), no
 `BREAKING CHANGE:` footer and no `major` label. A pin moved on setup-skills'
-line or on a printed line alone refuses nothing and takes no `!` either. State
+line or on a printed line alone is not breaking, since preflight refuses nothing
+on it, and takes no `!` either. State
 the break in plain words in the commit body and under
 `## Special things to note`.
 
@@ -70,8 +71,8 @@ mode moves every `others` row.
 6. [Source-repo mode](#source-repo-mode)'s per-row items and its check
    paragraph, before Ship's phase 5: a red check at the new pins is a
    hold-back, not a fix-and-retry; its title rule is phase 6's title. The PR
-   and hand-back lines below replace its step 8 and every-row-held-back
-   sentences.
+   and hand-back lines below replace its "In step 8 the PR body opens" and
+   "With every row held back" sentences.
 
 A held-back row hands the issue back to the owner. With some rows moved, phase
 6 runs `open-pr none --title <t> --body-file <f>`, `<f>` saying `Refs #<issue>`,
