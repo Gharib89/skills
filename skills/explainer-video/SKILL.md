@@ -4,7 +4,7 @@ description: >-
   Make a narrated explainer video from a repo, document, page or topic. Use when
   asked for an explainer video, narration audio or a style profile.
 metadata:
-  version: 0.54.0
+  version: 0.55.0
 ---
 
 # explainer-video
