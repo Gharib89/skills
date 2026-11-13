@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.6.1 (2026-11-13)
+
+### Documentation
+
+- **grill-with-artifact**: State the wayfinder branch and the ADR rule, trim step 3 and description
+  ([#1227](https://github.com/Gharib89/skills/pull/1227),
+  [`525c36b`](https://github.com/Gharib89/skills/commit/525c36bfff243d4e7d44ef128769ee4443b5cdb9))
+
+
 ## v0.6.0 (2026-11-04)
 
 ### Features

@@ -3,7 +3,7 @@ name: grill-with-artifact
 description: "Grill a plan or design on a private artifact page. Use when the human names grill-with-artifact, asks to grill on a page or an artifact, or a wayfinder ticket's Notes call for it."
 argument-hint: "[topic]"
 metadata:
-  version: 0.6.0
+  version: 0.6.1
 ---
 
 # grill-with-artifact
