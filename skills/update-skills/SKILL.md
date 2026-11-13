@@ -3,7 +3,7 @@ name: update-skills
 description: "Refresh this repo's skills in one PR: Gharib89/skills skills, their composed skills at pinned refs, and other repo-scoped skills the owner picks; report upstream drift to the source repo and summarise the changes. In the source repo, move drifted pins instead. Attended only."
 disable-model-invocation: true
 metadata:
-  version: 0.10.4
+  version: 0.11.0
 ---
 
 # update-skills
