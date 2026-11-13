@@ -6,7 +6,7 @@ description: >-
   when running as the owner's pinned super agent thread in T3 Code, or when
   the owner names a ticket for it to take.
 metadata:
-  version: 0.20.4
+  version: 0.21.0
 ---
 
 # super-agent
@@ -110,8 +110,8 @@ picks, which `launch.sh` runs for you:
    per provider instance; a remote machine is never extra quota.
 2. `route.sh` takes the size from the issue's Size label (M with none), with
    `--raise <n>` on a raised launch (the stall ladder below). The ladder is
-   Sonnet medium, Sonnet high, Opus high; XS, S and M start on the first rung,
-   L the second, XL the third.
+   Sonnet medium, Opus medium, Opus high; XS and S start on the first rung,
+   M the second, L and XL the third.
 3. When route's `ask` is true, launch answers `ask`: escalate first, then rerun
    launch with `--wanted yes` or `--wanted no`
    ([routing](reference/routing.md)); `no_instance` goes to Needs you.

@@ -7,9 +7,9 @@
 #   route --job text [--claude] --quota <file>
 #
 # --quota is a file holding `quota`'s output. The tier ladder is Sonnet medium,
-# Sonnet high, Opus high (medium is the lowest effort a ship launch gets, owner
-# ruling 2026-11-11); XS, S and M start on the first rung, L on the second, XL on
-# the third. --raise (default 0) climbs one rung per stall or hard finding, and
+# Opus medium, Opus high (medium is the lowest effort a ship launch gets, owner
+# ruling 2026-11-11); XS and S start on the first rung, M on the second, L and XL
+# on the third (owner ruling 2026-11-13). --raise (default 0) climbs one rung per stall or hard finding, and
 # stops at the top. Each provider is a T3
 # provider instance, its key the instance id. A launch's candidates are the
 # `claude` instances plus the `pi`, `cursor` and `grok` instances the owner
@@ -111,8 +111,8 @@ if [ -n "$job" ]; then
   exit 0
 fi
 jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg named "$named" '
-  [{model: "sonnet", effort: "medium"}, {model: "sonnet", effort: "high"}, {model: "opus", effort: "high"}] as $ladder
-  | ({XS: 0, S: 0, M: 0, L: 1, XL: 2}[$size]) as $d
+  [{model: "sonnet", effort: "medium"}, {model: "opus", effort: "medium"}, {model: "opus", effort: "high"}] as $ladder
+  | ({XS: 0, S: 0, M: 1, L: 2, XL: 2}[$size]) as $d
   | ([$d + $raise, 2] | min) as $w
   | (.floors.five_hour // 0.1) as $f5
   | (.floors.weekly_reserve // 0.05) as $res
