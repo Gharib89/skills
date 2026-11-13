@@ -194,8 +194,8 @@ prints it again. Per-row steps:
 - `cleanup`: a settled or closed entry's threads and worktree to tidy.
 - `verify`: a merged ship PR to check against its issue's acceptance criteria.
 - `escalate`: what only the owner can unblock: record one need per row with
-  `ledger.sh need --reason <the row's reason>` (Escalation format), which
-  silences that row only.
+  `ledger.sh --ledger <ledger> need <key> --action <text> --reason <the row's
+  reason>` (Escalation format), which silences that row only.
 
 The other lists report:
 
@@ -251,8 +251,9 @@ The owner reads one thing: the **status block** `scripts/status.sh --ledger
 A need names exactly one action, and a pick from fixed options (approve or deny
 a held call, a scope fork) also opens an AskUserQuestion dialog with the
 recommended option first.
-Record each escalation as a need with `ledger.sh need --reason <word>`, the
-permission hold and the stall at 3 included
+Record each escalation as a need with `ledger.sh --ledger <ledger> need <key>
+--action <text> --reason <word>`, the permission hold and the stall at 3
+included
 ([a need](reference/status-block.md#a-need)), and the owner's answer as a
 [ruling](reference/status-block.md#a-ruling). A reviewer's usage-limit notice
 is no escalation: record it as
