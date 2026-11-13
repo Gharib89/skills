@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.60.2 (2026-11-13)
+
+### Refactoring
+
+- **ship**: Cut the always-read reference load and cap its sum
+  ([#1233](https://github.com/Gharib89/skills/pull/1233),
+  [`b31c9ef`](https://github.com/Gharib89/skills/commit/b31c9efcf19eafec436f30f50fd028753a96f547))
+
+
 ## v0.60.1 (2026-11-13)
 
 ### Bug Fixes
