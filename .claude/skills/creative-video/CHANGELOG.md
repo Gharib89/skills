@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.24.1 (2026-11-13)
+
+### Bug Fixes
+
+- **creative-video**: Stop the upstream beacon, state the media branch, fix three prose gaps
+  ([#1223](https://github.com/Gharib89/skills/pull/1223),
+  [`4c4fc80`](https://github.com/Gharib89/skills/commit/4c4fc80eddac4fa5388073ff16b0dad768bd5bb6))
+
+
 ## v0.24.0 (2026-11-12)
 
 ### Features
