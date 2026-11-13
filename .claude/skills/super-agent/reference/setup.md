@@ -57,8 +57,9 @@ skill's base directory.
    which route skips an instance. Each Claude instance carries `models`, its
    `sonnet` and `opus` keys the exact model ids its capabilities row lists
    (for example `claude-sonnet-5-5`): route launches on these, and on the
-   tier's alias only where `models` names none. Model ids change with each
-   release, so re-run setup (or edit `models`) after one.
+   tier's alias only where `models` names none. A re-run keeps the file's own
+   `models`, like every value already there, so after a model release edit
+   `models` to the new ids.
 4. Ask the owner to confirm or adjust it, the `work_week` set to their own
    working days (the morning report and the retro follow it). After the yes,
    run it again with `--write` and the same `--probe` flags, then apply the
