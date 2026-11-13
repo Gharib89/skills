@@ -60,6 +60,9 @@
 #         polled and `unobserved` the open keys it skipped
 #         a watcher already running is {error, running: <pid, or null when
 #         its lock reads empty>}
+#         `event` is one of pr-merged, pr-closed, pending-approval,
+#         run-finished, stall-window, pr-opened, checks-finished,
+#         thread-mismatch, thread-unreadable, pr-unreadable or timeout
 # exit: 0 a change or the timeout · 1 no open entry, none `reconcile` has
 #       observed yet, or a watcher already running · 2 usage, an unreadable
 #       ledger, or a lock it cannot take
