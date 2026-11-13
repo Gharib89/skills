@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.25.0 (2026-11-13)
+
+### Features
+
+- **creative-video**: Trim both video descriptions and route the pair apart
+  ([#1228](https://github.com/Gharib89/skills/pull/1228),
+  [`d5bd773`](https://github.com/Gharib89/skills/commit/d5bd773b0ab3883f18234aecde4f899583f38609))
+
+
 ## v0.24.1 (2026-11-13)
 
 ### Bug Fixes
