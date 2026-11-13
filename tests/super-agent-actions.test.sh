@@ -144,8 +144,10 @@ check "a need for its own cause silences it" "" "$(esc "$(R)")"
 check "the need keeps its reason" permission-hold "$(L list | jq -r '.needs[0].reason')"
 # A need with no --reason silences every later escalate row of its entry, so
 # every `need` call the skill's prose shows carries one, within its sentence.
-bare=$(perl -0777 -ne 's/\s+/ /g; while (/(ledger\.sh(?: --ledger <ledger>)? need\b.*?(?:\.(?: |$)|$))/g) { print "$ARGV: $1\n" unless $1 =~ /--reason/ }' skills/super-agent/SKILL.md skills/super-agent/reference/*.md)
-check "every need call the prose shows carries --reason" "" "$bare"
+bare_needs() { perl -0777 -ne 's/\s+/ /g; while (/(ledger\.sh(?: --ledger \S+)? need\b.*?(?:\.(?: |$)|$))/g) { print "$ARGV: $1\n" unless $1 =~ /--reason/ }' "$@"; }
+printf 'Run `ledger.sh --ledger "$l" need k --action a`.\nThen `ledger.sh need`\nwrapped, e.g. `x`. Keep `ledger.sh need --reason r`.\n' > "$tmp/needs.md"
+check "the matcher finds a bare call in any --ledger form and across a wrap" 2 "$(bare_needs "$tmp/needs.md" | wc -l | tr -d ' ')"
+check "every need call the prose shows carries --reason" "" "$(bare_needs skills/super-agent/SKILL.md skills/super-agent/reference/*.md)"
 fixture
 rm "$SA_FAKE/threads/t-5.json"
 out=$(R)

@@ -23,8 +23,8 @@ The super agent's machine and its linked machines run Linux.
 ## The scripts
 
 They live in `scripts/` under this skill's base directory. Each answers
-`--help` with its flags, the JSON it prints and its exits, and the sections
-below name the one each step runs. A script that reads the ledger takes it by
+`--help` with its flags and the JSON it prints, and the sections below name
+the one each step runs. A script that reads the ledger takes it by
 `--ledger <ledger>` (`ledger.sh` before its subcommand): keep it at
 `super-agent/ledger.json` under `$XDG_STATE_HOME` (`~/.local/state` when
 unset), your own machine's state directory. A ledger key is `<owner/name>#<n>`,
@@ -148,11 +148,10 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    `delete_scheduled_task` it: the loop is done.
 4. **Wake.** The watcher's exit or the schedule wakes you. A watcher wake runs
    step 5. A backstop wake runs `scripts/pulse.sh --ledger <ledger> --fleet
-   <fleet>` instead, with step 5's flags: while a remote entry is open, save
-   its reads first and pass one `--remote` per environment (Remote entries,
-   below), or its thread reads `thread-unreadable`. `alive` true and `changed`
-   false ends the turn there, nothing else read or posted; `alive` false starts
-   the watcher; `changed` true makes its `summary` the answer step 5 acts on.
+   <fleet>` instead, with step 5's flags, `--remote` included (Remote
+   entries, below). `alive` true and `changed` false ends the turn there,
+   nothing else read or posted; `alive` false starts the watcher; `changed`
+   true makes its `summary` the answer step 5 acts on.
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
    action it prints (Acting on the summary), run `scripts/status.sh --ledger
@@ -167,7 +166,8 @@ bound schedule wakes you on time (all measured 2026-11-06).
 
 **Remote entries** (an `environment_id`): on each wake, before reconcile or
 pulse, save their `t3_thread_read` and pass `--remote`
-([remote](reference/remote.md)).
+([remote](reference/remote.md)); a pulse without it reads their threads as
+`thread-unreadable`.
 
 **The owner steps into a supervised thread.** A message of theirs there leaves
 its entry in the ledger and watched: never unwatch, settle or rethread it for
@@ -239,8 +239,9 @@ The owner decides these, and you decide everything else:
 
 Placement `waiting` and a same-repo wait are not escalations.
 
-With `merge_gate_ruler: super-agent` you rule on a merge-gate hold, within the
-limits in [wake-actions](reference/wake-actions.md#merge-gate-holds).
+With `merge_gate_ruler: super-agent` you rule on a merge-gate hold. **A hold on
+a failure the PR did not cause is never waived, whoever rules**
+([wake-actions](reference/wake-actions.md#merge-gate-holds)).
 
 ### Escalation format
 

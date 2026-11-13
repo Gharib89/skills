@@ -29,14 +29,14 @@ checks on its head commit finishing (`checks-finished`), a merge and a close.
    `--worktree <path>` from it and one `--remote` (step 3) per environment
    holding an open remote entry, the new one included: its baseline reconcile
    reads it.
-2. **Read.** On each wake, before `reconcile.sh`, read every open remote
-   entry's thread with `t3_thread_read`, its
-   `environmentId` the entry's `environment_id`, with a low `limit` and
-   `maxCharsPerItem`. Write each read to `<dir>/<thread id>.json`, one `<dir>`
-   per environment, under your own scratch or state directory.
-3. **Pass.** Give `reconcile.sh` one `--remote <environment id>=<dir>` per
-   environment that holds an open entry. `watch.sh` takes none: it reads no
-   reply file.
+2. **Read.** On each wake, before `reconcile.sh` or `pulse.sh`, read every
+   open remote entry's thread with `t3_thread_read`, its `environmentId` the
+   entry's `environment_id`, with a low `limit` and `maxCharsPerItem`. Write
+   each read to `<dir>/<thread id>.json`, one `<dir>` per environment, under
+   your own scratch or state directory.
+3. **Pass.** Give `reconcile.sh` (or `pulse.sh`) one `--remote <environment
+   id>=<dir>` per environment that holds an open entry. `watch.sh` takes none:
+   it reads no reply file.
 4. **Settle.** Settle a remote thread with `t3_thread_organize` action
    `settle`, passing its `environmentId`.
 5. **Remove the worktree.** Launch a scratch thread on the entry's

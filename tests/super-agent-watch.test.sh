@@ -45,7 +45,7 @@ for e in pr-merged pr-closed pending-approval run-finished stall-window pr-opene
   checks-finished thread-mismatch thread-unreadable pr-unreadable timeout; do
   grep -q -- "$e" <<<"$out" || missing="${missing:-} $e"
 done
-check "--help lists all 11 events SKILL.md says it lists" "" "${missing:-}"
+check "--help lists all 11 events watch emits" "" "${missing:-}"
 out=$(bash "$s/watch.sh" --interval 0 2>/dev/null); rc=$?
 check "a malformed call answers its usage line" "$(sed -n 1p <<<"$(bash "$s/watch.sh" --help)")" "$(jq -r .error <<<"$out")"
 check_rc "a malformed call exits 2" 2 "$rc"
