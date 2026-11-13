@@ -1,12 +1,10 @@
 ---
 name: super-agent
 description: >-
-  Launch a T3 thread for a ticket the owner names, record it in a ledger, and
-  wake on its changes through a background watcher until its PR merges. Use
-  when running as the owner's pinned super agent thread in T3 Code, or when
-  the owner names a ticket for it to take.
+  Launch, record and watch T3 threads for the owner's tickets until their PRs
+  merge. Use when running as the owner's pinned super agent thread in T3 Code.
 metadata:
-  version: 0.21.0
+  version: 0.21.1
 ---
 
 # super-agent
@@ -24,69 +22,17 @@ The super agent's machine and its linked machines run Linux.
 
 ## The scripts
 
-They live in `scripts/` under this skill's base directory, and each answers
-`--help` with its flags and the JSON it prints. Each takes the ledger by
-`--ledger <ledger>`: keep it at `super-agent/ledger.json` under
-`$XDG_STATE_HOME` (`~/.local/state` when unset), your own machine's state
-directory.
-
-- `ledger.sh add|adopt|get|list|set|rethread|ruling|allowed|briefed|wait|unwait|need|pushed|unneed|limit|unlimit`
-  reads and writes the ledger; its `--ledger` comes first. A key is
-  `<owner/name>#<n>`, or `task:<slug>` for a `task` entry. `add` with
-  `--kind triage` records a `/triage` ticket, no PR. `add` with
-  `--task <slug>` records a thread that is no ticket's (a grill, a review),
-  closed on its thread's rest; `adopt` records a thread someone else
-  launched, in the same flags. `list` prints `waiting` in order. Its
-  `--help` holds `ruling` with `--brief`, and `need`.
-- `status.sh --ledger <ledger> [--quota <file>] [--instance <id>] [--digest]`
-  prints the status block.
-- `watch.sh` polls every open entry's thread and PR and exits on the first
-  change or `timeout`; its `--help` lists the events. Rules:
-  [watching](reference/watching.md).
-- `notify.sh` is the alarm `watch.sh --ledger <ledger> --fleet <fleet>` leaves
-  behind on an event exit: it runs the fleet file's notify command unless a
-  reconcile followed within its delay. You never run it.
-- `reconcile.sh` compares the ledger with T3 and GitHub, moves each entry's
-  stage (a merged PR is `merged` until its thread rests, then `settled`),
-  keeps each entry's `stalls`, and prints one summary: the lists `cleanup`,
-  `verify`, `escalate` say what you owe (Acting on the summary), the rest
-  report ([watching](reference/watching.md)). `ledger.sh set` refuses `stage`;
-  never set `stalls` by hand, bar
-  [the reset](reference/stall-ladder.md#the-ladder).
-- `pulse.sh` takes reconcile's flags, runs it, and answers `alive` (the watcher
-  runs), `changed` (anything to act on) and `summary` (reconcile's answer when
-  `changed`, else null): the whole backstop turn.
-- `setup.sh` probes the machines, accounts and quota commands, merges each
-  `--probe` reply, and proposes the fleet file (below) with `--propose`, one
-  provider per instance from `--instances <file>`; it takes `--fleet <file>` in
-  place of `--ledger`, and writes only with `--write`.
-- `probe.sh --json` measures this machine.
-- `launch.sh` prepares a launch in one call (claim, route, place, brief: the
-  `t3_thread_launch` arguments, which you send), and its `record` form writes
-  the entry after it (The loop); `record` with `--task <slug>` writes a
-  `task` entry for a launch that is no ticket's.
-- `launch-check.sh` answers whether one machine takes a launch now (Placement).
-- `place.sh` picks the machine a launch runs on (Placement).
-- `quota.sh --fleet <file> [--save <file> --wake <id>]` reads each provider
-  instance's quota and auth. A read that fails is `unknown`, not an error.
-- `brief.sh --fleet <file> --ledger <ledger> [--repo <r>] [--machine <m>]
-  [--note <text>]` prints the launch brief as `brief`, with its parts.
-- `schedules.sh --fleet <file>` proposes the morning report and weekly
-  retro-runs; it creates nothing (Schedules and lessons).
-- `route.sh` picks a launch's instance, tier, `model` and `options` from the
-  Size label and a saved quota read, or the driver for a bounded text job
-  (`--job text`, `--claude`).
-- `worktree.sh remove` removes a settled or closed entry's clean worktree,
-  never forced, and keeps the branch; `--delete-branch`, only on the owner's
-  word, also deletes a merged PR's local branch.
-- `agy-job.sh` runs one bounded text job on agy
-  ([agy jobs](reference/agy-jobs.md)).
-- `claim.sh` claims one ticket for this machine and prints its `status`
-  (`taken`, `own`, `claimed`, `stale`) and the holder's `claim`.
-- `track.sh --fleet <file> track|stop <owner/name>` edits the active repos.
-- `fleet.sh --fleet <file> pin <owner/name> <machine>|unpin <owner/name>|slots
-  <machine> <n>` edits a repo's machine pin and a machine's slots (Placement).
-- `intake.sh` builds the daily offer over the active repos. It writes nothing.
+They live in `scripts/` under this skill's base directory. Each answers
+`--help` with its flags and the JSON it prints, and the sections below name
+the one each step runs. A script that reads the ledger takes it by
+`--ledger <ledger>` (`ledger.sh` before its subcommand): keep it at
+`super-agent/ledger.json` under `$XDG_STATE_HOME` (`~/.local/state` when
+unset), your own machine's state directory. A ledger key is `<owner/name>#<n>`,
+or `task:<slug>` for a `task` entry. Reconcile alone moves an entry's `stage`
+and `stalls`: never set `stalls` by hand, bar
+[the reset](reference/stall-ladder.md#the-ladder). `notify.sh` is the
+watcher's alarm ([watching](reference/watching.md#the-notify-command)): you
+never run it.
 
 ## Setup
 
@@ -202,9 +148,10 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    `delete_scheduled_task` it: the loop is done.
 4. **Wake.** The watcher's exit or the schedule wakes you. A watcher wake runs
    step 5. A backstop wake runs `scripts/pulse.sh --ledger <ledger> --fleet
-   <fleet>` instead (the flags of step 5): `alive` true and `changed` false
-   ends the turn there, nothing else read or posted; `alive` false starts the
-   watcher; `changed` true makes its `summary` the answer step 5 acts on.
+   <fleet>` instead, with step 5's flags, `--remote` included (Remote
+   entries, below). `alive` true and `changed` false ends the turn there,
+   nothing else read or posted; `alive` false starts the watcher; `changed`
+   true makes its `summary` the answer step 5 acts on.
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
    action it prints (Acting on the summary), run `scripts/status.sh --ledger
@@ -217,14 +164,14 @@ entry. A supervised thread finishing wakes nothing, and neither does its
 permission hold; a background shell's exit wakes you about 5 s later, and a
 bound schedule wakes you on time (all measured 2026-11-06).
 
-**Remote entries** (an `environment_id`): on each wake, before reconcile, save
-their `t3_thread_read` and pass `--remote` to reconcile
-([remote](reference/remote.md)). The watcher reads them from GitHub alone; the
-backstop schedule notices a remote thread resting.
+**Remote entries** (an `environment_id`): on each wake, before reconcile or
+pulse, save their `t3_thread_read` and pass `--remote`
+([remote](reference/remote.md)); a pulse without it reads their threads as
+`thread-unreadable`.
 
 **The owner steps into a supervised thread.** A message of theirs there leaves
 its entry in the ledger and watched: never unwatch, settle or rethread it for
-that. Record a need when the thread ends needing them.
+that. Record a need (`--reason owner`) when the thread ends needing them.
 
 Wait only through the watcher: a `sleep` or a poll in your own turn spends
 context on nothing. Read a thread's messages only in small slices
@@ -244,14 +191,11 @@ stays in every answer until you clear its cause, so a wake that does nothing
 prints it again. Per-row steps:
 [reference/wake-actions.md](reference/wake-actions.md).
 
-- `cleanup`: per row, settle its thread and the threads it started once at rest,
-  `scripts/worktree.sh remove --ledger <ledger> <key>`, then `ledger.sh --ledger
-  <ledger> set <key> cleanup_owed false`.
-- `verify`: check the merged PR against the issue's acceptance criteria, then
-  `ledger.sh --ledger <ledger> set <key> verify_owed false`; unmet, record a
-  need first. A `merged` entry settles when its thread rests.
-- `escalate`: record one need per row with `ledger.sh need` (Escalation
-  format), which silences it.
+- `cleanup`: a settled or closed entry's threads and worktree to tidy.
+- `verify`: a merged ship PR to check against its issue's acceptance criteria.
+- `escalate`: what only the owner can unblock: record one need per row with
+  `ledger.sh --ledger <ledger> need <key> --action <text> --reason <the row's
+  reason>` (Escalation format), which silences that row only.
 
 The other lists report:
 
@@ -296,28 +240,24 @@ The owner decides these, and you decide everything else:
 Placement `waiting` and a same-repo wait are not escalations.
 
 With `merge_gate_ruler: super-agent` you rule on a merge-gate hold. **A hold on
-a failure the PR did not cause is never waived, whoever rules**: its fix is
-filed first and the ticket stays unmerged
+a failure the PR did not cause is never waived, whoever rules**
 ([wake-actions](reference/wake-actions.md#merge-gate-holds)).
 
 ### Escalation format
 
 The owner reads one thing: the **status block** `scripts/status.sh --ledger
-<ledger> --quota <file> --instance <id>` prints. Post it as printed, never
-rewrite it, and post nothing on a wake whose `block` is empty. Only a new need
-sends a push.
+<ledger> --quota <file> --instance <id>` prints, posted and pushed as
+[status-block](reference/status-block.md#every-wake) says.
 A need names exactly one action, and a pick from fixed options (approve or deny
 a held call, a scope fork) also opens an AskUserQuestion dialog with the
 recommended option first.
-Record each escalation as a need with `ledger.sh need`, the permission hold and
-the stall at 3 included. Steps and the digest form:
-[reference/status-block.md](reference/status-block.md).
-
-A held call's need names the thread, the held call and your recommendation.
-Record the owner's answer with `ledger.sh --ledger <ledger> ruling <text>`,
-which dates it; how `--allow`, `--brief`, `--repo` and `--machine` scope it, and
-the fleet file's standing lines:
-[status-block](reference/status-block.md#a-ruling).
+Record each escalation as a need with `ledger.sh --ledger <ledger> need <key>
+--action <text> --reason <word>`, the permission hold and the stall at 3
+included
+([a need](reference/status-block.md#a-need)), and the owner's answer as a
+[ruling](reference/status-block.md#a-ruling). A reviewer's usage-limit notice
+is no escalation: record it as
+[a reviewer usage limit](reference/status-block.md#a-reviewer-usage-limit).
 
 ## Agy jobs
 

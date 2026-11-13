@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.30.1 (2026-11-13)
+
+### Bug Fixes
+
+- **setup-skills**: Accept harness exits 0 to 3, offer Body-check, Timebox and Paths, trim
+  branch-only prose ([#1224](https://github.com/Gharib89/skills/pull/1224),
+  [`2540200`](https://github.com/Gharib89/skills/commit/254020014a6d40d665cfdeee428d1c9216b4fcaa))
+
+
 ## v0.30.0 (2026-11-13)
 
 ### Features
