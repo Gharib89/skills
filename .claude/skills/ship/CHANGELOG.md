@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.60.1 (2026-11-13)
+
+### Bug Fixes
+
+- **ship**: ExitWorktree in the merge gate, name the issue-not-found stop, align existing PR
+  ([#1232](https://github.com/Gharib89/skills/pull/1232),
+  [`ec1d860`](https://github.com/Gharib89/skills/commit/ec1d8603e3243c569a8ea4f9f881455b833545b8))
+
+
 ## v0.60.0 (2026-11-13)
 
 ### Features
