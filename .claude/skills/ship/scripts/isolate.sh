@@ -19,16 +19,15 @@
 # as it found them. Carried files are gitignored
 # files copied IN one way; nothing is ever copied back.
 #
-# A session the host launched in a linked worktree (not the main checkout) on a
-# branch ending `-<n>`, whatever its slug, is adopted rather than refused
-# `existing branch`: clean and with no commits beyond origin/HEAD, its branch is
-# fast-forwarded there and printed as `worktree`/`branch`, `reused: true`, with
-# or without --in-place. Carry applies as for a new worktree (the host's
-# checkout holds no gitignored file), so --carry copies in; --in-place still
-# refuses it. One dirty is `launched worktree dirty: <path>`, one with commits
-# of its own `launched branch <branch> has commits beyond <base>`: a run never
-# adopts work it did not make. The folder and branch stay the host's, and
-# `cleanup` leaves both.
+# Run from a linked worktree a host made (not the main checkout, not one under
+# .claude/worktrees/) on a branch ending `-<n>`, whatever its slug, isolate
+# adopts it rather than refuse `existing branch`: it fast-forwards the branch to
+# origin/HEAD and prints that worktree and branch with `reused: true`, with or
+# without --in-place. --carry copies in as for a new worktree, since the host's
+# checkout holds no gitignored file (and stays a usage error with --in-place).
+# A dirty one is `launched worktree dirty: <path>`, one with commits of its own
+# `launched branch <branch> has commits beyond <base>`: a run never adopts work
+# it did not make. The folder and branch stay the host's; `cleanup` leaves both.
 #
 # `--rework` is the Rework run's form, attended only: the branch is the PR's,
 # already on origin, and `base` is origin's tip of it, which the rework's own
@@ -86,14 +85,17 @@ if $rework; then
   base=$(git -C "$root" rev-parse -q --verify "refs/remotes/origin/$branch") || ship_fail "no PR branch on origin: $branch"
 else
   base=$(cd "$root" && ship_base_ref) || ship_tooling "cannot resolve origin/HEAD"
-  # A linked worktree the host launched the session in, on a branch ending
-  # `-<n>`, is adopted whatever its slug: the git dir differs from the common
-  # dir only in a linked worktree, so the main checkout never is.
+  # A host-made linked worktree on a branch ending `-<n>` is adopted whatever its
+  # slug: the git dir differs from the common dir only in a linked worktree, so
+  # the main checkout never is, and one under the container is ship's own,
+  # which preflight and cleanup already govern.
+  here=$(git rev-parse --show-toplevel) && gd=$(git rev-parse --absolute-git-dir) \
+    && cd_=$(git rev-parse --path-format=absolute --git-common-dir) \
+    || ship_tooling "cannot read the current checkout"
   launched=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || launched=
-  if [[ $launched == *-"$n" ]] \
-    && [ "$(git rev-parse --absolute-git-dir 2>/dev/null)" != "$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" ]; then
-    here=$(git rev-parse --show-toplevel) || ship_tooling "not inside a git checkout"
-    [ -z "$(git status --porcelain)" ] || ship_fail "launched worktree dirty: $here"
+  if [[ $launched == *-"$n" ]] && [ "$gd" != "$cd_" ] && [[ $here != "$(ship_worktree_container)"/* ]]; then
+    st=$(git status --porcelain) || ship_tooling "cannot read the status of $here"
+    [ -z "$st" ] || ship_fail "launched worktree dirty: $here"
     git merge-base --is-ancestor HEAD "$base"
     case $? in
       0) ;;

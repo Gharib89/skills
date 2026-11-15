@@ -53,6 +53,12 @@ check "it removes neither the host's worktree nor its branch" "null null" \
   "$(jq -r '"\(.worktree) \(.branch)"' <<<"$out")"
 check "the host's worktree is still there" "feat/launch-name-7" "$(git -C "$host" rev-parse --abbrev-ref HEAD)"
 
+echo s > "$repo/secret.env"
+out=$(cd "$host" && bash "$m" 7 feat x --carry secret.env 2>/dev/null); rc=$?
+check_rc "--carry into an adopted worktree exits ok" 0 "$rc"
+check "the file is carried into it" "secret.env s" "$(jq -r '.carried | join(",")' <<<"$out") $(cat "$host/secret.env" 2>/dev/null)"
+rm -f "$repo/secret.env" "$host/secret.env"
+
 touch "$host/dirty"
 out=$(cd "$host" && bash "$m" 7 feat x 2>/dev/null); rc=$?
 check_rc "a dirty launched worktree is refused" 1 "$rc"
@@ -65,6 +71,7 @@ check_rc "a launched branch with its own commits is refused" 1 "$rc"
 check "the refusal names the branch" "launched branch feat/launch-name-7 has commits beyond origin/main" \
   "$(jq -r .error <<<"$out")"
 
+# `-80` is a near miss for issue 8: the suffix must be exactly `-<n>`.
 other=$tmp/host/t3-b
 launch "$other" feat/other-80
 out=$(cd "$other" && bash "$m" 8 feat x 2>/dev/null); rc=$?
@@ -72,9 +79,16 @@ check_rc "a launched branch not ending -<n> isolates as before" 0 "$rc"
 check "it is not adopted: a fresh worktree is made" "$repo/.claude/worktrees/x-8 false" \
   "$(jq -r '"\(.worktree) \(.reused)"' <<<"$out")"
 
+out=$(cd "$repo/.claude/worktrees/x-8" && bash "$m" 8 feat x 2>/dev/null); rc=$?
+check_rc "ship's own worktree under .claude/worktrees/ is not adopted" 1 "$rc"
+check "it is refused as before" "existing branch: feat/x-8" "$(jq -r .error <<<"$out")"
+
 g -C "$repo" switch -q -c feat/x-9 "$tip" >/dev/null 2>&1
 out=$(cd "$repo" && bash "$m" 9 feat x --in-place 2>/dev/null); rc=$?
 check_rc "the main checkout on a -<n> branch is not adopted" 1 "$rc"
 check "it is refused as before" "existing branch: feat/x-9" "$(jq -r .error <<<"$out")"
+out=$(cd "$repo" && bash "$m" 9 feat x 2>/dev/null); rc=$?
+check_rc "nor attended" 1 "$rc"
+check "the attended refusal is the same" "existing branch: feat/x-9" "$(jq -r .error <<<"$out")"
 
 finish

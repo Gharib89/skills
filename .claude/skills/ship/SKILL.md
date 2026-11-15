@@ -95,9 +95,9 @@ preflight proves and refuses and why the worktree is made the way it is.
 Run `preflight <issue>`, then `read-issue`, then `isolate`; the steps are in
 [phase-steps.md](reference/phase-steps.md#phase-0-isolate).
 **Done when:** `preflight` answered `ok: true`, `isolate` printed its path, any
-`## Worktree` `Bootstrap:` ran green, and, attended, `EnterWorktree` entered
-that path unless
-[adopted](reference/isolate.md#adopting-the-launched-worktree).
+`## Worktree` `Bootstrap:` ran green, and, attended, the session is in that path
+(`EnterWorktree`, or already there when
+[adopted](reference/isolate.md#adopting-the-launched-worktree)).
 
 **1 · Understand.** Too vague to plan from the `read-issue` result: stop
 `ambiguous`, with no claim taken. Otherwise **claim before any work**:

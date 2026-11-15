@@ -46,11 +46,10 @@ because an absolute main-checkout path silently edits the wrong tree.
 
 ## Adopting the launched worktree
 
-A session a host launched in its own linked worktree, on a branch ending
-`-<issue>`, is adopted, not refused: `isolate` fast-forwards it to
-`origin/HEAD` and prints it `reused: true`. A dirty one, one ahead of
-`origin/HEAD` and the main checkout are refused. Skip `EnterWorktree` and
-`ExitWorktree`; `cleanup` leaves folder and branch to the host.
+A host's worktree the session started in, on a branch ending `-<issue>`, is
+adopted: `isolate` fast-forwards it to `origin/HEAD`, `reused: true`. A dirty
+one or one ahead is refused; the main checkout is never adopted. The session is
+already there: skip `EnterWorktree` and `ExitWorktree`. `cleanup` leaves it.
 
 ## Entering the worktree
 
