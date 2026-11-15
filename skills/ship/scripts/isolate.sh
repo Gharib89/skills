@@ -90,10 +90,10 @@ else
   # the main checkout never is, and one under the container is ship's own,
   # which preflight and cleanup already govern.
   here=$(git rev-parse --show-toplevel) && gd=$(git rev-parse --absolute-git-dir) \
-    && cd_=$(git rev-parse --path-format=absolute --git-common-dir) \
+    && common=$(git rev-parse --path-format=absolute --git-common-dir) \
     || ship_tooling "cannot read the current checkout"
   launched=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || launched=
-  if [[ $launched == *-"$n" ]] && [ "$gd" != "$cd_" ] && [[ $here != "$(ship_worktree_container)"/* ]]; then
+  if [[ $launched == *-"$n" ]] && [ "$gd" != "$common" ] && [[ $here != "$(ship_worktree_container)"/* ]]; then
     st=$(git status --porcelain) || ship_tooling "cannot read the status of $here"
     [ -z "$st" ] || ship_fail "launched worktree dirty: $here"
     git merge-base --is-ancestor HEAD "$base"
