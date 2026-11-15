@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.63.0 (2026-11-15)
+
+### Features
+
+- **ship**: The agent runs the PR create as its own Bash call
+  ([#1247](https://github.com/Gharib89/skills/pull/1247),
+  [`f9e9cac`](https://github.com/Gharib89/skills/commit/f9e9cac4a81448f74cb210ce577a71726d0fd18e))
+
+
 ## v0.62.0 (2026-11-15)
 
 ### Features
