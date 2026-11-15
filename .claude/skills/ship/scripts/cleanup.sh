@@ -51,9 +51,12 @@ done
 # An in-place run has no worktree; its branch still has isolate's
 # `<type>/<slug>-<n>` shape. Matched with grep, since a for-each-ref glob's `*`
 # stops at a `/`, and held to that shape because `branch -D` would also take a
-# hand-made branch that merely ends in `-<n>`.
+# hand-made branch that merely ends in `-<n>`. A branch another linked worktree
+# holds is the host's (isolate adopted its worktree): its folder and branch are
+# the host's to remove, so it is skipped here.
 if [ "$branch" = null ]; then
-  branch=$(git -C "$root" for-each-ref --format='%(refname:short)' refs/heads/ | grep -m1 -E "^[^/]+/.+-$n\$")
+  branch=$(git -C "$root" for-each-ref --format='%(refname:short)%09%(worktreepath)' refs/heads/ \
+    | awk -F'\t' -v r="$root" '$2 == "" || $2 == r { print $1 }' | grep -m1 -E "^[^/]+/.+-$n\$")
   [ -n "$branch" ] || branch=null
 fi
 if [ "$branch" != null ]; then
