@@ -20,8 +20,8 @@
 # exit: 0 no line owed, or present · 1 a line owed and absent · 2 tooling
 set -uo pipefail
 
-# shellcheck source=scripts/pr-check-lib.sh
-source "$(dirname "${BASH_SOURCE[0]}")/pr-check-lib.sh"
+# shellcheck source=scripts/lib/pr-check.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/pr-check.sh"
 pr_check_init check-fix-scope
 
 type=${title%%[(:!]*}
@@ -31,7 +31,7 @@ changed=$(git -C "$root" diff --name-only "$base...HEAD") || exit 2
 touched=$(printf '%s\n' "$changed" | grep -E '^(skills|docs/agents)/' | head -n 1)
 [ -n "$touched" ] || { echo "fix-scope: the diff touches neither skills/ nor docs/agents/, no Fix scope: line owed."; exit 0; }
 
-stated=$(pr_body_has_line '' '^[ \t]*(([-*+]|[0-9]+[.)])[ \t]+)?fix scope:[ \t]*(procedure|domain)([^a-z]|$)')
+stated=$(pr_body_has_line '' '^[ \t]*(([-*+]|[0-9]+[.)])[ \t]+)?Fix scope:[ \t]*([Pp]rocedure|[Dd]omain)([^a-z]|$)')
 [ "$stated" = yes ] && { echo "fix-scope: Fix scope: line present."; exit 0; }
 
 printf 'fix-scope: a fix title touching %s needs a line starting `Fix scope:` naming `procedure` or `domain` in the PR body.\n' "$touched"

@@ -8,7 +8,7 @@
 #                                     (default: the checkout holding the check);
 #                                     exits 2 on an unset or unknown PR_BASE
 #   pr_body_has_line <heading> <ere>  prints yes or no: a body line matching the
-#                                     lowercased ERE, within the `## <heading>`
+#                                     ERE, within the `## <heading>`
 #                                     section, or anywhere when <heading> is empty
 
 # shellcheck disable=SC2034  # the variables are read by the sourcing check
@@ -34,6 +34,6 @@ pr_body_has_line() {
         if (j) line = substr(line, 1, i - 1) substr(line, i + 4 + j + 2)
         else { line = substr(line, 1, i - 1); cm = 1; break }
       }
-      if (tolower(line) ~ re) found = 1 }
+      if (line ~ re) found = 1 }
     END { print found ? "yes" : "no" }'
 }

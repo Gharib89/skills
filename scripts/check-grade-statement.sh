@@ -28,8 +28,8 @@
 # exit: 0 no line owed, or present · 1 a line owed and absent · 2 tooling
 set -uo pipefail
 
-# shellcheck source=scripts/pr-check-lib.sh
-source "$(dirname "${BASH_SOURCE[0]}")/pr-check-lib.sh"
+# shellcheck source=scripts/lib/pr-check.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/pr-check.sh"
 pr_check_init check-grade-statement
 
 changed=$(git -C "$root" diff --name-only "$base...HEAD") || exit 2
@@ -82,7 +82,7 @@ type=${title%%[(:!]*}
 [ -n "$desc_files$mech_files" ] || { echo "grade-statement: no description or mechanic contract changed, no Grade: line owed."; exit 0; }
 
 # A `Grade:` line, with its text, under `## Special things to note`.
-stated=$(pr_body_has_line 'Special things to note' '^[ \t]*([-*][ \t]+)?grade:[ \t]*[^ \t\r]')
+stated=$(pr_body_has_line 'Special things to note' '^[ \t]*([-*][ \t]+)?Grade:[ \t]*[^ \t\r]')
 [ "$stated" = yes ] && { echo "grade-statement: Grade: line present."; exit 0; }
 
 while IFS= read -r f; do
