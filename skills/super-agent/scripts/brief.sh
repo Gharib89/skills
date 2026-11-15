@@ -15,8 +15,8 @@
 # The `ship` form is the brief below. The `triage` form drops what only a ship run
 # acts on, the merge allowance, the standing waivers, the gate-hold line and the
 # PR-URL-and-gate-state ending, because a triage run opens no PR on its usual
-# route; it adds one line for the inline-fix route (a PR the triage run opens
-# itself gets a review round and green CI, then stops for the super agent to
+# route; it adds one line for the inline fix (a PR the triage run opens
+# itself to ship a small proven fix gets a review round and green CI, then stops for the super agent to
 # merge, since `merge.sh` has no gate record for it), and ends on the triage
 # outcome. Every shared line is the same in both forms.
 #
@@ -84,7 +84,7 @@ jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" --ar
         (if ($w | length) == 0 then "  (none)" else ($w | to_entries[] | "  \(.key + 1). \(.value.condition)") end),
         "Any hold outside the merge allowance and these waivers stops at the gate: end with the gate state and the hold named, and do not work around it; \(if $ruler == "owner" then "the super agent escalates it to the owner" else "the super agent rules on it and reports to the owner" end)."
       else
-        "If the inline-fix route opens a PR, it gets a review round and green CI, then stops for the super agent to merge: do not run `merge.sh`, which has no gate record for it."
+        "If you open a PR yourself to ship a small proven fix inline, it gets a review round and green CI, then stops for the super agent to merge: do not run `merge.sh`, which has no gate record for it."
       end),
       "A ruling from the super agent or the owner arrives in your thread: act on it, and never write it into a PR body (the body records what you did and checked).",
       "Commands harmless to run (reads, tests, the repo'"'"'s own checks) need no hold.",
@@ -95,6 +95,6 @@ jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" --ar
       (if $note == "" then empty else "Note for this ticket:", "  \($note)" end),
       "A turn that ends only to wait on your own background work (a check, a CI wait, a subagent) ends with this line, word for word, as its last line: `\($wl)` The watcher reads it as still working and wakes the super agent for no stall until the stall window has passed. \(if $ship then "Your final message is the PR URL and the gate state below, never this line." else "Your final message is the triage outcome, never this line." end)",
       "Work in the worktree you start in, on the branch it holds, and make no other: the PR is found by that branch.",
-      (if $ship then "End your last message with the PR URL and the gate state." else "End your last message with the triage outcome: the labels applied and any tickets filed, plus the PR URL when the inline-fix route opened one." end)
+      (if $ship then "End your last message with the PR URL and the gate state." else "End your last message with the triage outcome: the labels applied and any tickets filed, plus the PR URL when you opened one." end)
     ] | join("\n")),
     waivers: (if $ship then ($w | length) else 0 end), allowed: ($al | length), rulings: ($rl | length), lines: ($fl | length), gate_ruler: $ruler, skill: $skill}'

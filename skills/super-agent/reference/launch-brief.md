@@ -11,12 +11,12 @@ it chose; no `--skill` is `ship`). The **ship form** is the one below. The
 **triage form** is the same brief without what only a ship run acts on: no merge
 allowance, no standing waivers, no gate-hold line and no PR-URL-and-gate-state
 ending, since a triage run opens no PR on its usual route. It adds one line for
-the inline-fix route (a PR the triage run opens itself gets a review round and
-green CI, then stops for the super agent to merge, and the run does not run
-`merge.sh`, which has no gate record for it), ends its waiting line on "the
-triage outcome" in place of the PR sentence, and ends on the triage outcome: the
-labels applied, any tickets filed, and the PR URL when the inline-fix route
-opened one. Every other line is shared. Its `waivers` count is 0.
+an inline fix (a PR the triage run opens itself to ship a small proven fix gets
+a review round and green CI, then stops for the super agent to merge, and the
+run does not run `merge.sh`, which has no gate record for it), ends its waiting
+line on "the triage outcome" in place of the PR sentence, and ends on the triage
+outcome: the labels applied, any tickets filed, and the PR URL when it opened
+one. Every other line is shared. Its `waivers` count is 0.
 
 The ship form carries the **merge allowance** (merge on a clean `/ship` gate,
 nothing wider), the numbered **standing waivers**, the shared-machine lines
