@@ -165,6 +165,19 @@ out=$( cd "$repo" && bash "$open" none --verify 2>/dev/null ); rc=$?
 check_rc "verify for a free-text run checks no closing link" 0 "$rc"
 check "and makes no body call" 'host_pr_for_branch host_pr_get' "$(calls)"
 
+# On Azure DevOps the work item links the PR, so the host's create body is the
+# body unchanged and the verify reads it as carrying the link.
+reset
+git -C "$repo" remote set-url origin https://dev.azure.com/org/proj/_git/repo
+fx host_pr_for_branch '{"number": 12, "state": "open", "head_sha": "x"}'
+pr_get false main '## Summary'
+fx host_pr_create_body "$(jq -n '{body: "## Summary"}')"
+out=$(verify); rc=$?
+check_rc "verify on an Azure DevOps checkout exits 0" 0 "$rc"
+check "it loaded the Azure DevOps host" 'ado' "$(cut -d' ' -f1 "$SHIP_FAKE/loaded")"
+check "it answers with the PR" 12 "$(jq -r .number <<<"$out")"
+git -C "$repo" remote set-url origin https://github.com/owner/repo.git
+
 check_rc "--verify takes no title" 2 "$( cd "$repo" && bash "$open" 7 --verify --title x >/dev/null 2>&1; echo $? )"
 check_rc "--verify and --rework are separate forms" 2 "$( cd "$repo" && bash "$open" 7 --verify --rework >/dev/null 2>&1; echo $? )"
 
