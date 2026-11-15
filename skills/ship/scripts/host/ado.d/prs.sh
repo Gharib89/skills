@@ -13,7 +13,9 @@ host_pr_create_cmd() { # <head> <base> <title> <body-file> <issue>
   local c
   c=$(printf 'az repos pr create --org %q --project %q --repository %q --source-branch %q --target-branch %q --title %q' \
     "$SHIP_ORG_URL" "$SHIP_PROJECT" "$SHIP_REPO" "$1" "$2" "$3")
-  c+=$(printf ' --description "$(cat %q)" --draft false' "$4")
+  # `@<file>`: az reads an argument's value from the file, so the command holds
+  # no `$(...)`, which a Bash permission check may refuse in an unattended run.
+  c+=$(printf ' --description %q --draft false' "@$4")
   [ -z "$5" ] || c+=$(printf ' --work-items %q' "$5")
   jq -n --arg c "$c" '{command: $c}'
 }

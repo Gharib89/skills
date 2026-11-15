@@ -78,11 +78,13 @@ FAKE
 
   cmd=$(host_pr_create_cmd fix/a-7 main "$title" "$body" 7 | jq -r .command)
   check "ado command: the create is az repos pr create itself, first on the line" "az repos pr create" "${cmd:0:18}"
-  check "ado command: run as printed, az gets the fields today's adapter sent" \
+  check "ado command: run as printed, az gets the old adapter's fields, the description as @<file>" \
     "$(printf '%s\n' repos pr create --org https://dev.azure.com/org --project proj --repository repo \
-        --source-branch fix/a-7 --target-branch main --title "$title" --description "$(cat "$body")" \
+        --source-branch fix/a-7 --target-branch main --title "$title" --description "@$body" \
         --draft false --work-items 7)" \
     "$(argv "$cmd")"
+  check "ado command: no command substitution, which a permission check may refuse" "" \
+    "$(grep -F '$(' <<<"$cmd")"
   cmd=$(host_pr_create_cmd fix/a main "$title" "$body" "" | jq -r .command)
   check "ado command: no issue, no work item" "" "$(argv "$cmd" | grep -x -- --work-items)"
 
