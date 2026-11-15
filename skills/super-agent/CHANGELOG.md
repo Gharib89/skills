@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.23.0 (2026-11-15)
+
+### Features
+
+- **super-agent**: A /triage launch brief drops ship's merge block
+  ([#1246](https://github.com/Gharib89/skills/pull/1246),
+  [`f099119`](https://github.com/Gharib89/skills/commit/f099119324094b400c99999bbab7b28a11e75692))
+
+
 ## v0.22.0 (2026-11-13)
 
 ### Features
