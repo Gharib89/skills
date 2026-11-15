@@ -170,6 +170,36 @@ for v in '"operator"' 7 '""'; do
   check "a ruler of $v exits 2 naming the field" "2 1" "$rc $(jq -r .error <<<"$out" | grep -c 'merge_gate_ruler')"
 done
 
+# --- the owner skill picks the form: ship's by default, a triage brief without the merge block ---
+# golden: what the script printed before `--skill` existed, on this fleet, ledger, repo, machine and note
+# (the allowed-call line carries the ruling's date, so dates are masked on both sides)
+gt=$tmp/golden; mkdir -p "$gt"
+jq -n --arg a "$w1" --arg b "$w2" '{machines: {box: {brief: ["Box fleet line."]}}, repos: {"acme/widgets": {brief: ["Widgets fleet line."]}},
+  waivers: [{id: "a", condition: $a}, {id: "b", condition: $b}]}' > "$gt/fleet.json"
+bash "$s/ledger.sh" --ledger "$gt/led.json" ruling "deny nothing" --allow "git push to the branch" >/dev/null
+bash "$s/ledger.sh" --ledger "$gt/led.json" ruling "Everywhere ruling." --brief >/dev/null
+bash "$s/ledger.sh" --ledger "$gt/led.json" ruling "Widgets on box ruling." --brief --repo acme/widgets --machine box >/dev/null
+G() { bash "$s/brief.sh" --fleet "$gt/fleet.json" --ledger "$gt/led.json" --repo acme/widgets --machine box --note "Check the migration first." "$@" | sed -E 's/[0-9]{4}-[0-9]{2}-[0-9]{2}/DATE/g'; }
+golden=$(sed -E 's/[0-9]{4}-[0-9]{2}-[0-9]{2}/DATE/g' tests/fixtures/super-agent/brief-ship.golden.json)
+# the answer gained a `skill` field, so the comparison drops it: every older field is the same bytes
+check "no --skill prints byte for byte what the script printed before" "$golden" "$(G | jq -c 'del(.skill)')"
+check "--skill ship prints the same" "$golden" "$(G --skill ship | jq -c 'del(.skill)')"
+check "the answer names the form" 'ship triage' "$(G | jq -r .skill) $(G --skill triage | jq -r .skill)"
+check_rc "--skill bogus exits 2" 2 "$(G --skill bogus >/dev/null 2>&1; echo $?)"
+check_rc "--skill with no value exits 2" 2 "$(bash "$s/brief.sh" --fleet "$gt/fleet.json" --ledger "$gt/led.json" --skill >/dev/null 2>&1; echo $?)"
+out=$(G --skill triage); tb=$(jq -r .brief <<<"$out")
+check "a triage brief carries no merge allowance, standing waiver, gate hold or PR-and-gate ending" 0 \
+  "$(grep -cE "Merge allowance|Standing waivers|Codex answers|A live end-to-end|Any hold outside|PR URL and the gate state|^End your last message with the PR URL" <<<"$tb")"
+check "and counts no waivers" 0 "$(jq .waivers <<<"$out")"
+check "it names the inline-fix route: review round, green CI, then the super agent merges, no merge.sh" 1 \
+  "$(grep -c '^If the inline-fix route opens a PR, it gets a review round and green CI, then stops for the super agent to merge: do not run `merge.sh`, which has no gate record for it\.$' <<<"$tb")"
+check "it ends on the triage outcome" "End your last message with the triage outcome: the labels applied and any tickets filed, plus the PR URL when the inline-fix route opened one." "$(tail -1 <<<"$tb")"
+check "its waiting line stays, ending on the triage outcome in place of the PR sentence" '1 1' \
+  "$(grep -cF "ends with this line, word for word, as its last line: \`$wl\`" <<<"$tb") $(grep -c 'Your final message is the triage outcome, never this line\.$' <<<"$tb")"
+check "every shared line stays: ruling, harmless, lock, allowed, rulings, fleet lines, note, worktree" 11 \
+  "$(grep -cE "^A ruling from the super agent|^Commands harmless|^Other runs share this machine|^Calls the owner allowed|^  Run .git push to the branch|^Owner rulings:|^  .*Everywhere ruling|^Lines for this repo and machine:|^Note for this ticket:|^  Check the migration first|^Work in the worktree you start in" <<<"$tb")"
+check "the shared lines match the ship brief's" "" "$(diff <(jq -r .brief <<<"$(G)" | grep -E '^(A ruling from|Commands harmless|Other runs share|Calls the owner|Owner rulings|Lines for this|Note for this|Work in the worktree)') <(grep -E '^(A ruling from|Commands harmless|Other runs share|Calls the owner|Owner rulings|Lines for this|Note for this|Work in the worktree)' <<<"$tb"))"
+
 # --- a supervisor's ruling never goes into a PR body ---------------------------------
 check "every brief tells the run to keep a ruling out of the PR body" 1 \
   "$(B | jq -r .brief | grep -c '^A ruling from the super agent or the owner arrives in your thread: act on it, and never write it into a PR body')"

@@ -4,12 +4,21 @@
 # word and no launch rewords them.
 #
 #   brief --fleet <file> --ledger <file> [--repo <owner/name>] [--machine <key>]
-#         [--note <text>]
+#         [--note <text>] [--skill ship|triage]
 #
 # --repo and --machine (the fleet key of the machine the thread runs on) select
 # the scoped rulings and the fleet's `repos.<r>.brief` and `machines.<m>.brief`
 # lines; without them only unscoped rulings print and the lock line names
 # `<repo>`. --note adds one `Note for this ticket:` line.
+#
+# --skill is the owner skill the launch invokes (`ship`, the default, or `triage`).
+# The `ship` form is the brief below. The `triage` form drops what only a ship run
+# acts on, the merge allowance, the standing waivers, the gate-hold line and the
+# PR-URL-and-gate-state ending, because a triage run opens no PR on its usual
+# route; it adds one line for the inline-fix route (a PR the triage run opens
+# itself gets a review round and green CI, then stops for the super agent to
+# merge, since `merge.sh` has no gate record for it), and ends on the triage
+# outcome. Every shared line is the same in both forms.
 #
 # The brief also carries the waiting line (`sa_waiting_line` in `_lib.sh`), the fixed
 # last line of a turn that ends only to wait on the run's own background work.
@@ -24,16 +33,17 @@
 # `Owner rulings:`, each word for word. A fleet file with no waivers says so, so a
 # hold is never read as waived.
 #
-# stdout: {brief, waivers, allowed, rulings, lines, gate_ruler}: `brief` the text to send,
-#         `waivers`, `allowed`, `rulings` and `lines` how many of each it carries,
-#         `gate_ruler` `owner` or `super-agent`
+# stdout: {brief, waivers, allowed, rulings, lines, gate_ruler, skill}: `brief` the text to send,
+#         `waivers`, `allowed`, `rulings` and `lines` how many of each it carries
+#         (`waivers` is 0 for a triage brief), `gate_ruler` `owner` or `super-agent`,
+#         `skill` the form printed
 # exit: 0 a brief · 2 usage, or a fleet file or ledger that is unreadable
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: brief --fleet <file> --ledger <file> [--repo <owner/name>] [--machine <key>] [--note <text>]'
+usage='usage: brief --fleet <file> --ledger <file> [--repo <owner/name>] [--machine <key>] [--note <text>] [--skill ship|triage]'
 sa_help "$usage" "$@"
-fleet='' ledger='' repo='' machine='' note=''
+fleet='' ledger='' repo='' machine='' note='' skill=ship
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2 ;;
@@ -41,10 +51,12 @@ while [ $# -gt 0 ]; do
     --repo) sa_flag_value "$usage" "${2:-}"; repo=$2; shift 2 ;;
     --machine) sa_flag_value "$usage" "${2:-}"; machine=$2; shift 2 ;;
     --note) sa_flag_value "$usage" "${2:-}"; note=$2; shift 2 ;;
+    --skill) sa_flag_value "$usage" "${2:-}"; skill=$2; shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
 done
 [ -n "$fleet" ] && [ -n "$ledger" ] || sa_tooling "$usage"
+case $skill in ship | triage) ;; *) sa_tooling "$usage" ;; esac
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file, run setup"
 jq -e '((.waivers // []) | type) == "array"' "$fleet" >/dev/null 2>&1 || sa_tooling "$fleet: not a fleet file (waivers must be an array)"
 jq -e '(.merge_gate_ruler // "owner") | IN("owner", "super-agent")' "$fleet" >/dev/null 2>&1 \
@@ -55,7 +67,7 @@ jq -e '((.repos // {}) | type == "object")
 allowed=$(bash "$(dirname "${BASH_SOURCE[0]}")/ledger.sh" --ledger "$ledger" allowed) || sa_tooling "cannot read the allowed calls from $ledger"
 briefed=$(bash "$(dirname "${BASH_SOURCE[0]}")/ledger.sh" --ledger "$ledger" briefed) || sa_tooling "cannot read the rulings from $ledger"
 
-jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" --arg repo "$repo" --arg machine "$machine" --arg note "$note" --arg wl "$sa_waiting_line" \
+jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" --arg repo "$repo" --arg machine "$machine" --arg note "$note" --arg skill "$skill" --arg wl "$sa_waiting_line" \
   "$sa_jq_norm"'
   ($f[0].waivers // []) as $w | $a.allowed as $al
   | [$r.briefed[] | select(((.repo // null) == null or (.repo | norm_repo) == ($repo | norm_repo))
@@ -64,11 +76,16 @@ jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" --ar
       (($f[0].machines // {})[$machine].brief // [])[]?]) as $fl
   | ($f[0].merge_gate_ruler // "owner") as $ruler
   | ($repo | norm_repo | split("/") | join("-")) as $lock
+  | ($skill == "ship") as $ship
   | {brief: ([
-      "Merge allowance: merge when /ship'"'"'s merge gate is clean, nothing wider.",
-      "Standing waivers, the only holds you may pass without stopping:",
-      (if ($w | length) == 0 then "  (none)" else ($w | to_entries[] | "  \(.key + 1). \(.value.condition)") end),
-      "Any hold outside the merge allowance and these waivers stops at the gate: end with the gate state and the hold named, and do not work around it; \(if $ruler == "owner" then "the super agent escalates it to the owner" else "the super agent rules on it and reports to the owner" end).",
+      (if $ship then
+        "Merge allowance: merge when /ship'"'"'s merge gate is clean, nothing wider.",
+        "Standing waivers, the only holds you may pass without stopping:",
+        (if ($w | length) == 0 then "  (none)" else ($w | to_entries[] | "  \(.key + 1). \(.value.condition)") end),
+        "Any hold outside the merge allowance and these waivers stops at the gate: end with the gate state and the hold named, and do not work around it; \(if $ruler == "owner" then "the super agent escalates it to the owner" else "the super agent rules on it and reports to the owner" end)."
+      else
+        "If the inline-fix route opens a PR, it gets a review round and green CI, then stops for the super agent to merge: do not run `merge.sh`, which has no gate record for it."
+      end),
       "A ruling from the super agent or the owner arrives in your thread: act on it, and never write it into a PR body (the body records what you did and checked).",
       "Commands harmless to run (reads, tests, the repo'"'"'s own checks) need no hold.",
       "Other runs share this machine: stop only the processes you started, by their PID (never `pkill` or `pgrep` by name or pattern), and run the heavy check (the full suite, a container) under a per-repo lock and a memory cap: `flock /tmp/super-agent-\(if $lock == "" then "<repo>" else $lock end).lock systemd-run --user --scope -q -p MemoryMax=<G>G -p MemorySwapMax=0 <command>`.",
@@ -76,8 +93,8 @@ jq -cn --slurpfile f "$fleet" --argjson a "$allowed" --argjson r "$briefed" --ar
       (if ($rl | length) == 0 then empty else "Owner rulings:", ($rl[] | "  \(.date): \(.text)") end),
       (if ($fl | length) == 0 then empty else "Lines for this repo and machine:", ($fl[] | "  \(.)") end),
       (if $note == "" then empty else "Note for this ticket:", "  \($note)" end),
-      "A turn that ends only to wait on your own background work (a check, a CI wait, a subagent) ends with this line, word for word, as its last line: `\($wl)` The watcher reads it as still working and wakes the super agent for no stall until the stall window has passed. Your final message is the PR URL and the gate state below, never this line.",
+      "A turn that ends only to wait on your own background work (a check, a CI wait, a subagent) ends with this line, word for word, as its last line: `\($wl)` The watcher reads it as still working and wakes the super agent for no stall until the stall window has passed. \(if $ship then "Your final message is the PR URL and the gate state below, never this line." else "Your final message is the triage outcome, never this line." end)",
       "Work in the worktree you start in, on the branch it holds, and make no other: the PR is found by that branch.",
-      "End your last message with the PR URL and the gate state."
+      (if $ship then "End your last message with the PR URL and the gate state." else "End your last message with the triage outcome: the labels applied and any tickets filed, plus the PR URL when the inline-fix route opened one." end)
     ] | join("\n")),
-    waivers: ($w | length), allowed: ($al | length), rulings: ($rl | length), lines: ($fl | length), gate_ruler: $ruler}'
+    waivers: (if $ship then ($w | length) else 0 end), allowed: ($al | length), rulings: ($rl | length), lines: ($fl | length), gate_ruler: $ruler, skill: $skill}'

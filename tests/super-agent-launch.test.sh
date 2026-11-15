@@ -104,6 +104,12 @@ issue 11 "Something is off" needs-triage
 out=$(L 11)
 check "a needs-triage ticket takes /triage, a triage/ branch and the default size M" '["/triage 11","triage/something-is-off-11","M","default"]' \
   "$(jq -c '[(.args.message | split("\n")[0]), .args.workspaceStrategy.branch, .size, .size_source]' <<<"$out")"
+check "its message carries the triage brief: the inline-fix line, no merge allowance, no PR-and-gate ending" '1 0 0' \
+  "$(jq -r .args.message <<<"$out" | grep -c '^If the inline-fix route opens a PR') $(jq -r .args.message <<<"$out" | grep -c 'Merge allowance') $(jq -r .args.message <<<"$out" | grep -c 'PR URL and the gate state')"
+reset; issue 12 "Another one" ready-for-agent
+msg=$(L 12 | jq -r .args.message)
+check "a ready-for-agent ticket's message still carries the ship brief" '1 0' \
+  "$(grep -c '^Merge allowance' <<<"$msg") $(grep -c '^If the inline-fix route' <<<"$msg")"
 
 # --- the flags place and route take pass through -------------------------------------
 sa_load 9 12288

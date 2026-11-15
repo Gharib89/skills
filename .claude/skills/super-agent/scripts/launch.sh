@@ -221,7 +221,7 @@ if [ "${#slug}" -gt 32 ]; then slug=${slug:0:32}; slug=${slug%-*}; fi
 type=$(jq -r 'if index("bug") then "fix" elif index("documentation") then "docs" elif index("refactor") then "refactor" elif index("chore") then "chore" else "feat" end' <<<"$labels")
 [ "$kind" = ship ] || type=triage
 branch="$type/$slug-$number"
-sub brief --fleet "$fleet" --ledger "$ledger" --repo "$repo" --machine "$pm" ${note:+--note "$note"}
+sub brief --fleet "$fleet" --ledger "$ledger" --repo "$repo" --machine "$pm" --skill "$kind" ${note:+--note "$note"}
 [ "$rc" = 0 ] && brief=$(jq -er '.brief | select(type == "string" and length > 0)' <<<"$out" 2>/dev/null) || sa_tooling "brief gave no answer"
 
 # `record` is what the ledger entry carries: the fleet's machine key and the
