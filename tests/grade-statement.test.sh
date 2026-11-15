@@ -49,6 +49,8 @@ grade "$r" 'feat(demo): reword' "$without_line"
 check_rc "a feat title does not excuse a changed description" 1 "$rc"
 grade "$r" 'fix(demo): reword' "$line_elsewhere"
 check_rc "a Grade: line under another heading does not count" 1 "$rc"
+grade "$r" 'fix(demo): reword' $'## Special things to note\n\n- grade: patch\n\n## Needs attention\n'
+check_rc "a lowercase grade: label does not count" 1 "$rc"
 grade "$r" 'fix(demo): reword' $'## Special things to note\n\n<!-- Grade: patch -->\n\n## Needs attention\n'
 check_rc "a Grade: line inside an HTML comment does not count" 1 "$rc"
 

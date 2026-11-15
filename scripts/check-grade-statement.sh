@@ -28,12 +28,9 @@
 # exit: 0 no line owed, or present · 1 a line owed and absent · 2 tooling
 set -uo pipefail
 
-title=${PR_TITLE:-}
-body=${PR_BODY:-}
-base=${PR_BASE:-}
-root=${PR_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
-[ -n "$base" ] || { echo "check-grade-statement: PR_BASE is not set" >&2; exit 2; }
-git -C "$root" rev-parse --verify -q "$base^{commit}" >/dev/null || { printf 'check-grade-statement: no such ref: %s\n' "$base" >&2; exit 2; }
+# shellcheck source=scripts/lib/pr-check.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/pr-check.sh"
+pr_check_init check-grade-statement
 
 changed=$(git -C "$root" diff --name-only "$base...HEAD") || exit 2
 
@@ -84,21 +81,8 @@ type=${title%%[(:!]*}
 
 [ -n "$desc_files$mech_files" ] || { echo "grade-statement: no description or mechanic contract changed, no Grade: line owed."; exit 0; }
 
-# A `Grade:` line, with its text, between the heading and the next `##`,
-# outside an HTML comment, which renders as nothing.
-stated=$(printf '%s\n' "$body" | awk '
-  /^## / { on = ($0 ~ /^## Special things to note[ \t]*\r?$/); next }
-  !on { next }
-  { line = $0
-    while (1) {
-      if (cm) { i = index(line, "-->"); if (!i) { line = ""; break } line = substr(line, i + 3); cm = 0 }
-      i = index(line, "<!--"); if (!i) break
-      j = index(substr(line, i + 4), "-->")
-      if (j) line = substr(line, 1, i - 1) substr(line, i + 4 + j + 2)
-      else { line = substr(line, 1, i - 1); cm = 1; break }
-    }
-    if (line ~ /^[ \t]*([-*][ \t]+)?Grade:[ \t]*[^ \t\r]/) found = 1 }
-  END { print found ? "yes" : "no" }')
+# A `Grade:` line, with its text, under `## Special things to note`.
+stated=$(pr_body_has_line 'Special things to note' '^[ \t]*([-*][ \t]+)?Grade:[ \t]*[^ \t\r]')
 [ "$stated" = yes ] && { echo "grade-statement: Grade: line present."; exit 0; }
 
 while IFS= read -r f; do
