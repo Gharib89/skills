@@ -54,11 +54,13 @@ host_pr_get() {
                 elif .mergeable == true then "clean" else "unknown" end)}'
 }
 
+# `tojson`, because gh's --jq prints a null result as an empty line, not `null`,
+# and a branch with no PR yet must answer the contract's `null` (#1239).
 host_pr_for_branch() { # <branch>
   # paged: per_page=1 sorted newest first: only the branch's latest PR is wanted
   api "$R/pulls" -X GET -f state=all -f "head=$SHIP_OWNER:$1" -f sort=created -f direction=desc -f per_page=1 \
     --jq 'first | if . == null then null else {number, state: (if .merged_at != null then "merged" elif .state == "open" then "open" else "closed" end),
-      head_sha: .head.sha} end'
+      head_sha: .head.sha} end | tojson'
 }
 
 # Check runs plus classic commit statuses, one row per name, latest wins. Within

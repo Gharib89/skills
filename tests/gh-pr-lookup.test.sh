@@ -45,4 +45,16 @@ check "branch lookup: state is a field" yes "$(has_pair "$call" -f state=all)"
 check "branch lookup: head is a field, unescaped" yes "$(has_pair "$call" -f "head=owner:$slug")"
 check "branch lookup: no query string on the route" "" "$(printf '%s' "$call" | grep -F '?')"
 
+# A branch with no PR answers the contract's `null`. The fake applies the --jq
+# filter to an empty list the way gh 2.104.0 does (measured: a null result
+# prints as an empty line, a string raw), so a filter that ends on a bare null
+# answers nothing.
+cat > "$bin/gh" <<'FAKE'
+#!/usr/bin/env bash
+while [ $# -gt 0 ]; do [ "$1" = --jq ] && { f=$2; break; }; shift; done
+printf 'HTTP/2.0 200 OK\r\n\r\n'
+jq -c "$f" <<<'[]' | while read -r v; do [ "$v" = null ] && echo || jq -r . <<<"$v"; done
+FAKE
+check "branch lookup: no PR on the branch answers null" null "$(host_pr_for_branch "$slug")"
+
 finish
