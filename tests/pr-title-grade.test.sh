@@ -43,7 +43,7 @@ grade() { # <word|none>: the Run file's recorded grade
   mkdir -p "$records/ship-7"
   printf '# Run 7\n\n## Grade\n\nGrade: %s\n\n## Notes\n' "$1" > "$runfile"
 }
-reset() { rm -f "$SHIP_FAKE"/*; git -C "$bare" update-ref -d refs/heads/feat/thing-7 2>/dev/null; }
+reset() { rm -f "$SHIP_FAKE"/*; git -C "$bare" update-ref -d refs/heads/feat/thing-7 2>/dev/null; printf "null\n" > "$SHIP_FAKE/host_pr_for_branch.1.json"; }
 opn()   { ( cd "$repo" && bash "$open" "${1:-7}" --title "$2" --body-file "$work/body.md" 2>/dev/null ); }
 pushed() { git -C "$bare" rev-parse -q --verify refs/heads/feat/thing-7 >/dev/null && echo pushed || echo none; }
 
@@ -61,7 +61,7 @@ check "open-pr: no host call is made" "" "$(cat "$SHIP_FAKE/calls" 2>/dev/null)"
 reset; grade minor
 out=$(opn 7 "feat(ship): a new thing"); rc=$?
 check_rc "open-pr: a feat title against Grade: minor exits 0" 0 "$rc"
-check "open-pr: it pushes and creates" "pushed host_pr_create" "$(pushed) $(cut -f1 "$SHIP_FAKE/calls" | paste -sd' ')"
+check "open-pr: it pushes and prepares the create" "pushed host_pr_for_branch host_pr_create_body host_pr_create_cmd" "$(pushed) $(cut -f1 "$SHIP_FAKE/calls" | paste -sd' ')"
 
 reset; grade none
 opn 7 "fix(ship): a small thing" >/dev/null; rc=$?

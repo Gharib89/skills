@@ -275,8 +275,10 @@ on.
 
 Open it with `$S/open-pr.sh none --title "<subject>" --body-file <body>`, a
 Conventional-Commit subject honouring the profile's `Subject constraints:`
-(`chore(skills): refresh derived skills` where it has none), then
-`$S/read-pr.sh <pr>`. Hand the owner the link and this line, with the
+(`chore(skills): refresh derived skills` where it has none); run the `create`
+command it prints, as printed, as its own Bash call, so Claude Code counts the
+PR; then `$S/open-pr.sh none --verify` for the PR and `$S/read-pr.sh <pr>`. Hand
+the owner the link and this line, with the
 `<worktree>` and `<branch>` step 1 noted, to run from the main checkout after
 the merge. It removes the refresh's worktree, local branch and remote branch:
 the repo's own merge may leave the remote one, and `cleanup.sh` deletes no

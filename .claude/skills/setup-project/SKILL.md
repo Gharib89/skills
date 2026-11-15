@@ -237,16 +237,21 @@ reasons that are not, which the next run takes up.
 In a repo that had no commits, push `main`. On
 `chore/setup-project` with commits beyond the default branch, open its PR
 through Ship's mechanics, which push the branch first and, when an earlier run
-already opened its PR, return that one:
+already opened its PR, return that one. `open-pr.sh` prints a `create` command
+where no PR is open yet; `<create>` is that command, run as printed, as its own
+Bash call, so Claude Code counts the PR, and skipped where none was printed.
+The `--verify` line then answers the PR either way:
 
 ```sh
 .claude/skills/ship/scripts/open-pr.sh none --title "chore: set up this repo for Ship" --body-file <body>
+<create>
+.claude/skills/ship/scripts/open-pr.sh none --verify
 .claude/skills/ship/scripts/update-pr-body.sh <pr> --section "Setup status" --body-file <table>
 ```
 
 `<body>` and `<table>` are files the run writes first: the body follows the
 repo's PR template with the final status table under `## Setup status`, and
-`<table>` holds the table alone. `<pr>` is the `number` in `open-pr.sh`'s
+`<table>` holds the table alone. `<pr>` is the `number` in `--verify`'s
 answer, which is the earlier run's PR when one is open, so the second command
 rewrites the table there. With no commits beyond the default branch, there is
 nothing to review: switch back and delete the branch.

@@ -34,7 +34,7 @@ checker() { printf '#!/bin/sh\n%s\n' "$1" > "$repo/scripts/check-outline.sh"; ch
 checker 'n=$(awk '\''/^```diff/ { f = 1; next } /^```/ { f = 0 } f'\'' "$1" | wc -l)
 [ "$n" -le 3 ] || { echo "pr-body: change outline: the Shape fence is $n lines, over 3"; exit 1; }'
 profile() { { printf '## PR\n\nTemplate: None.\n'; printf '%s\n' "$@"; printf '\n## Public surface\n\nDefault.\n'; } > "$repo/docs/agents/ship.md"; }
-reset()   { rm -f "$SHIP_FAKE"/*; git -C "$bare" update-ref -d refs/heads/feat/thing-7 2>/dev/null; }
+reset()   { rm -f "$SHIP_FAKE"/*; git -C "$bare" update-ref -d refs/heads/feat/thing-7 2>/dev/null; printf "null\n" > "$SHIP_FAKE/host_pr_for_branch.1.json"; }
 opn()     { printf '%s' "$1" > "$work/body.md"; ( cd "$repo" && bash "$open" 7 --title "fix: a thing" --body-file "$work/body.md" 2>/dev/null ); }
 pushed()  { git -C "$bare" rev-parse -q --verify refs/heads/feat/thing-7 >/dev/null && echo pushed || echo none; }
 created() { cut -f1 "$SHIP_FAKE/calls" 2>/dev/null | paste -sd' '; }
@@ -55,7 +55,7 @@ check "the checker's stderr file is removed" "" "$(ls -A "$work/tmp")"
 reset
 opn "$short" >/dev/null; rc=$?
 check_rc "a body the checker accepts opens" 0 "$rc"
-check "it pushes and creates" "pushed host_pr_create" "$(pushed) $(created)"
+check "it pushes and prepares the create" "pushed host_pr_for_branch host_pr_create_body host_pr_create_cmd" "$(pushed) $(created)"
 
 checker 'echo oops >&2
 exit 2'

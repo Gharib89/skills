@@ -28,12 +28,12 @@ The block's `Trigger:` fixes how a round starts; the brand fixes nothing.
   of the phrase for a reviewer a comment triggers), and `request-review`
   confirms the request queued; a request it cannot confirm exits 1, and the
   reviewer is `not reviewed: never-queued`, with no poll.
-  Under the host's own request call, round 1 first polls `--since` `open-pr`'s
-  `created_at` at `--timeout 0`: a round the host opened unbidden with the PR (a
-  Copilot ruleset, `review_on_push: false`) that has landed is round 1, and the
-  request is sent only where none has.
-- **`auto-once`**: nothing to request; poll once with `--since` `open-pr`'s
-  `created_at`. That one round is all there is.
+  Under the host's own request call, round 1 first polls `--since` `open-pr
+  --verify`'s `created_at` at `--timeout 0`: a round the host opened unbidden
+  with the PR (a Copilot ruleset, `review_on_push: false`) that has landed is
+  round 1, and the request is sent only where none has.
+- **`auto-once`**: nothing to request; poll once with `--since` `open-pr
+  --verify`'s `created_at`.
 - **`on-push`**: every push earns a round; poll with no `--since`, which counts
   a round only on the current head.
 
