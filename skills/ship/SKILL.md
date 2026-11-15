@@ -96,7 +96,7 @@ Run `preflight <issue>`, then `read-issue`, then `isolate`; the steps are in
 [phase-steps.md](reference/phase-steps.md#phase-0-isolate).
 **Done when:** `preflight` answered `ok: true`, `isolate` printed its path, any
 `## Worktree` `Bootstrap:` ran green, and, attended, the session is in that path
-(`EnterWorktree`, or already there when
+(`EnterWorktree`, or
 [adopted](reference/isolate.md#adopting-the-launched-worktree)).
 
 **1 · Understand.** Too vague to plan from the `read-issue` result: stop
@@ -206,7 +206,7 @@ the summary's shape and what `merge` does; its refusals, a human's changes and
 Write the summary per merge-gate.md; the steps from the merge authorization to
 the return are in [phase-steps.md](reference/phase-steps.md#phase-9-merge-gate).
 **Done when:** attended, `merge` and every `update-issue-body` exited 0 with no
-`false`, then `close 9`, then `ExitWorktree`, then `cleanup
+`false`, then `close 9`, then `ExitWorktree` unless adopted, then `cleanup
 <issue|none>` exited 0 with no `false`; unattended, `comment-pr` posted.
 
 ## The stops
