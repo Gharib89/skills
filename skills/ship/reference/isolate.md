@@ -48,8 +48,8 @@ because an absolute main-checkout path silently edits the wrong tree.
 
 A host's worktree the session started in, on a branch ending `-<issue>`, is
 adopted, fast-forwarded to `origin/HEAD`, `reused: true`. A dirty or ahead
-one is refused; the main checkout is never adopted. The session is
-already there: skip `EnterWorktree` and `ExitWorktree`. `cleanup` leaves it.
+one is refused, the main checkout never adopted. Already there, the session
+needs no `EnterWorktree` or `ExitWorktree`. `cleanup` leaves it.
 
 ## Entering the worktree
 
