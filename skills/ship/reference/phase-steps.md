@@ -27,8 +27,9 @@ a row of the stop table, and every `warnings` entry a Ship note recorded after
 branch `<type>` (`feat`, `fix`, `docs`, ...) and `<slug>` are derived. Then
 `isolate <issue> <type> <slug>` with the profile's `Carry:` files, or `isolate
 ... --in-place` unattended. Attended, `EnterWorktree` with `path` set to that
-path comes right after isolate, before any edit or `LSP` call: the language
-server roots where the session stands when it first starts
+path (none [adopted](isolate.md#adopting-the-launched-worktree)) comes
+right after isolate, before any edit or `LSP` call: the language server roots
+where the session stands when it first starts
 ([isolate.md](isolate.md#entering-the-worktree)). Every edit, commit and the PR
 happen from the path `isolate` printed, and you **commit as you go**, because
 the PR needs real commits. A `Bootstrap:` under `## Worktree` runs once here,

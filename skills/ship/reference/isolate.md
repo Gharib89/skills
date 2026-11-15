@@ -47,8 +47,8 @@ because an absolute main-checkout path silently edits the wrong tree.
 ## Adopting the launched worktree
 
 A host's worktree the session started in, on a branch ending `-<issue>`, is
-adopted: `isolate` fast-forwards it to `origin/HEAD`, `reused: true`. A dirty
-one or one ahead is refused; the main checkout is never adopted. The session is
+adopted, fast-forwarded to `origin/HEAD`, `reused: true`. A dirty or ahead
+one is refused; the main checkout is never adopted. The session is
 already there: skip `EnterWorktree` and `ExitWorktree`. `cleanup` leaves it.
 
 ## Entering the worktree

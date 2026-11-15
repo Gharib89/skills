@@ -229,7 +229,8 @@ Ship defect draft not yet filed goes into the closing message the way the
 [unattended lane](unattended.md#the-merge-gate-post-to-the-pr-then-return)
 carries it, because `cleanup` deletes the directory the drafts live in; nothing
 waits on it. Then `run-file close 9` and set the task to the returned `mirror`,
-then `ExitWorktree` with `action: "keep"` (`cleanup` owns the removal), and last
+then `ExitWorktree` with `action: "keep"` (`cleanup` owns the removal; none
+[adopted](isolate.md#adopting-the-launched-worktree)), and last
 `cleanup <issue|none>`.
 
 **If the human says no or wants changes**, or says "file defects", read
