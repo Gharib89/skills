@@ -237,12 +237,14 @@ reasons that are not, which the next run takes up.
 In a repo that had no commits, push `main`. On
 `chore/setup-project` with commits beyond the default branch, open its PR
 through Ship's mechanics, which push the branch first and, when an earlier run
-already opened its PR, return that one. The first prints a `create` command
-where no PR is open yet: run it as printed, as its own Bash call, so Claude
-Code counts the PR, then the `--verify` line answers the PR either way:
+already opened its PR, return that one. `open-pr.sh` prints a `create` command
+where no PR is open yet; `<create>` is that command, run as printed, as its own
+Bash call, so Claude Code counts the PR, and skipped where none was printed.
+The `--verify` line then answers the PR either way:
 
 ```sh
 .claude/skills/ship/scripts/open-pr.sh none --title "chore: set up this repo for Ship" --body-file <body>
+<create>
 .claude/skills/ship/scripts/open-pr.sh none --verify
 .claude/skills/ship/scripts/update-pr-body.sh <pr> --section "Setup status" --body-file <table>
 ```

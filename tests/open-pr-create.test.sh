@@ -59,6 +59,15 @@ check "the command adapter gets head, base, title, the prepared file and the iss
   "$(printf 'host_pr_create_cmd\tfix/thing-7\tmain\tfix: a thing\t%s\t7' "$bf")" \
   "$(grep '^host_pr_create_cmd' "$SHIP_FAKE/calls")"
 
+# The agent runs the command from wherever its shell stands, so a relative body
+# file still yields an absolute prepared path.
+reset
+fx host_pr_for_branch null
+fx host_pr_create_body '{"body": "b"}'
+fx host_pr_create_cmd '{"command": "c"}'
+out=$( cd "$repo" && bash "$open" 7 --title "fix: a thing" --body-file ../body.md 2>/dev/null )
+check "a relative body file gives an absolute prepared path" "$(cd "$work" && pwd)/body.create.md" "$(jq -r .body_file <<<"$out")"
+
 # A re-run after the create step landed (or a flake that opened the PR anyway)
 # finds the PR and answers with it, so no second PR is ever opened.
 reset

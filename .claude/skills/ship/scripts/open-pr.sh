@@ -26,7 +26,8 @@
 #
 # `--verify` finds the open PR on the branch and confirms it is no draft, its
 # base is the default branch, and, for an issue, its body carries the host's
-# closing link (the host's create body leaves it unchanged). No open PR there,
+# closing link (the host's create body leaves it unchanged). On Azure DevOps the
+# work item links the PR and the body carries nothing, so no link is checked. No open PR there,
 # or one failing a check, is exit 1. It pushes nothing and takes no title or
 # body file.
 #
@@ -115,8 +116,8 @@ if [ -n "$num" ]; then
   pr=$(host_pr_get "$num" | jq -ce 'select(.url)') || ship_tooling "cannot read PR #$num"
   # A Rework run's PR was opened by an earlier run, so it carries no creation
   # time for phase 7's `auto-once` window.
-  at=created_at; [ "$mode" = rework ] && at=null
-  answer=$(jq -c --arg b "$branch" --arg base "$base" "{number, url, created_at: .$at, branch: \$b, base: \$base}" <<<"$pr")
+  answer=$(jq -c --arg b "$branch" --arg base "$base" --arg mode "$mode" \
+    '{number, url, created_at: (if $mode == "rework" then null else .created_at end), branch: $b, base: $base}' <<<"$pr")
 fi
 
 if [ "$mode" = verify ]; then
@@ -142,7 +143,8 @@ if [ -n "$num" ]; then
   exit 0
 fi
 
-out=${file%.md}.create.md
+# Absolute, since the agent's Bash call runs the command from wherever it stands.
+out=$(cd "$(dirname "$file")" && pwd)/$(basename "${file%.md}").create.md
 host_pr_create_body "$file" "$issue_arg" | jq -jer '.body + "\n"' > "$out" \
   || ship_tooling "cannot write the create body to $out"
 cmd=$(host_pr_create_cmd "$branch" "$base" "$title" "$out" "$issue_arg" | jq -er '.command | select(. != "")') \

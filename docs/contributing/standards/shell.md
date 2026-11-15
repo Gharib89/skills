@@ -17,7 +17,10 @@ exceptions bound these rules.
   the `contract` gate enforces it.
 - **No host CLI outside a named mechanic.** In this repo's code, `gh` and `az`
   are called only from `skills/ship/scripts/host/<host>.sh`; a gating call no
-  mechanic performs is a ship defect, not a prose fallback. A run itself may
+  mechanic performs or prints is a ship defect, not a prose fallback. The PR
+  create is the printed one: the adapter builds it and the agent runs it as its
+  own Bash call, because Claude Code counts a PR only when the create is the
+  Bash command itself (#1239). A run itself may
   make a direct call no mechanic covers through the host's REST form, logged in
   its Run file's `## Direct calls` by `run-file call`, and that is no violation
   of this rule. One documented exception: a CI template under
@@ -73,7 +76,9 @@ exceptions bound these rules.
 - **A host create posts once, through create-then-verify.** A 5xx can be the
   response lost on the way back from a POST that landed, so a create is never
   sent through a retrying wrapper: it re-reads before it retries, the way
-  `_gh_create_verify` in the GitHub adapter does. A list endpoint whose whole
+  `_gh_create_verify` in the GitHub adapter does. The agent's PR create has the
+  same shape: `open-pr` re-run after a failed create answers with any PR it
+  opened, and `open-pr --verify` reads the PR back. A list endpoint whose whole
   set decides the answer is paged until it ends, because one page truncates the
   list with no error. A path variable (a branch, a ref, a file path) is
   URI-encoded, because a `/` or `#` in it otherwise addresses another resource.
