@@ -3,7 +3,7 @@ name: ship
 description: Drive one tracker issue to a merge-ready PR in a single run, reaching the merge gate or merging when the repo opts in and the gate is clean. Use when the user wants to ship an issue, or to run the unattended lane.
 argument-hint: "[issue-number] [--unattended | [--rework [\"<feedback>\"]] [--inline [--review]]]"
 metadata:
-  version: 0.61.0
+  version: 0.62.0
   profile-schema: "5"
   composes: mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:tdd mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa:codebase-design mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:writing-for-agents mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa:code-review upstash/context7#681554c5d3a688c67879d02d4f01d79ffd15df13:find-docs humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c:show-me
 ---
@@ -95,8 +95,9 @@ preflight proves and refuses and why the worktree is made the way it is.
 Run `preflight <issue>`, then `read-issue`, then `isolate`; the steps are in
 [phase-steps.md](reference/phase-steps.md#phase-0-isolate).
 **Done when:** `preflight` answered `ok: true`, `isolate` printed its path, any
-`## Worktree` `Bootstrap:` ran green, and, attended, `EnterWorktree` entered
-that path.
+`## Worktree` `Bootstrap:` ran green, and, attended, the session is in that path
+(`EnterWorktree`, or
+[adopted](reference/isolate.md#adopting-the-launched-worktree)).
 
 **1 · Understand.** Too vague to plan from the `read-issue` result: stop
 `ambiguous`, with no claim taken. Otherwise **claim before any work**:
@@ -205,7 +206,7 @@ the summary's shape and what `merge` does; its refusals, a human's changes and
 Write the summary per merge-gate.md; the steps from the merge authorization to
 the return are in [phase-steps.md](reference/phase-steps.md#phase-9-merge-gate).
 **Done when:** attended, `merge` and every `update-issue-body` exited 0 with no
-`false`, then `close 9`, then `ExitWorktree`, then `cleanup
+`false`, then `close 9`, then `ExitWorktree` unless adopted, then `cleanup
 <issue|none>` exited 0 with no `false`; unattended, `comment-pr` posted.
 
 ## The stops

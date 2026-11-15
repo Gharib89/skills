@@ -44,6 +44,13 @@ a bare `git worktree add`: it is what lands the worktree at the path and branch
 preflight checks. Work from the printed path, every edit under it absolute,
 because an absolute main-checkout path silently edits the wrong tree.
 
+## Adopting the launched worktree
+
+A host's worktree the session started in, on a branch ending `-<issue>`, is
+adopted, fast-forwarded to `origin/HEAD`, `reused: true`. A dirty or ahead
+one is refused, the main checkout never adopted. Already there, the session
+skips `EnterWorktree` and `ExitWorktree`. `cleanup` leaves it.
+
 ## Entering the worktree
 
 Attended, the session then enters the path `isolate` printed with

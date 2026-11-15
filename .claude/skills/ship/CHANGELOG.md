@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.62.0 (2026-11-15)
+
+### Features
+
+- **ship**: Isolate adopts the host-launched worktree on the issue's branch
+  ([#1244](https://github.com/Gharib89/skills/pull/1244),
+  [`169f151`](https://github.com/Gharib89/skills/commit/169f151b28e7911dcc2eeee42cc53a7fcf3f6f7d))
+
+
 ## v0.61.0 (2026-11-13)
 
 ### Features
