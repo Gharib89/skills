@@ -86,6 +86,10 @@ do to pass.
   `stdout:` header under a non-`feat` title, carrying a `Grade:` line under
   `## Special things to note`, per the `bump-guard` job's grade-statement step
   (the line's form is in [release.md](release.md)).
+- A `fix`-titled PR whose diff touches `skills/` or `docs/agents/` carrying a
+  line starting `Fix scope:` that names `procedure` or `domain`, per the
+  `bump-guard` job's fix-scope step (`scripts/check-fix-scope.sh`; the rule is
+  in [prose.md](prose.md)).
 - Each mechanic's header synopsis naming the same flags and leading `<slots>`
   as its `--help` usage line, per the `contract` gate.
 - Every value-taking flag answering a leading-dash value (`--title --x`) with
