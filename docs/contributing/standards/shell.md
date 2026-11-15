@@ -20,10 +20,10 @@ exceptions bound these rules.
   mechanic performs or prints is a ship defect, not a prose fallback. The PR
   create is the printed one: the adapter builds it and the agent runs it as its
   own Bash call, because Claude Code counts a PR only when the create is the
-  Bash command itself (#1239). A run itself may
-  make a direct call no mechanic covers through the host's REST form, logged in
-  its Run file's `## Direct calls` by `run-file call`, and that is no violation
-  of this rule. One documented exception: a CI template under
+  Bash command itself (#1239). A run itself may make a direct call no mechanic
+  covers through the host's REST form, logged in its Run file's `## Direct
+  calls` by `run-file call`, and that is no violation of this rule. One
+  documented exception: a CI template under
   `skills/setup-skills/reviewers/`, and this repo's own copy of one under
   `.github/workflows/`, calls `gh` directly. It runs on a runner in a consumer
   repo that has no mechanics checked out, so there is nothing to route through.

@@ -144,7 +144,7 @@ if [ -n "$num" ]; then
 fi
 
 # Absolute, since the agent's Bash call runs the command from wherever it stands.
-out=$(cd "$(dirname "$file")" && pwd)/$(basename "${file%.md}").create.md
+out=$(CDPATH='' cd -- "$(dirname -- "$file")" && pwd)/$(basename "${file%.md}").create.md
 host_pr_create_body "$file" "$issue_arg" | jq -jer '.body + "\n"' > "$out" \
   || ship_tooling "cannot write the create body to $out"
 cmd=$(host_pr_create_cmd "$branch" "$base" "$title" "$out" "$issue_arg" | jq -er '.command | select(. != "")') \
