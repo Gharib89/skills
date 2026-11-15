@@ -130,7 +130,7 @@
     "setup-project": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "10fa174c94f19e80c4c0211ad9d5ae4df5afc02bbe0a77e08bb81d115ade8830"
+      "computedHash": "931cb4baf08d040297d881402b0970f87208784aa495732d72dfe6c04374c966"
     },
     "setup-skills": {
       "source": ".",
@@ -140,7 +140,7 @@
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "bd3da95dfe1e9a3b086430dc4234da95678be5aff76bb34324169a2f5de996bd"
+      "computedHash": "18ef9a1e9ef176734096b0a061dd50a0011a79863e25750b03d103027f173e15"
     },
     "show-me": {
       "source": "humanlayer/skills",
@@ -185,7 +185,7 @@
     "update-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "39d1ab02b91c6a41d2946be842227ca4c2d44a3757a8c8bec575526dad578631"
+      "computedHash": "7f86e0f8e6bf1a794b4af984bcb44bd585469e3e869aab735609f5dea041c28b"
     },
     "wayfinder": {
       "source": "mattpocock/skills",

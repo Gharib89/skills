@@ -1,0 +1,3 @@
+{
+  "command": "gh api -X POST repos/owner/repo/pulls --input body.create.json --jq .html_url"
+}

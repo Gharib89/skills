@@ -32,7 +32,7 @@ export XDG_STATE_HOME=$work/state
 mkdir -p "$repo/docs/agents" "$repo/.github"
 printf '## Summary\n\n## Change outline\n\n## Review\n' > "$repo/.github/pull_request_template.md"
 profile() { printf '## Host\n\nHost: github\n\n## PR\n\n%s\n\n## Public surface\n' "$1" > "$repo/docs/agents/ship.md"; }
-reset()   { rm -f "$SHIP_FAKE"/*; git -C "$bare" update-ref -d refs/heads/feat/thing-7 2>/dev/null; }
+reset()   { rm -f "$SHIP_FAKE"/*; git -C "$bare" update-ref -d refs/heads/feat/thing-7 2>/dev/null; printf "null\n" > "$SHIP_FAKE/host_pr_for_branch.1.json"; }
 opn()     { printf '%s' "$1" > "$work/body.md"; ( cd "$repo" && bash "$open" 7 --title "fix: a thing" --body-file "$work/body.md" 2>/dev/null ); }
 pushed()  { git -C "$bare" rev-parse -q --verify refs/heads/feat/thing-7 >/dev/null && echo pushed || echo none; }
 created() { cut -f1 "$SHIP_FAKE/calls" 2>/dev/null | paste -sd' '; }
@@ -56,7 +56,7 @@ check "both are named, in template order" 'body lacks the template headings: Cha
 reset; profile 'Template: .github/pull_request_template.md'
 opn "$full" >/dev/null; rc=$?
 check_rc "a body with every template heading opens" 0 "$rc"
-check "it pushes and creates" "pushed host_pr_create" "$(pushed) $(created)"
+check "it pushes and prepares the create" "pushed host_pr_for_branch host_pr_create_body host_pr_create_cmd" "$(pushed) $(created)"
 
 reset; rm -f "$repo/docs/agents/ship.md"
 opn "$reworded" >/dev/null; rc=$?

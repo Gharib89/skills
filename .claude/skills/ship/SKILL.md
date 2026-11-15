@@ -165,8 +165,11 @@ its JSON. The verdict words and what each does are in
 and the recorded verdict reads `verdict: pass` with `gates.secrets` present.
 
 **6 · Open PR.** [reference/pr-body.md](reference/pr-body.md) carries what the
-body holds and how it is written and read back. `open-pr <issue> --title
---body-file`, **non-draft** (drafts may not trigger a reviewer). Title: a
+body holds and how it is written and read back. Three steps: `open-pr <issue>
+--title --body-file` pushes and prints a **non-draft** (drafts may not trigger
+a reviewer) `create`; run it as printed, as its own Bash call, since Claude Code
+counts a PR only when the create is the Bash command itself; then `open-pr
+<issue> --verify`. Title: a
 Conventional-Commit subject honouring `Subject constraints:`, fixed later with
 `update-pr-title`. **Every title or body write
 to an open PR ends with `read-pr <pr>`**, its `## ` headings checked against the

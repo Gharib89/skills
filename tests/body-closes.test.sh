@@ -33,7 +33,7 @@ check "reads a keyword left visible by a fence interrupting a paragraph" \
 body=$(printf 'An example:\n\n```md\nCloses #76\n```\n')
 check "ignores a backtick-fenced example" no "$(says "$body" 76)"
 
-# A tilde fence is a fence too, so host_pr_create no longer reads an example as
+# A tilde fence is a fence too, so host_pr_create_body no longer reads an example as
 # a body that already claims the issue and skips placing the real closing line.
 body=$(printf 'An example:\n\n~~~md\nCloses #76\n~~~\n')
 check "ignores a tilde-fenced example" no "$(says "$body" 76)"

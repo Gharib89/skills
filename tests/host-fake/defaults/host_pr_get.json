@@ -8,5 +8,6 @@
   "base_ref": "main",
   "draft": false,
   "state": "open",
-  "mergeable": "clean"
+  "mergeable": "clean",
+  "created_at": "2026-01-01T00:00:00Z"
 }
