@@ -103,6 +103,9 @@ these rules bind as hard as the shell ones.
   scope is **procedure** or **domain**; the run is a PR, an issue, a session or
   a ship run. Both go in the PR body under `## Special things to note` and in
   the issue, never in skill prose, so a fact about one repo stays out of what
-  every consumer reads. Self-review and the Reviewer check the line; no body
-  checker enforces it, because a fix cannot be told from its title (a skill fix
-  often ships as `feat`).
+  every consumer reads. The `bump-guard` job's fix-scope step
+  (`scripts/check-fix-scope.sh`) fails a `fix`-titled PR that touches `skills/`
+  or `docs/agents/` and carries no line starting `Fix scope:` that names
+  `procedure` or `domain`. A fix shipped under a `feat` title (a skill fix often
+  is one) and whether the stated scope is right stay with self-review and the
+  Reviewer.

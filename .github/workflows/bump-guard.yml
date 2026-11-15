@@ -21,6 +21,10 @@ name: bump-guard
 # `scripts/check-grade-statement.sh` is that rule, driven by
 # `tests/grade-statement.test.sh`.
 #
+# A fourth step holds a `fix`-titled PR that touches `skills/` or `docs/agents/`
+# to a `Fix scope:` line in its body. `scripts/check-fix-scope.sh` is that rule,
+# driven by `tests/fix-scope.test.sh`.
+#
 # Not path-filtered, so it reports on every PR and is one of the profile's two
 # CI legs, beside `check-full`.
 
@@ -78,3 +82,12 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: PR_BASE="origin/$BASE_REF" scripts/check-grade-statement.sh
+
+      # Its own verdict, like the grade step, and over the same diff.
+      - name: Check a fix to a skill or a profile names its Fix scope
+        if: ${{ !cancelled() }}
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: PR_BASE="origin/$BASE_REF" scripts/check-fix-scope.sh
