@@ -17,7 +17,7 @@ under `.claude/skills/ship` is a **derived copy**, changed in its source repo
 in CLAUDE.md carries.
 
 **Version.** The harness strips this file's frontmatter on load, so read the
-version once, at the start of the run, with
+version once, at the run's start, with
 `sed -n 's/^  version: //p' <base directory>/SKILL.md`; by default print
 `ship <version>` in the first reply and the merge summary, so the PR records
 which ship produced it.
@@ -78,8 +78,8 @@ once its `Done when:` holds, not before.
 (the merge gate included) or on a wait its last line names: a background job or
 subagent whose notification resumes the run. A line saying what comes next is
 followed by doing it in the same turn. When that job or subagent comes back,
-announce its end in one line before the next step, so the human reading the
-session sees the run move on.
+announce its end in one line before the next step, so the human sees the run
+move on.
 
 **A phase runs the mechanic it names**, rather than re-deriving what that
 mechanic wraps. **Every gating call goes through a mechanic**, a host call a
@@ -130,8 +130,8 @@ each applicable one `pass`, `deferred-to-ci` or `unexercised`; any other result
 is recorded, then takes its named stop. Or `run-file skip 3` recorded what
 skipped it.
 
-**4 · Sync docs, then self-review.** Docs first, so the review reads the docs
-edits as part of the diff. **Docs-sync fires only when the public surface or
+**4 · Sync docs, then self-review.** Docs first, so the review reads their
+edits in the diff. **Docs-sync fires only when the public surface or
 observable behavior changed**: bring the profile's `Targets:` in line, folding
 the edits into this change, a tracker issue's as a
 [drafted section](reference/tracker-targets.md). Skip it
@@ -169,7 +169,8 @@ body holds and how it is written and read back. Three steps: `open-pr <issue>
 --title --body-file` pushes and prints a `create`, none where a PR is open; run
 it as printed, as its own Bash call, since Claude Code counts a PR only when
 the create is the Bash command itself; then `open-pr <issue> --verify`. Title: a
-Conventional-Commit subject honouring `Subject constraints:`, fixed later with
+Conventional-Commit subject stating the outcome the change delivers, honouring
+`Subject constraints:`, fixed later with
 `update-pr-title`. **Every title or body write
 to an open PR ends with `read-pr <pr>`**, its `## ` headings checked against the
 ones the body owes. Then `reflect <issue> <pr>`.

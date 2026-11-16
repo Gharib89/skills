@@ -121,15 +121,14 @@ admitted.
 ## A window that closes with no round
 
 A window that closes with `done: false` and `not_reviewed` set is that round's
-answer, bar `unreachable` with `landed_by` null on a `head_sha` that is not the
-expected head: confirm the push landed, then poll again ([Reading a
-round](#reading-a-round)). A landed round keeps its answer there. The
-answer stands whatever the reviewer's own status says it may still do: no second
-window opens for the same round and no second request goes out. Record its stop
-per [The exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned
-round whose fixes changed the tree, else `not reviewed: <cause>`. Either way
-that exit is final, and the `Fallback-for:` reviewer that names it, if any, is
-driven per [Fallbacks](review-unconverged.md#fallbacks).
+answer, bar `unreachable` with `landed_by` null on a `head_sha` not the expected
+head, which [Reading a round](#reading-a-round) re-polls. The answer stands
+whatever the reviewer's own status says it may still do: no second window opens
+for the same round and no second request goes out. Record its stop per [The
+exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned round
+whose fixes changed the tree, else `not reviewed: <cause>`. Either way that exit
+is final, and the `Fallback-for:` reviewer that names it, if any, is driven per
+[Fallbacks](review-unconverged.md#fallbacks).
 
 A `status: pending` answer is no closed window: resume it by its cursor
 ([mechanics.md](mechanics.md#waits-past-540-s)). A `conflict` closes the window
@@ -144,7 +143,8 @@ with `not_reviewed` null, which says nothing about the reviewer: resolve it
   when declining.
 - **Batch fixes into one push per round.** A fix to a rule goes to every copy of
   that rule in the same batch: grep the phrase before you push and read each
-  hunk back.
+  hunk back. Before the push, cut every line of this round's changes no
+  finding's fix or test needs.
 - **Reply in the thread**: `reply-thread <pr> <thread> --body-file` for every
   `replied: false` thread, `fixed in <sha>` or the decline and its reason. Once
   every thread carries a reply, run the block's `Resolve:` per thread; `Resolve:
@@ -155,12 +155,11 @@ with `not_reviewed` null, which says nothing about the reviewer: resolve it
   (`reply-thread` in the same thread, `comment-pr` or `comment-issue`), opening
   `Correction:` and naming what the earlier one got wrong. No mechanic edits or
   deletes a posted comment, so the run never edits one by hand (a direct REST or
-  `gh api` PATCH), even when the human or a session supervising this one asks
-  for an in-place fix: the correction answers that ask and keeps what the run
-  first claimed on record. With the correction, a `## Review` line repeating the
-  wrong claim is rewritten through `update-pr-body`, and a wrong Evidence line
-  is answered by a `run-file note Evidence` line opening `Correction:`, since
-  that verb only appends.
+  `gh api` PATCH), even when asked for an in-place fix: the correction answers
+  that ask and keeps what the run first claimed on record. With the correction,
+  a `## Review` line repeating the wrong claim is rewritten through
+  `update-pr-body`, and a wrong Evidence line is answered by a `run-file note
+  Evidence` line opening `Correction:`.
 - **A finding outside the PR's scope that merits an issue is filed by a real
   `file-issue` call in this round**, `--outside-scope "<reason>"` when it cites
   a path the PR changes, per [phase 2's adjacent
@@ -169,9 +168,9 @@ with `not_reviewed` null, which says nothing about the reviewer: resolve it
 - **Write each round to the Run file as you disposition it**
   (`run-file note Evidence "<line>" --issue <issue>`, one call per line), one
   line per finding with its disposition, one per round whose
-  `reviewer_run.denied` is numeric, with the run URL, and the round's `Round:`
-  line (formats under [The exit](#the-exit)): the `## Review` line is read from
-  them.
+  `reviewer_run.denied` is numeric, with the run URL, and, after the push, the
+  round's `Round:` line (formats under [The exit](#the-exit)): the `## Review`
+  line is read from them.
 
 ## The exit
 
@@ -217,17 +216,20 @@ Round: <reviewer> <n>: <text>
 Stop: <reviewer>: <reason>
 ```
 
-`<text>` is the round's outcome in a line. Write each line with `run-file note
-Evidence "<line>" --issue <issue>`. `close 7` and `gate clean` match the `not
-reviewed` prefix, so `Stop: <reviewer>: not reviewed: <reason>` satisfies every
-rule the bare form does. A reviewer that raises again a finding this run
+`<text>` is the round's outcome, ending with the output of
+`git diff --shortstat <head the round read>..HEAD` after its push, or
+`no change`. Write each line with
+`run-file note Evidence "<line>" --issue <issue>`. `close 7` and `gate clean`
+match the `not reviewed` prefix, so
+`Stop: <reviewer>: not reviewed: <reason>` satisfies every rule the bare form
+does. A reviewer that raises again a finding this run
 declined in an earlier round gets no `tree unchanged` stop for it: declining
 must never be a cheaper way past the gate than fixing. Fix the finding, and the
 round reads as any other. Leave it declined, and the round's text opens with
 `re-raised declined: <the finding>` and the reviewer stops on `cap at <sha>`,
 which holds the gate, no fallback standing in for it: the human reads the
 declined finding at the merge gate. `gate clean` also holds a `tree unchanged`
-stop beside that opening. A fixed finding never gets that text. When the last
+stop beside that opening. When the last
 fully read and dispositioned round changed no file, record `tree unchanged at
 <sha>` even at `Cap:`, in the small lane or for an `auto-once` trigger, `<sha>`
 the head that round read: for a requested round, the PR's head when
