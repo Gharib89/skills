@@ -68,7 +68,7 @@ reset
 printf '{"url":"https://example.invalid/pull/8"}\n' > "$SHIP_FAKE/host_pr_get.1.json"
 printf '[]\n' > "$SHIP_FAKE/host_issue_comments.1.json"
 mech reflect 7 8 >/dev/null
-check "the reflected PR line carries the marker" "PR: https://example.invalid/pull/8\\n\\n$L\\n$M" \
+check "the reflected PR line carries the visible line then the marker" "PR: https://example.invalid/pull/8\\n\\n$L\\n$M" \
   "$(last_body host_issue_comment 3)"
 reset
 printf '{"url":"https://example.invalid/pull/8"}\n' > "$SHIP_FAKE/host_pr_get.1.json"
@@ -97,17 +97,17 @@ check "and posts nothing" 0 "$(grep -c '^host_issue_comment	' "$SHIP_FAKE/calls"
 printf 'round summary\n' > "$work/body.md"
 reset
 mech comment-issue 7 --body-file "$work/body.md" >/dev/null
-check "comment-issue posts the file's bytes then the marker" "round summary\\n\\n$L\\n$M\\n" "$(last_body host_issue_comment 3)"
+check "comment-issue posts the file's bytes then the visible line and the marker" "round summary\\n\\n$L\\n$M\\n" "$(last_body host_issue_comment 3)"
 reset
 mech comment-pr 7 --body-file "$work/body.md" >/dev/null
-check "comment-pr hands the host the file then the marker" "round summary
+check "comment-pr hands the host the file then the visible line and the marker" "round summary
 
 $L
 $M" "$(cat "$SHIP_FAKE/posted")"
 check "and leaves the caller's file alone" 'round summary' "$(cat "$work/body.md")"
 reset
 mech reply-thread 7 t1 --body-file "$work/body.md" >/dev/null
-check "reply-thread hands the host the file then the marker" "round summary
+check "reply-thread hands the host the file then the visible line and the marker" "round summary
 
 $L
 $M" "$(cat "$SHIP_FAKE/posted")"
@@ -132,7 +132,7 @@ Fallback-for: None.
 PROFILE
 reset
 mech request-review 7 --reviewer claude >/dev/null
-check "the request comment opens with the phrase and ends with the marker" "@claude
+check "the request comment opens with the phrase and ends with the visible line and the marker" "@claude
 
 $L
 $M" "$(cat "$SHIP_FAKE/posted")"
@@ -145,7 +145,7 @@ $M" "$(cat "$SHIP_FAKE/posted")"
   check_rc "an unreadable source fails the marking" 1 "$rc"
   check "and writes nothing" '' "$(cat "$work/marked" 2>/dev/null)"
   printf 'a\n\n' > "$work/src"; ship_mark_file "$work/src" "$work/marked"
-  check "a readable source keeps its trailing newlines, then the marker" $'a\n\n\n'"$L"$'\n'"$M" "$(cat "$work/marked")" )
+  check "a readable source keeps its trailing newlines, then the visible line and the marker" $'a\n\n\n'"$L"$'\n'"$M" "$(cat "$work/marked")" )
 
 # The visible line: last visible line, once, and none where the body opens with
 # the robot (the claim and the hand-back above read as they always did).

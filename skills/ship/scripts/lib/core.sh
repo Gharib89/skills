@@ -27,7 +27,7 @@ ship_mark() {
   case $b in 🤖*) ;; *) b+=$'\n'"$SHIP_COMMENT_LINE"$'\n' ;; esac
   printf '%s%s\n' "$b" "$SHIP_COMMENT_MARKER"
 }
-# ship_mark_file <src> <dst>: <src>'s bytes then the marker, written to <dst>;
+# ship_mark_file <src> <dst>: <src>'s bytes, the visible line (see ship_mark) and the marker, written to <dst>;
 # 1 where <src> cannot be read, with <dst> untouched. The sentinel keeps the
 # file's trailing newlines through `$( )`, and `&&` keeps `cat`'s status as the
 # substitution's, which a `;` would replace with the sentinel's.
