@@ -25,7 +25,7 @@ The background script the super agent leaves running at the end of each turn: it
 _Avoid_: watchdog, poller, monitor
 
 **Waiting line**:
-The fixed last line, `Waiting on my own background work.`, that the launch brief tells a supervised thread to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A thread's final message is the PR URL and the gate state, never this line. Not the **Waiting list**.
+The fixed last line, `Waiting on my own background work.`, that ship tells every run to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A run's final message is the PR URL and the gate state, never this line.
 _Avoid_: heartbeat, keepalive, status ping
 
 **Wake action**:
@@ -37,7 +37,7 @@ A supervised thread at rest with its ticket not done: its run completed with no 
 _Avoid_: hang, idle (idle is a thread state, not a judgement), crash
 
 **Merge-gate ruler**:
-The fleet file's `merge_gate_ruler`: who rules on a merge-gate hold outside the merge allowance and the standing waivers, the owner (default) or the super agent, which then decides and reports to the owner. The launch brief says which. A hold on a failure the PR did not cause is never waived by either: the failure is filed as its own issue and ordered first, and the gate re-runs after its fix.
+The fleet file's `merge_gate_ruler`: who rules on a merge-gate hold outside the merge allowance and the standing waivers, the owner (default) or the super agent, which then decides and reports to the owner. A hold on a failure the PR did not cause is never waived by either: the failure is filed as its own issue and ordered first, and the gate re-runs after its fix.
 _Avoid_: approver, gatekeeper
 
 **Notify command**:
@@ -49,8 +49,16 @@ Reconcile's `parents_done` list: an open parent issue (a spec) whose sub-issues 
 _Avoid_: batch complete, epic done
 
 **Standing waiver**:
-A merge-gate hold the launch template waives in advance, with its condition written out, so a run that meets it merges without a round trip to the owner. The fleet file lists them and the launch brief carries each condition word for word. A hold outside the listed waivers goes to the merge-gate ruler.
-_Avoid_: auto-merge, merge allowance (that is the launch permission to merge at all), exception
+A merge-gate hold the owner waives in advance, with its condition written out, so a hold that meets it merges without a round trip to the owner. The fleet file lists them; they never reach a supervised thread up front: the super agent cites the one that matches in a step-in when the thread stops at its gate. A hold outside the listed waivers goes to the merge-gate ruler.
+_Avoid_: auto-merge, merge allowance (that is the permission to merge at all), exception
+
+**Launch message**:
+The first message of a supervised thread: its owner-skill invocation (`/ship <n>`, `/triage <n>`), plus one `Note:` line only when the owner gave one for that ticket. Nothing else rides on it: rules the run must follow live in the skill, the repo's profile or the global rules it loads.
+_Avoid_: launch brief, preamble, system prompt
+
+**Step-in**:
+A message the super agent sends into a supervised thread after its launch message, only when the thread reaches the situation it answers, and carrying only what that situation needs.
+_Avoid_: re-brief, reminder, broadcast
 
 **Fleet file**:
 The owner's user-scope file, written by the super agent's setup step and carried to every machine, that lists what the super agent may use: each linked machine with its capabilities and slot count, each provider instance with its quota read and auth result, the GitHub accounts, the active repos (each with its ship cap, machine pin and brief lines), the default standing waivers, who rules on a merge-gate hold and the notify command. The skill itself names none of these, so it stays the same for every owner.
