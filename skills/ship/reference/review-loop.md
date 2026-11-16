@@ -12,7 +12,11 @@ The review gate is phase 4's self-review plus green CI; the reviewers under the
 profile's `## Reviewers` are a second pair of eyes on top of it. So phase 7 is
 best-effort: ask each reviewer for a round, wait a bounded time, triage whatever
 landed, and report what happened. A reviewer that answers nothing costs one
-bounded wait, not an investigation. Zero reviewers: skip the phase. A reviewer
+bounded wait, not an investigation. Zero reviewers: skip the phase. Every
+reviewer whose `Fallback-for:` reads `None.` goes first; a fallback is driven
+when its primary exits `not reviewed` (`inline lane` aside), is capped with
+findings or stops `not landed`
+([Fallbacks](review-unconverged.md#fallbacks)). A reviewer
 re-reads the **whole PR** each round: treat each round as a fresh read of the
 committed tree. [review-loop-examples.md](review-loop-examples.md) maps real
 reviewers onto this loop.
@@ -144,7 +148,14 @@ with `not_reviewed` null, which says nothing about the reviewer: resolve it
 - **Batch fixes into one push per round.** A fix to a rule goes to every copy of
   that rule in the same batch: grep the phrase before you push and read each
   hunk back. Before the push, cut every line of this round's changes no
-  finding's fix or test needs.
+  finding's fix or test needs. Prove the fix with its targeted test nodes plus
+  the repo's edit rung, the per-file check its harness runs after each edit
+  (`check.sh edit <file>...`), over the files it touched, or the local gate
+  where the repo has no harness; a fix carrying a test is also proven red with
+  `--fix <fix commit>` ([evidence-lines.md](evidence-lines.md)). The local gate
+  is not re-run per round: the merge gate's [final head's
+  gate](merge-gate.md#attended-post-then-wait) covers it, never run while a
+  `code-review` is out.
 - **Reply in the thread**: `reply-thread <pr> <thread> --body-file` for every
   `replied: false` thread, `fixed in <sha>` or the decline and its reason. Once
   every thread carries a reply, run the block's `Resolve:` per thread; `Resolve:

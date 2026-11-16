@@ -1,4 +1,4 @@
-# Phases 1, 2 and 4: understand, implement, self-review (detail)
+# Phases 1, 2 and 4: understand, implement, self-review
 
 ## Contents
 
@@ -9,6 +9,7 @@
 - [Phase 2: verify the spec's external-system claims before building on them](#phase-2-verify-the-specs-external-system-claims-before-building-on-them)
 - [Phase 2: delegate execution, keep judgment](#phase-2-delegate-execution-keep-judgment)
 - [Phase 2: adjacent finds](#phase-2-adjacent-finds)
+- [Phase 4: docs-sync and the writing pass](#phase-4-docs-sync-and-the-writing-pass)
 - [Phase 4: triage and depth checks](#phase-4-triage-and-depth-checks)
 - [Phase 4: the self-review loop](#phase-4-the-self-review-loop)
 - [Consult current docs](#consult-current-docs)
@@ -35,8 +36,11 @@ author believed. Grep each one in the worktree before planning, because a run
 built on a wrong anchor spends
 its reviewer rounds unwinding it. Where the tree contradicts one, the tree
 wins. A wrong anchor that changes no acceptance criterion goes in the
-deviations log alone. One that changes a criterion rewrites the issue body, per
-[spec-gaps.md](spec-gaps.md#an-anchor-that-changes-a-criterion).
+deviations log alone. One that changes a criterion rewrites the issue body,
+per [spec-gaps.md](spec-gaps.md#an-anchor-that-changes-a-criterion). A
+criterion needing a host action no mechanic performs goes to
+[spec-gaps.md](spec-gaps.md#a-criterion-no-mechanic-can-perform) before
+planning.
 
 ## Phase 1: criteria the run owes
 
@@ -59,8 +63,8 @@ text with its headings, and where that list holds a checkbox, write each
 criterion a brief or comment adds as a checkbox too.
 Text yielding none writes no section and
 warns: record each criterion with `run-file note Criteria <text>`. It refuses
-the text `null`. Phase 0 reuses this read. A free-text run has no issue and
-passes none.
+the text `null`. Phase 0 reuses this read. A free-text run has no issue,
+passes none, and notes, the same way, criteria a later phase can check.
 An issue's init without `--criteria` warns when the issue holds criteria, and
 `run-file gate summary` then holds the gate (`criteria:` in `held_by`) until
 each is recorded with `run-file note Criteria <text>`.
@@ -105,6 +109,16 @@ a silently skipped verification later.
   real run in phase 3 is the integration proof.
 
 When in doubt between `code` and `docs`, treat it as `code` and write the test.
+
+Judge the lane keys and each `## Verification` entry's `Applies when:` prose
+now, and by default say which apply. Record the grade with `run-file grade`: the
+public-surface change's, under the profile's `Subject constraints:`, since
+`open-pr` and `update-pr-title` refuse a title type that grades lower. Keep the
+**deviations log** from the first edit: whenever the territory forces a
+departure from the issue, brief or plan, take the conservative option, log what
+and why, and keep going; it lands verbatim in the merge summary. A change one PR
+cannot hold stops `needs-split` with a proposal, per
+[spec-gaps.md](spec-gaps.md#needs-split).
 
 **Callers found, dependencies justified.** Before the first edit to a
 function's signature, return value or behavior, grep the changed symbol across
@@ -188,6 +202,21 @@ wrong is the `mis-specified` stop instead.
 The merge summary lists every issue filed, every candidate linked and every
 noted find.
 
+## Phase 4: docs-sync and the writing pass
+
+Docs first, so the review reads their edits in the diff. **Docs-sync fires only
+when the public surface or observable behavior changed**: bring the profile's
+`Targets:` in line, folding the edits into this change, a tracker issue's as a
+[drafted section](tracker-targets.md). Skip it for internal refactors, a bugfix
+restoring documented behavior, test-only or tooling changes, and comments, and
+say so in one line at the merge gate.
+
+**The `writing-for-agents` pass has a trigger of its own**, firing even where
+docs-sync is skipped: the diff touches a target on the profile's
+`Agent-facing:` line. It reads every agent-facing file in the diff; human
+prose takes the mechanical pass. With docs-sync's edits landed, dispatch this
+pass with [round 1](#phase-4-the-self-review-loop) in one turn.
+
 ## Phase 4: triage and depth checks
 
 **Auto-triage** every finding: harden rather than rip out capability, verify
@@ -224,20 +253,19 @@ profile's `Self-review cap:`, 3 where the line is absent; after a compaction,
 `preflight none` answers it again, `none` skipping the issue's own checks.
 Every lane runs the same loop.
 
-- **Round 1** is the phase's first dispatch: both axes, Standards and Spec,
-  over the whole diff, the `writing-for-agents` pass where it fired, and the
-  depth checks above. Every fix any of them leads to is round 1's. The Spec
-  axis, the pass and the depth checks run in round 1 only.
+- **Round 1** is the phase's first dispatch: `code-review`'s two axes over the
+  diff since `origin/HEAD`, Standards reading the profile's `## Coding
+  standards` path and Spec the issue, each prompt saying the local gate runs
+  the suite later; the `writing-for-agents` pass where it fired; and the depth
+  checks above. Every fix any of them leads to is round 1's. The Spec axis,
+  the pass and the depth checks run in round 1 only.
 - **Round 2 and up** is one `code-review` subagent, Standards axis only, over
   the previous round's **fix-only diff**: write the head into the Run file
   before triaging round `<n>`, where a compaction cannot lose it, commit its
   fixes, and hand the next round `git diff <head>..HEAD`. It
-  is dispatched with round 1's Standards prompt, only its diff and Report file
-  changing, and triaged as round 1 is: it waits for the Report file, and a file
-  still missing once retries stop helping is
-  `red-after-retry: standards`. Its Report file is
-  `<scratch>/standards/standards-report-<n>.md`, `<n>` the round number, so no
-  round overwrites another's.
+  is dispatched with round 1's Standards prompt, only its diff and
+  [Report file](context-discipline.md#the-run-file) changing, and triaged as
+  round 1 is.
 - **The loop stops** at the first round whose fix-only diff is empty (no
   finding fixed: each declined, filed or linked, or none raised), or at the
   round the cap allows, its findings dispositioned in full. A cap of 1 is the

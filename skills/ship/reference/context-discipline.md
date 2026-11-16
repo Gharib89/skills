@@ -143,9 +143,8 @@ whose `Applies when:` you judged false). A Verification the PR adds to the
 profile owes a result too, since the merge gate judges the profile's headings:
 pass it to `close 3` with the rest, never to `skip 3`, which settles only those
 init named. After phase 3 has closed or been skipped, a Verification heading a
-later phase's fix adds, or a re-run of one already recorded, takes the same
-`close 3 --result`. Close a phase only once its `Done when:` holds: the
-mechanic stamps whatever close it is given, except that `close 3` refuses a
+later phase's fix adds takes the same `close 3 --result`. The mechanic stamps
+whatever close it is given, except that `close 3` refuses a
 missing result, `close 5` an unsettled entry
 ([implement.md](implement.md#phase-1-criteria-the-run-owes)), and `close 4`
 and `close 7` refuse without the lines
@@ -173,7 +172,7 @@ a refusal measured on every bare `report*.md` a run tried, while a prefixed name
 is admitted. Each dispatch names the file, and takes back only the path and a
 summary of at most five lines. No file at the named path is a report that failed
 to arrive: retry while retries make progress, as SKILL.md's stops say, then
-`red-after-retry`. An inline pass writes the same file itself before
+`red-after-retry: <role>`. An inline pass writes the same file itself before
 dispositioning. The Run file's `## Design and plan` names every round's paths as
 each round is dispatched; disposition from the file, and quote the merge
 summary's `Self-review` item from it. Phase 7's [local
