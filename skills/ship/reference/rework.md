@@ -20,16 +20,16 @@ a replacement step satisfies any `Done when:` naming the step it replaces.
 
 ## Before phase 0
 
-Before any edit, and only in a `--rework` run, decide whether the PR is still
-wanted and record it in `## Design and plan`: **modernize** (bring it up to the
-current base and standards), **rework** (address the review as asked) or
-**close**. On **close**, ask the owner and stop: the run never closes a PR.
-
 `run-file init <issue> --from-profile --criteria -`, the effective spec read
 first; phase 1's feedback criteria stay in the plan. When it refuses an existing
 record, run phase 0's `preflight` first, since it writes nothing, and repeat the
 init with `--rebuild` only on its `ok: true`: a stop leaves the earlier record
 intact. Every rework run gets a new Run file and a fresh `Cap:` per reviewer.
+
+Then, before any edit (`--rework` only), decide if the PR is still wanted and
+record it in `## Design and plan`: **modernize** (bring it to the current base
+and standards), **rework** (address the review as asked) or **close**. On
+**close**, ask the owner and stop, claim held: the run never closes a PR.
 
 ## Phase 0: admission and the worktree
 

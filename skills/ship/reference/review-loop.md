@@ -217,7 +217,8 @@ Stop: <reviewer>: <reason>
 ```
 
 `<text>` is the round's outcome in a line, ending with
-`git diff --shortstat <head the round read>..HEAD` after its push. Write each
+`git diff --shortstat <head the round read>..HEAD` after its push, or
+`no change`. Write each
 line with `run-file note Evidence "<line>" --issue <issue>`. `close 7` and
 `gate clean` match the `not
 reviewed` prefix, so `Stop: <reviewer>: not reviewed: <reason>` satisfies every
