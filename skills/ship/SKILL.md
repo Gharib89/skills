@@ -208,7 +208,7 @@ Whoever launched the run:
 - A run that starts in a worktree on a branch ending `-<issue>` works there, on
   that branch, and makes no other: the PR is found by that branch.
 - The last message ends on the PR URL and the gate state, or on the stop reason
-  where no PR opened, never the waiting line.
+  before the gate, never the waiting line.
 - After a stop at a merge-gate hold, a later message in the thread may carry a
   ruling on that hold: act on it, not as a new task. A ruling never goes into
   the PR body, except a waiver that passed the gate, which the body names.
