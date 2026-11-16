@@ -44,8 +44,9 @@ ones:
    message or any rule again.
 3. **A gate hold** the run stopped on
    ([wake-actions](wake-actions.md#merge-gate-holds)): the one standing waiver
-   from the fleet file's `waivers`, or the one ruling in the ledger scoped to
-   the repo, whose condition matches the hold, quoted word for word, telling
+   from the fleet file's `waivers`, or the one ruling scoped to the repo (the
+   `briefed` rows of `ledger.sh --ledger <ledger> briefed` whose `repo` is the
+   run's), whose condition matches the hold, quoted word for word, telling
    the run to merge through `merge.sh` and name that waiver in its PR body. A
    hold none matches goes to whoever `merge_gate_ruler` names, and the step-in
    carries that ruling once it exists. A triage run that reports a PR it opened

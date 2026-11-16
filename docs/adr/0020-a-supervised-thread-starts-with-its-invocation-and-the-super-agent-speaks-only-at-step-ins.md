@@ -13,5 +13,5 @@ A supervised thread's launch message is its owner-skill invocation (`/ship <n>`,
 - Each repo's ship profile decides merge-on-clean and carries ship-behaviour rulings (when a reviewer is requested). Rulings about the super agent stay in the ledger; gate-hold rulings and the standing waivers stay with the super agent, which cites the one that matches at the hold.
 - The shared-machine rules (stop only your own PIDs, the per-repo lock, the memory cap) are global rules every session loads.
 - A step-in happens at exactly five moments: the stall 1 nudge, the stall 2 missing fact, a gate hold, the owner's answer to a need the thread raised, and a hard finding from verification. Nothing is broadcast to running threads. A thread that merges on a waiver names the waiver in its PR body.
-- `ledger ruling --brief`, the fleet's `repos.<r>.brief` and `machines.<m>.brief` lines and most of `brief.sh` are deleted, so nothing can ride the launch message again by accident.
+- `brief.sh` is deleted, and `ledger ruling --brief` with the fleet's `repos.<r>.brief` and `machines.<m>.brief` lines follows it (#1268), so nothing can ride the launch message again by accident. A ruling's `--repo` scope stays, so the gate-hold step-in can find the ruling for its repo.
 - Ship's slice lands before the super agent's, so no run stops hearing the waiting line before ship tells it.
