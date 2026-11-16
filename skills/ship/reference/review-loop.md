@@ -56,8 +56,7 @@ would buy wording nits. The poll takes its bound from the block; a window that
 closes with `not_reviewed` set is read per [A window that closes with no
 round](review-unconverged.md#a-window-that-closes-with-no-round).
 
-A `status: pending` answer is no closed window: resume it by its cursor
-([mechanics.md](mechanics.md#waits-past-540-s)). A `conflict` closes the window
+A `conflict` closes the window
 with `not_reviewed` null, which says nothing about the reviewer: resolve it
 (phase 8) and poll again.
 
@@ -116,10 +115,6 @@ admitted.
   request.** A reply, a thread answer, a PR body or a reflect comment names
   `codex review`, not the phrase itself: the host delivers every mention, and a
   stray one starts a round or a Codex task no poll is waiting for.
-- **A poll waits for the expected head**, the worktree's `HEAD` on the PR's
-  branch or `--sha`. `not_reviewed: unreachable` with `landed_by` null and a
-  `head_sha` that is not that head means the host never showed the push: confirm
-  it landed, then poll again.
 - **Exit 1 beside a landed round is still the answer.** A non-null
   `landed_by` with `done: false` and no `status` is triaged like any other; the
   brief's `pending_checks` names the checks still pending when the window
@@ -205,22 +200,13 @@ the calls the reviewer was denied, summed from the numeric `reviewer_run.denied`
 over the rounds, with each non-zero round's run URL. On GitHub, an entry past
 three lines of detail [folds](pr-body-collapse.md#collapsing-long-sections).
 
-Each reviewer's rounds and stop go in the Run file as lines, which `run-file
-close 7` requires of every reviewer on the phase-7 row, one `Round:` per round
-(`not reviewed`, `not invoked` and `inline lane` need none) and one `Stop:`:
-
-```
-Round: <reviewer> <n>: <text>
-Stop: <reviewer>: <reason>
-```
-
-`<text>` is the round's outcome, ending with the output of
-`git diff --shortstat <head the round read>..HEAD` after its push, or
-`no change`. Write each line with
-`run-file note Evidence "<line>" --issue <issue>`. `close 7` and `gate clean`
-match the `not reviewed` prefix, so
-`Stop: <reviewer>: not reviewed: <reason>` satisfies every rule the bare form
-does. A reviewer that raises again a finding this run
+Each reviewer's rounds and stop go in the Run file, one `Round: <reviewer> <n>:
+<text>` per round and one `Stop: <reviewer>: <reason>`, written with `run-file
+note Evidence "<line>" --issue <issue>`; `run-file close 7` refuses a reviewer
+on the phase-7 row whose lines are missing or misshapen, naming the line and
+its shape. `<text>` is the round's outcome, ending with the output of `git diff
+--shortstat <head the round read>..HEAD` after its push, or `no change`. A
+reviewer that raises again a finding this run
 declined in an earlier round gets no `tree unchanged` stop for it: declining
 must never be a cheaper way past the gate than fixing. Fix the finding, and the
 round reads as any other. Leave it declined, and the round's text opens with
@@ -236,13 +222,12 @@ dispositioned; for an `on-push` round, the `head_sha` its poll waited for; for a
 round the host opened with the PR (`auto-once`, or round 1's unbidden one), the
 head the PR opened on. Take it when the round starts, since another reviewer's
 fixes can move the PR's head past what a round read before its poll returns;
-`close 7` refuses the stop without it, and `gate clean` holds on the stop once
-its `<sha>` no longer covers the PR head. Otherwise `<reason>` is one of `cap
-at <sha>` (`Cap:` spent, a docs-only fix-only diff ended the loop, or a
-declined finding came back: in each the last fixes or the declined finding went
-unread by a host round; only a spent `Cap:` drives a fallback; `<sha>` taken
-as for `tree unchanged`; read as `cap`, the stamp read only by the self-review
-cap's lift; a bare `cap` is still admitted), `tree unchanged at <sha>` (a
+`gate clean` holds on the stop once its `<sha>` no longer covers the PR head.
+Otherwise `<reason>` is one of `cap at <sha>` (`Cap:` spent, a docs-only
+fix-only diff ended the loop, or a declined finding came back: in each the last
+fixes or the declined finding went unread by a host round; only a spent `Cap:`
+drives a fallback; `<sha>` taken as for `tree unchanged`; read as `cap`, the
+stamp read only by the self-review cap's lift), `tree unchanged at <sha>` (a
 round's dispositions changed no file, so a further round would read the same
 tree), `small lane` (the lane's one requested round), `inline lane` (the lane
 requested no round), `auto-once` (the reviewer fires once, on PR open), `not

@@ -136,17 +136,12 @@ not the deviations log.
 **Every title or body write to an open PR ends with `read-pr <pr>`**, its `## `
 headings checked against the ones the body owes.
 `update-pr-body <pr> --section <name> --body-file <path>` replaces one section
-and writes its `## <name>` line itself, so the file holds the content alone;
-`--drop-records`, section mode only, skips carrying the old `<details>` blocks.
+and writes its `## <name>` line itself, so the file holds the content alone.
 `--preamble` replaces everything above the first heading, where the closing line
 sits, carrying the old closing line over when the new content lacks one; a body
 with no heading is preamble entire. A column-0 `<details>` block is a
 `<details>` record, whose rule [mechanics.md](mechanics.md#section-surgery)
 states.
-
-A section a rewrite swallowed is missing from `read-pr`'s `headings`, the only
-place a swallowed `## Attribution` shows while the PR is open;
-`update-pr-body`'s `sections` list is the same check one write earlier.
 
 `open-pr` runs the repo's body checker, the profile's `## PR` `Body-check:`
 line, on the body file before the push, and `update-pr-body` on the body it

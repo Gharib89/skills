@@ -4,7 +4,7 @@
 # reference material, and a reference file long enough to scroll needs a map at
 # the top rather than at the point a reader gives up. The thresholds and the
 # paths, whole: `skills/*/SKILL.md` at most 3500 words, ship's always-read set at
-# most 17000 words in sum, and every `skills/*/reference/*.md` over 100 lines
+# most 16000 words in sum, and every `skills/*/reference/*.md` over 100 lines
 # opening with a `## Contents` heading inside its first 15 lines whose list
 # matches the file's `## ` headings.
 # `scripts/check.sh full` runs this as its `prose-budget` row, which
@@ -15,13 +15,13 @@
 # (#606), rounded up to the next 500: a ratchet, so prose that regrows fails here
 # instead of accumulating again.
 #
-# Ship's always-read set has a word budget of its own, 17000: `skills/ship/SKILL.md`
+# Ship's always-read set has a word budget of its own, 16000: `skills/ship/SKILL.md`
 # plus every `skills/ship/reference/*.md` but the files a run reads only on their
 # branch (the case list below). A full-lane run reads that whole set, so a rule
 # moved out of SKILL.md into a reference file still costs every run; the per-file
-# caps never bounded the sum. 17000 is the set at 16,860 words after the
-# sections a run reads on one branch moved to branch-only files (#1255), rounded
-# up to the next 500, the same ratchet. A
+# caps never bounded the sum. 16000 is the set at 15,991 words after prose
+# restating what a script already refuses became a pointer at that refusal
+# (#1256), rounded up to the next 500, the same ratchet. A
 # reference file the list does not name counts, so a new file is in the sum
 # until it is declared branch-only here.
 #
@@ -173,8 +173,8 @@ if [ -f "$root/skills/ship/SKILL.md" ]; then
     n=$(words "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
     sum=$((sum + n))
   done
-  [ "$sum" -le 17000 ] \
-    || { printf 'skills/ship: the always-read set is %s words, over the 17000-word budget\n' "$sum"; rc=1; }
+  [ "$sum" -le 16000 ] \
+    || { printf 'skills/ship: the always-read set is %s words, over the 16000-word budget\n' "$sum"; rc=1; }
 fi
 for f in "$root"/skills/*/reference/*.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
