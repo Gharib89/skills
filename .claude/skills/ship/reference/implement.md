@@ -50,19 +50,19 @@ effective spec by [spec precedence](#phase-1-spec-precedence): the body's
 criteria, less each a later `writer: true` brief or comment drops or revises,
 plus the criteria it adds. `run-file init <issue> --from-profile --criteria -`
 takes that text as a quoted heredoc, so the shell expands none of the issue's
-own words, a form that works only before isolation: an isolated session passes
+words, a form that works only before isolation: an isolated session passes
 `--criteria <file>`
 ([context-discipline.md](context-discipline.md#once-isolated)). Init records
 each checkbox line, or a criteria heading's top-level list lines where it holds
 no checkbox, as a `## Criteria` entry, so pass the text with its headings and
-write each criterion a brief or comment adds under its criteria heading, in that
-list's form; init warns, naming the fix, where that yields none or `--criteria`
-was left out, and `gate clean` holds until it is applied. Phase 0 reuses this
-read. A free-text run has no issue, passes none, and notes criteria a later
-phase can check, each with `run-file note Criteria <text>`. A phase-1 anchor
-rewrite that changes a criterion adds each replacement criterion with `run-file
-note Criteria <text>`, which writes it under the next number, owing its own
-line, and the original's `Criterion` line names them.
+write each criterion a brief or comment adds under the issue's criteria heading,
+in that list's form; init warns, naming the fix, where that yields none or
+`--criteria` was left out, and `gate summary` holds until it is applied. Phase 0
+reuses this read. A free-text run has no issue, passes none, and notes criteria
+a later phase can check, each with `run-file note Criteria <text>`. A phase-1
+anchor rewrite that changes a criterion adds each replacement criterion with
+`run-file note Criteria <text>`, which writes it under the next number, owing
+its own line, and the original's `Criterion` line names them.
 
 Every entry is owed one line, anywhere in the file, written as the run
 settles it: `Criterion <n>: met: <proof>`, the proof a test, a
@@ -150,10 +150,10 @@ architecture: a plan-implement loop across a subagent boundary loses too much.
 Hand the subagent the worktree path, its `execute` scratch directory, the plan,
 the test command and the conventions the edit needs. Require back a diff
 summary, the tests added or updated, and a **structured deviations list**, which
-lands verbatim in the merge summary. Its prompt carries the worktree prefix, the
-[one plain command](context-discipline.md#once-isolated) rule and targeted test
-nodes only, the phase-5 gate staying with the orchestrator: a guard refusal of a
-write is a wrong path to correct, not a form to work around.
+lands verbatim in the merge summary. Its prompt carries the worktree prefix and
+the [one plain command](context-discipline.md#once-isolated) rule, and has it
+run only targeted test nodes, the phase-5 gate staying with the orchestrator: a
+guard refusal of a write is a wrong path to correct, not a form to work around.
 
 ## Phase 2: adjacent finds
 

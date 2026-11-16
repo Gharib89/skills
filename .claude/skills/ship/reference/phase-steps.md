@@ -10,7 +10,7 @@ from the worktree was pre-merge; behind, follow its advice, re-run, continue.
 Confirm every `Carry:` file matches the main checkout's copy: one differing is
 `carried file modified`, because ship never edits untracked secrets. Then run
 the gate at the profile's `Location:` from the worktree, inline, and `run-file
-gate record` its JSON, reading unparseable output or a missing `gates.secrets`
+gate record` its JSON; read unparseable output or a missing `gates.secrets`
 as `unavailable`. Verdict `fail`: fix loop. Gate `deferred-to-ci`: proceed, the
 merge summary naming each deferred gate. `unavailable`: stop `local gate
 unavailable`, the PR unopened.
