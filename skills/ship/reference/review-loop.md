@@ -121,14 +121,14 @@ admitted.
 ## A window that closes with no round
 
 A window that closes with `done: false` and `not_reviewed` set is that round's
-answer, bar the `unreachable` on a wrong head that [Reading a
-round](#reading-a-round) re-polls. The answer stands whatever the reviewer's own
-status says it may still do: no second
-window opens for the same round and no second request goes out. Record its stop
-per [The exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned
-round whose fixes changed the tree, else `not reviewed: <cause>`. Either way
-that exit is final, and the `Fallback-for:` reviewer that names it, if any, is
-driven per [Fallbacks](review-unconverged.md#fallbacks).
+answer, bar `unreachable` with `landed_by` null on a `head_sha` not the expected
+head, which [Reading a round](#reading-a-round) re-polls. The answer stands
+whatever the reviewer's status says it may still do: no second window opens for
+the same round and no second request goes out. Record its stop per [The
+exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned round
+whose fixes changed the tree, else `not reviewed: <cause>`. Either way that exit
+is final, and the `Fallback-for:` reviewer that names it, if any, is driven per
+[Fallbacks](review-unconverged.md#fallbacks).
 
 A `status: pending` answer is no closed window: resume it by its cursor
 ([mechanics.md](mechanics.md#waits-past-540-s)). A `conflict` closes the window
