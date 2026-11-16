@@ -11,6 +11,7 @@ source tests/lib.sh
 m=${RUN_FILE_MECHANIC:-$PWD/skills/ship/scripts/run-file.sh}
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
+echo "No findings." > "$tmp/local-report.md"
 repo=$tmp/repo
 f=$tmp/records/ship-9/run.md
 ci=$tmp/ci.json
@@ -106,7 +107,7 @@ holds 'evidence at a clean merge before a conflicting one' "$conflict_merge" "$(
 # clean base merge keeps the reading the local review gave.
 pastcap_run() { # pastcap_run <head> <past-cap stamp>
   run "$1" "cap" "pass at $1"
-  printf 'Round: primary 2: fixes pushed\nPast-cap: primary: tree unchanged at %s\n' "$2" >> "$f"
+  printf 'Round: primary 2: fixes pushed\nPast-cap: primary: tree unchanged at %s: local review %s: no findings\n' "$2" "$tmp/local-report.md" >> "$f"
 }
 sed 's/^Fallback-for: None.$/Cap: 2\n&/' "$repo/docs/agents/ship.md" > "$tmp/capped.md" && cp "$tmp/capped.md" "$repo/docs/agents/ship.md"
 pastcap_run "$conflict_merge" "$stamp"

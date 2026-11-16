@@ -17,7 +17,9 @@
 # thresholds, quota commands, active repos, waivers, any key the owner added)
 # keeps the file's value, so an owner's edit survives (a quota command a
 # previous setup recorded is kept too: fix one by hand in the file, or delete it
-# there and re-run). A machine the file holds
+# there and re-run), except a `last-fix-after-cap` waiver still holding the old
+# default condition, which is rewritten to the current one (any other text is
+# kept and named in a warning). A machine the file holds
 # and T3 no longer lists is kept. A machine's slots are the lesser of half
 # its cores and its RAM over the per-thread floor, at least 1, and this
 # machine keeps 1 slot (`reserve`) for the owner's messages. This machine is
@@ -142,6 +144,16 @@ floor_gb=4
 warnings='[]'
 warn() { warnings=$(jq -c --arg w "$1" '. + [$w]' <<<"$warnings"); }
 
+# The last-fix waiver never covered ship's local review (#1248). The merge keeps
+# the file's value over the proposal, so a file holding the old default text is
+# rewritten to the new one here; an owner's own text is kept and named.
+last_fix_old='The last fix after the review cap is reached may merge without another review round: record it in the PR body.'
+last_fix_new='The last fix after the review cap is reached may merge without another host review round; this does not skip ship'"'"'s local review of that fix, which still runs: record both in the PR body.'
+existing=$(jq -c --arg o "$last_fix_old" --arg n "$last_fix_new" \
+  'if (.waivers | type) == "array" then .waivers |= map(if .id == "last-fix-after-cap" and .condition == $o then .condition = $n else . end) else . end' <<<"$existing")
+own=$(jq -r --arg n "$last_fix_new" 'first(.waivers[]? | select(.id == "last-fix-after-cap" and .condition != $n)) | .condition // empty' <<<"$existing")
+[ -z "$own" ] || warn "last-fix-after-cap: the file's condition is not the default, so it was kept; check it does not skip ship's local review: $own"
+
 # One machine's facts and proposal from a probe line: slots the lesser of half
 # its cores and its RAM over the floor, at least 1. A GPU read that failed is
 # left out of the facts, so the file keeps what it holds.
@@ -157,12 +169,12 @@ probe_out=$(bash "$(dirname "${BASH_SOURCE[0]}")/probe.sh" --json 2>/dev/null </
 local_m=$(jq -c "$machine_jq"' machine(.; $f; {reserve: 1})' --argjson f "$floor_gb" <<<"$probe_out")
 ! jq -e .gpu_failed >/dev/null <<<"$probe_out" || warn "nvidia-smi failed: gpu left as the file has it"
 facts=$(jq -cn --arg n "$name" --argjson m "$local_m" '{machines: {($n): $m.facts}}')
-proposed=$(jq -cn --arg n "$name" --argjson m "$local_m" --argjson f "$floor_gb" \
+proposed=$(jq -cn --arg n "$name" --argjson m "$local_m" --argjson f "$floor_gb" --arg last_fix "$last_fix_new" \
   '{machines: {($n): $m.proposal}, thread_ram_floor_gb: $f, active_repos: [], work_week: [1,2,3,4,5], five_hour_floor: 0.1, weekly_reserve: 0.05,
     waivers: [
       {id: "codex-usage-limit", condition: "Codex answers a review request with a usage-limit notice: drive the fallback reviewer and record Codex as not landed; do not hold the merge gate for it."},
       {id: "offline-live-e2e", condition: "A live end-to-end proof needs a real T3 server or other machines: prove it through the scripts over fake CLIs and say so in the PR body."},
-      {id: "last-fix-after-cap", condition: "The last fix after the review cap is reached may merge without another review round: record it in the PR body."}]}')
+      {id: "last-fix-after-cap", condition: $last_fix}]}')
 
 # Linked T3 environments: each is a machine this super agent may launch on. A
 # reachable one is probed through a scratch thread there (the caller runs it, see

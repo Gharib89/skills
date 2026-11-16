@@ -157,6 +157,23 @@ check "a machine no longer linked is kept, not dropped" present \
   "$(jq -r 'if .machines.down then "present" else "absent" end' <<<"$g")"
 check "a second run changes nothing" "$g" "$(S --name laptop --write >/dev/null; jq -c . "$fleet")"
 
+# --- the last-fix waiver never covered the local review (#1248) --------------------
+# A file holding the old default text gets the new one; an owner's own text stays,
+# with a warning, since the merge keeps the file's value over the proposal.
+old_w='The last fix after the review cap is reached may merge without another review round: record it in the PR body.'
+reset
+S --name laptop --write >/dev/null
+new_w=$(jq -r '.waivers[] | select(.id == "last-fix-after-cap") | .condition' "$fleet")
+check "the new waiver says it does not skip the local review" yes "$(case $new_w in *"does not skip"*"local review"*) echo yes ;; *) echo no ;; esac)"
+jq --arg c "$old_w" '(.waivers[] | select(.id == "last-fix-after-cap") | .condition) = $c' "$fleet" > "$tmp/old.json" && mv "$tmp/old.json" "$fleet"
+out=$(S --name laptop --write)
+check "a file holding the old default condition gets the new one" "$new_w" "$(jq -r '.waivers[] | select(.id == "last-fix-after-cap") | .condition' "$fleet")"
+check "and the rewrite warns nothing" '[]' "$(jq -c '[.warnings[] | select(test("last-fix-after-cap"))]' <<<"$out")"
+jq '(.waivers[] | select(.id == "last-fix-after-cap") | .condition) = "Mine: merge the last fix."' "$fleet" > "$tmp/own.json" && mv "$tmp/own.json" "$fleet"
+out=$(S --name laptop --write)
+check "an owner-edited condition is left alone" 'Mine: merge the last fix.' "$(jq -r '.waivers[] | select(.id == "last-fix-after-cap") | .condition' "$fleet")"
+check "and named in a warning" 1 "$(jq '[.warnings[] | select(test("last-fix-after-cap"))] | length' <<<"$out")"
+
 # --- a failed GPU read is not a verdict --------------------------------------------
 reset
 S --name laptop --write >/dev/null

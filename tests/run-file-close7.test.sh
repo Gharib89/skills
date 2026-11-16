@@ -24,6 +24,9 @@ run4() { run4bare; printf '%s\n' 'Round: self-review 1: clean' 'Stop: self-revie
 run7() { n=$((n + 1)); rf=$(bash "$bin/run-file.sh" init "$n" --scratchpad "$tmp/sp" --reviewers "${1-copilot, claude}" \
   --state 0=done --state 1=done --state 2=done --state 3=done --state 4=done --state 5=done --state 6=done --state 7=open | jq -r .run_file); }
 add() { printf '%s\n' "$@" >> "$rf"; }
+# lr <reviewer>: the local review line a reviewer stopped at cap or not landed owes (#1248).
+report=$tmp/standards-report-local.md; printf 'Findings: none\n' > "$report"
+lr() { printf 'Past-cap: %s: tree unchanged at abcdef0123456789: local review %s: no findings\n' "$1" "$report"; }
 # call <cwd> <args...>: sets out, err and status for one call.
 call() { local d=$1; shift; out=$( cd "$d" && bash "$bin/run-file.sh" "$@" 2>"$tmp/err" ); status=$?; err=$(jq -r '.error // empty' <<<"$out" 2>/dev/null); }
 close() { call "$work" close "$@" --file "$rf"; }
@@ -47,7 +50,7 @@ check "the same refusal names the other reviewer's stop" yes "$(has 'no Stop lin
 check "and each reviewer's missing round" yes "$(has 'no Round line for copilot: add `Round: copilot <n>: <text>`, one per round, unless it stopped `not reviewed`, `not invoked: <primary> reviewed` or `inline lane`' "$err")"
 check "and the other's" yes "$(has 'no Round line for claude' "$err")"
 
-run7; add 'Stop: copilot: cap' 'Stop: claude: auto-once' 'Round: copilot 1: 2 findings, both fixed' 'Round: copilot 2: clean' 'Round: claude 1: clean'
+run7; add 'Stop: copilot: cap' 'Stop: claude: auto-once' 'Round: copilot 1: 2 findings, both fixed' 'Round: copilot 2: clean' 'Round: claude 1: clean' "$(lr copilot)"
 close 7
 admitted "a stop and a round for each reviewer"
 
@@ -63,7 +66,7 @@ run7; add '- Stop: copilot: tree unchanged at 0123abc' '- Round: copilot 1: clea
 close 7
 admitted "bulleted stop and round lines"
 
-run7; add 'Stop: copilot: cap' 'Stop: claude: not reviewed' 'Round: copilot 1: clean'; close 7
+run7; add 'Stop: copilot: cap' 'Stop: claude: not reviewed' 'Round: copilot 1: clean' "$(lr copilot)"; close 7
 admitted "one reviewer with rounds and one not reviewed"
 
 # `not reviewed: <reason>` is the documented spelling of `not reviewed` (#787):
@@ -92,11 +95,11 @@ for p in 'not reviewed' 'not landed' 'inline lane'; do
 done
 run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Stop: claude: not invoked: codex reviewed'; held=$(cat "$rf"); close 7
 refused "a not-invoked fallback naming a reviewer off the row" "Stop line for claude names codex, which is not a reviewer on the phase 7 row"
-run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Round: claude 1: landed, threads unreadable' 'Stop: claude: not reviewed'; close 7
+run7; add 'Round: copilot 1: clean' 'Stop: copilot: cap' 'Round: claude 1: landed, threads unreadable' 'Stop: claude: not reviewed' "$(lr copilot)"; close 7
 admitted "a Round line beside Stop: not reviewed, a round that landed with unreadable threads"
 
 # `not landed`: a round was dispositioned, then a later one did not land (#551).
-run7; add 'Round: copilot 1: 1 finding, fixed' 'Stop: copilot: not landed' 'Stop: claude: not reviewed'; close 7
+run7; add 'Round: copilot 1: 1 finding, fixed' 'Stop: copilot: not landed' 'Stop: claude: not reviewed' "$(lr copilot)"; close 7
 admitted "a not-landed reviewer with its dispositioned round"
 run7; add 'Stop: copilot: not landed' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
 refused "a not-landed reviewer with no round" 'no Round line for copilot'
@@ -106,7 +109,7 @@ refused "a stopped reviewer with no round" 'no Round line for copilot'
 check "the not-reviewed reviewer is not asked for a round" no "$(has 'no Round line for claude' "$err")"
 check "no Stop is asked for" no "$(has 'no Stop line' "$err")"
 
-run7; add 'Stop: copilot: cap' 'Stop: claude: whenever' 'Round: copilot 1: x' 'Round: claude 1: x'; held=$(cat "$rf"); close 7
+run7; add 'Stop: copilot: cap' 'Stop: claude: whenever' 'Round: copilot 1: x' 'Round: claude 1: x' "$(lr copilot)"; held=$(cat "$rf"); close 7
 refused "a stop reason outside the list" "Stop line for claude has reason 'whenever', which is not one of $stops"
 check "the valid one is left alone" no "$(has 'copilot' "$err")"
 
@@ -117,7 +120,7 @@ run7; add 'Round: copilot 1: clean' 'Stop: copilot: tree unchanged at HEAD' 'Sto
 refused "a tree-unchanged stop whose head is no sha" "Stop line for copilot has reason 'tree unchanged at HEAD', whose head is not a commit sha"
 
 # A cap may name the head its last round read (#1045).
-run7; add 'Round: copilot 1: fixed' 'Stop: copilot: cap at abcdef0123456789' 'Stop: claude: not reviewed'; close 7
+run7; add 'Round: copilot 1: fixed' 'Stop: copilot: cap at abcdef0123456789' 'Stop: claude: not reviewed' "$(lr copilot)"; close 7
 admitted "a cap stamped with the head the last round read"
 run7; add 'Round: copilot 1: fixed' 'Stop: copilot: cap at HEAD' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
 refused "a cap stamp that is no sha" "Stop line for copilot has reason 'cap at HEAD', whose head is not a commit sha"
@@ -127,7 +130,7 @@ refused "a reason that only starts with a listed one" "Stop line for copilot has
 
 run7; add 'Stop: copilot: cap' 'Stop: claude: cap' 'Stop: claude: nonsense' 'Round: copilot 1: x' 'Round: claude 1: x'; held=$(cat "$rf"); close 7
 refused "the last Stop line decides" "Stop line for claude has reason 'nonsense'"
-run7; add 'Stop: copilot: cap' 'Stop: claude: nonsense' 'Stop: claude: cap' 'Round: copilot 1: x' 'Round: claude 1: x'; close 7
+run7; add 'Stop: copilot: cap' 'Stop: claude: nonsense' 'Stop: claude: cap' 'Round: copilot 1: x' 'Round: claude 1: x' "$(lr copilot)" "$(lr claude)"; close 7
 admitted "a later valid Stop line replaces an earlier invalid one"
 
 for bad in 'Round: copilot x: text' 'Round: copilot 0: text' 'Round: copilot 1:' 'Round: copilot 1: ' 'Round: copilot: text' 'Round: copilot 01: text' 'Round: copilots 1: text' 'Round: copilot 1 text'; do
@@ -137,7 +140,7 @@ done
 
 # A name may hold spaces, dots and hyphens: matched by exact prefix, never as a pattern.
 run7 'my.rev-1, Code Rabbit, claude'
-add 'Stop: my.rev-1: cap' 'Round: my.rev-1 1: x' 'Stop: Code Rabbit: cap' 'Round: Code Rabbit 1: x' 'Stop: claude: cap' 'Round: claude 1: x'
+add 'Stop: my.rev-1: cap' 'Round: my.rev-1 1: x' 'Stop: Code Rabbit: cap' 'Round: Code Rabbit 1: x' 'Stop: claude: cap' 'Round: claude 1: x' "$(lr my.rev-1)" "$(lr 'Code Rabbit')" "$(lr claude)"
 close 7
 admitted "reviewer names with a dot, a hyphen and a space"
 run7 'my.rev-1, Code Rabbit, claude'
@@ -157,6 +160,51 @@ run7 'None.'; close 7
 admitted "None. as the reviewers"
 run7 'copilot (on-request), claude'; close 7
 admitted "a list that is not name-shaped skips the check"
+
+# --- close 7: the local review a non-converged reviewer owes (#1248) -------------
+# A cap, a docs-only end or a not-landed primary's last round left fixes no host
+# reviewer read: close 7 owes a `Past-cap:` or `Docs-only:` line naming the local
+# review, its Report file and its result, for that reviewer.
+pastcap=$(lr copilot)
+owed='copilot stopped after fixes no host reviewer read, with no local review line'
+run7; add 'Round: copilot 1: 2 findings, both fixed' 'Round: copilot 2: 1 finding, fixed' 'Stop: copilot: cap at abcdef0123456789' 'Stop: claude: not reviewed'
+held=$(cat "$rf"); close 7
+refused "a cap whose fixes changed the tree with no local review" "$owed"
+check "the refusal names the line to add" yes "$(has 'Past-cap: copilot: tree unchanged at <sha>: local review <report file>: <result>' "$err")"
+run7; add 'Round: copilot 1: fixed' 'Stop: copilot: cap at abcdef0123456789' 'Stop: claude: not reviewed' "$pastcap"; close 7
+admitted "a cap with its Past-cap line"
+run7; add 'Round: copilot 1: fixed' 'Stop: copilot: cap at abcdef0123456789' 'Stop: claude: not reviewed' "${pastcap%%: local review*}"; held=$(cat "$rf"); close 7
+refused "a Past-cap line that names no local review is none" "$owed"
+run7; add 'Round: copilot 1: fixed' 'Stop: copilot: cap at abcdef0123456789' 'Stop: claude: not reviewed' "Past-cap: copilot: tree unchanged at abcdef0123456789: local review $tmp/no-such.md: no findings"; held=$(cat "$rf"); close 7
+refused "a Past-cap line whose Report file is missing is none" "$owed"
+run7; add 'Round: copilot 1: fixed' 'Stop: copilot: cap at abcdef0123456789' 'Stop: claude: not reviewed' "${pastcap/copilot/claude}"; held=$(cat "$rf"); close 7
+refused "another reviewer's Past-cap line" "$owed"
+# A docs-only end: the same cap stop, short of the cap, its line `Docs-only:`.
+run7; add 'Round: copilot 1: docs fixed' 'Stop: copilot: cap' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
+refused "a docs-only end with no local review" "$owed"
+run7; add 'Round: copilot 1: docs fixed' 'Stop: copilot: cap' 'Stop: claude: not reviewed' "${pastcap/Past-cap/Docs-only}"; close 7
+admitted "a docs-only end with its Docs-only line"
+# A not-landed primary after a dispositioned round left that round's fixes unread.
+run7; add 'Round: copilot 1: 1 finding, fixed' 'Stop: copilot: not landed' 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
+refused "a not-landed primary's last round with no local review" "$owed"
+run7; add 'Round: copilot 1: 1 finding, fixed' 'Stop: copilot: not landed' 'Stop: claude: not reviewed' "$pastcap"; close 7
+admitted "a not-landed primary with its local review line"
+# A cap from a re-raised declined finding fixed nothing, so no review is owed.
+run7; add 'Round: copilot 1: re-raised declined: a finding' 'Stop: copilot: cap at abcdef0123456789' 'Stop: claude: not reviewed'; close 7
+admitted "a cap from a re-raised declined finding owes no local review"
+# The skip: a fallback that ran host rounds read the primary's fixes.
+mkdir -p "$work/docs/agents"
+printf '%s\n' '## Reviewers' '### copilot' 'Trigger: on-request' 'Cap: 2' 'Fallback-for: None.' '### claude' 'Trigger: on-request' 'Fallback-for: copilot' > "$work/docs/agents/ship.md"
+for s in 'cap at abcdef0123456789' 'not landed'; do
+  run7; add 'Round: copilot 1: fixed' 'Round: copilot 2: fixed' "Stop: copilot: $s" 'Round: claude 1: clean' 'Stop: claude: tree unchanged at abcdef0123456789'; close 7
+  admitted "a primary stopped $s whose fallback reviewed owes no local review"
+  run7; add 'Round: copilot 1: fixed' 'Round: copilot 2: fixed' "Stop: copilot: $s" 'Stop: claude: not reviewed'; held=$(cat "$rf"); close 7
+  refused "a primary stopped $s whose fallback did not review" "$owed"
+done
+run7; add 'Round: copilot 1: fixed' 'Round: copilot 2: fixed' 'Stop: copilot: cap' 'Round: claude 1: fixed' 'Stop: claude: cap at abcdef0123456789'; held=$(cat "$rf"); close 7
+refused "a capped fallback owes its own local review" 'claude stopped after fixes no host reviewer read'
+check "and its primary owes none" no "$(has "$owed" "$err")"
+rm -r "$work/docs"
 
 # --- grade -----------------------------------------------------------------------
 
