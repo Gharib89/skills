@@ -202,8 +202,8 @@ findings, read from its Run-file lines below. A loop that owed a local review
 adds what that review found. Add whatever else the reader needs: the primary's
 reason on a fallback that ran, a round that did not land after one that did, or
 the calls the reviewer was denied, summed from the numeric `reviewer_run.denied`
-over the rounds, with each non-zero round's run URL. GitHub
-[folds](pr-body-collapse.md#collapsing-long-sections) detail.
+over the rounds, with each non-zero round's run URL. On GitHub, an entry past
+three lines of detail [folds](pr-body-collapse.md#collapsing-long-sections).
 
 Each reviewer's rounds and stop go in the Run file as lines, which `run-file
 close 7` requires of every reviewer on the phase-7 row, one `Round:` per round

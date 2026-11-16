@@ -32,7 +32,7 @@ references call each item, not a layout:
   `unmet_criteria_line` (a run with no `## Criteria` lists them from the issue),
   with its reason (the action a human must take, for a host action), or
   `no line` where the run recorded none. With any listed, read [Unmet
-  criteria](merge-gate-branches.md#unmet-criteria) before taking a merge word.
+  criteria](merge-gate-branches.md#unmet-criteria) before merging.
 - **Verification**: each applicable verification's phase-3 result and what
   ran, or the reason the PR body gives for none applying.
 - **Self-review**: its rounds and stop, each phase-4 report with its path, and

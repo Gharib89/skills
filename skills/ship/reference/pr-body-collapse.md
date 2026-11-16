@@ -1,8 +1,7 @@
-# Phase 6 and 7: collapsing long PR body sections
+# Phases 6 and 7: collapsing long PR body sections
 
-Read this file only when a `## Review` or `## Verification` entry carries more
-than three lines of detail: a reviewer's per-round findings, or a
-verification's command output or multi-line note. The body itself is
+Read this file only on a GitHub host, when a `## Review` or `## Verification`
+entry carries more than three lines of detail. The body itself is
 [pr-body.md](pr-body.md).
 
 ## Collapsing long sections
@@ -21,8 +20,8 @@ reviewer's exit-word line, each verification's result line, or the
 detail. The section surgery treats the block as the section's own content,
 never as a heading ([mechanics.md](mechanics.md#section-surgery)).
 `## Why the change` and the Door line are never wrapped. On an Azure DevOps
-host, write no `<details>` block: it renders no HTML, as the Change outline
-notes.
+host, write no `<details>` block: it renders no HTML, as [the Change
+outline](pr-body.md#the-change-outline) notes.
 
 Write a wrapped section once, in the write that finishes it. Only that write
 carries the block: the `## Review` placeholder written at open and any interim

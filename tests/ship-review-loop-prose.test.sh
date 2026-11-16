@@ -14,7 +14,7 @@ loop=$(awk '/^## A window that closes with no round/{f=1; next} /^## /{f=0} f' s
 skill=$(flat < skills/ship/SKILL.md)
 round=$(awk '/^## The round/{f=1; next} /^## /{f=0} f' skills/ship/reference/review-loop.md | flat)
 
-check 'the review loop has the section' yes "$([ -n "$loop" ] && echo yes || echo no)"
+check 'review-unconverged has the closed-window section' yes "$([ -n "$loop" ] && echo yes || echo no)"
 
 # <case>|<text read>|<clause it must hold>|<the clause with its meaning negated>
 rules=(
