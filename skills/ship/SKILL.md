@@ -55,9 +55,8 @@ its tail: `tooling` as `host-unreachable`, `bootstrap` as `bootstrap-failed`.
 Load `tdd` (phase 2), `writing-for-agents` (phase 4, agent-facing docs),
 `code-review` (phase 4) and `find-docs` (any API claim, the profile's `Pinned:`
 libraries included: [implement.md](reference/implement.md#consult-current-docs))
-through the Skill tool when their moment comes, taking each one's logic from the
-skill itself, and tell any composed skill with an unattended mode that the run
-is unattended, explicitly, because it has no other way to know. **Read**
+through the Skill tool, and tell any composed skill with an unattended mode that
+the run is unattended: it has no other way to know. **Read**
 `show-me` (phase 6, the Change outline) instead;
 [pr-body.md](reference/pr-body.md) says why.
 
@@ -199,6 +198,21 @@ Hand-back is `manage-issue <issue> handback "<reason>"`; the rules, attended
 and unattended, are in
 [phase-steps.md](reference/phase-steps.md#hand-back).
 
+## The run contract
+
+Whoever launched the run:
+
+- A turn that ends only to wait on the run's own background work (a check, CI, a
+  subagent) ends with this line, word for word, as its last line,
+  without the backticks: `Waiting on my own background work.`
+- A run that starts in a worktree on a branch ending `-<issue>` works there, on
+  that branch, and makes no other: the PR is found by that branch.
+- The last message ends on the PR URL and the gate state, or on the stop reason
+  before the gate, never the waiting line.
+- After a stop at a merge-gate hold, a later message in the thread may carry a
+  ruling on that hold: act on it, not as a new task. A ruling never goes into
+  the PR body, except a waiver that passed the gate, which the body names.
+
 ## The lanes
 
 Every run is **full lane** until the change proves it **small**: all three keys
@@ -239,8 +253,7 @@ These bind every edit a run makes, in every repo, regardless of a personal
   `TODO` standing in for the fix; if the real fix is out of scope, say so and
   file it.
 - **Callers found, dependencies justified.** Before changing a contract, find
-  its callers and tests and update each one the change breaks; prefer the
-  standard library or what the repo already installs, and justify a new
+  its callers and tests and update each one the change breaks; justify a new
   dependency in the PR body; [implement.md](reference/implement.md)'s phase 2
   says how.
 - **Comments record the why.** Document public APIs and non-obvious

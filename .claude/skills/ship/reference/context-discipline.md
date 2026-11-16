@@ -18,9 +18,9 @@ mechanics refuse.
 only when the raw output you would otherwise ingest is much larger than the
 conclusion you need: a multi-file map, a verification run, CI logs. When you
 can already point at the target (one or two known files, a single test node,
-one mechanic's projected JSON) work inline. A small-lane run typically spawns
-none of its own; a session with no subagent tools runs everything inline and is
-still a complete run. The levers, in rough order of impact:
+one mechanic's projected JSON) work inline. A session with no subagent tools
+runs everything inline and is still a complete run. The levers, in rough order
+of impact:
 
 - **Delegate reading, not just review.** Send the investigation to a cheap-tier
   subagent ("map how X, Y, Z connect; return signatures, call sites and data
@@ -28,9 +28,8 @@ still a complete run. The levers, in rough order of impact:
   *understand* stays out of main context. Ask neutral, current-state questions
   that want file and line pointers back, and keep the intended change in the
   main thread: a brief that names the change gets back a reading bent toward it.
-- **One reference file per call.** Several files chained in one `cat`
-  can pass the persist limit, and the caller then sees a 2 KB preview of the
-  lot and re-reads each file it chained.
+- **One reference file per call.** Files chained in one `cat` can
+  pass the persist limit, leaving a 2 KB preview and a re-read of each.
 - **Read the profile by `##` section**, naming the heading (`## Reviewers`,
   say) in a section-scoped `awk` or `sed -n`, for the sections a phase uses,
   rather than the whole file.
@@ -42,7 +41,7 @@ still a complete run. The levers, in rough order of impact:
   `pass | fail` plus the failing lines. Mechanics project their own output:
   run them inline.
 - **One Run file** for the checklist and the design and plan. It survives a
-  mid-run context summary; the same summary repeated across turns does not.
+  mid-run context summary.
 
 **Every subagent prompt names the scratch directory that subagent writes in**,
 `<scratch>/<role>/`, `<scratch>` being the directory `run-file init` printed and
@@ -79,9 +78,7 @@ a read of the output file buys nothing it does not deliver.
 After `EnterWorktree`, Claude Code guards the session, and every subagent it
 dispatches inherits the guard. It refuses an Edit or Write to a path in the main
 checkout, and any Bash command running git that it cannot prove targets this
-worktree. Claude Code 2.1.311 refused a loop around git, `git -C` at another
-checkout, a heredoc to a script naming git, a `.git` path, and a `run-file note`
-text naming `bash -c` (3 of 7 wordings). So Edit and Write paths stay under the
+worktree. So Edit and Write paths stay under the
 worktree, and one Bash rule, stricter than the guard on purpose, holds for the
 orchestrator and in every subagent prompt it writes: **once isolated, each Bash
 call is one plain command run with the worktree as its cwd**, naming no `.git`
@@ -151,14 +148,13 @@ dispositioned**, `<scratch>/<role>/<role>-report.md`, or
 because a report held in context alone is lost to a compaction the Run file
 survives. The `<role>-` prefix is required: Claude Code refuses a subagent's
 Write to a file named `report*.md` ("subagents should return findings as text"),
-a refusal measured on every bare `report*.md` a run tried, while a prefixed name
-is admitted. Each dispatch names the file, and takes back only the path and a
-summary of at most five lines. No file at the named path is a report that failed
-to arrive: retry while retries make progress, as SKILL.md's stops say, then
-`red-after-retry: <role>`. An inline pass writes the same file itself before
-dispositioning. The Run file's `## Design and plan` names every round's paths as
-each round is dispatched; disposition from the file, and quote the merge
-summary's `Self-review` item from it. Phase 7's [local
+while a prefixed name is admitted. Each dispatch names the file, and takes back
+only the path and a summary of at most five lines. No file at the named path
+is a report that failed to arrive: retry while retries make progress, as
+SKILL.md's stops say, then `red-after-retry: <role>`. An inline pass writes the
+same file itself before dispositioning. The Run file's `## Design and plan`
+names every round's paths as each round is dispatched; disposition from the
+file, and quote the merge summary's `Self-review` item from it. Phase 7's [local
 review](review-unconverged.md#the-local-review) writes
 `<scratch>/standards/standards-report-local.md` under the same rule, a path no
 phase-4 round uses.

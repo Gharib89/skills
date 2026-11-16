@@ -105,10 +105,10 @@ that block.
 Each prints one JSON verdict on stdout, a failing step's last 40 log lines on
 stderr, and exits `0` ok, `1` the mechanic's own not-ok answer, `2` tooling. A
 malformed invocation is tooling: it prints `{"error": "<usage>"}` and exits 2.
-Exit 1 is an answer, not always a fault: `nothing-ready` from `select`, a
-not-actionable `preflight` and a `poll-pr` window that closed are all exit 1 and
-none is red. Every exit-1 and exit-2 `error` is also written to stderr, so a
-refusal shows there even when `| jq -r .field` over stdout reads `null`.
+Exit 1 is an answer, not always a fault: `nothing-ready` from `select` and a
+closed `poll-pr` window are not red. Every exit-1 and exit-2 `error` is also
+written to stderr, so a refusal shows there even when `| jq -r .field` over
+stdout reads `null`.
 
 A failed write to a PR body or title, a comment or a thread reply carries the
 host's `status` beside its `error`: a 5xx or 429 outlasted the mechanic's own
@@ -128,7 +128,7 @@ list. A section write replaces the section's prose and, by default in both
 mechanics, carries every record in its old content through, verbatim and in
 order, below the new content. `update-pr-body --section <name> --drop-records
 --body-file <file>` skips that carry, so the body file is all the section keeps;
-`update-issue-body` has no such flag. A `## <name>` found only inside a record
+`update-issue-body` has none. A `## <name>` found only inside a record
 is an absent section, created at the end.
 
 ## The vocabulary a read comes back in
