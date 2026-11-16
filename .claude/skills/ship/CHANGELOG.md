@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.66.1 (2026-11-16)
+
+### Refactoring
+
+- **ship**: Give each phase rule one home in the always-read set and lower the prose cap to 17,500
+  ([#1262](https://github.com/Gharib89/skills/pull/1262),
+  [`87606f1`](https://github.com/Gharib89/skills/commit/87606f1d22ca7a91b74b364e2639ff855594a59f))
+
+
 ## v0.66.0 (2026-11-16)
 
 ### Features
