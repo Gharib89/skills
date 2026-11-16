@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.65.0 (2026-11-16)
+
+### Features
+
+- **ship**: Every comment a ship run posts ends with a visible ship line
+  ([#1259](https://github.com/Gharib89/skills/pull/1259),
+  [`3c0b123`](https://github.com/Gharib89/skills/commit/3c0b12312115a5a7ed163d2d4826308f086d20bf))
+
+
 ## v0.64.0 (2026-11-16)
 
 ### Features
