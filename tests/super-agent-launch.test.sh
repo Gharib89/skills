@@ -10,46 +10,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source tests/super-agent-fake.sh
-
-s=skills/super-agent/scripts
-tmp=$(mktemp -d) || exit 2
-trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/bin" "$tmp/tools" "$tmp/fake" "$tmp/remote"
-for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut find wc diff chmod cp; do
-  ln -s "$(command -v $t)" "$tmp/tools/$t" || exit 2
-done
-export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake
-sa_fake_install "$tmp/bin"
-fleet=$tmp/fleet.json led=$tmp/ledger.json quota=$tmp/quota.json readings=$tmp/readings.json out_f=$tmp/launch.json
-repo=acme/widgets
-cat > "$fleet" <<'JSON'
-{"thread_ram_floor_gb": 4,
- "machines": {"home": {"cores": 8, "slots": 4, "reserve": 1, "max_load": 8, "gpu": null, "gh_logins": ["alice"], "brief": ["Machine line: the home box has one GPU shared by all runs."]},
-              "box": {"environment_id": "env-box", "cores": 8, "slots": 4, "max_load": 8, "gpu": null, "gh_logins": ["alice"]}},
- "repos": {"acme/widgets": {"max_ships": 2, "brief": ["Repo line: run the widget suite with `make test`."]}},
- "waivers": [{"id": "w", "condition": "Codex answers with a usage-limit notice: record it as not landed."}]}
-JSON
-quota_with() { # <weekly remaining> [<auth>]
-  jq -cn --argjson w "$1" --arg a "${2:-ok}" '{providers: {claudeAgent: {driver: "claude", status: "available", auth: $a,
-    buckets: [{id: "week", window: "weekly", remaining: $w}, {id: "five", window: "5h", remaining: 0.9}]}}}' > "$quota"
-}
-issue() { # <number> <title> <label>...
-  local n=$1 t=$2; shift 2
-  sa_route "repos/$repo/issues/$n" "$(jq -cn --arg t "$t" --argjson n "$n" '{number: $n, title: $t, state: "open", labels: ($ARGS.positional | map({name: .}))}' --args "$@")"
-  sa_route "repos/$repo/issues/$n/comments" '[]'
-}
-L() { # <number> [<launch flags>...]: the launch call for one ticket of the repo
-  local n=$1; shift
-  bash "$s/launch.sh" "$repo#$n" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine home --thread th-super "$@"
-}
-reset() {
-  rm -f "$led" "$SA_FAKE/calls" "$SA_FAKE/on-post" "$out_f"
-  sa_machine home 8 16384; sa_load 0.5 12288; sa_environments '[{"environmentId":"env-box","label":"box","status":"reachable"}]'
-  sa_route user '{"login":"octo"}'; sa_route "repos/$repo" '{"default_branch":"main"}'
-  echo 2026-11-06T12:00:00Z > "$SA_FAKE/now"
-  quota_with 0.8
-  printf '{"box":{"load1":1,"free_gb":20}}\n' > "$readings"
-}
+source tests/super-agent-launch-lib.sh
 
 # --- the contract every script keeps ------------------------------------------
 out=$(bash "$s/launch.sh" --help 2>"$tmp/err"); rc=$?
@@ -160,25 +121,6 @@ check "no instance able to launch is no_instance, with route's reason" no_instan
 echo stale > "$out_f"; L 7 --out "$out_f" >/dev/null
 check "an answer that does not launch removes a stale --out file" absent "$([ -e "$out_f" ] && echo present || echo absent)"
 quota_with 0.8
-
-# --- who rules on a merge-gate hold: a fleet value other than owner or super-agent is no launch ---
-reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
-for v in owner super-agent; do
-  jq --arg v "$v" '.merge_gate_ruler = $v' "$fleet" > "$tmp/ruler.json"
-  check "a merge_gate_ruler of $v launches" true \
-    "$(bash "$s/launch.sh" "$repo#7" --fleet "$tmp/ruler.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x | jq .launch)"
-done
-for v in '"anyone"' 3; do
-  jq --argjson v "$v" '.merge_gate_ruler = $v' "$fleet" > "$tmp/ruler.json"
-  out=$(bash "$s/launch.sh" "$repo#7" --fleet "$tmp/ruler.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>/dev/null); rc=$?
-  check "a merge_gate_ruler of $v exits 2 naming the field, never launching" "2 false 1" \
-    "$rc $(jq -r 'has("args")' <<<"$out") $(jq -r .error <<<"$out" | grep -c merge_gate_ruler)"
-done
-reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
-rm -rf "$tmp/stub"; cp -r "$s" "$tmp/stub"; printf 'exit 0\n' > "$tmp/stub/route.sh"
-out=$(bash "$tmp/stub/launch.sh" "$repo#7" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>&1); rc=$?
-check "a route that prints nothing exits 2 with a named error, never launching" "2 false route gave no answer" "$rc $(jq -r 'has("args")' <<<"$out") $(jq -r .error <<<"$out")"
-reset
 
 # --- the per-repo cap: a launch over it is a waiting row -----------------------------
 bash "$s/ledger.sh" --ledger "$led" add --repo $repo --number 1 --thread t1 --worktree /w/1 --branch b1 --machine home --area a >/dev/null

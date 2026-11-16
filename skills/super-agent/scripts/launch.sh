@@ -22,7 +22,7 @@
 # --gpu, --account, --blocked-by, --readings and --exclude go to `place`,
 # --instance and --raise to `route`. --wanted answers a route's `ask`: `yes`
 # launches the wanted tier, `no` the default one. --note is the owner's note for
-# this ticket. --out also writes the answer to a file, only when it launches; `record`
+# this ticket, one line: a newline in it exits 2. --out also writes the answer to a file, only when it launches; `record`
 # reads that file as --launch.
 # The ticket's Size label picks the tier (M when it has none, `size_source` says
 # so); `ready-for-agent` is a `ship` launch, `needs-triage` a `triage` one.
@@ -163,7 +163,7 @@ while [ $# -gt 0 ]; do
   case $1 in
     --fleet) fleet=$2 ;; --ledger) ledger=$2 ;; --quota) quota=$2 ;; --machine) machine=$2 ;; --thread) thread=$2 ;;
     --raise) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; raise=$2 ;;
-    --instance) named=$2 ;; --readings) readings=$2 ;; --note) note=$2 ;; --out) outf=$2 ;; --account) account=$2 ;;
+    --instance) named=$2 ;; --readings) readings=$2 ;; --note) case $2 in *$'\n'*) sa_tooling "--note holds a newline: the launch message takes one Note: line" ;; esac; note=$2 ;; --out) outf=$2 ;; --account) account=$2 ;;
     --wanted) case $2 in yes|no) wanted=$2 ;; *) sa_tooling "$usage" ;; esac ;;
     --area) areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas"); pargs+=(--area "$2") ;;
     --blocked-by) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; pargs+=(--blocked-by "$2") ;;
