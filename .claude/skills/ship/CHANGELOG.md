@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.64.0 (2026-11-16)
+
+### Features
+
+- **ship,super-agent**: Close 7 owes a local review after a capped, docs-only or not-landed round
+  ([#1257](https://github.com/Gharib89/skills/pull/1257),
+  [`70de341`](https://github.com/Gharib89/skills/commit/70de3412c658fb54b9e706f249aa1264ff6e76cc))
+
+
 ## v0.63.0 (2026-11-15)
 
 ### Features
