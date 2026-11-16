@@ -5,59 +5,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source tests/run-file-lib.sh
-run_file_clean_setup
-base() {
-  cat > "$profile" <<'PROFILE'
-## CI
-Legs:
-  test: prove the change
-
-## Reviewers
-### primary
-Trigger: on-request
-Fallback-for: None.
-### fallback
-Trigger: on-request
-Fallback-for: primary
-
-## Verification
-### live check: punctuation
-Also proven by CI: test
-PROFILE
-  cat > "$f" <<'RUN'
-# ship run
-## Verification results
-- live check: punctuation: pass at abcdef0123456789
-## Local gate
-- 10:00 abcdef0123456789 pass {"tests":"pass","secrets":"pass"}
-## Review evidence
-Round: primary 1: all dispositioned
-Stop: primary: tree unchanged at abcdef0123456789
-Stop: fallback: not reviewed
-RUN
-  printf '%s\n' '{"status":"green","head_sha":"abcdef0123456789","checks":[{"name":"test","status":"success"}],"legs":["test"],"missing_legs":[],"failing":[],"non_leg_failing":[],"unlisted":[],"waited_s":0}' > "$ci"
-  rm -f "$tmp/records/ship-clean/defect-1.md" "$tmp/records/ship-clean/tracker-1.md" "$tmp/records/ship-clean/defect-1.base.md"
-}
-call() { (cd "$repo" && bash "$m" gate clean "$ci" --head "$head" --file "$f" "$@" 2>"$tmp/err"); }
-held() {
-  local name=$1 reason=$2 answer rc
-  answer=$(call); rc=$?
-  check_rc "$name refuses" 1 "$rc"
-  check "$name names its hold" true "$(jq -r --arg r "$reason" '.clean == false and (.held_by | index($r) != null)' <<<"$answer")"
-  check "$name reports evidence on stderr" true "$(if grep -Fq -- "$reason" "$tmp/err"; then echo true; else echo false; fi)"
-}
-clean() {
-  local name=$1 answer rc
-  answer=$(call); rc=$?
-  check_rc "$name exits clean" 0 "$rc"
-  check "$name has the public key set" 'clean,held_by' "$(jq -r 'keys | join(",")' <<<"$answer")"
-  check "$name has no holds" '{"clean":true,"held_by":[]}' "$(jq -c . <<<"$answer")"
-}
-unheld() { check "$1 does not hold $2" false "$(call | jq -r --arg r "$2" '.held_by | index($r) != null')"; }
-change_run() { sed "$1" "$f" > "$f.new" && mv "$f.new" "$f"; }
-change_ci() { jq "$1" "$ci" > "$ci.new" && mv "$ci.new" "$ci"; }
-# A primary that spent its Cap: on a tree-changing last round owes its fallback a run (#531).
-capped() { base; sed 's/^Fallback-for: None.$/Cap: 2\n&/' "$profile" > "$profile.new"; mv "$profile.new" "$profile"; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Round: primary 2: fixes pushed\nStop: primary: cap/'; }
+source tests/run-file-clean-cap-lib.sh
 capped; held 'capped primary owes its fallback' 'reviewer fallback: not reviewed'
 capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'capped primary covered by a fallback stopped on tree unchanged'
 capped; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap\n' >> "$f"; held 'capped primary with a capped fallback' 'reviewer fallback: cap'
@@ -69,49 +17,6 @@ capped; change_run 's/Stop: primary: cap/Stop: primary: tree unchanged at abcdef
 capped; change_run 's/Stop: primary: cap/& at abcdef0123456789/'; held 'a stamped capped primary owes its fallback' 'reviewer fallback: not reviewed'
 capped; change_run 's/Stop: primary: cap/& at abcdef0123456789/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a stamped capped primary covered by its fallback'
 capped; change_run 's/Stop: primary: cap/& at abcdef0123456789/'; printf 'Round: fallback 1: dispositioned\nStop: fallback: cap at abcdef0123456789\n' >> "$f"; held 'a stamped capped fallback keeps the cap reason' 'reviewer fallback: cap'
-# A run past the cap records its local review as `Past-cap:`, never as a reviewer
-# `Round:`, so the capped reviewer's rounds still read 1..Cap (ship-849). The
-# gate stays held, naming the cap and the head the local review read (#880).
-pastcap='reviewer primary: past cap 2, local review read abcdef0123456789, no host reviewer read it'
-capped; before=$(grep -c '^Round: primary' "$f"); printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"
-held 'a local review past the cap' "$pastcap"
-check 'the local review adds no reviewer Round line' "$before" "$(grep -c '^Round: primary' "$f")"
-capped; unheld 'a capped primary with no local review' "$pastcap"
-capped; held 'a capped primary with no local review keeps the cap reason' 'reviewer primary: cap'
-capped; printf 'Past-cap: primary: tree unchanged at 1234567\n' >> "$f"; held 'a local review at an uncovered head names the range to read' 'reviewer primary: past cap 2, local review read 1234567, head moved: read 1234567..abcdef0123456789'
-capped; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\nRound: fallback 1: dispositioned\nStop: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a fallback that read the head settles a past-cap primary'
-capped; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"; unheld 'a past-cap local review' 'reviewer primary: cap'
-base; printf 'Past-cap: primary: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a past-cap line on a reviewer that settled'
-# `note` takes the one form the gate reads.
-base; check_rc 'note takes a past-cap line' 0 "$(bash "$m" note 'Review evidence' 'Past-cap: primary: tree unchanged at abcdef0123456789' --file "$f" >/dev/null 2>&1; echo $?)"
-check 'the past-cap line landed' 1 "$(grep -c '^Past-cap: primary: tree unchanged at abcdef0123456789$' "$f")"
-capped; printf 'Past-cap: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; unheld "another reviewer's past-cap line" "$pastcap"
-for bad in 'abc123' 'ABCDEF0123456789'; do
-  base; check_rc "note refuses a past-cap line at $bad" 1 "$(bash "$m" note 'Review evidence' "Past-cap: primary: tree unchanged at $bad" --file "$f" >/dev/null 2>&1; echo $?)"
-done
-base; answer=$(bash "$m" note 'Review evidence' 'Past-cap: primary: tree unchanged' --file "$f" 2>/dev/null); rc=$?
-check_rc 'note refuses a past-cap line with no head' 1 "$rc"
-check 'the refusal names the form' 'a Past-cap line is `Past-cap: <reviewer>: tree unchanged at <sha>`, the form gate clean reads: Past-cap: primary: tree unchanged' "$(jq -r .error <<<"$answer")"
-# A docs-only fix-only diff ends the loop before Cap: is spent: no fallback is owed, and none covers it.
-capped; change_run '/^Round: primary 2/d'; held 'docs-only end before the cap' 'reviewer primary: cap'
-capped; change_run '/^Round: primary 2/d'; unheld 'docs-only end before the cap' 'reviewer fallback: not reviewed'
-# Its local review, recorded as `Docs-only:` on the head it read, clears the hold:
-# the loop's own rule ended it, and no fix went unread (#1034).
-docsonly() { capped; change_run '/^Round: primary 2/d'; }
-docsonly; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'a docs-only end whose local review read the head'
-base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: cap/'; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; clean 'an uncapped docs-only end whose local review read the head'
-docsonly; printf 'Docs-only: primary: tree unchanged at 1234567\n' >> "$f"; held 'a docs-only local review at an uncovered head names the range to read' 'reviewer primary: docs-only end, local review read 1234567, head moved: read 1234567..abcdef0123456789'
-docsonly; printf 'Docs-only: fallback: tree unchanged at abcdef0123456789\n' >> "$f"; held "another reviewer's docs-only line" 'reviewer primary: cap'
-capped; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a docs-only line on a spent cap' 'reviewer primary: cap'
-docsonly; change_run 's/Round: primary 1:/Round: primary 2:/'; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a docs-only line on gapped rounds' 'reviewer primary: cap'
-docsonly; change_run 's/Round: primary 1: all dispositioned/Round: primary 1: re-raised declined: a finding/'; printf 'Docs-only: primary: tree unchanged at abcdef0123456789\n' >> "$f"; held 'a docs-only line on a re-raised declined finding' 'reviewer primary: cap'
-base; check_rc 'note takes a docs-only line' 0 "$(bash "$m" note 'Review evidence' 'Docs-only: primary: tree unchanged at abcdef0123456789' --file "$f" >/dev/null 2>&1; echo $?)"
-for bad in 'abc123' 'ABCDEF0123456789'; do
-  base; check_rc "note refuses a docs-only line at $bad" 1 "$(bash "$m" note 'Review evidence' "Docs-only: primary: tree unchanged at $bad" --file "$f" >/dev/null 2>&1; echo $?)"
-done
-base; answer=$(bash "$m" note 'Review evidence' 'Docs-only: primary: tree unchanged' --file "$f" 2>/dev/null); rc=$?
-check_rc 'note refuses a docs-only line with no head' 1 "$rc"
-check 'the docs-only refusal names the form' 'a Docs-only line is `Docs-only: <reviewer>: tree unchanged at <sha>`, the form gate clean reads: Docs-only: primary: tree unchanged' "$(jq -r .error <<<"$answer")"
 # A primary whose later round did not land after a fix changed the tree owes its fallback a run (#551).
 landed() { base; change_run 's/Stop: primary: tree unchanged at abcdef0123456789/Stop: primary: not landed/'; }
 landed; held 'not-landed primary owes its fallback' 'reviewer fallback: not reviewed'
