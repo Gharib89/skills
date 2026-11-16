@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.67.0 (2026-11-16)
+
+### Features
+
+- **ship**: SKILL.md carries the run contract the launch brief repeats
+  ([#1269](https://github.com/Gharib89/skills/pull/1269),
+  [`79168d3`](https://github.com/Gharib89/skills/commit/79168d39009b43c0b55c0809372f50790d332f5f))
+
+
 ## v0.66.3 (2026-11-16)
 
 ### Refactoring
