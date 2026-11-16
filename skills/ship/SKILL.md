@@ -203,12 +203,12 @@ and unattended, are in
 Whoever launched the run:
 
 - A turn that ends only to wait on the run's own background work (a check, CI, a
-  subagent) ends with this line, word for word, as its last line:
-  `Waiting on my own background work.`
+  subagent) ends with this line, word for word, as its last line,
+  without the backticks: `Waiting on my own background work.`
 - A run that starts in a worktree on a branch ending `-<issue>` works there, on
   that branch, and makes no other: the PR is found by that branch.
-- The last message ends on the PR URL and the gate state, never the waiting
-  line.
+- The last message ends on the PR URL and the gate state, or on the stop reason
+  where no PR opened, never the waiting line.
 - After a stop at a merge-gate hold, a later message in the thread may carry a
   ruling on that hold: act on it, not as a new task. A ruling never goes into
   the PR body, except a waiver that passed the gate, which the body names.
@@ -253,8 +253,7 @@ These bind every edit a run makes, in every repo, regardless of a personal
   `TODO` standing in for the fix; if the real fix is out of scope, say so and
   file it.
 - **Callers found, dependencies justified.** Before changing a contract, find
-  its callers and tests and update each one the change breaks; prefer the
-  standard library or what the repo already installs, and justify a new
+  its callers and tests and update each one the change breaks; justify a new
   dependency in the PR body; [implement.md](reference/implement.md)'s phase 2
   says how.
 - **Comments record the why.** Document public APIs and non-obvious
