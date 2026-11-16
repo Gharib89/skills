@@ -123,8 +123,8 @@ admitted.
 A window that closes with `done: false` and `not_reviewed` set is that round's
 answer, bar `unreachable` with `landed_by` null on a `head_sha` not the expected
 head, which [Reading a round](#reading-a-round) re-polls. The answer stands
-whatever the reviewer's status says it may still do: no second window opens for
-the same round and no second request goes out. Record its stop per [The
+whatever the reviewer's own status says it may still do: no second window opens
+for the same round and no second request goes out. Record its stop per [The
 exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned round
 whose fixes changed the tree, else `not reviewed: <cause>`. Either way that exit
 is final, and the `Fallback-for:` reviewer that names it, if any, is driven per
@@ -143,7 +143,7 @@ with `not_reviewed` null, which says nothing about the reviewer: resolve it
   when declining.
 - **Batch fixes into one push per round.** A fix to a rule goes to every copy of
   that rule in the same batch: grep the phrase before you push and read each
-  hunk back. Before the push, cut every line of this round's changes that no
+  hunk back. Before the push, cut every line of this round's changes no
   finding's fix or test needs.
 - **Reply in the thread**: `reply-thread <pr> <thread> --body-file` for every
   `replied: false` thread, `fixed in <sha>` or the decline and its reason. Once
