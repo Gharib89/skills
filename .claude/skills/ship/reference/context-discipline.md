@@ -77,23 +77,22 @@ a read of the output file buys nothing it does not deliver.
 ## Once isolated
 
 After `EnterWorktree`, Claude Code guards the session, and every subagent it
-dispatches inherits the guard. It refuses an Edit or Write to a path in the
-main checkout, and any Bash command running git that it cannot prove targets
-this worktree: measured on Claude Code 2.1.311, a loop around git, `git -C` at
-another checkout, a heredoc to a script naming git, a `.git` path, and a
-`run-file note` text naming `bash -c` (3 of 7 wordings). So Edit and Write paths
-stay under the worktree, and one Bash rule, stricter than the guard on purpose,
-holds for the orchestrator and in every subagent prompt it writes: **once
-isolated, each Bash call is one plain command run with the worktree as its
-cwd**, naming no `.git` path, with no chain, loop, substitution, variable as the
-command or heredoc. Its one exception is a `run-file prove` test command passed
-as one quoted `bash -c` argument ([evidence-lines.md](evidence-lines.md)), which
-the guard admitted. `run-file note` takes one line per call, naming no `bash -c`
-or other nested shell in its text (say "the prove recipe", not its command); a
-plain command named as a `Criterion` proof was admitted. Text a script reads
-(criteria, a body, a reply) goes into a file written with the Write tool and
-passes by path. Where a form works only before isolation, the prose that hands
-it out says so.
+dispatches inherits the guard. It refuses an Edit or Write to a path in the main
+checkout, and any Bash command running git that it cannot prove targets this
+worktree. Claude Code 2.1.311 refused a loop around git, `git -C` at another
+checkout, a heredoc to a script naming git, a `.git` path, and a `run-file note`
+text naming `bash -c` (3 of 7 wordings). So Edit and Write paths stay under the
+worktree, and one Bash rule, stricter than the guard on purpose, holds for the
+orchestrator and in every subagent prompt it writes: **once isolated, each Bash
+call is one plain command run with the worktree as its cwd**, naming no `.git`
+path, with no chain, loop, substitution, variable as the command or heredoc. Its
+one exception is a `run-file prove` test command passed as one quoted `bash -c`
+argument ([evidence-lines.md](evidence-lines.md)), which the guard admitted.
+`run-file note` takes one line per call, naming no `bash -c` or other nested
+shell in its text (say "the prove recipe", not its command); a plain command
+named as a `Criterion` proof was admitted. Text a script reads (criteria, a
+body, a reply) goes into a file written with the Write tool and passes by path.
+Where a form works only before isolation, the prose that hands it out says so.
 
 ## The Run file
 
@@ -121,23 +120,23 @@ width the remaining context suggests. Every later call finds it from the issue
 alone, `--issue <issue>`, plus the same `--scratchpad` if init took one. The
 task list is its **display**, one harness task per item: create all ten from
 init's `items` in one parallel turn, then set phase 0 to its `mirror`, so the
-human sees the phases still ahead and not only the open one. `run-file next
-<n>` closes the open phase and opens `<n>`, and `open`, `close` and `skip` flip
-one phase, each returning the `mirror` its task takes. Phase 4 may open while
-phase 3 is still open, both stamped; a phase-4 fix that touches a path a
-Verification already ran on re-runs that Verification scoped to the fix before
-phase 3 closes. `close 3` refuses until each Verification named at init has a
+human sees the phases still ahead and not only the open one. `run-file next <n>`
+closes the open phase and opens `<n>`, and `open`, `close` and `skip` flip one
+phase, each returning the `mirror` its task takes. Phase 4 may open while phase
+3 is still open, both stamped; a phase-4 fix that touches a path a Verification
+already ran on re-runs that Verification scoped to the fix before phase 3
+closes. `close 3` refuses until each Verification named at init has a
 `--result`, `n/a` for one whose `Applies when:` you judged false. A Verification
 the PR adds to the profile owes a result too, since the merge gate judges the
 profile's headings: pass it to `close 3` with the rest, never to `skip 3`, which
 settles only those init named. After phase 3 has closed or been skipped, a
 Verification heading a later phase's fix adds takes the same `close 3 --result`.
-`close 3`, `4`, `5` and `7` refuse what their phase still owes, each refusal
-naming it. A **small-lane** run keeps all ten items and `skip`s each collapsed
-phase, so the record shows a decision and not a gap; re-running `skip <n>
-"<reason>"` replaces a reason a wider diff outgrew, though phase 3's settled
-results keep the first skip's reason. A harness that refuses the task tools has
-answered: run on the file alone.
+`close 4`, `5` and `7` refuse what their phase still owes, each refusal naming
+it. A **small-lane** run keeps all ten items and `skip`s each collapsed phase,
+so the record shows a decision and not a gap; re-running `skip <n> "<reason>"`
+replaces a reason a wider diff outgrew, though phase 3's settled results keep
+the first skip's reason. A harness that refuses the task tools has answered: run
+on the file alone.
 
 **Every attested line goes through `run-file note <section> <line> --issue
 <issue>`** (`Round:`, `Stop:`, `Criterion <n>:`, `Noted:`, `Filed:`):

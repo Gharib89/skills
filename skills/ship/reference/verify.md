@@ -18,12 +18,12 @@ when none applies, whatever the class.
   so far as evidence, so the run stops `red-after-retry: <verification>`
   instead of looping. An entry
   without the line has no bound.
-- **Head.** `close 3` stamps each result with the head it ran on, and a
-  `pass` keeps the clean gate only while that head covers the PR head
-  (`run-file --help` says how a clean base merge and the entry's `Paths:` keep
-  it). A later change that breaks it, a fix after phase 3 or one the human
-  asked for at the merge gate, re-runs the Verification and records it again
-  with `close 3 --result`.
+- **Head.** `close 3` stamps each result with the head it ran on, and a `pass`
+  keeps the clean gate only while that head covers the PR head (`run-file
+  --help` says how a clean base merge or untouched `Paths:` keep that cover). A
+  later change that breaks the cover, a fix after phase 3 or one the human asked
+  for at the merge gate, re-runs the Verification and records it again with
+  `close 3 --result`.
 - **Prerequisite missing** (`Needs:` fails its detection): the disposition is
   the entry's `Without it:` line, one of:
   - `hand-off`: attended, print the exact command and setup, wait for the human

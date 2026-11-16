@@ -33,10 +33,10 @@ A non-gating call a mechanic already covers (`reflect`, `comment-issue`,
 `comment-pr`, `isolate`, `cleanup`) still runs through it. Any other host call
 is a **direct call** the run makes itself, logged first with `run-file call
 "<why>" --issue <issue> -- gh api ...`, which writes the line under the Run
-file's `## Direct calls` and refuses, naming the rule, any form but the host's
-REST one and a credential in the command. A direct call made in two runs, where
-this run can see the other (an earlier unattended summary comment on this repo's
-PRs lists it), is raised as a Ship note: it may earn a mechanic. Verification
+file's `## Direct calls` and refuses, naming the rule, an `Authorization` header
+and any form but the host's REST one. A direct call made in two runs, where this
+run can see the other (an earlier unattended summary comment on this repo's PRs
+lists it), is raised as a Ship note: it may earn a mechanic. Verification
 scaffolding sits outside the rule: a scratch issue or scratch review thread a
 `Run:` line sets up by hand, or a throwaway probe PR an acceptance criterion
 asks for, with its pushes and CI cancels, closed unmerged before the merge gate.

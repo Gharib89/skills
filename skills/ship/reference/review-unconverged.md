@@ -45,7 +45,7 @@ a re-raised declined finding caused the stop. Where the head later moves past
 
 A window that closes with `done: false` and `not_reviewed` set is that round's
 answer, bar `unreachable` with `landed_by` null on a `head_sha` not the expected
-head, which [Reading a round](review-loop.md#reading-a-round) re-polls. The
+head, which [mechanics.md](mechanics.md#waits-past-540-s) re-polls. The
 answer stands whatever the reviewer's own status says it may still do: no
 second window opens for the same round and no second request goes out. Record
 its stop per [The exit](review-loop.md#the-exit): `Stop: <reviewer>: not

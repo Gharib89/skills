@@ -57,9 +57,8 @@ would buy wording nits. The poll takes its bound from the block; a window that
 closes with `not_reviewed` set is read per [A window that closes with no
 round](review-unconverged.md#a-window-that-closes-with-no-round).
 
-A `conflict` closes the window
-with `not_reviewed` null, which says nothing about the reviewer: resolve it
-(phase 8) and poll again.
+A `conflict` closes the window with `not_reviewed` null, which says nothing
+about the reviewer: resolve it (phase 8) and poll again.
 
 **`Cap:`** is the budget on rounds ship starts: a number, or `None.` for an
 uncapped loop; `auto-once` delivers one round whatever it reads, and under
@@ -204,20 +203,19 @@ three lines of detail [folds](pr-body-collapse.md#collapsing-long-sections).
 Each reviewer's rounds and stop go in the Run file, one `Round: <reviewer> <n>:
 <text>` per round and one `Stop: <reviewer>: <reason>`, written with `run-file
 note Evidence "<line>" --issue <issue>`; `run-file close 7` refuses a reviewer
-on the phase-7 row whose lines are missing or misshapen, naming the line and
-its shape. `<text>` is the round's outcome, ending with the output of `git diff
+on the phase-7 row whose lines are missing or misshapen, naming the line and its
+shape. `<text>` is the round's outcome, ending with the output of `git diff
 --shortstat <head the round read>..HEAD` after its push, or `no change`. A
-reviewer that raises again a finding this run
-declined in an earlier round gets no `tree unchanged` stop for it: declining
-must never be a cheaper way past the gate than fixing. Fix the finding, and the
-round reads as any other. Leave it declined, and the round's text opens with
-`re-raised declined: <the finding>` and the reviewer stops on `cap at <sha>`,
-which holds the gate, no fallback standing in for it: the human reads the
-declined finding at the merge gate. `gate clean` also holds a `tree unchanged`
-stop beside that opening. When the last
-fully read and dispositioned round changed no file, record `tree unchanged at
-<sha>` even at `Cap:`, in the small lane or for an `auto-once` trigger, `<sha>`
-the head that round read: for a requested round, the PR's head when
+reviewer that raises again a finding this run declined in an earlier round gets
+no `tree unchanged` stop for it: declining must never be a cheaper way past the
+gate than fixing. Fix the finding, and the round reads as any other. Leave it
+declined, and the round's text opens with `re-raised declined: <the finding>`
+and the reviewer stops on `cap at <sha>`, which holds the gate, no fallback
+standing in for it: the human reads the declined finding at the merge gate.
+`gate clean` also holds a `tree unchanged` stop beside that opening. When the
+last fully read and dispositioned round changed no file, record `tree unchanged
+at <sha>` even at `Cap:`, in the small lane or for an `auto-once` trigger,
+`<sha>` the head that round read: for a requested round, the PR's head when
 `request-review` sent it, since ship pushes nothing until the round is
 dispositioned; for an `on-push` round, the `head_sha` its poll waited for; for a
 round the host opened with the PR (`auto-once`, or round 1's unbidden one), the

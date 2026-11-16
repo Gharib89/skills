@@ -278,7 +278,7 @@ call)
       esac
     done
   fi
-  [ "$rest" = true ] || ship_fail "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`, never GraphQL, which the cloud sandbox's proxy refuses with a 403: $cmd"
+  [ "$rest" = true ] || ship_fail "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`; the cloud sandbox's proxy refuses GitHub GraphQL, which \`gh\` porcelain runs on, with a 403: $cmd"
   append_to_section "## Direct calls" "- $cmd · $why"
   jq -n --arg f "$file" --arg c "$cmd" --arg w "$why" '{run_file: $f, command: $c, why: $w}'
   ;;

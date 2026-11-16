@@ -1,12 +1,12 @@
 # Phase 4 evidence lines
 
-`run-file close 4` refuses until the Run file carries a `Reverted-fix:` line
-for each test file the diff adds or changes, and the self-review loop's
-`Round:` and `Stop:` lines; each refusal names the line missing or misshapen,
-its shape and the verb that writes it. The check holds a line's presence and
-shape, and the self-review keeps the judgment of what it says. The lines exist
-because something reads them: the red line proves a new test fails on the old
-code, and `run-file gate clean` reads the loop's `Stop:` line.
+`run-file close 4` refuses until the Run file carries a `Reverted-fix:` line for
+each test file the diff adds or changes, and the self-review loop's attested
+`Round:` and `Stop:` lines; each refusal names the line missing or misshapen and
+its shape. The check holds a line's presence and shape, and the self-review
+keeps the judgment of what it says. The lines exist because something reads
+them: the red line proves a new test fails on the old code, and `run-file gate
+clean` reads the loop's `Stop:` line.
 
 - **The red line** is produced: `run-file prove <test> <path>... --issue
   <issue>` runs `revert-red` on committed state, so commit the test and the fix
@@ -33,6 +33,3 @@ code, and `run-file gate clean` reads the loop's `Stop:` line.
   database or service a fresh checkout cannot start, its runner cannot run that
   one file on its own, or it is already red before the revert: none of these
   can show the test going red for the fix's absence.
-
-The loop's `Round:` and `Stop:` lines and `close 7`'s
-([review-loop.md](review-loop.md#the-exit)) are attested the same way.

@@ -33,26 +33,26 @@ check "the az rest line lands below the first" "- az rest --method get --url htt
 before=$(cat "$rf")
 call 'retitle' --file "$rf" -- gh issue edit 9 --title x
 check_rc "a gh issue edit call is refused" 1 "$status"
-check "the refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`, never GraphQL, which the cloud sandbox's proxy refuses with a 403: gh issue edit 9 --title x" "$err"
+check "the refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`; the cloud sandbox's proxy refuses GitHub GraphQL, which \`gh\` porcelain runs on, with a 403: gh issue edit 9 --title x" "$err"
 call 'partial token' --file "$rf" -- gh apix repos/o/r
 check_rc "a word that only starts with api is refused" 1 "$status"
-check "the partial-token refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`, never GraphQL, which the cloud sandbox's proxy refuses with a 403: gh apix repos/o/r" "$err"
+check "the partial-token refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`; the cloud sandbox's proxy refuses GitHub GraphQL, which \`gh\` porcelain runs on, with a 403: gh apix repos/o/r" "$err"
 call 'bare' --file "$rf" -- gh api
 check_rc "gh api with no argument is refused" 1 "$status"
-check "the bare refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`, never GraphQL, which the cloud sandbox's proxy refuses with a 403: gh api" "$err"
+check "the bare refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`; the cloud sandbox's proxy refuses GitHub GraphQL, which \`gh\` porcelain runs on, with a 403: gh api" "$err"
 # `gh api graphql` is GraphQL, which the cloud proxy refuses as `gh issue edit`'s calls are.
 call 'graphql' --file "$rf" -- gh api graphql -f 'query={viewer{login}}'
 check_rc "gh api graphql is refused" 1 "$status"
-check "the graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`, never GraphQL, which the cloud sandbox's proxy refuses with a 403: gh api graphql -f query=\{viewer\{login\}\}" "$err"
+check "the graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`; the cloud sandbox's proxy refuses GitHub GraphQL, which \`gh\` porcelain runs on, with a 403: gh api graphql -f query=\{viewer\{login\}\}" "$err"
 call 'graphql late' --file "$rf" -- gh api -H 'X: y' graphql
 check_rc "a graphql endpoint after a flag is refused" 1 "$status"
-check "the late graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`, never GraphQL, which the cloud sandbox's proxy refuses with a 403: gh api -H X:\ y graphql" "$err"
+check "the late graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`; the cloud sandbox's proxy refuses GitHub GraphQL, which \`gh\` porcelain runs on, with a 403: gh api -H X:\ y graphql" "$err"
 call 'graphql path' --file "$rf" -- gh api /graphql -f 'query=x'
 check_rc "a /graphql path is refused" 1 "$status"
-check "the /graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`, never GraphQL, which the cloud sandbox's proxy refuses with a 403: gh api /graphql -f query=x" "$err"
+check "the /graphql refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`; the cloud sandbox's proxy refuses GitHub GraphQL, which \`gh\` porcelain runs on, with a 403: gh api /graphql -f query=x" "$err"
 call 'graphql url' --file "$rf" -- gh api https://api.github.com/graphql
 check_rc "a graphql URL is refused" 1 "$status"
-check "the graphql URL refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`, never GraphQL, which the cloud sandbox's proxy refuses with a 403: gh api https://api.github.com/graphql" "$err"
+check "the graphql URL refusal names the REST form" "a direct call goes through the host's REST form, \`gh api <REST path>\` or \`az rest\`; the cloud sandbox's proxy refuses GitHub GraphQL, which \`gh\` porcelain runs on, with a 403: gh api https://api.github.com/graphql" "$err"
 call 'graphql slash' --file "$rf" -- gh api graphql/
 check_rc "a graphql endpoint with a trailing slash is refused" 1 "$status"
 call 'graphql query' --file "$rf" -- gh api 'https://api.github.com/graphql?x=1'
