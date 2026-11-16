@@ -6,9 +6,9 @@ and how the worktree is made.
 ## What preflight proves
 
 Tooling, identity and push permission; each `reasons` entry is a row of the
-stop table. Azure DevOps has no cheap push probe, so preflight returns
-`unknown`, warns on stderr and continues: name the unproven check in the merge
-summary. An unattended run passes `--unattended`.
+stop table, and an unattended run calls `preflight <issue> --unattended`. Azure
+DevOps has no cheap push probe, so preflight returns `unknown`, warns on stderr
+and continues: name the unproven check in the merge summary.
 
 The composed-skills guard refuses on the repo's own `.claude/skills` only, and
 beside it preflight's `warnings` lists, never refusing, each personal copy under

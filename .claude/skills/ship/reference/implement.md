@@ -64,8 +64,7 @@ criterion a brief or comment adds as a checkbox too.
 Text yielding none writes no section and
 warns: record each criterion with `run-file note Criteria <text>`. It refuses
 the text `null`. Phase 0 reuses this read. A free-text run has no issue,
-passes none, and records with `run-file note Criteria <text>` criteria a later
-phase can check.
+passes none, and notes criteria a later phase can check the same way.
 An issue's init without `--criteria` warns when the issue holds criteria, and
 `run-file gate summary` then holds the gate (`criteria:` in `held_by`) until
 each is recorded with `run-file note Criteria <text>`.
@@ -266,7 +265,7 @@ Every lane runs the same loop.
   fixes, and hand the next round `git diff <head>..HEAD`. It
   is dispatched with round 1's Standards prompt, only its diff and
   [Report file](context-discipline.md#the-run-file) changing, and triaged as
-  round 1 is; a missing file is `red-after-retry: standards`.
+  round 1 is.
 - **The loop stops** at the first round whose fix-only diff is empty (no
   finding fixed: each declined, filed or linked, or none raised), or at the
   round the cap allows, its findings dispositioned in full. A cap of 1 is the

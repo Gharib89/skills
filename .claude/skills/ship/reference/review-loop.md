@@ -149,11 +149,11 @@ with `not_reviewed` null, which says nothing about the reviewer: resolve it
   that rule in the same batch: grep the phrase before you push and read each
   hunk back. Before the push, cut every line of this round's changes no
   finding's fix or test needs. Prove the fix with its targeted test nodes plus
-  its harness's per-edit check (`check.sh edit <file>...`) over the files it
-  touched, or the local gate where the repo has no harness, and a fix carrying
-  a test with `run-file prove --fix <commit>`
-  ([evidence-lines.md](evidence-lines.md)). The local gate is not re-run per
-  round: the merge gate's [final head's
+  the repo's edit rung, the per-file check its harness runs after each edit
+  (`check.sh edit <file>...`), over the files it touched, or the local gate
+  where the repo has no harness; a fix carrying a test is also proven red with
+  `--fix <fix commit>` ([evidence-lines.md](evidence-lines.md)). The local gate
+  is not re-run per round: the merge gate's [final head's
   gate](merge-gate.md#attended-post-then-wait) covers it, never run while a
   `code-review` is out.
 - **Reply in the thread**: `reply-thread <pr> <thread> --body-file` for every

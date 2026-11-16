@@ -172,7 +172,7 @@ a refusal measured on every bare `report*.md` a run tried, while a prefixed name
 is admitted. Each dispatch names the file, and takes back only the path and a
 summary of at most five lines. No file at the named path is a report that failed
 to arrive: retry while retries make progress, as SKILL.md's stops say, then
-`red-after-retry`. An inline pass writes the same file itself before
+`red-after-retry: <role>`. An inline pass writes the same file itself before
 dispositioning. The Run file's `## Design and plan` names every round's paths as
 each round is dispatched; disposition from the file, and quote the merge
 summary's `Self-review` item from it. Phase 7's [local
