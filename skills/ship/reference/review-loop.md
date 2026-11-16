@@ -41,11 +41,12 @@ The block's `Trigger:` fixes how a round starts; the brand fixes nothing.
   a round only on the current head.
 
 Per round: start it, `poll-pr <pr> --reviewer <name> [--since <iso>] --brief`,
-inline or in the background, resuming a `pending` answer with its `--cursor`
-([mechanics.md](mechanics.md#waits-past-540-s) has the cap), triage what landed,
-push the fixes once, reply. The next round starts only while the latest round's
-fixes changed the tree, the **fix-only diff** (the commits pushed since the last
-head a reviewer read) classifies `code` or `infra` under [phase 2's
+inline or in the background, triage what landed, push the fixes once, reply.
+A `status: pending` answer is no closed window: resume it with its `--cursor`
+([mechanics.md](mechanics.md#waits-past-540-s) has the cap). The next round
+starts only while the latest round's fixes changed the tree, the **fix-only
+diff** (the commits pushed since the last head a reviewer read) classifies
+`code` or `infra` under [phase 2's
 classes](implement.md#phase-2-classify-then-implement-test-first), its
 when-in-doubt rule included, and `Cap:` has rounds left. Here a fix-only diff
 touching a file an agent executes as instructions (a skill's `SKILL.md` or its

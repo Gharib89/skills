@@ -34,5 +34,5 @@ code, and `run-file gate clean` reads the loop's `Stop:` line.
   one file on its own, or it is already red before the revert: none of these
   can show the test going red for the fix's absence.
 
-`close 7`'s `Round:` and `Stop:` lines
+The loop's `Round:` and `Stop:` lines and `close 7`'s
 ([review-loop.md](review-loop.md#the-exit)) are attested the same way.
