@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.66.0 (2026-11-16)
+
+### Features
+
+- **ship**: Rework asks if a PR is still wanted, triage re-grades nits, rounds report their growth,
+  titles state the outcome ([#1261](https://github.com/Gharib89/skills/pull/1261),
+  [`27bc563`](https://github.com/Gharib89/skills/commit/27bc563c5cfad8a2847cbff630d1d28fdeaad648))
+
+
 ## v0.65.0 (2026-11-16)
 
 ### Features
