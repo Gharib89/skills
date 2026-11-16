@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.25.0 (2026-11-16)
+
+### Features
+
+- **super-agent**: Launch supervised threads with the invocation plus a note, and step in only at
+  five moments ([#1271](https://github.com/Gharib89/skills/pull/1271),
+  [`e68e0d4`](https://github.com/Gharib89/skills/commit/e68e0d4870c624e2b55f7d8a0638a900bfa3f1fc))
+
+
 ## v0.24.0 (2026-11-16)
 
 ### Features
