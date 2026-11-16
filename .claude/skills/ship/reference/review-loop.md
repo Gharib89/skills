@@ -122,8 +122,8 @@ admitted.
 
 A window that closes with `done: false` and `not_reviewed` set is that round's
 answer, bar the `unreachable` on a wrong head that [Reading a
-round](#reading-a-round) re-polls. A landed round keeps its answer there. The
-answer stands whatever the reviewer's own status says it may still do: no second
+round](#reading-a-round) re-polls. The answer stands whatever the reviewer's own
+status says it may still do: no second
 window opens for the same round and no second request goes out. Record its stop
 per [The exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned
 round whose fixes changed the tree, else `not reviewed: <cause>`. Either way
@@ -143,7 +143,8 @@ with `not_reviewed` null, which says nothing about the reviewer: resolve it
   when declining.
 - **Batch fixes into one push per round.** A fix to a rule goes to every copy of
   that rule in the same batch: grep the phrase before you push and read each
-  hunk back. Cut every line no finding's fix or test needs before the push.
+  hunk back. Before the push, cut every line of this round's changes that no
+  finding's fix or test needs.
 - **Reply in the thread**: `reply-thread <pr> <thread> --body-file` for every
   `replied: false` thread, `fixed in <sha>` or the decline and its reason. Once
   every thread carries a reply, run the block's `Resolve:` per thread; `Resolve:
@@ -168,8 +169,8 @@ with `not_reviewed` null, which says nothing about the reviewer: resolve it
   (`run-file note Evidence "<line>" --issue <issue>`, one call per line), one
   line per finding with its disposition, one per round whose
   `reviewer_run.denied` is numeric, with the run URL, and the round's `Round:`
-  line, carrying `git diff --shortstat` from the pre-round head (formats under
-  [The exit](#the-exit)): the `## Review` line is read from them.
+  line (formats under [The exit](#the-exit)): the `## Review` line is read from
+  them.
 
 ## The exit
 
@@ -215,8 +216,10 @@ Round: <reviewer> <n>: <text>
 Stop: <reviewer>: <reason>
 ```
 
-`<text>` is the round's outcome in a line. Write each line with `run-file note
-Evidence "<line>" --issue <issue>`. `close 7` and `gate clean` match the `not
+`<text>` is the round's outcome in a line, ending with
+`git diff --shortstat <head the round read>..HEAD` after its push. Write each
+line with `run-file note Evidence "<line>" --issue <issue>`. `close 7` and
+`gate clean` match the `not
 reviewed` prefix, so `Stop: <reviewer>: not reviewed: <reason>` satisfies every
 rule the bare form does. A reviewer that raises again a finding this run
 declined in an earlier round gets no `tree unchanged` stop for it: declining

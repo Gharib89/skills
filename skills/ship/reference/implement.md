@@ -193,10 +193,10 @@ noted find.
 **Auto-triage** every finding: harden rather than rip out capability, verify
 nits against the pinned versions, reject known non-issues, fix the valid ones,
 and record a one-line disposition per finding. A finding that amounts to another
-path, a rare case or a small cost is a nit whatever severity the reviewer wrote,
-and rarity alone never demotes a consequential defect. A decline whose reason
-asserts how the code behaves ("the caller already guards it") is worth a probe
-before it stands: `run-file probe <ref> --issue <issue> -- <command>...`,
+approach, a rare case or a small cost is a nit whatever severity the reviewer
+wrote, and rarity alone never demotes a consequential defect. A decline whose
+reason asserts how the code behaves ("the caller already guards it") is worth a
+probe before it stands: `run-file probe <ref> --issue <issue> -- <command>...`,
 `<ref>` naming the finding (no `: ` in it), runs the command at the checkout top
 and writes what it printed as a `Probe:` line under `## Evidence`, and output
 that does not bear the claim out turns the decline into a fix. Two rails on

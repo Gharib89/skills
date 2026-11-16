@@ -4,25 +4,26 @@
 issue, attended or unattended, left open at the merge gate. The change to make
 is its **feedback**, from three sources: the PR's unresolved review threads
 whose latest comment is not Ship's own, the PR's authoritative comments posted
-after the **head push** (the push that put the PR's head at its sha), less
-Ship's own, and the feedback text, if any. Preflight drops each thread Ship
-answered last, and it is feedback again once someone replies in it. A PR
-comment is authoritative as [implement.md](implement.md#phase-1-spec-precedence)
-defines it, and preflight drops every other one. The run keeps the claim, the
-branch and the PR, and ends at a fresh merge gate. It is attended only.
-`--unattended` and a task-spec run (free text for the issue number) are refused
-with preflight's usage line, so `cloud-ship` never starts one. `--inline`
-composes: the inline lane's rules apply to the rework's own diff.
+after the **head push** (the push that put the PR's head at its sha; the pushing
+run saw older ones), less Ship's own, and the feedback text, if any. Preflight
+drops each thread Ship answered last, and it is feedback again once someone
+replies in it. A PR comment is authoritative as
+[implement.md](implement.md#phase-1-spec-precedence) defines it, and preflight
+drops every other one. The run keeps the claim, the branch and the PR, and ends
+at a fresh merge gate. It is attended only. `--unattended` and a task-spec run
+(free text instead of the issue number) are refused with preflight's usage line,
+so `cloud-ship` never starts one. `--inline` composes: the inline lane's rules
+apply to the rework's own diff.
 
 The ten phases run as SKILL.md has them; this file lists only what changes, and
 a replacement step satisfies any `Done when:` naming the step it replaces.
 
 ## Before phase 0
 
-Before any edit, ask whether the PR is still wanted and answer **modernize**
-(bring it up to the current base and standards), **rework** (address the review
-as asked) or **close**, which the run never does: it only asks the owner. Only
-`--rework` runs this check.
+Before any edit, and only in a `--rework` run, decide whether the PR is still
+wanted and record it in `## Design and plan`: **modernize** (bring it up to the
+current base and standards), **rework** (address the review as asked) or
+**close**. On **close**, ask the owner and stop: the run never closes a PR.
 
 `run-file init <issue> --from-profile --criteria -`, the effective spec read
 first; phase 1's feedback criteria stay in the plan. When it refuses an existing
@@ -36,31 +37,31 @@ intact. Every rework run gets a new Run file and a fresh `Cap:` per reviewer.
 text. In place of `already claimed`, `existing PR` and `existing branch` it
 admits the run only when the claim is your identity's and exactly one open PR
 closes the issue, its head being the one `*-<n>` branch on origin. Any other
-shape is `not reworkable: <detail>`. An admitted PR with no feedback thread,
-none of those PR comments and no text from the human is
-`no feedback`. Both stops end the run before any change, the claim unchanged:
-no release, no hand-back. On `ok`, preflight's `rework` names
+shape is `not reworkable: <detail>`. An admitted PR with no feedback thread, no
+such PR comment and no human text is `no feedback`. Both stops end the run
+before any change, the claim unchanged: no release, no hand-back. On `ok`,
+preflight's `rework` names
 `{pr, branch, head_sha, worktree, threads, comments}`, each comment
 `{author, created_at, body}`.
 
 `isolate <issue> <type> <slug> --rework` with the profile's `Carry:` files,
 where `<type>` and `<slug>` are split from `rework.branch`
-(`<type>/<slug>-<issue>`). It reuses the worktree an ended attended run left,
-if clean and at the PR's head (`reused: true`), and otherwise checks the PR
-branch out into a new worktree. Its refusal `existing branch: <branch> has
-commits origin lacks` stops the run like `not reworkable`. Its `base` is the
-PR's head before this run: write it to the Run file's `## Design and plan` as
-the **rework base**. `EnterWorktree` follows.
+(`<type>/<slug>-<issue>`). It reuses the worktree an ended attended run left, if
+clean and at the PR's head (`reused: true`), and otherwise checks the PR branch
+out into a new worktree. Its refusal
+`existing branch: <branch> has commits origin lacks` stops the run like
+`not reworkable`. Its `base` is the PR's head before this run: write it to
+`## Design and plan` as the **rework base**.
 
 ## Phase 1: the feedback is the spec delta
 
 `manage-issue <issue> take` answers `claim: held`, which here meets
 `claim: taken`. Read each thread in `rework.threads` whole with
 `poll-pr <pr> --brief --full open`. Write one criterion per thread, one per
-comment in `rework.comments`, then the human's text as criteria; where they
-conflict, the human's text wins. A thread or comment is triaged the way phase 7
-triages a reviewer finding: fixed, or declined with a reason. The issue body
-still binds wherever the feedback leaves it alone.
+comment in `rework.comments`, then the human's text, which wins any conflict.
+A thread or comment is triaged the way phase 7 triages a reviewer finding:
+fixed, or declined with a reason. The issue body still binds wherever the
+feedback leaves it alone.
 
 ## Phase 2: the lane keys
 
@@ -76,9 +77,8 @@ The lane keys, and the small lane's size, measure the rework's own diff,
 3. Rewrite each body section the rework changed with
    `update-pr-body --section --body-file`. The Change outline and Verification
    sections always need it.
-4. Read it back with `read-pr`.
-5. Skip `reflect`, since the issue already links the PR.
-6. Answer each feedback thread with `reply-thread`, saying what changed or why
+4. Skip `reflect`, since the issue already links the PR.
+5. Answer each feedback thread with `reply-thread`, saying what changed or why
    it was declined, then `resolve-thread` each one fixed; a declined thread
    stays open for the human.
 
@@ -93,8 +93,8 @@ Rounds run as usual. With `created_at` null:
 
 ## Phase 9: a fresh merge gate
 
-Write the summary as merge-gate.md says, naming each comment from
-`rework.comments` by author and time with what it changed, or why it was
-declined: a comment has no thread to answer in. Then post it with
-`comment-pr <pr> --body-file`, which marks it as Ship's own, so a later rework
-never reads it as feedback. Then take the attended `Merge:` branch.
+Write the summary per merge-gate.md, naming each comment from `rework.comments`
+by author and time with what it changed, or why it was declined: a comment has
+no thread to answer in. Then post it with `comment-pr <pr> --body-file`, which
+marks it as Ship's own, so a later rework never reads it as feedback. Then take
+the attended `Merge:` branch.
