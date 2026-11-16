@@ -55,9 +55,8 @@ its tail: `tooling` as `host-unreachable`, `bootstrap` as `bootstrap-failed`.
 Load `tdd` (phase 2), `writing-for-agents` (phase 4, agent-facing docs),
 `code-review` (phase 4) and `find-docs` (any API claim, the profile's `Pinned:`
 libraries included: [implement.md](reference/implement.md#consult-current-docs))
-through the Skill tool when their moment comes, taking each one's logic from the
-skill itself, and tell any composed skill with an unattended mode that the run
-is unattended, explicitly, because it has no other way to know. **Read**
+through the Skill tool, and tell any composed skill with an unattended mode that
+the run is unattended: it has no other way to know. **Read**
 `show-me` (phase 6, the Change outline) instead;
 [pr-body.md](reference/pr-body.md) says why.
 
@@ -198,6 +197,21 @@ findings, fixing, re-running, is autonomous. Two guardrails hold around that:
 Hand-back is `manage-issue <issue> handback "<reason>"`; the rules, attended
 and unattended, are in
 [phase-steps.md](reference/phase-steps.md#hand-back).
+
+## The run contract
+
+Whoever launched the run:
+
+- A turn that ends only to wait on the run's own background work (a check, a CI
+  wait, a subagent) ends with this line, word for word, as its last line:
+  `Waiting on my own background work.`
+- Work in the worktree the run starts in, on the branch it holds, and make no
+  other: the PR is found by that branch.
+- The last message ends on the PR URL and the gate state, never the waiting
+  line.
+- After a stop at a merge-gate hold, a later message in the thread may carry a
+  ruling on that hold: act on it, not as a new task. A ruling never goes into
+  the PR body, except a waiver that passed the gate, which the body names.
 
 ## The lanes
 
