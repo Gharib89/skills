@@ -2,6 +2,35 @@
 # Run-file mechanic: the phase 4, 5 and 7 gates, and the covered-head and untouched-path reads. Sourced by ../run-file.sh, never run.
 # shellcheck disable=SC2154,SC2034 # shares the globals of run-file.sh (file, head, verb, usage)
 
+# `close 4` reads the checkout's own diff (the working tree, untracked files
+# included, against the merge base of HEAD and origin/HEAD); it needs:
+#   `Reverted-fix: <test path>: red at <sha> reverting <path>...` (produced) or
+#     `Reverted-fix: <test path>: n/a: <reason>` (attested) for each test file
+#     the diff adds or changes, deletions aside. A red line stands while neither
+#     the test nor a path it lists has changed since <sha> in the working tree,
+#     untracked files included; a hand-written `red` or `red: <text>` is
+#     refused. A test file has a path component `tests`, `test` or `__tests__`,
+#     or a basename matching `*.test.*`, `*.spec.*`, `*_test.*` or `test_*`.
+#   the self-review loop in close 7's vocabulary: at least one
+#     `Round: self-review <n>: <text>`, <n> a positive integer, and
+#     `Stop: self-review: <reason>`, the last such line deciding, the reason
+#     tree unchanged, cap or `cap at <sha>`.
+# `close 7` reads the reviewers from the phase's checklist row (nothing is held
+# where the row names none, or names what is not a list of names) and needs a
+# `Stop: <reviewer>: <reason>` for each, the last such line deciding, the reason
+# one of cap, `cap at <sha>` (read as cap), `tree unchanged at <sha>` (<sha>
+# the PR head the round read; a bare `tree unchanged` is refused), small lane,
+# inline lane, auto-once, not landed, not reviewed (also spelled `not reviewed:
+# <reason>`, read as the same stop here and in `gate clean`) or `not invoked:
+# <primary> reviewed` (a fallback whose primary, a reviewer on the row, stopped
+# on none of not reviewed, not landed, inline lane or not invoked), and unless
+# it is `not reviewed`, `not invoked: <primary> reviewed` or `inline lane` at
+# least one `Round: <reviewer> <n>: <text>`, <n> a positive integer. A reviewer
+# whose loop left fixes no host reviewer read (a cap no re-raised declined
+# finding caused, or not landed after a round), unless the profile's fallback
+# for it ran a round and did not stop not reviewed, also needs its local
+# review's `Past-cap:` or `Docs-only:` line, in the form `note` takes.
+
 is_test_path() {
   case /$1/ in */tests/* | */test/* | */__tests__/*) return 0 ;; esac
   case ${1##*/} in *.test.* | *.spec.* | *_test.* | test_*) return 0 ;; esac

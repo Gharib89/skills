@@ -129,7 +129,10 @@ Setup runs only here, on the super agent's machine. The owner edits the file by
 hand for anything setup proposed (slots, thresholds, active repos, waivers,
 `work_week`); a re-run keeps those edits for a machine probed before and
 refreshes only the probed facts (`proposed_slots` shows what a fresh measure
-would set), while a machine never probed takes the computed slots. An
+would set), while a machine never probed takes the computed slots. One edit
+is not kept: a `last-fix-after-cap` waiver still holding the old default text
+gets the current one, since that waiver never covered ship's local review; any
+other text stays, named in a warning. An
 unreachable machine keeps its previous facts and is probed on the next setup
 that finds it reachable. An `unavailable` provider, or an instance whose
 `auth` is `failed`, is a fact to report, not an error: name it with its reason
