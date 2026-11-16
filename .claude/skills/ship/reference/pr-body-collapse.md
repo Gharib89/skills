@@ -1,8 +1,7 @@
 # Phases 6 and 7: collapsing long PR body sections
 
-Read this file only on a GitHub host, when a `## Review` or `## Verification`
-entry carries more than three lines of detail. The body itself is
-[pr-body.md](pr-body.md).
+Read this file only when a `## Review` or `## Verification` entry carries more
+than three lines of detail. The body itself is [pr-body.md](pr-body.md).
 
 ## Collapsing long sections
 
