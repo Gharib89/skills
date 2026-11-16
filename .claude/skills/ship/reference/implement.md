@@ -64,7 +64,7 @@ criterion a brief or comment adds as a checkbox too.
 Text yielding none writes no section and
 warns: record each criterion with `run-file note Criteria <text>`. It refuses
 the text `null`. Phase 0 reuses this read. A free-text run has no issue,
-passes none, and notes criteria a later phase can check the same way.
+passes none, and notes, the same way, criteria a later phase can check.
 An issue's init without `--criteria` warns when the issue holds criteria, and
 `run-file gate summary` then holds the gate (`criteria:` in `held_by`) until
 each is recorded with `run-file note Criteria <text>`.
