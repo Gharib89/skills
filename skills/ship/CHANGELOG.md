@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.66.2 (2026-11-16)
+
+### Refactoring
+
+- **ship**: Move one-branch sections out of the always-read set and lower the prose cap to 17,000
+  ([#1263](https://github.com/Gharib89/skills/pull/1263),
+  [`7abaf82`](https://github.com/Gharib89/skills/commit/7abaf8212c500e7c87ea6ef4d5ec31f4732515da))
+
+
 ## v0.66.1 (2026-11-16)
 
 ### Refactoring
