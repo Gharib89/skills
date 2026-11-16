@@ -102,11 +102,21 @@ EORESTS
   refuse_gaps 4
 }
 
+# A local review's line, the review a reviewer's loop owes when it ended with
+# fixes no host reviewer read: `<kind>: <reviewer>: tree unchanged at <sha>:
+# local review <report file>: <result>`, its Report file on disk, so the line
+# traces a review that ran and not a stamp alone (#1248). `gate clean` reads its
+# `<sha>`.
+local_review_ok() { # local_review_ok <line>: 0 in that form with its Report file present
+  [[ $1 =~ ^(Past-cap|Docs-only):\ .+:\ tree\ unchanged\ at\ [0-9a-f]{7,64}:\ local\ review\ ([^:]+):\ .*[^[:space:]]$ ]] \
+    && [ -s "${BASH_REMATCH[2]}" ]
+}
+
 # Phase 7: each reviewer the checklist row names has its stop reason and, unless
-# it never reviewed, a round.
+# it never reviewed, a round; one whose fixes no host reviewer read, its local review.
 stop_reasons="cap at <sha>, cap, tree unchanged at <sha>, small lane, inline lane, auto-once, not landed, not reviewed, not invoked: <primary> reviewed"
 gate_phase7() { # gate_phase7 <phase 7 row>
-  local list names nm stop r ok p ps
+  local list names nm stop r ok p ps profile reviewers fb fs k found
   case $1 in *", one bounded pass each"*) ;; *) return 0 ;; esac
   list=${1#*"Reviewers: "}; list=${list%%", one bounded pass each"*}
   case $list in "" | None | None. | none | none.) return 0 ;; esac
@@ -116,6 +126,10 @@ gate_phase7() { # gate_phase7 <phase 7 row>
   done <<EONAMES
 $names
 EONAMES
+  # The profile's fallbacks, for the local review's skip; none without a profile.
+  reviewers='[]'
+  profile=$(ship_profile_path) && [ -f "$profile" ] && { reviewers=$(ship_reviewers "$(cat "$profile")") \
+    || ship_tooling "close 7 reads the profile's reviewers at $profile, which cannot be read"; }
   while IFS= read -r nm; do
     stop=$(rests "Stop: $nm: " | tail -n 1)
     stop=$(trim_end "$stop")
@@ -150,6 +164,29 @@ EONAMES
 $(rests "Round: $nm ")
 EORESTS
     [ "$ok" = true ] || gap "no Round line for $nm: add \`Round: $nm <n>: <text>\`, one per round, unless it stopped \`not reviewed\`, \`not invoked: <primary> reviewed\` or \`inline lane\`"
+    # Fixes no host reviewer read: an unraised cap (spent, or a docs-only end) or
+    # a not-landed stop after a round, unless a fallback ran host rounds over them.
+    [ "$ok" = true ] || continue
+    case $stop in
+      cap | "cap at "*) rests "Round: $nm " | grep -qE '^[1-9][0-9]*: re-raised declined: ' && continue ;;
+      "not landed") ;;
+      *) continue ;;
+    esac
+    fb=$(jq -r --arg n "$nm" 'first(.[] | select(.fallback_for == $n) | .name) // empty' <<<"$reviewers")
+    if [ -n "$fb" ]; then
+      fs=$(trim_end "$(rests "Stop: $fb: " | tail -n 1)")
+      case $fs in "not reviewed" | "not reviewed: "* | "not invoked: "* | "inline lane" | "") ;;
+        *) rests "Round: $fb " | grep -qE "$round_re" && continue ;; esac
+    fi
+    found=false
+    for k in Past-cap Docs-only; do
+      while IFS= read -r r; do
+        [ -n "$r" ] && local_review_ok "$k: $nm: $(trim_end "$r")" && found=true
+      done <<EOLOCAL
+$(rests "$k: $nm: ")
+EOLOCAL
+    done
+    [ "$found" = true ] || gap "$nm stopped after fixes no host reviewer read, with no local review line: run the local review, then add \`Past-cap: $nm: tree unchanged at <sha>: local review <report file>: <result>\` (\`Docs-only:\` for a docs-only end before the cap) with \`run-file note\`"
   done <<EONAMES
 $names
 EONAMES
