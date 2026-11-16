@@ -282,7 +282,7 @@ check_rc "a pid file of a dead watcher is taken over" 0 "$rc"
 check "and the lock is released at exit" "no" "$([ -f "$led.watch" ] && echo yes || echo no)"
 
 # --- a rest that ends on the waiting line is running until the window passes ---
-# The brief tells a run that ends a turn to wait on its own background work to
+# Ship's run contract tells a run that ends a turn to wait on its own background work to
 # say so in a last line of this exact text. 2099 is inside any window, 2020 past
 # the 60 s one, so no case reads the clock.
 wl='Waiting on my own background work.'

@@ -142,10 +142,10 @@ sa_remote_flag() {
 }
 
 # The last line a supervised run writes when it ends a turn only to wait on its own
-# background work (a check, a CI wait, a subagent): the launch brief asks for it
+# background work (a check, a CI wait, a subagent): ship's run contract asks for it
 # word for word, and `sa_observe` reads it as `waiting`. A rest that ends on it is
 # running until the stall window passes, so it raises no `run-finished` and adds no
-# stall. Defined once here: `brief.sh` sends it and the observation matches it.
+# stall. Defined once here, where the observation matches it.
 sa_waiting_line='Waiting on my own background work.'
 
 # `active($w; $now)` for a snapshot (`$obs`): the thread is running, or at rest on

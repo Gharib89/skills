@@ -42,7 +42,7 @@
 # `add` over a finished triage entry, `rethread` for a thread that failed. A write is
 # a temp file beside the ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
 # `--allow` is a call the answer lets a supervised thread make without a hold,
-# and `allowed` lists them as the lines the launch brief carries. `--brief` marks
+# and `allowed` lists them. `--brief` marks
 # the ruling brief-bound: `briefed` lists those, and `brief` carries each one word
 # for word, so a ruling the owner dated today (a reviewer that will not work, say)
 # reaches every supervised thread without a hand-appended line. With `--brief`,

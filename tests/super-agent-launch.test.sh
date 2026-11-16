@@ -2,7 +2,7 @@
 # super-agent's `launch` and `launch record`, driven through their command lines
 # over the fake `t3` and `gh` (tests/super-agent-fake.sh): the launch call prints the
 # whole `t3_thread_launch` argument object built from the claim, the saved quota
-# read, the route, the placement and the brief, or names why it did not launch
+# read, the route, the placement and the launch message, or names why it did not launch
 # (each reason, no argument object); `record` writes the ledger entry with the
 # fleet's machine key and the routed tier's model and effort, then reconciles. The
 # end of the file runs launch, record, reconcile and status in a row.
@@ -79,10 +79,7 @@ check "the worktree strategy names the base and the branch /ship would" \
 check "L starts on the third rung, on route's instance, options an array" \
   '{"instanceId":"claudeAgent","model":"opus","options":[{"id":"effort","value":"high"}]}' "$(jq -c .args.modelSelection <<<"$out")"
 check "a local launch carries no environment id" false "$(jq '.args | has("environmentId")' <<<"$out")"
-check "the message opens with the owner-skill invocation" "/ship 7" "$(jq -r .args.message <<<"$out" | sed -n 1p)"
-check "then the brief, waiver word for word" 1 "$(jq -r .args.message <<<"$out" | grep -cF 'Codex answers with a usage-limit notice: record it as not landed.')"
-check "the brief carries the repo's cap-scoped line, the machine's line and the note" 3 \
-  "$(jq -r .args.message <<<"$out" | grep -cE '^  (Repo line: run the widget|Machine line: the home box|Mind the flaky)')"
+check "with --note the message is the invocation plus one Note: line, nothing else" "$(printf '/ship 7\nNote: Mind the flaky test.')" "$(jq -r .args.message <<<"$out")"
 check "the argument only an MCP read fills is named" '["projectId"]' "$(jq -c .needs <<<"$out")"
 check "the record block holds what the ledger will carry" \
   '{"key":"acme/widgets#7","kind":"ship","machine":"home","environment_id":null,"instance_id":"claudeAgent","model":"opus","effort":"high","areas":["skills/widgets"],"branch":"fix/add-a-frobnicator-to-the-7"}' "$(jq -c .record <<<"$out")"
@@ -104,12 +101,21 @@ issue 11 "Something is off" needs-triage
 out=$(L 11)
 check "a needs-triage ticket takes /triage, a triage/ branch and the default size M" '["/triage 11","triage/something-is-off-11","M","default"]' \
   "$(jq -c '[(.args.message | split("\n")[0]), .args.workspaceStrategy.branch, .size, .size_source]' <<<"$out")"
-check "its message carries the triage brief: the inline-fix line, no merge allowance, no PR-and-gate ending" '1 0 0' \
-  "$(jq -r .args.message <<<"$out" | grep -c '^If you open a PR yourself to ship') $(jq -r .args.message <<<"$out" | grep -c 'Merge allowance') $(jq -r .args.message <<<"$out" | grep -c 'PR URL and the gate state')"
+check "without --note a triage message is the invocation alone" "/triage 11" "$(jq -r .args.message <<<"$out")"
+check "with --note a triage message is the invocation plus one Note: line" "$(printf '/triage 11\nNote: Look at the logs first.')" \
+  "$(L 11 --note "Look at the logs first." | jq -r .args.message)"
 reset; issue 12 "Another one" ready-for-agent
-msg=$(L 12 | jq -r .args.message)
-check "a ready-for-agent ticket's message still carries the ship brief" '1 0' \
-  "$(grep -c '^Merge allowance' <<<"$msg") $(grep -c '^If you open a PR yourself to ship' <<<"$msg")"
+check "without --note a ship message is the invocation alone" "/ship 12" "$(L 12 | jq -r .args.message)"
+# The fleet's waivers, the ledger's allowed and brief-bound rulings and the fleet's
+# brief lines all exist here, and none of them reaches the launch message.
+bash "$s/ledger.sh" --ledger "$led" ruling "Brief-bound ruling text." --brief >/dev/null
+bash "$s/ledger.sh" --ledger "$led" ruling "deny nothing" --allow "git push to the branch" >/dev/null
+for t in "12 ready-for-agent" "11 needs-triage"; do
+  set -- $t; issue "$1" "Another one" "$2"
+  msg=$(L "$1" --note "Only this." | jq -r .args.message)
+  check "a $2 message carries no waiver, ruling, shared-machine, merge allowance, waiting, branch or last-message line" 0 \
+    "$(grep -ciE 'waiver|Codex answers|ruling|Brief-bound|git push|Repo line|Machine line|share this machine|pkill|flock|Merge allowance|Waiting on my own|worktree you start in|branch it holds|last message|merge\.sh' <<<"$msg")"
+done
 
 # --- the flags place and route take pass through -------------------------------------
 sa_load 9 12288
@@ -155,16 +161,23 @@ echo stale > "$out_f"; L 7 --out "$out_f" >/dev/null
 check "an answer that does not launch removes a stale --out file" absent "$([ -e "$out_f" ] && echo present || echo absent)"
 quota_with 0.8
 
-# --- a brief that cannot be built is no launch --------------------------------------
+# --- who rules on a merge-gate hold: a fleet value other than owner or super-agent is no launch ---
 reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
-jq '.repos = {"acme/widgets": {"brief": "one line"}}' "$fleet" > "$tmp/badfleet.json"
-out=$(bash "$s/launch.sh" "$repo#7" --fleet "$tmp/badfleet.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>&1); rc=$?
-check "a fleet whose brief lines are mis-shaped exits 2, never launching with an empty brief" "2 false" "$rc $(jq -r 'has("args")' <<<"$out")"
-for stub in brief route; do
-  rm -rf "$tmp/stub"; cp -r "$s" "$tmp/stub"; printf 'exit 0\n' > "$tmp/stub/$stub.sh"
-  out=$(bash "$tmp/stub/launch.sh" "$repo#7" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>&1); rc=$?
-  check "a $stub that prints nothing exits 2 with a named error, never launching" "2 false $stub gave no answer" "$rc $(jq -r 'has("args")' <<<"$out") $(jq -r .error <<<"$out")"
+for v in owner super-agent; do
+  jq --arg v "$v" '.merge_gate_ruler = $v' "$fleet" > "$tmp/ruler.json"
+  check "a merge_gate_ruler of $v launches" true \
+    "$(bash "$s/launch.sh" "$repo#7" --fleet "$tmp/ruler.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x | jq .launch)"
 done
+for v in '"anyone"' 3; do
+  jq --argjson v "$v" '.merge_gate_ruler = $v' "$fleet" > "$tmp/ruler.json"
+  out=$(bash "$s/launch.sh" "$repo#7" --fleet "$tmp/ruler.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>/dev/null); rc=$?
+  check "a merge_gate_ruler of $v exits 2 naming the field, never launching" "2 false 1" \
+    "$rc $(jq -r 'has("args")' <<<"$out") $(jq -r .error <<<"$out" | grep -c merge_gate_ruler)"
+done
+reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+rm -rf "$tmp/stub"; cp -r "$s" "$tmp/stub"; printf 'exit 0\n' > "$tmp/stub/route.sh"
+out=$(bash "$tmp/stub/launch.sh" "$repo#7" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>&1); rc=$?
+check "a route that prints nothing exits 2 with a named error, never launching" "2 false route gave no answer" "$rc $(jq -r 'has("args")' <<<"$out") $(jq -r .error <<<"$out")"
 reset
 
 # --- the per-repo cap: a launch over it is a waiting row -----------------------------

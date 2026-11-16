@@ -38,7 +38,7 @@ never run it.
 
 The **fleet file** is `super-agent/fleet.json` under `$XDG_CONFIG_HOME`
 (`~/.config` when unset). The machines and their slots, the GitHub accounts,
-the active repos, their ship caps, machine pins and brief lines, the work week,
+the active repos, their ship caps and machine pins, the work week,
 the standing waivers, who rules on a merge-gate hold, the notify command and
 the provider quota commands come from the fleet file, never from this text.
 
@@ -113,15 +113,15 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    (Routing, Placement), `--note <text>` for a line only this ticket's thread
    should read, and `--raise <n>` on a raised launch. It reads the labels
    (`ready-for-agent` takes `/ship <n>`, `needs-triage` takes `/triage <n>`),
-   claims, routes, places and writes the brief, and prints `launch: true` with
-   `args`, the whole `t3_thread_launch` argument object, or `launch: false` with
-   a `reason`: `claimed`, `stale`, `waiting`, `need_reading`, `ask`,
+   claims, routes, places and writes the launch message, and prints `launch:
+   true` with `args`, the whole `t3_thread_launch` argument object, or `launch:
+   false` with a `reason`: `claimed`, `stale`, `waiting`, `need_reading`, `ask`,
    `no_owner_skill` or `no_instance`. Act on the reason as Claims, Routing and
    Placement say; `no_owner_skill` and `no_instance` are escalations. On
    `launch: true`, add each name in `needs` to `args` and call
    `t3_thread_launch` with `args`, never `delegate_task`; the steps, and the
    no-project escalation, are in
-   [launch-brief](reference/launch-brief.md#sending-the-launch).
+   [step-ins](reference/step-ins.md#sending-the-launch).
 2. **Record.** Run `scripts/launch.sh record --launch <launch file> --thread
    <id> --ledger <ledger>`, `<id>` the thread id `t3_thread_launch` returned. No
    turn ends between `t3_thread_launch` and this call: `record` fails with
@@ -178,11 +178,15 @@ context on nothing. Read a thread's messages only in small slices
 (`t3_thread_read` with a low `limit` and `maxCharsPerItem`): your context never
 carries a supervised thread's transcript.
 
-## The launch brief
+## The launch message and the step-ins
 
-`launch.sh` generates the brief fresh into `args.message`: send it unedited. Its
-parts and the re-brief form:
-[reference/launch-brief.md](reference/launch-brief.md).
+`launch.sh` writes the **launch message** into `args.message`: the invocation,
+plus one `Note:` line with `--note`; send it unedited. After it you post into a
+supervised thread only at a **step-in**, exactly five moments: the stall 1
+nudge, the stall 2 missing fact, a gate hold, the owner's answer to a need the
+thread raised, and a hard finding from verification. Nothing is broadcast to
+running threads. What each carries:
+[reference/step-ins.md](reference/step-ins.md).
 
 ## Acting on the summary
 
@@ -200,7 +204,7 @@ prints it again. Per-row steps:
 The other lists report:
 
 - `stalled`: climb the **stall ladder**, keyed on the entry's `stalls`:
-  nudge, re-brief, then a fresh thread on a raised tier
+  nudge, send the missing fact, then a fresh thread on a raised tier
   ([reference/stall-ladder.md](reference/stall-ladder.md)).
 - `ready`: waiting rows to launch, in order. `dropped`: closed issues' rows.
 - `unqueued`: open issues in an active repo, filed since the batch began, that
@@ -211,10 +215,10 @@ The other lists report:
   once. Close it as completed yourself, verify by REST, and say so in one chat
   line ([wake-actions](reference/wake-actions.md#parents_done)).
 - `woke`: a settled triage thread reran; `Running` shows it again.
-- `at_rest` with a merge-gate summary is no stall: an allowed merge needs
-  nothing from you, and a hold outside the merge allowance and the standing
-  waivers goes to whoever the fleet file's `merge_gate_ruler` names
-  (Escalation).
+- `at_rest` with a merge-gate summary is no stall: a merge the repo's ship
+  profile allows needs nothing from you; a hold a standing waiver or a
+  repo-scoped ruling matches gets the gate-hold step-in, and any other hold
+  goes to whoever the fleet file's `merge_gate_ruler` names (Escalation).
 - `errors` of an entry: its `escalate` row covers them; say others in one chat
   line.
 
@@ -225,7 +229,7 @@ The owner decides these, and you decide everything else:
 - a permission hold on a supervised thread: you cannot approve one
   (`t3_pending_request` cannot), so name the thread, the held call and your
   recommendation;
-- a merge-gate hold outside the merge allowance and any standing waiver, when
+- a merge-gate hold no standing waiver or ruling matches, when
   the fleet file's `merge_gate_ruler` is `owner` (its default);
 - a design or scope fork the supervised thread cannot settle;
 - a disagreement between the ledger and T3 or GitHub that reconcile does not

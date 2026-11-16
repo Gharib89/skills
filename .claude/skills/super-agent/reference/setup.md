@@ -4,7 +4,7 @@
 
 - [Steps](#steps)
 - [Cursor and Grok](#cursor-and-grok)
-- [Fleet brief lines](#fleet-brief-lines)
+- [Fleet repo entries](#fleet-repo-entries)
 - [Fleet keys the owner sets](#fleet-keys-the-owner-sets)
 - [The super agent's own tier](#the-super-agents-own-tier)
 - [Re-runs](#re-runs)
@@ -80,33 +80,28 @@ unset. A null
 `modelSelection` and launch on the instance's own default; map a tier to a
 model in the fleet file's `models` to choose one.
 
-## Fleet brief lines
+## Fleet repo entries
 
 Setup does not write these; the owner adds them by hand. A `repos` object keys
-each repo by `<owner/name>`, and an entry holds two optional keys:
+each repo by `<owner/name>`, and an entry may hold, beside a machine pin
+([placement](placement.md)):
 
 - `max_ships`: a whole number of at least 1, the **ship cap**. At most this many
   tickets of the repo run at once, counting every open one, ship and triage, on
   every machine. 3 when unset. A launch over it waits, the cap in its reason; a
   value that is not a whole number at least 1 is a tooling error.
-- `brief`: an array of text lines every launch brief for that repo carries. A
-  `brief` that is not an array of text, or a `repos` that is not an object, is
-  a tooling error.
 
-A machine entry takes the same `brief` array, carried by every launch placed on
-that machine. A launch brief prints the lines that match its repo and the
-machine it is placed on under `Lines for this repo and machine:`. A one-off
-ruling is scoped the same way:
-`ledger.sh --ledger <ledger> ruling <text> --brief --repo <r> --machine <m>`.
+No line in the fleet file reaches a supervised thread: its launch message is the
+invocation and an optional note ([step-ins](step-ins.md#the-launch-message)).
 
 ## Fleet keys the owner sets
 
 Each is optional: a fleet file without it keeps the default.
 
 - `merge_gate_ruler`: `owner` (default) or `super-agent`, who rules on a
-  merge-gate hold outside the merge allowance and the standing waivers. Any
-  other value is a tooling error from `brief.sh`. The launch brief says which
-  ([launch-brief](launch-brief.md)).
+  merge-gate hold no standing waiver or ruling matches. Any other value is a
+  tooling error from `launch.sh`, which launches nothing until it is fixed
+  ([step-ins](step-ins.md#the-step-ins)).
 - `notify`: `{command, delay}`, the alarm that runs when the watcher exited
   on an event and no reconcile followed within the delay
   ([watching](watching.md#the-notify-command) has its shape).

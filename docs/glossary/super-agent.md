@@ -33,7 +33,7 @@ A row in one of the three lists reconcile prints for what the super agent owes a
 _Avoid_: todo, task (that is a ledger kind), notification
 
 **Stall**:
-A supervised thread at rest with its ticket not done: its run completed with no merged PR and no merge-gate summary, or no new run for the stall window. Each stall raises the ticket's stall count and each real step lowers it; the count decides whether the super agent nudges, re-briefs, or starts a fresh thread or escalates.
+A supervised thread at rest with its ticket not done: its run completed with no merged PR and no merge-gate summary, or no new run for the stall window. Each stall raises the ticket's stall count and each real step lowers it; the count decides whether the super agent nudges, sends the missing fact, or starts a fresh thread or escalates.
 _Avoid_: hang, idle (idle is a thread state, not a judgement), crash
 
 **Merge-gate ruler**:

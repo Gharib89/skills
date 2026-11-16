@@ -67,10 +67,10 @@ pushes twice.
 
 Record the owner's answer with `scripts/ledger.sh --ledger <ledger> ruling
 <text> --allow <call>`, which dates it. Pass `--allow` only when the answer lets
-that call run unheld in later briefs (a deny is a ruling with no `--allow`), and
-`--brief` when later briefs must carry the ruling, with `--repo` or `--machine`
-to limit it. A standing line for one repo or machine belongs in the fleet file
-([setup](setup.md#fleet-brief-lines)). A ruling of your own on a merge-gate hold
+that call run unheld, cited at the [step-in](step-ins.md#the-step-ins) that
+answers a later hold on it (a deny is a ruling with no `--allow`). No ruling
+rides on a launch message: one that changes how ship runs belongs in the repo's
+ship profile. A ruling of your own on a merge-gate hold
 (`merge_gate_ruler: super-agent`) is recorded the same way, then reported in the
 next block.
 
