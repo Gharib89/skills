@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.66.3 (2026-11-16)
+
+### Refactoring
+
+- **ship**: Point at script refusals instead of restating them, and cap the always-read prose at
+  16,000 words ([#1264](https://github.com/Gharib89/skills/pull/1264),
+  [`714398d`](https://github.com/Gharib89/skills/commit/714398d04917166d71d36ffe4f3e386567f1c0ca))
+
+
 ## v0.66.2 (2026-11-16)
 
 ### Refactoring
