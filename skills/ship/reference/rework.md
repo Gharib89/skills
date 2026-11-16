@@ -8,25 +8,27 @@ after the **head push** (the push that put the PR's head at its sha), less
 Ship's own, and the feedback text, if any. Preflight drops each thread Ship
 answered last, and it is feedback again once someone replies in it. A PR
 comment is authoritative as [implement.md](implement.md#phase-1-spec-precedence)
-defines it, and preflight drops every other one. A comment older than the head
-push was already in front of the run that pushed. The run keeps the claim, the
+defines it, and preflight drops every other one. The run keeps the claim, the
 branch and the PR, and ends at a fresh merge gate. It is attended only.
-`--unattended` and a task-spec run (free text in place of the issue number) are
-refused with preflight's usage line, so `cloud-ship`, which always passes
-`--unattended`, never starts one. `--inline` composes: the inline lane's rules
-apply to the rework's own diff.
+`--unattended` and a task-spec run (free text for the issue number) are refused
+with preflight's usage line, so `cloud-ship` never starts one. `--inline`
+composes: the inline lane's rules apply to the rework's own diff.
 
-The ten phases run as SKILL.md has them. This file lists only what changes.
-Where a phase's `Done when:` names a step this file replaces, the replacement
-satisfies it.
+The ten phases run as SKILL.md has them; this file lists only what changes, and
+a replacement step satisfies any `Done when:` naming the step it replaces.
 
 ## Before phase 0
+
+Before any edit, ask whether the PR is still wanted and answer **modernize**
+(bring it up to the current base and standards), **rework** (address the review
+as asked) or **close**, which the run never does: it only asks the owner. Only
+`--rework` runs this check.
 
 `run-file init <issue> --from-profile --criteria -`, the effective spec read
 first; phase 1's feedback criteria stay in the plan. When it refuses an existing
 record, run phase 0's `preflight` first, since it writes nothing, and repeat the
 init with `--rebuild` only on its `ok: true`: a stop leaves the earlier record
-as it was. Every rework run gets a new Run file and a fresh `Cap:` per reviewer.
+intact. Every rework run gets a new Run file and a fresh `Cap:` per reviewer.
 
 ## Phase 0: admission and the worktree
 
@@ -36,20 +38,19 @@ admits the run only when the claim is your identity's and exactly one open PR
 closes the issue, its head being the one `*-<n>` branch on origin. Any other
 shape is `not reworkable: <detail>`. An admitted PR with no feedback thread,
 none of those PR comments and no text from the human is
-`no feedback`. Both stops end the run before any change and leave the claim as
-it is: no release, no hand-back. On `ok`, preflight's `rework` names
+`no feedback`. Both stops end the run before any change, the claim unchanged:
+no release, no hand-back. On `ok`, preflight's `rework` names
 `{pr, branch, head_sha, worktree, threads, comments}`, each comment
 `{author, created_at, body}`.
 
 `isolate <issue> <type> <slug> --rework` with the profile's `Carry:` files,
 where `<type>` and `<slug>` are split from `rework.branch`
 (`<type>/<slug>-<issue>`). It reuses the worktree an ended attended run left,
-if that worktree is clean and at the PR's head (`reused: true`), and otherwise
-checks the PR branch out into a new worktree. Its refusal
-`existing branch: <branch> has commits origin lacks` stops the run like
-`not reworkable`, with the claim unchanged.
-Its `base` is the PR's head before this run: write it to the Run file's
-`## Design and plan` as the **rework base**. `EnterWorktree` follows, as usual.
+if clean and at the PR's head (`reused: true`), and otherwise checks the PR
+branch out into a new worktree. Its refusal `existing branch: <branch> has
+commits origin lacks` stops the run like `not reworkable`. Its `base` is the
+PR's head before this run: write it to the Run file's `## Design and plan` as
+the **rework base**. `EnterWorktree` follows.
 
 ## Phase 1: the feedback is the spec delta
 
@@ -75,16 +76,15 @@ The lane keys, and the small lane's size, measure the rework's own diff,
 3. Rewrite each body section the rework changed with
    `update-pr-body --section --body-file`. The Change outline and Verification
    sections always need it.
-4. Read the result back with `read-pr`.
+4. Read it back with `read-pr`.
 5. Skip `reflect`, since the issue already links the PR.
-6. Answer each feedback thread with `reply-thread`, saying what changed, or why
-   it was declined.
-7. Run `resolve-thread` on each thread you fixed. A declined thread
+6. Answer each feedback thread with `reply-thread`, saying what changed or why
+   it was declined, then `resolve-thread` each one fixed; a declined thread
    stays open for the human.
 
 ## Phase 7: reviewers
 
-Rounds run as usual under a fresh `Cap:`. With `created_at` null:
+Rounds run as usual. With `created_at` null:
 
 - An `on-request` reviewer's round 1 skips the poll for a round the host opened
   unbidden with the PR.
