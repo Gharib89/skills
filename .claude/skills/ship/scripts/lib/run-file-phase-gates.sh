@@ -197,7 +197,8 @@ EORESTS
     # a not-landed stop after a round, unless a fallback ran host rounds over them.
     [ "$ok" = true ] || continue
     case $stop in
-      cap | "cap at "*) rests "Round: $nm " | grep -qE '^[1-9][0-9]*: re-raised declined: ' && continue ;;
+      cap | "cap at "*) r=$(rests "Round: $nm ")
+        grep -qE '^[1-9][0-9]*: re-raised declined: ' <<<"$r" && continue ;;
       "not landed") ;;
       *) continue ;;
     esac
@@ -205,7 +206,7 @@ EORESTS
     if [ -n "$fb" ]; then
       fs=$(trim_end "$(rests "Stop: $fb: " | tail -n 1)")
       case $fs in "not reviewed" | "not reviewed: "* | "not invoked: "* | "inline lane" | "") ;;
-        *) rests "Round: $fb " | grep -qE "$round_re" && continue ;; esac
+        *) r=$(rests "Round: $fb "); grep -qE "$round_re" <<<"$r" && continue ;; esac
     fi
     found=false
     for k in Past-cap Docs-only; do

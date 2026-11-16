@@ -110,7 +110,7 @@
 # writes nothing, names everything missing in one message, and `next` over
 # any of the three phases is held the same way. A gate line is a line anywhere in the file,
 # an optional leading `- ` accepted, matched by exact prefix at the line start.
-# What each close needs is in the header of lib/run-file-phase-gates.sh. `grade`
+# What close 4 and close 7 need is in lib/run-file-phase-gates.sh's header. `grade`
 # writes `Grade: <word>` under the `## Grade` section, replacing the line a call
 # before it wrote.
 #
@@ -180,7 +180,8 @@
 #   probe: {run_file, ref, command, exit, head, last}
 #   call: {run_file, command, why}
 #   note: {run_file, section, line}; a `Criterion`, `Past-cap` or `Docs-only`
-#     line is refused unless in the form `gate clean` reads
+#     line is refused unless in the form `close 7` and `gate clean` read, its
+#     Report file on disk
 #   gate record: {run_file, head, verdict}
 #   gate read: {run_file, verdict, head, gates, current, behind}; gates is null
 #     for a record made without one; behind is null where git cannot count the

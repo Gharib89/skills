@@ -21,27 +21,25 @@ primary capped with findings or stopped `not landed` whose fallback then exited
 last reviewer that stopped at `cap`, primary or fallback, and to a capped or
 not-landed primary whose fallback exited `not reviewed`.
 
-A local review past a reviewer's `Cap:` is no `Round:` of that reviewer, so its
-rounds still read 1 through `Cap:`. Once a review's fixes change no file, record
-`Past-cap: <reviewer>: tree unchanged at <sha>: local review <report file>:
-<result>` with `run-file note Evidence "<line>" --issue <issue>`, `<sha>` the
-head that review read and `<result>` its findings and their dispositions. `note`
-refuses the line without that tail or with no Report file at its path, and
-`close 7` refuses a reviewer that owes the review and has no such line, so a
-standing waiver to merge without another host round never skips it. `gate clean`
-still holds on the reviewer, reporting its cap and that `<sha>`, because no host
-reviewer read the fixes: the human reads them at the merge gate. Where the head
-later moves past that `<sha>` (a hand-resolved conflict merge, a lint fix), the
-hold names the range to read, `<sha>..<head>`.
+A local review past a reviewer's `Cap:`, or after its `not landed` stop, is no
+`Round:` of that reviewer, so its rounds still read 1 through `Cap:`. Once a
+review's fixes change no file, record `Past-cap: <reviewer>: tree unchanged at
+<sha>: local review <report file>: <result>` with `run-file note Evidence
+"<line>" --issue <issue>`, `<sha>` the head that review read and `<result>` its
+findings and their dispositions, or `no findings`. `note` needs that Report file
+on disk, and `close 7` holds a reviewer that owes the review until the line
+exists, whatever a waiver says. `gate clean` still holds on the reviewer,
+reporting its cap and that `<sha>`, because no host reviewer read the fixes: the
+human reads them at the merge gate. Where the head later moves past that `<sha>`
+(a hand-resolved conflict merge, a lint fix), the hold names the range to read,
+`<sha>..<head>`.
 
 A docs-only round before `Cap:` is spent (any docs-only round under `Cap:
-None.`) records `Docs-only:` instead, in the same form and with the same
-mechanic, `<sha>` the head its local review read, once that review's fixes
-change no file; a docs-only round at the
-cap records `Past-cap:`. `gate clean` then clears that reviewer's `cap` stop
-while `<sha>` covers the PR head, unless a re-raised declined finding caused
-the stop. Where the head later moves past `<sha>`, `gate clean` holds, naming
-`<sha>..<head>`.
+None.`) records `Docs-only:` instead, in the same form, once that review's fixes
+change no file; a docs-only round at the cap records `Past-cap:`. `gate clean`
+then clears that reviewer's `cap` stop while `<sha>` covers the PR head, unless
+a re-raised declined finding caused the stop. Where the head later moves past
+`<sha>`, `gate clean` holds, naming `<sha>..<head>`.
 
 ## Fallbacks
 
