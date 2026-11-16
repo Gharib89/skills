@@ -37,7 +37,7 @@ A supervised thread at rest with its ticket not done: its run completed with no 
 _Avoid_: hang, idle (idle is a thread state, not a judgement), crash
 
 **Merge-gate ruler**:
-The fleet file's `merge_gate_ruler`: who rules on a merge-gate hold outside the merge allowance and the standing waivers, the owner (default) or the super agent, which then decides and reports to the owner. A hold on a failure the PR did not cause is never waived by either: the failure is filed as its own issue and ordered first, and the gate re-runs after its fix.
+The fleet file's `merge_gate_ruler`: who rules on a merge-gate hold no standing waiver or ruling matches, the owner (default) or the super agent, which then decides and reports to the owner. A hold on a failure the PR did not cause is never waived by either: the failure is filed as its own issue and ordered first, and the gate re-runs after its fix.
 _Avoid_: approver, gatekeeper
 
 **Notify command**:
@@ -61,7 +61,7 @@ A message the super agent sends into a supervised thread after its launch messag
 _Avoid_: re-brief, reminder, broadcast
 
 **Fleet file**:
-The owner's user-scope file, written by the super agent's setup step and carried to every machine, that lists what the super agent may use: each linked machine with its capabilities and slot count, each provider instance with its quota read and auth result, the GitHub accounts, the active repos (each with its ship cap, machine pin and brief lines), the default standing waivers, who rules on a merge-gate hold and the notify command. The skill itself names none of these, so it stays the same for every owner.
+The owner's user-scope file, written by the super agent's setup step and carried to every machine, that lists what the super agent may use: each linked machine with its capabilities and slot count, each provider instance with its quota read and auth result, the GitHub accounts, the active repos (each with its ship cap and machine pin), the default standing waivers, who rules on a merge-gate hold and the notify command. The skill itself names none of these, so it stays the same for every owner.
 _Avoid_: config, inventory, profile (a ship profile is per repo)
 
 **Provider instance**:

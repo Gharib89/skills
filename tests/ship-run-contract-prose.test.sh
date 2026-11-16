@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ship's SKILL.md carries the run contract a launch brief repeats (#1266): the
+# Ship's SKILL.md carries the run contract the launch brief once repeated (#1266): the
 # waiting line, the branch rule, the closing message and the ruling rule. The
 # waiting line is the constant the super agent's watcher matches, so the test
 # reads it from `sa_waiting_line` in the super agent's _lib.sh and fails when

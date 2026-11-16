@@ -43,10 +43,9 @@
 # a temp file beside the ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
 # `--allow` is a call the answer lets a supervised thread make without a hold,
 # and `allowed` lists them. `--brief` marks
-# the ruling brief-bound: `briefed` lists those, and `brief` carries each one word
-# for word, so a ruling the owner dated today (a reviewer that will not work, say)
-# reaches every supervised thread without a hand-appended line. With `--brief`,
-# `--repo` and `--machine` limit it to launches for that repo or machine. `--machine`
+# the ruling brief-bound and `briefed` lists those; no launch message carries one.
+# With `--brief`, `--repo` and `--machine` scope it, so the gate-hold step-in can
+# cite a ruling for that repo. `--machine`
 # is the fleet file's key for the machine the thread runs on (`local` means the
 # machine the ledger is on), `--environment` the T3 environment id `place`
 # returned for a linked machine (absent: this machine), which `reconcile` and

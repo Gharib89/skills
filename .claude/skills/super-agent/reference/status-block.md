@@ -67,11 +67,12 @@ pushes twice.
 
 Record the owner's answer with `scripts/ledger.sh --ledger <ledger> ruling
 <text> --allow <call>`, which dates it. Pass `--allow` only when the answer lets
-that call run unheld, cited at the [step-in](step-ins.md#the-step-ins) that
-answers a later hold on it (a deny is a ruling with no `--allow`). No ruling
-rides on a launch message: one that changes how ship runs belongs in the repo's
-ship profile. A ruling of your own on a merge-gate hold
-(`merge_gate_ruler: super-agent`) is recorded the same way, then reported in the
+that call run unheld; a later hold on it gets the call cited in the owner's
+answer [step-in](step-ins.md#the-step-ins) (a deny is a ruling with no
+`--allow`). No ruling rides on a launch message: one that changes how ship
+runs belongs in the repo's ship profile. A ruling of your own on a merge-gate
+hold (`merge_gate_ruler: super-agent`) is recorded the same way, then reported
+in the
 next block.
 
 ## The digest

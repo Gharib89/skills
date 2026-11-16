@@ -6,10 +6,10 @@
 - [Sending the launch](#sending-the-launch)
 - [The step-ins](#the-step-ins)
 
-A supervised thread hears from you twice at most in the ordinary run: its
-**launch message**, and a **step-in** when it reaches one of five situations.
-Nothing else is sent into it: no reminder, no ruling it has not reached, no
-broadcast to running threads (ADR 0020).
+A supervised thread hears from you through its **launch message**, then only
+through a **step-in** when it reaches one of five situations. Nothing else is
+sent into it: no reminder, no ruling it has not reached, no broadcast to running
+threads (ADR 0020).
 
 ## The launch message
 
