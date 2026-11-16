@@ -13,8 +13,9 @@ Climb the **stall ladder**, keyed on the entry's `stalls` after reconcile:
 
 1. Nudge the same thread with `t3_thread_send`: it keeps its context, and a
    run's `completed` does not mean the ticket is done.
-2. Re-brief the same thread: read its last messages first, then resend the
-   launch brief with what it was missing.
+2. Send the same thread the missing fact: read its last messages first, then
+   send only what they show it lacks, never the launch message or a rule again
+   ([step-ins](step-ins.md#the-step-ins)).
 3. Start a fresh thread on a raised tier: run the loop's steps 1 and 2 again
    with the first launch's flags plus `--raise` set to the rungs the entry's
    model and effort sit above its size default, plus one, and `record

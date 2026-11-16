@@ -55,7 +55,7 @@ out=$(L get Gharib89/skills#99 2>/dev/null); rc=$?
 check_rc "get of a key the ledger lacks exits 1" 1 "$rc"
 check "and names it" "Gharib89/skills#99 is not in the ledger" "$(jq -r .error <<<"$out")"
 
-# --- rulings that allow a call: the launch brief carries them up front ----------
+# --- rulings that allow a call ------------------------------------------------
 out=$(L allowed)
 check "with no allowing ruling, no call is allowed" "[]" "$(jq -c .allowed <<<"$out")"
 out=$(L ruling "approve the held pnpm install" --allow "pnpm install" --allow "pnpm run build")
@@ -66,7 +66,7 @@ check "a ruling with no --allow is dated and allows nothing" "waive a Codex usag
 out=$(L allowed)
 check "allowed lists each call with its date" "pnpm install pnpm run build" "$(jq -r '[.allowed[].call] | join(" ")' <<<"$out")"
 check "dated by its ruling" "$day" "$(jq -r '.allowed[0].date' <<<"$out")"
-check "and written as the line the launch brief carries" \
+check "and written as a line a step-in can cite" \
   "Run \`pnpm install\` without a hold: the owner allowed it on $day." "$(jq -r '.allowed[0].line' <<<"$out")"
 
 # --- a brief-bound ruling is marked, and `briefed` lists only those ---------------

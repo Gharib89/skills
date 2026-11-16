@@ -67,12 +67,15 @@ that row only, so a later cause on the entry still prints. By `reason`:
 
 ## Merge-gate holds
 
-A run's hold outside the merge allowance and the standing waivers follows the
-fleet file's `merge_gate_ruler`. `owner` (the default, and a fleet file without
-the key): record a need with `ledger.sh --ledger <ledger> need <key> --action
-<text> --reason merge-gate`.
+A run at rest on a merge-gate hold gets the gate-hold
+[step-in](step-ins.md#the-step-ins) when a standing waiver in the fleet file or
+a ruling scoped to its repo (`ledger.sh briefed`) matches the hold: quote it,
+and tell the run to merge through `merge.sh` and name the waiver in its PR
+body. A hold none matches follows the fleet file's `merge_gate_ruler`. `owner`
+(the default, and a fleet file without the key): record a need with `ledger.sh
+--ledger <ledger> need <key> --action <text> --reason merge-gate`.
 `super-agent`: you rule on the hold, record it with `ledger.sh ruling`, tell the
-run in its thread (the run acts on it and writes nothing of it into a PR body),
+run in its thread as the gate-hold step-in,
 and say it in the next status block. A ruling you cannot defend is the owner's:
 record a need with `--reason merge-gate`.
 

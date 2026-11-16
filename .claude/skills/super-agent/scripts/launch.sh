@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One call for a launch, one for its record. The launch form reads the ticket's
-# labels (owner skill, Size), claims it, routes it, places it and writes its brief,
-# then prints the whole `t3_thread_launch` argument object, or why it did not
+# labels (owner skill, Size), claims it, routes it, places it and writes its launch
+# message, then prints the whole `t3_thread_launch` argument object, or why it did not
 # launch. The record form takes that answer and the launched thread and writes the
 # ledger entry, then runs the baseline reconcile. Neither calls `t3_thread_launch`:
 # the super agent makes that call.
@@ -18,15 +18,20 @@
 #          [--remote <environment id>=<dir>]...
 #
 # --machine is this machine's fleet key and --thread the super agent's own thread,
-# which `claim` records (the brief takes the placed machine,
-# `record.machine`, not this one); --quota is the saved `quota` read of this wake. --area,
+# which `claim` records; --quota is the saved `quota` read of this wake. --area,
 # --gpu, --account, --blocked-by, --readings and --exclude go to `place`,
 # --instance and --raise to `route`. --wanted answers a route's `ask`: `yes`
-# launches the wanted tier, `no` the default one. --note is a one-ticket brief
-# line. --out also writes the answer to a file, only when it launches; `record`
+# launches the wanted tier, `no` the default one. --note is the owner's note for
+# this ticket, one line: a newline in it exits 2. --out also writes the answer to a file, only when it launches; `record`
 # reads that file as --launch.
 # The ticket's Size label picks the tier (M when it has none, `size_source` says
 # so); `ready-for-agent` is a `ship` launch, `needs-triage` a `triage` one.
+# The launch message (`args.message`) is the owner-skill invocation (`/ship <n>`,
+# `/triage <n>`), plus one `Note: <text>` line with --note, and nothing else: every
+# rule a run follows lives in its skill, its repo's profile or the global rules,
+# and the super agent says anything more only at a step-in (ADR 0020).
+# The fleet file's `merge_gate_ruler` is checked here, `owner` (the default) or
+# `super-agent`, so a fleet the super agent cannot rule a hold from launches nothing.
 # `record` reads the worktree from `t3 thread show` when --worktree is omitted
 # on a launch to this machine; a remote launch names it, and its --remote
 # files reach the reconcile. --rethread points the ticket's open entry at the
@@ -53,7 +58,7 @@
 #         when it refused the entry, or {error: "unrecorded launch: ..."}
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
-#       file, a claim, issue or placement the host or a script refused, or a record
+#       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a claim, issue or placement the host or a script refused, or a record
 #       whose reconcile failed after the entry was written (do not record again)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -158,7 +163,7 @@ while [ $# -gt 0 ]; do
   case $1 in
     --fleet) fleet=$2 ;; --ledger) ledger=$2 ;; --quota) quota=$2 ;; --machine) machine=$2 ;; --thread) thread=$2 ;;
     --raise) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; raise=$2 ;;
-    --instance) named=$2 ;; --readings) readings=$2 ;; --note) note=$2 ;; --out) outf=$2 ;; --account) account=$2 ;;
+    --instance) named=$2 ;; --readings) readings=$2 ;; --note) case $2 in *$'\n'*) sa_tooling "--note holds a newline: the launch message takes one Note: line" ;; esac; note=$2 ;; --out) outf=$2 ;; --account) account=$2 ;;
     --wanted) case $2 in yes|no) wanted=$2 ;; *) sa_tooling "$usage" ;; esac ;;
     --area) areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas"); pargs+=(--area "$2") ;;
     --blocked-by) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; pargs+=(--blocked-by "$2") ;;
@@ -168,6 +173,9 @@ while [ $# -gt 0 ]; do
   shift 2
 done
 [ -n "$fleet" ] && [ -n "$ledger" ] && [ -n "$quota" ] && [ -n "$machine" ] && [ -n "$thread" ] || sa_tooling "$usage"
+[ -f "$fleet" ] || sa_tooling "$fleet: no such file, run setup"
+jq -e '(.merge_gate_ruler // "owner") | IN("owner", "super-agent")' "$fleet" >/dev/null 2>&1 \
+  || sa_tooling "$fleet: merge_gate_ruler must be \"owner\" or \"super-agent\""
 # An answer that does not launch leaves no file, so a stale one is never recorded.
 [ -z "$outf" ] || rm -f "$outf"
 
@@ -209,9 +217,8 @@ if [ "$placed" = null ]; then
   jq -e '.need_reading != null' <<<"$out" >/dev/null && answer need_reading "$(jq -c .need_reading <<<"$out")"
   answer waiting "$(jq -c '{reason, considered}' <<<"$out")"
 fi
-pm=$(jq -r .machine <<<"$placed")
 
-# 5. The names, the base and the brief. The branch is named the way `/ship` names
+# 5. The names, the base and the launch message. The branch is named the way `/ship` names
 # its own: <type>/<slug>-<n>, the slug the title past its `area: ` prefix.
 raw=$(gh api "repos/$repo" 2>/dev/null </dev/null) && base=$(jq -r '.default_branch // empty' <<<"$raw") && [ -n "$base" ] \
   || sa_tooling "cannot read the default branch of $repo"
@@ -221,20 +228,18 @@ if [ "${#slug}" -gt 32 ]; then slug=${slug:0:32}; slug=${slug%-*}; fi
 type=$(jq -r 'if index("bug") then "fix" elif index("documentation") then "docs" elif index("refactor") then "refactor" elif index("chore") then "chore" else "feat" end' <<<"$labels")
 [ "$kind" = ship ] || type=triage
 branch="$type/$slug-$number"
-sub brief --fleet "$fleet" --ledger "$ledger" --repo "$repo" --machine "$pm" --skill "$kind" ${note:+--note "$note"}
-[ "$rc" = 0 ] && brief=$(jq -er '.brief | select(type == "string" and length > 0)' <<<"$out" 2>/dev/null) || sa_tooling "brief gave no answer"
 
 # `record` is what the ledger entry carries: the fleet's machine key and the
 # routed tier's model and effort, one spelling each.
 answer_json=$(jq -cn --arg k "$key" --arg kind "$kind" --arg size "$size" --arg ss "$size_source" --arg claim "$claim" \
   --argjson route "$route" --argjson use "\"$use\"" --argjson placed "$placed" --argjson sel "$selection" --argjson areas "$areas" \
   --arg base "$base" --arg branch "$branch" --arg slug "$slug" --arg msg "/$kind $number" \
-  --arg brief "$brief" --arg n "$number" --arg short "${repo#*/}" '
+  --arg note "$note" --arg n "$number" --arg short "${repo#*/}" '
   ($route[$use]) as $tier
   | {key: $k, launch: true, kind: $kind, size: $size, size_source: $ss, claim: $claim,
      args: ({title: "\($short)#\($n) \($slug)",
              workspaceStrategy: {type: "worktree", baseRef: $base, branch: $branch, startFromOrigin: true},
-             modelSelection: $sel, message: "\($msg)\n\n\($brief)"}
+             modelSelection: $sel, message: (if $note == "" then $msg else "\($msg)\nNote: \($note)" end)}
             + (if $placed.environment_id == null then {} else {environmentId: $placed.environment_id} end)),
      needs: ["projectId"],
      record: {key: $k, kind: $kind, machine: $placed.machine, environment_id: $placed.environment_id, instance_id: $route.instance_id,

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Probe this machine, the linked T3 environments, GitHub and each provider's
 # quota command, and propose the fleet file: the owner's machines, providers,
-# accounts, active repos and standing waivers, which the launch reads instead of
-# the skill text. --propose prints the proposal and writes nothing, so the owner
+# accounts, active repos and standing waivers, which the super agent reads instead
+# of the skill text. --propose prints the proposal and writes nothing, so the owner
 # reads it and confirms first; --write then writes it.
 #
 #   setup (--propose | --write) [--fleet <file>] [--name <machine>]
