@@ -9,7 +9,9 @@ source tests/super-agent-fake.sh
 source tests/super-agent-launch-lib.sh
 
 reset; issue 7 "widgets: add a frobnicator to the pipeline and more" ready-for-agent L bug
-check_rc "a --note holding a newline exits 2, so the message keeps one Note: line" 2 "$(L 7 --note "$(printf 'Check A.\nThen B.')" >/dev/null 2>&1; echo $?)"
+out=$(L 7 --note "$(printf 'Check A.\nThen B.')" 2>/dev/null); rc=$?
+check "a --note holding a newline exits 2 naming --note, never launching, so the message keeps one Note: line" "2 false 1" \
+  "$rc $(jq -r 'has("args")' <<<"$out") $(jq -r .error <<<"$out" | grep -c -- --note)"
 
 # --- who rules on a merge-gate hold: a fleet value other than owner or super-agent is no launch ---
 reset; issue 7 "widgets: add a frobnicator" ready-for-agent S

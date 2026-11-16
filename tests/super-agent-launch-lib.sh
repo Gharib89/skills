@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Fixtures shared by the super-agent launch tests: the fake CLIs on a bare PATH,
-# a fleet, ledger and quota under $tmp, and the issue, L and reset helpers.
-# shellcheck disable=SC2034
+# a fleet, ledger and quota under $tmp, and the quota_with, issue, L and reset
+# helpers. Source it after tests/lib.sh and tests/super-agent-fake.sh, whose
+# sa_* helpers it calls.
+# shellcheck disable=SC2034 # the variables set here are read by the sourcing test
 s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
