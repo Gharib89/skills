@@ -90,7 +90,7 @@ rest`, logged first with `run-file call`; worked-around friction is a **Ship
 note**. [reference/mechanics.md](reference/mechanics.md) lists the gating calls,
 each phase's mechanic and their shared contract, `--help` included.
 
-**0 · Isolate.** `preflight <issue>`, `read-issue`, then `isolate`, per
+**0 · Isolate.** `preflight <issue>`, then `isolate`, per
 [isolate.md](reference/isolate.md).
 **Done when:** `preflight` answered `ok: true`, `isolate` printed its path, any
 `## Worktree` `Bootstrap:` ran green, and, attended, the session is in that path

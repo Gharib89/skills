@@ -1,13 +1,8 @@
 # Phase steps: the local gate, CI and hand-back
 
-The steps of the two phases with no reference file of their own, and of
-hand-back.
-
 ## Phase 5 local gate
 
-*Precondition:* every applicable verification is `pass`, `deferred-to-ci` or
-`unexercised`, or none applies, **and** every phase-4 finding carries a
-disposition; otherwise go back.
+*Precondition:* phases 3 and 4 meet their `Done when:`; otherwise go back.
 
 Run `base-fresh` first, because CI tests the merge ref, so a branch that
 predates a merge still goes green while every "does this exist?" answer taken

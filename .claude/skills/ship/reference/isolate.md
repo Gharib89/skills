@@ -5,11 +5,10 @@ and how the worktree is made.
 
 ## What preflight proves
 
-Tooling, identity and push permission; an unattended run passes
-`--unattended`, and each `reasons` entry is a row of the stop table. Azure
-DevOps has no cheap push probe, so
-preflight returns `unknown`, warns on stderr and continues: name the unproven
-check in the merge summary.
+Tooling, identity and push permission; each `reasons` entry is a row of the
+stop table. Azure DevOps has no cheap push probe, so preflight returns
+`unknown`, warns on stderr and continues: name the unproven check in the merge
+summary. An unattended run passes `--unattended`.
 
 The composed-skills guard refuses on the repo's own `.claude/skills` only, and
 beside it preflight's `warnings` lists, never refusing, each personal copy under
@@ -36,7 +35,8 @@ The branch `<type>` (`feat`, `fix`, `docs`, ...) and `<slug>` come from the
 `<main checkout>/.claude/worktrees/<slug>-<issue>`, lists `.claude/worktrees/`
 once in the repo's shared exclude file (`<git common dir>/info/exclude`, so the
 consumer commits nothing and the main checkout's `git status` stays clean),
-copies the profile's `Carry:` files in one way, and prints the path. For a
+copies each `--carry <file>` (the profile's `Carry:` files) in one way, and
+prints the path. For a
 `<slug>` already ending in `-<issue>`, `isolate` drops that suffix so the number
 appears once; `--rework` keeps the slug as given, since it names the PR's own
 branch. Unattended, `isolate ... --in-place` does the same fetch and branch in

@@ -1,4 +1,4 @@
-# Phases 1, 2 and 4: understand, implement, self-review (detail)
+# Phases 1, 2 and 4: understand, implement, self-review
 
 ## Contents
 
@@ -36,10 +36,9 @@ author believed. Grep each one in the worktree before planning, because a run
 built on a wrong anchor spends
 its reviewer rounds unwinding it. Where the tree contradicts one, the tree
 wins. A wrong anchor that changes no acceptance criterion goes in the
-deviations log alone. One that changes a criterion rewrites the issue body
-through `update-issue-body`, per
-[spec-gaps.md](spec-gaps.md#an-anchor-that-changes-a-criterion). A criterion
-needing a host action no mechanic performs is settled per
+deviations log alone. One that changes a criterion rewrites the issue body,
+per [spec-gaps.md](spec-gaps.md#an-anchor-that-changes-a-criterion). A
+criterion needing a host action no mechanic performs goes to
 [spec-gaps.md](spec-gaps.md#a-criterion-no-mechanic-can-perform) before
 planning.
 
@@ -65,7 +64,8 @@ criterion a brief or comment adds as a checkbox too.
 Text yielding none writes no section and
 warns: record each criterion with `run-file note Criteria <text>`. It refuses
 the text `null`. Phase 0 reuses this read. A free-text run has no issue,
-passes none, and settles criteria a later phase can check.
+passes none, and records with `run-file note Criteria <text>` criteria a later
+phase can check.
 An issue's init without `--criteria` warns when the issue holds criteria, and
 `run-file gate summary` then holds the gate (`criteria:` in `held_by`) until
 each is recorded with `run-file note Criteria <text>`.
@@ -111,14 +111,14 @@ a silently skipped verification later.
 
 When in doubt between `code` and `docs`, treat it as `code` and write the test.
 
-Judge each `## Verification` entry's `Applies when:` prose now, and say which
-apply. Record the grade with `run-file grade`: the public-surface change's,
-under the profile's `Subject constraints:`, since `open-pr` and
-`update-pr-title` refuse a title type that grades lower. Keep the **deviations
-log** from the first edit: whenever the territory forces a departure from the
-issue, brief or plan, take the conservative option, log what and why, and keep
-going; it lands verbatim in the merge summary. A change one PR cannot hold
-stops `needs-split` with a proposal, per
+Judge the lane keys and each `## Verification` entry's `Applies when:` prose
+now, and by default say which apply. Record the grade with `run-file grade`: the
+public-surface change's, under the profile's `Subject constraints:`, since
+`open-pr` and `update-pr-title` refuse a title type that grades lower. Keep the
+**deviations log** from the first edit: whenever the territory forces a
+departure from the issue, brief or plan, take the conservative option, log what
+and why, and keep going; it lands verbatim in the merge summary. A change one PR
+cannot hold stops `needs-split` with a proposal, per
 [spec-gaps.md](spec-gaps.md#needs-split).
 
 **Callers found, dependencies justified.** Before the first edit to a
@@ -215,9 +215,8 @@ say so in one line at the merge gate.
 **The `writing-for-agents` pass has a trigger of its own**, firing even where
 docs-sync is skipped: the diff touches a target on the profile's
 `Agent-facing:` line. It reads every agent-facing file in the diff; human
-prose takes the mechanical pass. With
-docs-sync's edits landed, load `code-review` and dispatch this pass and round
-1's two axes in one turn, each naming its Report file, then end the turn.
+prose takes the mechanical pass. With docs-sync's edits landed, dispatch this
+pass with [round 1](#phase-4-the-self-review-loop) in one turn.
 
 ## Phase 4: triage and depth checks
 
@@ -267,7 +266,7 @@ Every lane runs the same loop.
   fixes, and hand the next round `git diff <head>..HEAD`. It
   is dispatched with round 1's Standards prompt, only its diff and
   [Report file](context-discipline.md#the-run-file) changing, and triaged as
-  round 1 is.
+  round 1 is; a missing file is `red-after-retry: standards`.
 - **The loop stops** at the first round whose fix-only diff is empty (no
   finding fixed: each declined, filed or linked, or none raised), or at the
   round the cap allows, its findings dispositioned in full. A cap of 1 is the

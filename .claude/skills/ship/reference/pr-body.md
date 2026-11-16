@@ -24,9 +24,7 @@ a PR is open; run it as printed, as its own Bash call, since Claude Code counts
 a PR only when the create is the Bash command itself; then `open-pr <issue>
 --verify`. The title is a Conventional-Commit subject stating the outcome the
 change delivers, honouring `Subject constraints:`, fixed later with
-`update-pr-title`. **Every title or body write to an open PR ends with
-`read-pr <pr>`**, its `## ` headings checked against the ones the body owes.
-Then `reflect <issue> <pr>`.
+`update-pr-title`. Then `reflect <issue> <pr>`.
 
 ## What the body carries
 
@@ -164,6 +162,8 @@ the section keeps.
 
 ## Writing and reading it back
 
+**Every title or body write to an open PR ends with `read-pr <pr>`**, its `## `
+headings checked against the ones the body owes.
 `update-pr-body <pr> --section <name> --body-file <path>` replaces one section
 and writes its `## <name>` line itself, so the file holds the content alone;
 `--drop-records`, section mode only, skips carrying the old `<details>` blocks.
