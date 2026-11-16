@@ -59,24 +59,24 @@ check "another skill's overrun is reported" \
 
 # Ship's always-read set: SKILL.md plus every reference file but the ones read
 # only on their branch, summed against one budget.
-d=$(tree sum-at-budget); words 3000 > "$d/skills/ship/SKILL.md"; words 14500 > "$d/skills/ship/reference/a.md"
-check_rc "an always-read set of 17,500 words passes" 0 "$(rc_of "$d")"
+d=$(tree sum-at-budget); words 3000 > "$d/skills/ship/SKILL.md"; words 14000 > "$d/skills/ship/reference/a.md"
+check_rc "an always-read set of 17,000 words passes" 0 "$(rc_of "$d")"
 
-d=$(tree sum-over-budget); words 3000 > "$d/skills/ship/SKILL.md"; words 14501 > "$d/skills/ship/reference/a.md"
-check_rc "an always-read set of 17,501 words fails" 1 "$(rc_of "$d")"
+d=$(tree sum-over-budget); words 3000 > "$d/skills/ship/SKILL.md"; words 14001 > "$d/skills/ship/reference/a.md"
+check_rc "an always-read set of 17,001 words fails" 1 "$(rc_of "$d")"
 check "the sum overrun names the set and the count" \
-  "skills/ship: the always-read set is 17501 words, over the 17500-word budget" "$(out_of "$d")"
+  "skills/ship: the always-read set is 17001 words, over the 17000-word budget" "$(out_of "$d")"
 
 # A branch-only file is outside the sum, and a reference file the list does not
 # name is inside it, so a new file counts until it is declared branch-only.
-d=$(tree sum-branch-only); words 3000 > "$d/skills/ship/SKILL.md"; words 14500 > "$d/skills/ship/reference/a.md"
-for f in rework small-lane unattended review-loop-examples merge-gate-branches review-unconverged spec-gaps tracker-targets; do
+d=$(tree sum-branch-only); words 3000 > "$d/skills/ship/SKILL.md"; words 14000 > "$d/skills/ship/reference/a.md"
+for f in rework small-lane unattended review-loop-examples merge-gate-branches review-unconverged spec-gaps tracker-targets pr-body-collapse; do
   words 1000 > "$d/skills/ship/reference/$f.md"
 done
 check_rc "the branch-only files stay outside the sum" 0 "$(rc_of "$d")"
 words 1 > "$d/skills/ship/reference/new.md"
 check "a reference file the branch-only list does not name counts" \
-  "skills/ship: the always-read set is 17501 words, over the 17500-word budget" "$(out_of "$d")"
+  "skills/ship: the always-read set is 17001 words, over the 17000-word budget" "$(out_of "$d")"
 
 d=$(tree at-100); body 100 > "$d/skills/ship/reference/r.md"
 check_rc "a 100-line reference with no ## Contents passes" 0 "$(rc_of "$d")"

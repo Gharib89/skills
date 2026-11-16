@@ -80,7 +80,7 @@ the proof. The last line for an `<n>` decides, so a later `met` replaces an
 earlier `not met`. A criterion is met by what the diff and its checks show,
 never by the summary's account of them: one the run declined, deferred or
 covered with a "gap" is `not met`, and `run-file gate clean` holds the merge on
-it ([merge-gate.md](merge-gate.md#unmet-criteria)).
+it ([merge-gate-branches.md](merge-gate-branches.md#unmet-criteria)).
 
 `run-file close 5` refuses an unsettled entry: one with no `Criterion <n>:`
 line, or a `not met` whose reason is a placeholder `run-file --help` lists.

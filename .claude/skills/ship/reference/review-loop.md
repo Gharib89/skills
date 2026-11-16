@@ -4,7 +4,6 @@
 
 - [The round](#the-round)
 - [Reading a round](#reading-a-round)
-- [A window that closes with no round](#a-window-that-closes-with-no-round)
 - [Triage, fix, reply](#triage-fix-reply)
 - [The exit](#the-exit)
 
@@ -54,8 +53,13 @@ reference files, `CLAUDE.md`, `AGENTS.md`, a rules file) is `code`, though phase
 2 files it under `docs`: a fix to it changes behaviour. Any other `docs`
 fix-only diff is **docs-only** and ends the host loop, because another round
 would buy wording nits. The poll takes its bound from the block; a window that
-closes is read per
-[A window that closes with no round](#a-window-that-closes-with-no-round).
+closes with `not_reviewed` set is read per [A window that closes with no
+round](review-unconverged.md#a-window-that-closes-with-no-round).
+
+A `status: pending` answer is no closed window: resume it by its cursor
+([mechanics.md](mechanics.md#waits-past-540-s)). A `conflict` closes the window
+with `not_reviewed` null, which says nothing about the reviewer: resolve it
+(phase 8) and poll again.
 
 **`Cap:`** is the budget on rounds ship starts: a number, or `None.` for an
 uncapped loop; `auto-once` delivers one round whatever it reads, and under
@@ -121,23 +125,6 @@ admitted.
   brief's `pending_checks` names the checks still pending when the window
   closed, and `stale: true` says the host still showed another head than the
   expected one; a round the since rule landed stands even so.
-
-## A window that closes with no round
-
-A window that closes with `done: false` and `not_reviewed` set is that round's
-answer, bar `unreachable` with `landed_by` null on a `head_sha` not the expected
-head, which [Reading a round](#reading-a-round) re-polls. The answer stands
-whatever the reviewer's own status says it may still do: no second window opens
-for the same round and no second request goes out. Record its stop per [The
-exit](#the-exit): `Stop: <reviewer>: not landed` after a dispositioned round
-whose fixes changed the tree, else `not reviewed: <cause>`. Either way that exit
-is final, and the `Fallback-for:` reviewer that names it, if any, is driven per
-[Fallbacks](review-unconverged.md#fallbacks).
-
-A `status: pending` answer is no closed window: resume it by its cursor
-([mechanics.md](mechanics.md#waits-past-540-s)). A `conflict` closes the window
-with `not_reviewed` null, which says nothing about the reviewer: resolve it
-(phase 8) and poll again.
 
 ## Triage, fix, reply
 
@@ -215,8 +202,8 @@ findings, read from its Run-file lines below. A loop that owed a local review
 adds what that review found. Add whatever else the reader needs: the primary's
 reason on a fallback that ran, a round that did not land after one that did, or
 the calls the reviewer was denied, summed from the numeric `reviewer_run.denied`
-over the rounds, with each non-zero round's run URL. GitHub
-[folds](pr-body.md#collapsing-long-sections) detail.
+over the rounds, with each non-zero round's run URL. On GitHub, an entry past
+three lines of detail [folds](pr-body-collapse.md#collapsing-long-sections).
 
 Each reviewer's rounds and stop go in the Run file as lines, which `run-file
 close 7` requires of every reviewer on the phase-7 row, one `Round:` per round
