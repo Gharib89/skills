@@ -133,7 +133,7 @@ EORESTS
 
 # A local review's line, the review a reviewer's loop owes when it ended with
 # fixes no host reviewer read: `<kind>: <reviewer>: tree unchanged at <sha>:
-# local review <report file>: <result>`, its Report file on disk, so the line
+# local review <report file>: <result>`, its Report file non-empty, so the line
 # traces a review that ran and not a stamp alone (#1248). `gate clean` reads its
 # `<sha>`.
 local_review_ok() { # local_review_ok <line>: 0 in that form with its Report file present

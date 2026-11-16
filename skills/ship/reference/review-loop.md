@@ -202,10 +202,10 @@ the override the human decides on.
 One line per reviewer goes in the PR body's `## Review` section and the merge
 summary: its exit word, then what its rounds found and what became of the
 findings, read from its Run-file lines below. A loop that owed a local review
-adds its `<result>`. Add whatever else the reader needs: the primary's reason on
-a fallback that ran, a round that did not land after one that did, or the calls
-the reviewer was denied, summed from the numeric `reviewer_run.denied` over the
-rounds, with each non-zero round's run URL. GitHub
+adds what that review found. Add whatever else the reader needs: the primary's
+reason on a fallback that ran, a round that did not land after one that did, or
+the calls the reviewer was denied, summed from the numeric `reviewer_run.denied`
+over the rounds, with each non-zero round's run URL. GitHub
 [folds](pr-body.md#collapsing-long-sections) detail.
 
 Each reviewer's rounds and stop go in the Run file as lines, which `run-file

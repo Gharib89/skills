@@ -10,8 +10,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 m=${RUN_FILE_MECHANIC:-$PWD/skills/ship/scripts/run-file.sh}
 tmp=$(mktemp -d) || exit 2
-echo "No findings." > "$tmp/local-report.md"
 trap 'rm -rf "$tmp"' EXIT
+echo "No findings." > "$tmp/local-report.md"
 repo=$tmp/repo
 f=$tmp/records/ship-9/run.md
 ci=$tmp/ci.json

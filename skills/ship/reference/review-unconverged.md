@@ -22,17 +22,17 @@ last reviewer that stopped at `cap`, primary or fallback, and to a capped or
 not-landed primary whose fallback exited `not reviewed`.
 
 A local review past a reviewer's `Cap:`, or after its `not landed` stop, is no
-`Round:` of that reviewer, so its rounds still read 1 through `Cap:`. Once a
-review's fixes change no file, record `Past-cap: <reviewer>: tree unchanged at
-<sha>: local review <report file>: <result>` with `run-file note Evidence
-"<line>" --issue <issue>`, `<sha>` the head that review read and `<result>` its
-findings and their dispositions, or `no findings`. `note` needs that Report file
-on disk, and `close 7` holds a reviewer that owes the review until the line
-exists, whatever a waiver says. `gate clean` still holds on the reviewer,
-reporting its cap and that `<sha>`, because no host reviewer read the fixes: the
-human reads them at the merge gate. Where the head later moves past that `<sha>`
-(a hand-resolved conflict merge, a lint fix), the hold names the range to read,
-`<sha>..<head>`.
+`Round:` of that reviewer, so its rounds still read 1 through `Cap:`, or through
+its last landed round. Once a review's fixes change no file, record `Past-cap:
+<reviewer>: tree unchanged at <sha>: local review <report file>: <result>` with
+`run-file note Evidence "<line>" --issue <issue>`, `<sha>` the head that review
+read and `<result>` its findings and their dispositions, or `no findings`.
+`note` needs that Report file non-empty, and `close 7` holds a reviewer that
+owes the review until the line exists, whatever a waiver says. `gate clean`
+still holds on the reviewer, reporting its cap and that `<sha>`, because no host
+reviewer read the fixes: the human reads them at the merge gate. Where the head
+later moves past that `<sha>` (a hand-resolved conflict merge, a lint fix), the
+hold names the range to read, `<sha>..<head>`.
 
 A docs-only round before `Cap:` is spent (any docs-only round under `Cap:
 None.`) records `Docs-only:` instead, in the same form, once that review's fixes

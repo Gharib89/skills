@@ -34,7 +34,7 @@ for bad in 'abc123' 'ABCDEF0123456789'; do
 done
 base; answer=$(bash "$m" note 'Review evidence' 'Past-cap: primary: tree unchanged' --file "$f" 2>/dev/null); rc=$?
 check_rc 'note refuses a past-cap line with no head' 1 "$rc"
-check 'the refusal names the form' 'a Past-cap line is `Past-cap: <reviewer>: tree unchanged at <sha>: local review <report file>: <result>`, its Report file on disk, the form close 7 and gate clean read: Past-cap: primary: tree unchanged' "$(jq -r .error <<<"$answer")"
+check 'the refusal names the form' 'a Past-cap line is `Past-cap: <reviewer>: tree unchanged at <sha>: local review <report file>: <result>`, its Report file non-empty, the form close 7 and gate clean read: Past-cap: primary: tree unchanged' "$(jq -r .error <<<"$answer")"
 # A docs-only fix-only diff ends the loop before Cap: is spent: no fallback is owed, and none covers it.
 capped; change_run '/^Round: primary 2/d'; held 'docs-only end before the cap' 'reviewer primary: cap'
 capped; change_run '/^Round: primary 2/d'; unheld 'docs-only end before the cap' 'reviewer fallback: not reviewed'
@@ -54,5 +54,5 @@ for bad in 'abc123' 'ABCDEF0123456789'; do
 done
 base; answer=$(bash "$m" note 'Review evidence' 'Docs-only: primary: tree unchanged' --file "$f" 2>/dev/null); rc=$?
 check_rc 'note refuses a docs-only line with no head' 1 "$rc"
-check 'the docs-only refusal names the form' 'a Docs-only line is `Docs-only: <reviewer>: tree unchanged at <sha>: local review <report file>: <result>`, its Report file on disk, the form close 7 and gate clean read: Docs-only: primary: tree unchanged' "$(jq -r .error <<<"$answer")"
+check 'the docs-only refusal names the form' 'a Docs-only line is `Docs-only: <reviewer>: tree unchanged at <sha>: local review <report file>: <result>`, its Report file non-empty, the form close 7 and gate clean read: Docs-only: primary: tree unchanged' "$(jq -r .error <<<"$answer")"
 finish

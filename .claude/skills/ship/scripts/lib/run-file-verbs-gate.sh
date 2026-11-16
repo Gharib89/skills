@@ -305,7 +305,7 @@ note)
   # 1..Cap (#880, #1034), naming the review that ran (#1248).
   case $text in Past-cap:* | Docs-only:*)
     kind=${text%%:*}
-    local_review_ok "$text" || ship_fail "a $kind line is \`$kind: <reviewer>: tree unchanged at <sha>: local review <report file>: <result>\`, its Report file on disk, the form close 7 and gate clean read: $text" ;;
+    local_review_ok "$text" || ship_fail "a $kind line is \`$kind: <reviewer>: tree unchanged at <sha>: local review <report file>: <result>\`, its Report file non-empty, the form close 7 and gate clean read: $text" ;;
   esac
   append_to_section "## $sect" "$text"
   jq -n --arg f "$file" --arg s "$sect" --arg l "$text" '{run_file: $f, section: $s, line: $l}'
