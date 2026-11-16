@@ -136,7 +136,7 @@ EORESTS
 # local review <report file>: <result>`, its Report file non-empty, so the line
 # traces a review that ran and not a stamp alone (#1248). `gate clean` reads its
 # `<sha>`.
-local_review_ok() { # local_review_ok <line>: 0 in that form with its Report file present
+local_review_ok() { # local_review_ok <line>: 0 in that form with its Report file non-empty
   [[ $1 =~ ^(Past-cap|Docs-only):\ .+:\ tree\ unchanged\ at\ [0-9a-f]{7,64}:\ local\ review\ ([^:]+):\ .*[^[:space:]]$ ]] \
     && [ -s "${BASH_REMATCH[2]}" ]
 }
