@@ -18,7 +18,7 @@ check "the watcher's waiting line was read from its source" "Waiting on my own b
 # <case>¦<clause SKILL.md must hold>¦<the clause with its meaning changed>
 rules=(
   "a turn that only waits ends on the watcher's line, word for word¦ends with this line, word for word, as its last line: \`$wl\`¦ends with this line, word for word, as its last line: \`${wl%.} again.\`"
-  "a run that starts in a worktree stays on its branch and makes no other¦A run that starts in a worktree works there, on the branch it holds, and makes no other¦A run that starts in a worktree works there, on a branch of its own"
+  "a run that starts in a worktree stays on its branch and makes no other¦A run that starts in a worktree on a branch ending \`-<issue>\` works there, on that branch, and makes no other¦A run that starts in a worktree on a branch ending \`-<issue>\` works there, on a branch of its own"
   "the last message ends on the PR URL and the gate state¦The last message ends on the PR URL and the gate state, never the waiting line¦The last message ends on the waiting line"
   "a ruling after a hold is acted on¦a later message in the thread may carry a ruling on that hold: act on it, not as a new task¦a later message in the thread is a new task"
   "a ruling stays out of the PR body unless it is a waiver that passed the gate¦A ruling never goes into the PR body, except a waiver that passed the gate, which the body names¦A ruling goes into the PR body"

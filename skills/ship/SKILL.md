@@ -200,13 +200,13 @@ and unattended, are in
 
 ## The run contract
 
-These hold whoever launched the run:
+Whoever launched the run:
 
-- A turn that ends only to wait on the run's own background work (a check, a CI
-  wait, a subagent) ends with this line, word for word, as its last line:
+- A turn that ends only to wait on the run's own background work (a check, CI, a
+  subagent) ends with this line, word for word, as its last line:
   `Waiting on my own background work.`
-- A run that starts in a worktree works there, on the branch it holds, and
-  makes no other: the PR is found by that branch.
+- A run that starts in a worktree on a branch ending `-<issue>` works there, on
+  that branch, and makes no other: the PR is found by that branch.
 - The last message ends on the PR URL and the gate state, never the waiting
   line.
 - After a stop at a merge-gate hold, a later message in the thread may carry a
