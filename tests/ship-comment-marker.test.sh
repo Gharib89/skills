@@ -13,6 +13,7 @@ T=$'\t'  # the calls log separates arguments with a tab
 
 scripts=$PWD/skills/ship/scripts
 M='<span data-ship=1></span>'
+L='🤖 Posted by a ship run.'  # the visible line, last before the marker
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo; export SHIP_FAKE=$work/fake
 mkdir -p "$repo" "$SHIP_FAKE"
@@ -67,12 +68,14 @@ reset
 printf '{"url":"https://example.invalid/pull/8"}\n' > "$SHIP_FAKE/host_pr_get.1.json"
 printf '[]\n' > "$SHIP_FAKE/host_issue_comments.1.json"
 mech reflect 7 8 >/dev/null
-check "the reflected PR line carries the marker" "PR: https://example.invalid/pull/8\\n$M" \
+check "the reflected PR line carries the visible line then the marker" "PR: https://example.invalid/pull/8\\n\\n$L\\n$M" \
   "$(last_body host_issue_comment 3)"
 reset
 printf '{"url":"https://example.invalid/pull/8"}\n' > "$SHIP_FAKE/host_pr_get.1.json"
+printf '[{"author":"me","body":"PR: https://example.invalid/pull/8\\n\\n%s\\n%s","created_at":"2026-10-01T00:00:00Z"}]\n' "$L" "$M" > "$SHIP_FAKE/host_issue_comments.1.json"
+check "a marked PR line with the visible line, already there, is not posted again" false "$(mech reflect 7 8 | jq -r .posted)"
 printf '[{"author":"me","body":"PR: https://example.invalid/pull/8\\n%s","created_at":"2026-10-01T00:00:00Z"}]\n' "$M" > "$SHIP_FAKE/host_issue_comments.1.json"
-check "a marked PR line already there is not posted again" false "$(mech reflect 7 8 | jq -r .posted)"
+check "nor one from before the visible line" false "$(mech reflect 7 8 | jq -r .posted)"
 printf '[{"author":"me","body":"PR: https://example.invalid/pull/8","created_at":"2026-10-01T00:00:00Z"}]\n' > "$SHIP_FAKE/host_issue_comments.1.json"
 check "nor is an unmarked one from before the marker" false "$(mech reflect 7 8 | jq -r .posted)"
 # A comments read that failed is no verdict on the line, so nothing is posted (#636).
@@ -94,15 +97,19 @@ check "and posts nothing" 0 "$(grep -c '^host_issue_comment	' "$SHIP_FAKE/calls"
 printf 'round summary\n' > "$work/body.md"
 reset
 mech comment-issue 7 --body-file "$work/body.md" >/dev/null
-check "comment-issue posts the file's bytes then the marker" "round summary\\n$M\\n" "$(last_body host_issue_comment 3)"
+check "comment-issue posts the file's bytes then the visible line and the marker" "round summary\\n\\n$L\\n$M\\n" "$(last_body host_issue_comment 3)"
 reset
 mech comment-pr 7 --body-file "$work/body.md" >/dev/null
-check "comment-pr hands the host the file then the marker" "round summary
+check "comment-pr hands the host the file then the visible line and the marker" "round summary
+
+$L
 $M" "$(cat "$SHIP_FAKE/posted")"
 check "and leaves the caller's file alone" 'round summary' "$(cat "$work/body.md")"
 reset
 mech reply-thread 7 t1 --body-file "$work/body.md" >/dev/null
-check "reply-thread hands the host the file then the marker" "round summary
+check "reply-thread hands the host the file then the visible line and the marker" "round summary
+
+$L
 $M" "$(cat "$SHIP_FAKE/posted")"
 
 # request-review's comment transport: the request phrase still opens the body,
@@ -125,7 +132,9 @@ Fallback-for: None.
 PROFILE
 reset
 mech request-review 7 --reviewer claude >/dev/null
-check "the request comment opens with the phrase and ends with the marker" "@claude
+check "the request comment opens with the phrase and ends with the visible line and the marker" "@claude
+
+$L
 $M" "$(cat "$SHIP_FAKE/posted")"
 
 # ship_mark_file: a source that cannot be read is no body, so no marker-only
@@ -136,6 +145,19 @@ $M" "$(cat "$SHIP_FAKE/posted")"
   check_rc "an unreadable source fails the marking" 1 "$rc"
   check "and writes nothing" '' "$(cat "$work/marked" 2>/dev/null)"
   printf 'a\n\n' > "$work/src"; ship_mark_file "$work/src" "$work/marked"
-  check "a readable source keeps its trailing newlines, then the marker" $'a\n\n'"$M" "$(cat "$work/marked")" )
+  check "a readable source keeps its trailing newlines, then the visible line and the marker" $'a\n\n\n'"$L"$'\n'"$M" "$(cat "$work/marked")" )
+
+# The visible line: last visible line, once, and none where the body opens with
+# the robot (the claim and the hand-back above read as they always did).
+reset
+mech comment-issue 7 --body-file "$work/body.md" >/dev/null
+check "the visible line is the last line before the marker" "$L" \
+  "$(last_body host_issue_comment 3 | sed 's/\\n/\n/g' | grep -v '^$' | grep -vF "$M" | tail -1)"
+check "and appears once" 1 "$(last_body host_issue_comment 3 | grep -oF "$L" | wc -l)"
+printf '🤖 Handed back by hand\n' > "$work/robot.md"
+reset
+mech comment-pr 7 --body-file "$work/robot.md" >/dev/null
+check "a file body opening with the robot gets no second line" "🤖 Handed back by hand
+$M" "$(cat "$SHIP_FAKE/posted")"
 
 finish

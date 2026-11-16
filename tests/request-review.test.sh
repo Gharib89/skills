@@ -59,7 +59,9 @@ printf '%s\n' '{"id": 5, "url": "https://example.invalid/pull/7#issuecomment-5",
   > "$SHIP_FAKE/host_pr_comment.1.json"
 out=$(run 7 --reviewer claude); rc=$?
 check_rc "the comment transport exits 0" 0 "$rc"
-check "the phrase posted is the block's, then ship's marker" '@claude
+check "the phrase posted is the block's, then the visible line and ship's marker" '@claude
+
+🤖 Posted by a ship run.
 <span data-ship=1></span>' "$(cat "$SHIP_FAKE/posted")"
 check "one comment is the whole call list" 'host_pr_comment' "$(cut -f1 "$SHIP_FAKE/calls" | tr '\n' ' ' | sed 's/ $//')"
 check "the comment's created_at is requested_at, with name and login" \
