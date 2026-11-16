@@ -28,8 +28,9 @@ intact. Every rework run gets a new Run file and a fresh `Cap:` per reviewer.
 
 Then, before any edit (`--rework` only), decide if the PR is still wanted and
 record it in `## Design and plan`: **modernize** (bring it to the current base
-and standards), **rework** (address the review as asked) or **close**. On
-**close**, ask the owner and stop, claim held: the run never closes a PR.
+and standards), **rework** (address the review as asked) or **close** (no
+longer wanted). On **close**, ask the owner, who closes it or picks another
+answer: the run never closes a PR.
 
 ## Phase 0: admission and the worktree
 
@@ -39,8 +40,7 @@ admits the run only when the claim is your identity's and exactly one open PR
 closes the issue, its head being the one `*-<n>` branch on origin. Any other
 shape is `not reworkable: <detail>`. An admitted PR with no feedback thread, no
 such PR comment and no human text is `no feedback`. Both stops end the run
-before any change, the claim unchanged: no release, no hand-back. On `ok`,
-preflight's `rework` names
+before any change, the claim unchanged. On `ok`, preflight's `rework` names
 `{pr, branch, head_sha, worktree, threads, comments}`, each comment
 `{author, created_at, body}`.
 

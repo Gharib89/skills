@@ -205,7 +205,7 @@ rejecting: an assertion about **what exists in the repo** is checked against
 finding's **evidence and its claim are separate**, so a reviewer citing the
 wrong commit for a real primitive is still right.
 
-Then read the diff yourself against the depth checks in the coding-standards
+Then read the diff against the depth checks in the coding-standards
 file the Standards axis reads, and the sub-files it routes to, by their leading
 words: a vocabulary the change extends, a rule-shaped prose change, new
 pattern-matching code, a new test run with its fix reverted, removed lines with
@@ -218,11 +218,11 @@ unbalanced and unreadable input).
 
 ## Phase 4: the self-review loop
 
-Refactoring belongs to review, not the red-to-green loop, so the
-self-review repeats while it finds work. The bound is preflight's
-`self_review_cap`, the profile's `Self-review cap:` line as preflight reads it,
-3 where the line is absent; after a compaction, `preflight none` answers it
-again, `none` skipping the issue's own checks. Every lane runs the same loop.
+Refactoring belongs to review, not the red-to-green loop, so the self-review
+repeats while it finds work. The bound is preflight's `self_review_cap`, the
+profile's `Self-review cap:`, 3 where the line is absent; after a compaction,
+`preflight none` answers it again, `none` skipping the issue's own checks.
+Every lane runs the same loop.
 
 - **Round 1** is the phase's first dispatch: both axes, Standards and Spec,
   over the whole diff, the `writing-for-agents` pass where it fired, and the
@@ -243,14 +243,14 @@ again, `none` skipping the issue's own checks. Every lane runs the same loop.
   round the cap allows, its findings dispositioned in full. A cap of 1 is the
   single round, which a clean round 1 also ends at.
 
-Each round leaves `Round: self-review <n>: <text>`, its outcome in a line, and
-the loop leaves `Stop: self-review: <tree unchanged|cap at <sha>>`: `tree
-unchanged` when the last round changed no file, even at the cap, and `cap at
-<sha>` when the rounds reached it with the last fixes unread, `<sha>` the HEAD
-right after committing the last round's fixes. That holds `run-file gate clean`
-until a host reviewer read them: one stopped `tree unchanged` at a head
-covering the final head, or any whose last stop is stamped at that commit or a
-descendant of it.
+Each round leaves `Round: self-review <n>: <text>`, its outcome ending with its
+fix-only diff's `--shortstat`, or `no change`, and the loop leaves
+`Stop: self-review: <tree unchanged|cap at <sha>>`: `tree unchanged` when the
+last round changed no file, even at the cap, and `cap at <sha>` when the rounds
+reached it with the last fixes unread, `<sha>` the HEAD right after committing
+the last round's fixes. That holds `run-file gate clean` until a host reviewer
+read them: one stopped `tree unchanged` at a head covering the final head, or
+any whose last stop is stamped at that commit or a descendant of it.
 
 ## Consult current docs
 
