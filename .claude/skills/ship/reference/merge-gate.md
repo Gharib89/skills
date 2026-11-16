@@ -117,8 +117,7 @@ this repo is the source repo, a Ship defect is an adjacent find already (its
 profile's `## Triage`) and the item names its number instead of a draft. In
 either case, record `Ship-defect: <detail>` in the Run file when the defect is
 met, even if it is fixed or filed during the run, so the item survives a
-compaction; neither that line nor a draft holds the clean gate, since a defect
-that breaks a gating step already fails that step's evidence.
+compaction.
 
 **The body is the short form of this record** ([pr-body.md](pr-body.md)), each
 pair written from one result so the two cannot disagree: `Deviations from plan`
@@ -203,10 +202,8 @@ only the head the summary describes, `<head>` being this gate's `read-pr`
 since auto mode has refused the absolute form on a clean gate; the absolute
 base-directory path is for an install with no project copy (a global install). A
 `none` run names its Run file's slug with `--run`. `merge.sh`'s header carries
-what it does and what each refusal protects against: `pr-closed: <state>`,
-`head-moved: <current> != <gated>`, `stale-base: behind <n> on <base>`,
-`cloud-sandbox`, `no-gate-record` and `checks-unsettled` merge nothing and stop
-at this gate, including after a clean-gate decision; on one, read
+what it does and what each refusal protects against; a refusal merges nothing
+and stops at this gate, including after a clean-gate decision; on one, read
 [merge-gate-branches.md](merge-gate-branches.md#merge-refusals) for how it comes
 back here.
 

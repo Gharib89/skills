@@ -27,21 +27,15 @@ the review round it reads (`request-review`, `reply-thread`, `resolve-thread`),
 `ci-wait`, `open-pr`, the PR's title and body (`update-pr-title`,
 `update-pr-body`, `read-pr`), `merge`, the issue close, `file-issue`, and
 `update-issue-body` with the tracker drafts, and the unattended lane's
-`list-prs` and `select`. One no mechanic performs is a Ship defect, which never
-holds the clean gate on its own: a defect that breaks a gating step already
-fails that step's evidence.
+`list-prs` and `select`.
 
 A non-gating call a mechanic already covers (`reflect`, `comment-issue`,
 `comment-pr`, `isolate`, `cleanup`) still runs through it. Any other host call
-is a **direct call**: the run makes it itself, through the host's REST form
-only, `gh api <REST path>` (never its `graphql` endpoint) or `az rest`, which
-the cloud sandbox admits where its proxy refuses GitHub GraphQL with a 403, so
-`gh issue edit` and its kin are out. Log it before making it with `run-file call
+is a **direct call** the run makes itself, logged first with `run-file call
 "<why>" --issue <issue> -- gh api ...`, which writes the line under the Run
-file's `## Direct calls` and refuses, exit 1, any other form, and one carrying
-an `Authorization` header, because the line reaches the summary and the host CLI
-authenticates the call itself. A direct call made in two runs, where this run
-can see the other (an earlier unattended summary comment on this repo's PRs
+file's `## Direct calls` and refuses, naming the rule, an `Authorization` header
+and any form but the host's REST one. A direct call made in two runs, where this
+run can see the other (an earlier unattended summary comment on this repo's PRs
 lists it), is raised as a Ship note: it may earn a mechanic. Verification
 scaffolding sits outside the rule: a scratch issue or scratch review thread a
 `Run:` line sets up by hand, or a throwaway probe PR an acceptance criterion
@@ -64,7 +58,6 @@ contract.
 | `run-file init` | the first write, placed by SKILL.md's pipeline step |
 | `run-file next`, `run-file open`, `run-file close`, `run-file skip`, `run-file timing` | every phase flip, and the merge summary's `Timing` item |
 | `run-file gate` | 5, `record` after each gate run; 9, `read` against the PR head, `summary` for the attended summary's `Unmet criteria` and `Clean gate held by` lines (the saved `ci-wait.json` and `read-pr`'s head), and, attended with `Merge: on-clean-gate` or in the inline lane, `clean` against the recorded results and `ci-wait` JSON |
-| `run-file close 5` | 5, refused while a `## Criteria` entry has no `Criterion <n>:` line or a placeholder `not met` |
 | `run-file grade` | 2, the version grade `open-pr` and `update-pr-title` hold the title type to |
 | `preflight` | 0 |
 | `read-issue` | 0; an issue's run reads it before `run-file init`, and 0 reuses that read |
@@ -136,8 +129,7 @@ mechanics, carries every record in its old content through, verbatim and in
 order, below the new content. `update-pr-body --section <name> --drop-records
 --body-file <file>` skips that carry, so the body file is all the section keeps;
 `update-issue-body` has no such flag. A `## <name>` found only inside a record
-is an absent section, created at the end. A body file that ends inside an open
-fence or record is refused, exit 2.
+is an absent section, created at the end.
 
 ## The vocabulary a read comes back in
 

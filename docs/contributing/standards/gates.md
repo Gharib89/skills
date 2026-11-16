@@ -120,7 +120,7 @@ do to pass.
   the writer's SIGPIPE reads as no match.
 - The skills' own documents inside their prose budget, per the `prose-budget`
   gate: `skills/*/SKILL.md` at most 3500 words, ship's always-read set
-  (SKILL.md and every reference file not read only on its branch) at most 17500
+  (SKILL.md and every reference file not read only on its branch) at most 16000
   words in sum, and every
   `skills/*/reference/*.md` over 100 lines opening with a `## Contents` list
   that matches its `## ` headings both ways. The profile's `## Local gate`

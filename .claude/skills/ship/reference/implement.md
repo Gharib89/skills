@@ -50,27 +50,19 @@ effective spec by [spec precedence](#phase-1-spec-precedence): the body's
 criteria, less each a later `writer: true` brief or comment drops or revises,
 plus the criteria it adds. `run-file init <issue> --from-profile --criteria -`
 takes that text as a quoted heredoc, so the shell expands none of the issue's
-own words. That form works only before isolation: a session already isolated
-writes the text with the Write tool and passes `--criteria <file>`, since the
-guard refuses a heredoc naming git
+words, a form that works only before isolation: an isolated session passes
+`--criteria <file>`
 ([context-discipline.md](context-discipline.md#once-isolated)). Init records
-each checkbox line (`-`, `*`, `+` or a numbered item) as an
-entry under the Run file's `## Criteria`, `- <n>: <text>`. A heading naming
-criteria (`## Acceptance criteria`) whose list holds no checkbox gives its
-top-level list lines instead; each criteria heading then gives its own kind,
-and a checkbox under no criteria heading (a task list) is none. So pass the
-text with its headings, and where that list holds a checkbox, write each
-criterion a brief or comment adds as a checkbox too.
-Text yielding none writes no section and
-warns: record each criterion with `run-file note Criteria <text>`. It refuses
-the text `null`. Phase 0 reuses this read. A free-text run has no issue,
-passes none, and notes, the same way, criteria a later phase can check.
-An issue's init without `--criteria` warns when the issue holds criteria, and
-`run-file gate summary` then holds the gate (`criteria:` in `held_by`) until
-each is recorded with `run-file note Criteria <text>`.
-A phase-1 anchor rewrite that changes a criterion adds each replacement
-criterion with `run-file note Criteria <text>`, which writes it under the next
-number, owing its own line, and the original's `Criterion` line names them.
+each checkbox line, or a criteria heading's top-level list lines where it holds
+no checkbox, as a `## Criteria` entry, so pass the text with its headings and
+write each criterion a brief or comment adds under the issue's criteria heading,
+in that list's form; init warns, naming the fix, where that yields none or
+`--criteria` was left out, and `gate summary` holds until it is applied. Phase 0
+reuses this read. A free-text run has no issue, passes none, and notes criteria
+a later phase can check, each with `run-file note Criteria <text>`. A phase-1
+anchor rewrite that changes a criterion adds each replacement criterion with
+`run-file note Criteria <text>`, which writes it under the next number, owing
+its own line, and the original's `Criterion` line names them.
 
 Every entry is owed one line, anywhere in the file, written as the run
 settles it: `Criterion <n>: met: <proof>`, the proof a test, a
@@ -81,12 +73,9 @@ earlier `not met`. A criterion is met by what the diff and its checks show,
 never by the summary's account of them: one the run declined, deferred or
 covered with a "gap" is `not met`, and `run-file gate clean` holds the merge on
 it ([merge-gate-branches.md](merge-gate-branches.md#unmet-criteria)).
-
-`run-file close 5` refuses an unsettled entry: one with no `Criterion <n>:`
-line, or a `not met` whose reason is a placeholder `run-file --help` lists.
-One settling after phase 5 is written at that close `Criterion <n>: not met:
-<what is outstanding, and the step or human action that settles it>`; that
-step writes `met: <proof>`, replacing it.
+`run-file close 5` refuses an entry with no line, or a `not met` naming no
+outstanding work, each refusal giving the form; one settling after phase 5 is
+written at that close as `not met`, and the step that settles it writes `met`.
 
 ## Phase 2: classify, then implement test-first
 
@@ -160,16 +149,11 @@ architecture: a plan-implement loop across a subagent boundary loses too much.
 
 Hand the subagent the worktree path, its `execute` scratch directory, the plan,
 the test command and the conventions the edit needs. Require back a diff
-summary, the tests added or updated, and a **structured deviations list**,
-which lands verbatim in the merge summary. Three hard rules in its prompt:
-
-- Every Edit/Write path carries the **worktree prefix**; the inherited guard
-  refuses a write to the main checkout, so such a refusal is a wrong path to
-  correct, not a form to work around.
-- Each Bash call is **one plain command** run with the worktree as its cwd,
-  per [context-discipline.md](context-discipline.md#once-isolated).
-- It runs only the **targeted test nodes**; the phase-5 gate stays with the
-  orchestrator.
+summary, the tests added or updated, and a **structured deviations list**, which
+lands verbatim in the merge summary. Its prompt carries the worktree prefix and
+the [one plain command](context-discipline.md#once-isolated) rule, and has it
+run only targeted test nodes, the phase-5 gate staying with the orchestrator: a
+guard refusal of a write is a wrong path to correct, not a form to work around.
 
 ## Phase 2: adjacent finds
 
