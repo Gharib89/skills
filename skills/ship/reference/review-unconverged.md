@@ -3,8 +3,8 @@
 Read this file only when a reviewer's loop ends without converging: its last
 round was the cap round, a docs-only round or a not-landed primary's, with fixes
 that changed the tree, or a primary exits `not reviewed`, capped with findings
-or `not landed`, so its fallback is driven. The loop itself is
-[review-loop.md](review-loop.md).
+or `not landed`, so its fallback is driven, or a poll window closes with
+`not_reviewed` set. The loop itself is [review-loop.md](review-loop.md).
 
 ## The local review
 
@@ -40,6 +40,18 @@ change no file; a docs-only round at the cap records `Past-cap:`. `gate clean`
 then clears that reviewer's `cap` stop while `<sha>` covers the PR head, unless
 a re-raised declined finding caused the stop. Where the head later moves past
 `<sha>`, `gate clean` holds, naming `<sha>..<head>`.
+
+## A window that closes with no round
+
+A window that closes with `done: false` and `not_reviewed` set is that round's
+answer, bar `unreachable` with `landed_by` null on a `head_sha` not the expected
+head, which [Reading a round](review-loop.md#reading-a-round) re-polls. The
+answer stands whatever the reviewer's own status says it may still do: no
+second window opens for the same round and no second request goes out. Record
+its stop per [The exit](review-loop.md#the-exit): `Stop: <reviewer>: not
+landed` after a dispositioned round whose fixes changed the tree, else `not
+reviewed: <cause>`. Either way that exit is final, and the `Fallback-for:`
+reviewer that names it, if any, is driven per [Fallbacks](#fallbacks).
 
 ## Fallbacks
 

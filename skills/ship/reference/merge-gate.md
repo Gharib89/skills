@@ -3,7 +3,6 @@
 ## Contents
 
 - [The summary](#the-summary)
-- [Unmet criteria](#unmet-criteria)
 - [Attended: post, then wait](#attended-post-then-wait)
 
 The human stop by default; an attended profile can opt into merging on a
@@ -32,7 +31,8 @@ references call each item, not a layout:
 - **Unmet criteria**: each criterion not met, from `gate summary`'s
   `unmet_criteria_line` (a run with no `## Criteria` lists them from the issue),
   with its reason (the action a human must take, for a host action), or
-  `no line` where the run recorded none ([Unmet criteria](#unmet-criteria)).
+  `no line` where the run recorded none. With any listed, read [Unmet
+  criteria](merge-gate-branches.md#unmet-criteria) before taking a merge word.
 - **Verification**: each applicable verification's phase-3 result and what
   ran, or the reason the PR body gives for none applying.
 - **Self-review**: its rounds and stop, each phase-4 report with its path, and
@@ -138,25 +138,6 @@ note met after phase 7's body rewrite is written into `## Needs attention` with
 summary is posted: the merge freezes the PR title as the squash subject, so the
 human should read the title that will land.
 
-## Unmet criteria
-
-An **unmet criterion** is any issue criterion the run did not meet: one
-asking for a host action no mechanic performs, which stays verbatim in the issue
-([spec-gaps.md](spec-gaps.md#a-criterion-no-mechanic-can-perform)), or
-one the run could not prove. Each carries `Criterion <n>: not met: <reason>` in
-the Run file ([implement.md](implement.md#phase-1-criteria-the-run-owes)), or
-is owed that line and has none, and the `Unmet criteria` item lists it verbatim
-with its reason, which is the action a human must take where it is a host
-action; the gap is also in the deviations log. The item is the human's to
-clear: **merging needs an explicit waiver of each unmet criterion, beside the
-merge word**: "merge" alone, or a waiver naming fewer than all of them, is asked
-back. `gate clean` reads the same lines, holding on each criterion not met or
-with no line, so `Merge: on-clean-gate` posts the summary with the reply line
-and waits. A run whose Run file has no `## Criteria` section (a free-text run,
-an `init` given no `--criteria`, or criteria text yielding none) gives
-`gate clean` only its `Criterion <n>:` lines to read: with an unmet criterion
-listed, wait the same way, whatever it answers.
-
 ## Attended: post, then wait
 
 Read the optional `Merge:` line under the profile's `## PR`. An absent line
@@ -164,9 +145,10 @@ or `Merge: Default.` means post the summary in the conversation and **wait**
 for the exact word "merge"; a near miss is asked back. `Merge: on-clean-gate`
 means evaluate the clean gate below, which holds on an unmet criterion; the
 human's waiver beside "merge" clears it
-([Unmet criteria](#unmet-criteria)). Any other value holds for the human as a
-profile error. An inline-lane run reads it as `on-clean-gate` for its own PR.
-The unattended branch never evaluates this option.
+([merge-gate-branches.md](merge-gate-branches.md#unmet-criteria)). Any other
+value holds for the human as a profile error. An inline-lane run reads it as
+`on-clean-gate` for its own PR. The unattended branch never evaluates this
+option.
 
 **Every attended run, opted in or not, takes the summary's `Unmet criteria` and
 `Clean gate held by` lines from `run-file gate summary <pr> --issue <issue>`**
