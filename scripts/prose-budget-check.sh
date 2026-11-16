@@ -4,7 +4,7 @@
 # reference material, and a reference file long enough to scroll needs a map at
 # the top rather than at the point a reader gives up. The thresholds and the
 # paths, whole: `skills/*/SKILL.md` at most 3500 words, ship's always-read set at
-# most 18500 words in sum, and every `skills/*/reference/*.md` over 100 lines
+# most 17500 words in sum, and every `skills/*/reference/*.md` over 100 lines
 # opening with a `## Contents` heading inside its first 15 lines whose list
 # matches the file's `## ` headings.
 # `scripts/check.sh full` runs this as its `prose-budget` row, which
@@ -15,12 +15,12 @@
 # (#606), rounded up to the next 500: a ratchet, so prose that regrows fails here
 # instead of accumulating again.
 #
-# Ship's always-read set has a word budget of its own, 18500: `skills/ship/SKILL.md`
+# Ship's always-read set has a word budget of its own, 17500: `skills/ship/SKILL.md`
 # plus every `skills/ship/reference/*.md` but the files a run reads only on their
 # branch (the case list below). A full-lane run reads that whole set, so a rule
 # moved out of SKILL.md into a reference file still costs every run; the per-file
-# caps never bounded the sum. 18500 is the set at 18,438 words after branch-only
-# material moved out (#1212), rounded up to the next 500, the same ratchet. A
+# caps never bounded the sum. 17500 is the set at 17,479 words after each phase
+# rule kept one home (#1254), rounded up to the next 500, the same ratchet. A
 # reference file the list does not name counts, so a new file is in the sum
 # until it is declared branch-only here.
 #
@@ -172,8 +172,8 @@ if [ -f "$root/skills/ship/SKILL.md" ]; then
     n=$(words "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
     sum=$((sum + n))
   done
-  [ "$sum" -le 18500 ] \
-    || { printf 'skills/ship: the always-read set is %s words, over the 18500-word budget\n' "$sum"; rc=1; }
+  [ "$sum" -le 17500 ] \
+    || { printf 'skills/ship: the always-read set is %s words, over the 17500-word budget\n' "$sum"; rc=1; }
 fi
 for f in "$root"/skills/*/reference/*.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }

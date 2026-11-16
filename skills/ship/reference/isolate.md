@@ -5,7 +5,9 @@ and how the worktree is made.
 
 ## What preflight proves
 
-Tooling, identity and push permission. Azure DevOps has no cheap push probe, so
+Tooling, identity and push permission; an unattended run passes
+`--unattended`, and each `reasons` entry is a row of the stop table. Azure
+DevOps has no cheap push probe, so
 preflight returns `unknown`, warns on stderr and continues: name the unproven
 check in the merge summary.
 
@@ -28,7 +30,8 @@ live PR whose body **closes** this issue. A head branch on origin ending in
 
 ## The worktree
 
-Attended, `isolate <issue> <type> <slug>` fetches, branches
+The branch `<type>` (`feat`, `fix`, `docs`, ...) and `<slug>` come from the
+`read-issue` result. Attended, `isolate <issue> <type> <slug>` fetches, branches
 `<type>/<slug>-<issue>` from `origin/HEAD`, creates the worktree
 `<main checkout>/.claude/worktrees/<slug>-<issue>`, lists `.claude/worktrees/`
 once in the repo's shared exclude file (`<git common dir>/info/exclude`, so the
@@ -42,7 +45,9 @@ the sandbox clone, which is already isolation: no worktree, no carry.
 Creating the worktree is `isolate`'s call alone, rather than `EnterWorktree` or
 a bare `git worktree add`: it is what lands the worktree at the path and branch
 preflight checks. Work from the printed path, every edit under it absolute,
-because an absolute main-checkout path silently edits the wrong tree.
+because an absolute main-checkout path silently edits the wrong tree, and
+commit as you go, because the PR needs real commits. A `Bootstrap:` under the
+profile's `## Worktree` runs once, after `isolate`.
 
 ## Adopting the launched worktree
 

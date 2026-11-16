@@ -2,6 +2,7 @@
 
 ## Contents
 
+- [Opening it](#opening-it)
 - [What the body carries](#what-the-body-carries)
 - [The Change outline](#the-change-outline)
 - [Special things to note: the folded deviations](#special-things-to-note-the-folded-deviations)
@@ -15,6 +16,17 @@ transcript. It is written **for the reviewer**, not as the run's record: the
 merge summary is the record, so nothing the body leaves out is lost. Phase 6
 opens it; phase 7 rewrites three of its sections at exit, a fourth, the Change
 outline, where it fell short; phase 9 reads it at the gate.
+
+## Opening it
+
+`open-pr <issue> --title --body-file` pushes and prints a `create`, none where
+a PR is open; run it as printed, as its own Bash call, since Claude Code counts
+a PR only when the create is the Bash command itself; then `open-pr <issue>
+--verify`. The title is a Conventional-Commit subject stating the outcome the
+change delivers, honouring `Subject constraints:`, fixed later with
+`update-pr-title`. **Every title or body write to an open PR ends with
+`read-pr <pr>`**, its `## ` headings checked against the ones the body owes.
+Then `reflect <issue> <pr>`.
 
 ## What the body carries
 

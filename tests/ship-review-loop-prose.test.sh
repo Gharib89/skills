@@ -12,7 +12,7 @@ flat() { tr '\n' ' ' | tr -s ' '; }
 has() { grep -qiF -- "$2" <<<"$1" && echo yes || echo no; }
 loop=$(awk '/^## A window that closes with no round/{f=1; next} /^## /{f=0} f' skills/ship/reference/review-loop.md | flat)
 skill=$(flat < skills/ship/SKILL.md)
-steps=$(awk '/^## Phase 7 reviewers/{f=1; next} /^## /{f=0} f' skills/ship/reference/phase-steps.md | flat)
+round=$(awk '/^## The round/{f=1; next} /^## /{f=0} f' skills/ship/reference/review-loop.md | flat)
 
 check 'the review loop has the section' yes "$([ -n "$loop" ] && echo yes || echo no)"
 
@@ -25,13 +25,13 @@ rules=(
   "a round after a tree-changing fix stops not landed|loop|\`Stop: <reviewer>: not landed\`|\`Stop: <reviewer>: tree unchanged\`"
   "the stop is final|loop|that exit is final|that exit is not final"
   "the fallback that names it is driven per Fallbacks|loop|reviewer that names it, if any, is driven per [Fallbacks](review-unconverged.md#fallbacks)|reviewer that names it, if any, is not driven per [Fallbacks](review-unconverged.md#fallbacks)"
-  "phase 7 points at the section|steps|A window that closes with no round|A window that closes with a round"
+  "the round points at the section|round|A window that closes with no round|A window that closes with a round"
   "a turn never ends on a plan line|skill|A turn never ends on a plan line|A turn may end on a plan line"
   "a background job's end is announced in one line|skill|announce its end in one line|announce its end in a paragraph"
 )
 for r in "${rules[@]}"; do
   IFS='|' read -r name where clause negated <<<"$r"
-  case $where in loop) text=$loop ;; skill) text=$skill ;; steps) text=$steps ;; esac
+  case $where in loop) text=$loop ;; skill) text=$skill ;; round) text=$round ;; esac
   check "$name" yes "$(has "$text" "$clause")"
   check "$name: the negated clause is refused" no "$(has "$negated" "$clause")"
 done

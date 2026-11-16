@@ -8,6 +8,8 @@
 
 The human stop by default; an attended profile can opt into merging on a
 clean gate. Lay out everything the human would want to check in either case.
+An unattended run posts the summary to the PR and returns, per
+[unattended.md](unattended.md#the-merge-gate-post-to-the-pr-then-return).
 
 **Write it uncompressed.** A session-wide output style or personal brevity rule
 does **not** apply to this summary. It is the evidence a human approves an
@@ -214,9 +216,13 @@ unmet criteria, not a red leg (`checks-unsettled`). `<slug>` is `--run`'s. Any
 `update-pr-body` or `update-pr-title` after the settled `ci-wait` re-fires
 every workflow that triggers on `edited` against the same head, so re-run
 `ci-wait <pr> --sha <head>` and save its answer before the admit step. Then
-`merge <pr> <issue|none> <head> [--worktree <path>] [--run <slug>]`, `<head>`
-the `head_sha` this gate read from `read-pr`, so the merge lands only the head
-the summary describes; a `none` run names its Run file's slug with `--run`. Its
+`merge <pr> <issue|none> <head> [--worktree <path>] [--run <slug>]`, so the
+merge lands only the head the summary describes, `<head>` being this gate's
+`read-pr` `head_sha`. Invoke it from the worktree root as
+`.claude/skills/ship/scripts/merge.sh` where Ship is installed at project
+scope, since auto mode has refused the absolute form on a clean gate; the
+absolute base-directory path is for an install with no project copy (a global
+install). A `none` run names its Run file's slug with `--run`. Its
 header carries what it does and what each refusal protects against:
 `pr-closed: <state>`, `head-moved: <current> != <gated>`, `stale-base: behind
 <n> on <base>`, `cloud-sandbox`, `no-gate-record` and `checks-unsettled` merge
@@ -232,7 +238,9 @@ waits on it. Then `run-file close 9` and set the task to the returned `mirror`,
 then `ExitWorktree` with `action: "keep"` (skip it if
 [adopted](isolate.md#adopting-the-launched-worktree); `cleanup` owns the
 removal), and last
-`cleanup <issue|none>`.
+`cleanup <issue|none>`. A nonzero exit, or a `false` in `merge`'s or
+`cleanup`'s JSON, re-runs the mechanic that owns the step; a step no mechanic
+re-does is a Ship defect for the summary.
 
 **If the human says no or wants changes**, or says "file defects", read
 [merge-gate-branches.md](merge-gate-branches.md) before acting on it.

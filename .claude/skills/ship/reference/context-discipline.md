@@ -143,9 +143,8 @@ whose `Applies when:` you judged false). A Verification the PR adds to the
 profile owes a result too, since the merge gate judges the profile's headings:
 pass it to `close 3` with the rest, never to `skip 3`, which settles only those
 init named. After phase 3 has closed or been skipped, a Verification heading a
-later phase's fix adds, or a re-run of one already recorded, takes the same
-`close 3 --result`. Close a phase only once its `Done when:` holds: the
-mechanic stamps whatever close it is given, except that `close 3` refuses a
+later phase's fix adds takes the same `close 3 --result`. The mechanic stamps
+whatever close it is given, except that `close 3` refuses a
 missing result, `close 5` an unsettled entry
 ([implement.md](implement.md#phase-1-criteria-the-run-owes)), and `close 4`
 and `close 7` refuse without the lines
