@@ -15,7 +15,8 @@ L() { bash "$s/ledger.sh" --ledger "$tmp/ledger.json" "$@"; }
 check_rc "a repo scope without --brief exits 2" 2 "$(L ruling x --repo acme/widgets >/dev/null 2>&1; echo $?)"
 L ruling "Widgets-only ruling." --brief --repo Acme/Widgets >/dev/null
 L ruling "Box-only ruling." --brief --machine box >/dev/null
-check "the ledger keeps each ruling's scope as given" '[{"repo":"Acme/Widgets","machine":null},{"repo":null,"machine":"box"}]' \
+L ruling "Widgets on box ruling." --brief --repo acme/widgets --machine box >/dev/null
+check "the ledger keeps each ruling's scope as given" '[{"repo":"Acme/Widgets","machine":null},{"repo":null,"machine":"box"},{"repo":"acme/widgets","machine":"box"}]' \
   "$(L briefed | jq -c '[.briefed[] | {repo, machine}]')"
 
 finish

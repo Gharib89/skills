@@ -44,8 +44,8 @@
 # `--allow` is a call the answer lets a supervised thread make without a hold,
 # and `allowed` lists them. `--brief` marks
 # the ruling brief-bound and `briefed` lists those; no launch message carries one.
-# With `--brief`, `--repo` and `--machine` scope it, so the gate-hold step-in can
-# cite a ruling for that repo. `--machine`
+# With `--brief`, `--repo` scopes it so the gate-hold step-in can cite it for that
+# repo; nothing reads `--machine` now. `--machine`
 # is the fleet file's key for the machine the thread runs on (`local` means the
 # machine the ledger is on), `--environment` the T3 environment id `place`
 # returned for a linked machine (absent: this machine), which `reconcile` and
