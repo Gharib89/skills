@@ -25,7 +25,7 @@ The background script the super agent leaves running at the end of each turn: it
 _Avoid_: watchdog, poller, monitor
 
 **Waiting line**:
-The fixed last line, `Waiting on my own background work.`, that ship tells every run to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A run's final message is the PR URL and the gate state, never this line.
+The fixed last line, `Waiting on my own background work.`, that ship's run contract, or a `/triage` launch message's contract line, tells a run to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A run's final message is its outcome (the PR URL and the gate state for ship, the triage outcome for triage), never this line.
 _Avoid_: heartbeat, keepalive, status ping
 
 **Wake action**:
