@@ -53,14 +53,16 @@ ledger_rulings() {
     missing=$(jq -r --argjson l "$list" '. as $d | $l[] | select(. as $i | any($d.rulings[]; .date == $i.date and .text == $i.text) | not)
       | "\(.date) \(.text)"' <<<"$doc")
     [ -z "$missing" ] || sa_fail "the list names rulings the ledger lacks: $(paste -sd';' <<<"$missing")"
-    # an unmarked ruling lapses, as one marked lapse does: its expiry becomes yesterday
+    # an unmarked ruling written before expiries lapses, as one marked lapse does:
+    # its expiry becomes yesterday; one `ruling` wrote keeps its own expiry
     sa_update "$ledger" '.rulings |= map(. as $r | ([$l[] | select(.date == $r.date and .text == $r.text)] | first) as $m
         | if $m.mark == "pin" then .pinned = true
           elif $m.mark == "move" then .moved_to = $m.to | .pinned = false | .expires = $y
-          else .pinned = false | .expires = $y end)
+          elif $m.mark == "lapse" or .expires == null then .pinned = false | .expires = $y
+          else . end)
       | .rulings_migrated = $today' --argjson l "$list" --arg y "$yesterday" --arg today "$today"
     jq -c '{pinned: [.rulings[] | select(.pinned == true) | {date, text}],
-      lapsed: [.rulings[] | select(.pinned != true and .moved_to == null) | {date, text}],
-      moved: [.rulings[] | select(.moved_to != null) | {date, text, to: .moved_to}]}' <<<"$doc" ;;
+      lapsed: [.rulings[] | select(.pinned != true and .moved_to == null and .expires < $today) | {date, text}],
+      moved: [.rulings[] | select(.moved_to != null) | {date, text, to: .moved_to}]}' --arg today "$today" <<<"$doc" ;;
   esac
 }

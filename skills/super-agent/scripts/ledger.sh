@@ -53,8 +53,8 @@
 # keeps it. `pin <date> <text>` keeps one in force for good. `migrate-rulings`
 # applies the owner-approved list once, a JSON array of {date, text, mark:
 # pin|lapse|move, to}, `to` naming where a moved ruling now lives: a `pin` row
-# pins its ruling, and a `lapse` row, a `move` row or a ruling the list leaves
-# out gets yesterday as its `expires`.
+# pins its ruling, and a `lapse` row, a `move` row or a ruling with no
+# `expires` the list leaves out gets yesterday as its `expires`.
 # A ruling has no brief or machine scope: `--brief` and `--machine` are refused,
 # and a ruling an older ledger marked brief-bound reads as a plain one. An entry's `--machine`
 # is the fleet file's key for the machine the thread runs on (`local` means the

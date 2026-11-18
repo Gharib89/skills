@@ -109,7 +109,9 @@ check "a ruling written before expiries lapses 7 days after its date" '["one-off
 
 # --- the one-time migration applies the owner's list --------------------------
 rm -f "$led"
-for r in keep drop "cap of 2" "waive bump-guard" unmarked; do SA_NOW=$t0 L ruling "$r" >/dev/null; done
+for r in keep drop "cap of 2" "waive bump-guard" unmarked fresh; do SA_NOW=$t0 L ruling "$r" >/dev/null; done
+# every ruling but fresh predates expiries; fresh, recorded before the migration, keeps its own
+jq '.rulings |= map(if .text == "fresh" then . else del(.expires) end)' "$led" > "$tmp/l" && mv "$tmp/l" "$led"
 cat > "$tmp/list.json" <<'J'
 [{"date": "2025-11-18", "text": "keep", "mark": "pin"},
  {"date": "2025-11-18", "text": "drop", "mark": "lapse"},
@@ -120,7 +122,7 @@ out=$(SA_NOW=$t0 L migrate-rulings "$tmp/list.json"); rc=$?
 check_rc "migrate-rulings exits 0" 0 "$rc"
 check "it answers what it pinned, lapsed and moved" '{"pinned":["keep"],"lapsed":["drop","unmarked"],"moved":[{"text":"cap of 2","to":"fleet repos.acme/widgets.max_ships"},{"text":"waive bump-guard","to":"ship profile acme/gears: Waivers: bump-guard"}]}' \
   "$(jq -c '{pinned: [.pinned[].text], lapsed: [.lapsed[].text], moved: [.moved[] | {text, to}]}' <<<"$out")"
-check "only the pinned ruling still reads, the same day" '["keep"]' "$(SA_NOW=$t0 L list | jq -c '[.rulings[].text]')"
+check "only the pinned ruling and one with its own expiry still read, the same day" '["keep","fresh"]' "$(SA_NOW=$t0 L list | jq -c '[.rulings[].text]')"
 check "a moved ruling records where it went" "fleet repos.acme/widgets.max_ships" \
   "$(jq -r '.rulings[] | select(.text == "cap of 2") | .moved_to' "$led")"
 out=$(SA_NOW=$t0 L migrate-rulings "$tmp/list.json" 2>/dev/null); rc=$?

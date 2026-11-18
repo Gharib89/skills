@@ -90,8 +90,10 @@ file's standing waivers.
 ### The one-time rulings migration
 
 Run this once, while the ledger has no `rulings_migrated` field
-(`jq .rulings_migrated <ledger>` prints `null`) and holds rulings; the
-migration sets that field, and from then on skip this section.
+(`jq .rulings_migrated <ledger>` prints `null`) and holds a ruling written
+before expiries (`jq '[.rulings[] | select(.expires == null)] | length'
+<ledger>` prints more than 0); the migration sets that field, and from then on
+skip this section.
 
 1. Read every ruling, lapsed or not:
    `SA_NOW=<epoch of the oldest ruling's date at 00:00 UTC> ledger.sh --ledger
@@ -105,7 +107,7 @@ migration sets that field, and from then on skip this section.
 3. Put the list on a page for the owner (an artifact, the rows grouped by mark
    with your reason for each), and post its link with a push. Wait for the
    owner to approve it or edit it; a row they strike is left unmarked, which
-   lapses.
+   lapses, unless its ruling already has its own `expires`, which it keeps.
 4. Write each `move` into its destination first (the fleet key as
    [setup.md](setup.md) edits the fleet file, a profile line through that
    repo's own PR), then save the approved rows as a JSON array and run
