@@ -46,6 +46,12 @@ check_rc "a live holder outlasting the wait is exit 2" 2 "$rc"
 check "the refusal names its pid" "$led.lock is held by pid $$; remove it if no ledger write runs" "$(jq -r .error <<<"$out")"
 check "and neither write landed" "after a crash" "$(jq -r '.rulings[].text' "$led")"
 rm -f "$led.lock"
+for bad in x 0 08; do
+  out=$(SA_LOCK_TRIES=$bad L ruling "with a bad try count" 2>/dev/null); rc=$?
+  check_rc "SA_LOCK_TRIES=$bad is refused with exit 2" 2 "$rc"
+  check "and the refusal says why" "SA_LOCK_TRIES must be a whole number of 1 or more" "$(jq -r .error <<<"$out")"
+done
+check "a refused try count writes nothing" "after a crash" "$(jq -r '.rulings[].text' "$led")"
 
 # --- a write made while reconcile runs survives it -----------------------------
 rm -f "$led"
@@ -100,7 +106,8 @@ if [ ! -f "$tmp/mid/done" ]; then
 fi
 exec "$tmp/bin/gh" "\$@"
 EOF
-out=$(PATH="$tmp/mid:$PATH" bash "$s/reconcile.sh" --ledger "$led")
+out=$(PATH="$tmp/mid:$PATH" bash "$s/reconcile.sh" --ledger "$led"); rc=$?
+check_rc "reconcile exits 0 over a re-spelled waiting row" 0 "$rc"
 check "reconcile reports the row dropped" "$repo#7" "$(jq -r '.dropped[].key' <<<"$out")"
 check "and the re-spelled row is dropped with it" 0 "$(jq '.waiting | length' "$led")"
 

@@ -126,7 +126,7 @@ sa_write() {
 sa_lock() {
   [ "${sa_locked:-}" = "$1" ] && return 0
   local pid='' try
-  case ${SA_LOCK_TRIES:-600} in *[!0-9]*) sa_tooling "SA_LOCK_TRIES must be a whole number" ;; esac
+  case ${SA_LOCK_TRIES:-600} in 0*|*[!0-9]*) sa_tooling "SA_LOCK_TRIES must be a whole number of 1 or more" ;; esac
   mkdir -p "$(dirname "$1")" || sa_tooling "cannot create $(dirname "$1")"
   for ((try = 0; try < ${SA_LOCK_TRIES:-600}; try++)); do
     (set -C; printf '%s\n' "$$" > "$1.lock") 2>/dev/null && { sa_locked=$1; break; }
