@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.36.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: A thread stopped on a usage limit is not stalled before its reset
+  ([#1300](https://github.com/Gharib89/skills/pull/1300),
+  [`3525cc5`](https://github.com/Gharib89/skills/commit/3525cc5eefaee06ea8855ede263a8e01263b1a5b))
+
+
 ## v0.35.0 (2026-11-18)
 
 ### Features
