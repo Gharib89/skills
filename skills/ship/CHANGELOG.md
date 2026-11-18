@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.68.0 (2026-11-18)
+
+### Features
+
+- **ship**: A script checks the Carry: files against the main checkout at the phase 5 gate
+  ([#1275](https://github.com/Gharib89/skills/pull/1275),
+  [`04d36dd`](https://github.com/Gharib89/skills/commit/04d36dde6fb793955120ea4b440de450495854ae))
+
+
 ## v0.67.0 (2026-11-16)
 
 ### Features
