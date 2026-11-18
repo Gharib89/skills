@@ -33,8 +33,10 @@ After `reconcile.sh`, run `scripts/status.sh --ledger <ledger> --quota <file>
 - `block` set: post it as printed, with no push. A merge, a launch or a change
   to the waiting list reaches the owner this way.
 - `unpushed` holds a need, whatever `block` says: that need is new, and it is
-  the only thing that sends a push. Send one push notification (the
-  PushNotification tool) naming the run and the one action, then run
+  the only thing that sends a push, bar the
+  [daily handover](../SKILL.md#daily-handover)'s pin request. Send one push
+  notification (the PushNotification tool) naming the run and the one action,
+  then run
   `ledger.sh --ledger <ledger> pushed <key>`.
 
 ## A reviewer usage limit
