@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.27.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: Each wake flags a stale super-agent copy, and launch refuses a repo whose ship is
+  stale ([#1291](https://github.com/Gharib89/skills/pull/1291),
+  [`f00b9b7`](https://github.com/Gharib89/skills/commit/f00b9b733fab789a02a529a85071948102afc33b))
+
+
 ## v0.26.1 (2026-11-18)
 
 ### Bug Fixes
