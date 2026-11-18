@@ -54,9 +54,13 @@ ones:
    word, telling the run to merge through `merge.sh` and name that waiver in
    its PR body. A hold none matches goes to whoever `merge_gate_ruler` names,
    and the step-in carries that ruling once it exists. A triage run that
-   reports a PR it opened to ship a small proven fix inline is at a gate too:
-   tell it the PR gets a review round and green CI, then stops for you to
-   merge, without `merge.sh`, which has no gate record for it.
+   reports a PR it opened to ship a small proven fix inline is at a gate too,
+   and you never merge it: launch a `/ship <n> --rework "<feedback>"` thread
+   on the issue (`t3_thread_launch`, recorded like any launch), whose gate,
+   review round and `merge.sh` merge the PR. A plain `/ship <n>` stops
+   `existing PR`; `--rework` admits the one open PR, and its feedback text,
+   such as "take this PR through review and the merge gate", is what stops
+   `no feedback`.
 4. **The owner's answer to a need the thread raised**: the answer, as the owner
    gave it, into the thread whose need it settles.
 5. **A hard finding from verification**: the verified acceptance-criterion gap

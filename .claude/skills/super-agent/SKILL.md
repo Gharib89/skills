@@ -96,7 +96,9 @@ asks what is ready, and it launches nothing. Steps for all three:
 ## The loop
 
 Every thread you launch runs the same five steps, whatever its kind: launch,
-record, watch, wake, reconcile. A thread that is no ticket's (a grill, a deploy,
+record, watch, wake, reconcile. An owner ask that is not routing work (rotating
+a secret, editing dotfiles) is launched as a `task:<slug>` thread, never done
+inline. A thread that is no ticket's (a grill, a deploy,
 decks, a review: anything the owner asks you to launch) skips `launch.sh`'s
 claim, route and place, and takes `t3_thread_launch` directly; step 2 then
 records it with `launch.sh record --ledger <ledger> --task <slug> --thread <id>`
