@@ -39,8 +39,9 @@
 # launched, stalls 0, no observed state), so the key stays one entry; `--environment` names the new thread's linked
 # machine, and without it the entry is this machine's again. `--kind` and
 # `--area` replace the stored value when given and leave it when omitted; use
-# `add` over a finished triage entry, `rethread` for a thread that failed. A write is
-# a temp file beside the ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
+# `add` over a finished triage entry, `rethread` for a thread that failed. A write
+# holds the ledger's lock (`<ledger>.lock`) from its read to a temp file beside
+# the ledger renamed onto it, so concurrent writes all land. A ruling is the owner's answer to a hold, dated; each
 # `--allow` is a call the answer lets a supervised thread make without a hold,
 # and `allowed` lists them. `--repo` scopes a ruling to one repo so the gate-hold
 # step-in can cite it for that repo's later holds, and `scoped` lists the rulings
