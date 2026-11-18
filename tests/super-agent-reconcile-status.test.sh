@@ -59,5 +59,10 @@ before=$(cat "$led")
 echo '[]' > "$tmp/nq.json"
 check_rc "a --quota file that is not a quota read exits 2" 2 "$(R --quota "$tmp/nq.json" >/dev/null 2>&1; echo $?)"
 check "before any write: the closed waiting row is still there for the next reconcile" "$before" "$(cat "$led")"
+jq '.status = "x"' "$led" > "$tmp/l.json" && mv "$tmp/l.json" "$led"
+out=$(R); rc=$?
+check_rc "a status that fails after the write still exits 0" 0 "$rc"
+check "and the answer keeps the row it shows only once, the status error with it" \
+  "$repo#32 true" "$(jq -r '"\(.dropped[0].key) \(.status.error != null)"' <<<"$out")"
 
 finish

@@ -76,7 +76,8 @@
 #
 # stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, ready,
 #         dropped, unqueued, parents_done, cleanup, verify, escalate, errors, skill, status}:
-#         `status` is `status`'s answer {block, changed, unpushed};
+#         `status` is `status`'s answer {block, changed, unpushed}, or {error}
+#         when status failed after the write (the rest of the answer stands);
 #         `skill` {loaded, source, stale}: the running super-agent copy's version
 #         against the one on `sa_skill_source`'s default branch, `stale` true when
 #         the running one is older, null when either version cannot be read;
@@ -234,8 +235,10 @@ sa_archive "$ledger" "$now_s"
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 
 sa_unlock
-status=$(bash "$(dirname "${BASH_SOURCE[0]}")/status.sh" --ledger "$ledger" ${status_flags[@]+"${status_flags[@]}"}) \
-  || { printf '%s\n' "$status"; exit 2; }
+# The write above already recorded the once-only lists as offered, so a failed
+# status is carried as `status.error`, never in place of this answer.
+status=$(bash "$(dirname "${BASH_SOURCE[0]}")/status.sh" --ledger "$ledger" ${status_flags[@]+"${status_flags[@]}"} 2>/dev/null) \
+  || status=$(jq -c '{error}' <<<"$status" 2>/dev/null) || status='{"error":"status.sh failed"}'
 
 # The ledger goes in on stdin: one argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
 skill=$(sa_skill_stale)

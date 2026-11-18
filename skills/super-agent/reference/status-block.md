@@ -47,6 +47,8 @@ its own, from its baseline reconcile: post and push it the same way. Every
   numbered with your recommendation first and marked, and its push. The owner
   answers in chat. Never open a question dialog: it blocks the loop until
   answered.
+- A `status` holding only `error` built no block: act on the rest of the
+  answer as usual, and tell the owner that error in chat.
 
 ## A reviewer usage limit
 
