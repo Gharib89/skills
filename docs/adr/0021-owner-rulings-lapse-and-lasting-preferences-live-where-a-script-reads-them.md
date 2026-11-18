@@ -10,3 +10,8 @@ A ledger ruling lapses a week after it is dated unless the owner pins it, and a 
 ## Consequences
 
 - This amends ADR 0020's "Rulings about the super agent stay in the ledger": they stay only until they lapse or move.
+- The rule covers every kind of ruling the ledger holds, each with its own lasting home:
+  - An unscoped prose ruling lapses, or is pinned.
+  - A repo-scoped gate-hold ruling (`--repo`) lapses, or moves to the fleet file's standing waivers, which the gate-hold step-in already cites.
+  - A permission allowance (`--allow`) lapses, or is pinned. An allowance that lapses only means the next matching call is held for a ruling again.
+- The one-time migration of today's rulings marks each one of these outcomes, kind by kind.
