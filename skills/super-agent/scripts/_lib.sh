@@ -87,6 +87,8 @@ command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 
 # Reading and writing the ledger.
 source "$(dirname "${BASH_SOURCE[0]}")/lib/ledger-io.sh" || { printf '{"error":"cannot source lib/ledger-io.sh"}\n'; exit 2; }
+# A ruling's row and its lapse.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/rulings.sh" || { printf '{"error":"cannot source lib/rulings.sh"}\n'; exit 2; }
 
 # sa_uri <text>: URI-encoded, since a `/` in a branch name otherwise addresses
 # another resource.
@@ -171,13 +173,6 @@ sa_jq_ver='def ver: split(".") | map(tonumber);
 sa_skill_version() {
   gh api "repos/$1/contents/$2" 2>/dev/null </dev/null \
     | jq -r "$sa_jq_ver"'.content // "" | gsub("\\s"; "") | @base64d | skill_version' 2>/dev/null
-}
-
-# sa_ruling_row <text> [<allow json> [<repo>]]: a dated ruling row, the one shape `ledger`
-# writes under `rulings`
-sa_ruling_row() {
-  jq -cn --arg d "$(date -u +%F)" --arg t "$1" --argjson a "${2:-[]}" --arg r "${3:-}" \
-    '{date: $d, text: $t, allow: $a, repo: (if $r == "" then null else $r end)}'
 }
 
 # sa_skill_stale: {loaded, source, stale}, the version of the super-agent copy running
