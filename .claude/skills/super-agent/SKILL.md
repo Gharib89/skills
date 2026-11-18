@@ -116,8 +116,10 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    claims, routes, places and writes the launch message, and prints `launch:
    true` with `args`, the whole `t3_thread_launch` argument object, or `launch:
    false` with a `reason`: `claimed`, `stale`, `waiting`, `need_reading`, `ask`,
-   `no_owner_skill` or `no_instance`. Act on the reason as Claims, Routing and
-   Placement say; `no_owner_skill` and `no_instance` are escalations. On
+   `no_owner_skill`, `no_instance` or `stale_ship`. Act on the reason as Claims,
+   Routing and Placement say; `no_owner_skill`, `no_instance` and `stale_ship`
+   are escalations, `stale_ship` naming the repo's installed and minimum ship
+   versions: the repo's ship is refreshed before the ticket launches. On
    `launch: true`, add each name in `needs` to `args` and call
    `t3_thread_launch` with `args`, never `delegate_task`; the steps, and the
    no-project escalation, are in
@@ -151,7 +153,9 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    <fleet>` instead, with step 5's flags, `--remote` included (Remote
    entries, below). `alive` true and `changed` false ends the turn there,
    nothing else read or posted; `alive` false starts the watcher; `changed`
-   true makes its `summary` the answer step 5 acts on.
+   true makes its `summary` the answer step 5 acts on. On either wake, a
+   `skill.stale` of true (this loaded copy older than the source's) is
+   flagged for the handover, which refreshes the skill.
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
    action it prints (Acting on the summary), run `scripts/status.sh --ledger
