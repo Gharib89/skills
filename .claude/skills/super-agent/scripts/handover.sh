@@ -38,7 +38,7 @@ done
 [ -n "$ledger" ] && [ -n "$from" ] && [ -n "$out" ] || sa_tooling "$usage"
 sa_read "$ledger"
 # Writable before the refresh, so a refresh never runs for a handover that cannot finish.
-: >> "$out" 2>/dev/null || sa_tooling "cannot write $out"
+{ : >> "$out"; } 2>/dev/null || sa_tooling "cannot write $out"
 
 # One brace group, parsed whole before it runs: the refresh may rewrite this
 # very file, and bash reads a script as it goes.
