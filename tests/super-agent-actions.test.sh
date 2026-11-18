@@ -88,6 +88,27 @@ check "the same rest at reset plus the window is at-rest" at-rest "$(stage 5)"
 check "and the run that completed is a stall" "$repo#5 1 run-completed" "$(stalled "$out")"
 sa_thread t-5 idle 2 0 /wt/5 feat/x-5 "Stopped, no limit named." $past
 check "a rest with no limit line is a rest" at-rest "$(SA_NOW=$((reset - 3600)) R >/dev/null; stage 5)"
+# a rest after the clock time already passed that day: the reset is the next day's. The rest at
+# 20:00Z is 22:00 in Cairo, past 6:10pm, so the reset is 2020-01-02 16:10Z.
+late=2020-01-01T20:00:00Z
+next_reset=$(date -u -d 2020-01-02T16:10:00Z +%s) # a fixed stamp converted, no clock read
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$limit" $late
+R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$limit" $late
+out=$(SA_NOW=$((next_reset + 899)) R)
+check "a limit rest after that day's clock time resets the next day: running a second before its window ends" running "$(stage 5)"
+check "and no stall" "" "$(stalled "$out")"
+check "the same rest at the next day's reset plus the window is a stall" "$repo#5 1 run-completed" "$(stalled "$(SA_NOW=$((next_reset + 900)) R)")"
+# a time with no minutes reads too, and a zone date cannot read leaves an ordinary rest
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "You've hit your limit · resets 6pm (Africa/Cairo)" $past
+R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "You've hit your limit · resets 6pm (Africa/Cairo)" $past
+check "a reset with no minutes is read: 6pm is 16:00Z, so 16:14:59Z is still running" running \
+  "$(SA_NOW=$(($(date -u -d 2020-01-01T16:14:59Z +%s))) R >/dev/null; stage 5)"
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "You've hit your limit · resets 6pm (Mars/Base)" $past
+check "a zone date cannot read is an ordinary rest" at-rest "$(SA_NOW=$((reset - 3600)) R >/dev/null; stage 5)"
 
 # --- cleanup: what the super agent owes after an entry ends --------------------
 cleanup() { jq -r '[.cleanup[] | "\(.key) \(.thread) \(.worktree) \(.kind) \(.stage)"] | join(",")' <<<"$1"; }
