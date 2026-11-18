@@ -37,6 +37,9 @@ check "the morning prompt asks for the digest block" true "$(jq '.morning.prompt
 check "one retro-run per active repo" "acme/widgets acme/gears" "$(jq -r '[.retro[].repo] | join(" ")' <<<"$out")"
 check "each weekly on Friday at 09:00 in the repo's project" 'repo-project 5 09:00 /retro-run' \
   "$(jq -r '.retro[0] | "\(.bind) \(.schedule.weekdays[0]) \(.schedule.timeOfDay) \(.prompt)"' <<<"$out")"
+check "a backstop in this thread every hour" 'this-thread interval 3600000' \
+  "$(jq -r '.backstop | "\(.bind) \(.schedule.type) \(.schedule.everyMs)"' <<<"$out")"
+check "the backstop prompt runs pulse" true "$(jq '.backstop.prompt | contains("scripts/pulse.sh")' <<<"$out")"
 out=$(S --morning 07:30 --retro-day 1)
 check "the time and day are flags" '07:30 1' "$(jq -r '"\(.morning.schedule.timeOfDay) \(.retro[0].schedule.weekdays[0])"' <<<"$out")"
 # --- the work week comes from the fleet file ------------------------------------

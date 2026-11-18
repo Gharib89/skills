@@ -56,9 +56,11 @@ out=$(P); rc=$?
 check_rc "a pulse exits 0" 0 "$rc"
 check "one JSON object is the whole answer" 1 "$(jq -s length <<<"$out")"
 check "a live watcher with nothing changed is alive and quiet" "true false null" "$(jq -r '[.alive, .changed, (.summary | tostring)] | join(" ")' <<<"$out")"
+check "and it prints end_turn: the backstop wake posts nothing" true "$(jq .end_turn <<<"$out")"
 L need $repo#5 --action "approve the held call" >/dev/null
 out=$(P --instance claude_small)
 check "pulse passes --instance on to the block" "Super agent on claude_small" "$(jq -r .summary.status.block <<<"$out" | tail -1)"
+check "a changed row is no end_turn" false "$(jq .end_turn <<<"$out")"
 check "an unpushed need is a change, its push named in the summary" 'true ["Gharib89/skills#5"]' "$(jq -r '"\(.changed) \(.summary.status.unpushed | map(.key) | tojson)"' <<<"$out")"
 check "and the summary carries the block to post" "Needs you (1): [skills#5](https://github.com/$repo/issues/5) approve the held call" "$(jq -r .summary.status.block <<<"$out" | head -1)"
 L pushed $repo#5 >/dev/null
@@ -67,6 +69,7 @@ L unneed $repo#5 >/dev/null; R >/dev/null
 stop
 out=$(P)
 check "a lock holding a dead pid is a dead watcher" false "$(jq .alive <<<"$out")"
+check "a dead watcher is no end_turn: it must be started" false "$(jq .end_turn <<<"$out")"
 rm -f "$led.watch"
 check "no lock is a dead watcher" false "$(P | jq .alive)"
 /usr/bin/sleep 30 & other=$!
