@@ -297,6 +297,9 @@ list, the rulings and the needs; never rebuild it from the transcript):
 --ledger <ledger> --fleet <fleet>`, then start the watcher, then do the
 summary's rows (Acting on the summary) and launch its `ready` rows; `list`'s
 other `waiting` rows get a place rerun when a machine could have come back.
+Then `list_scheduled_tasks`: a morning report bound here whose prompt is not
+the one `scripts/schedules.sh --fleet <fleet>` proposes is deleted and
+recreated with that prompt at its own time, under the owner's earlier yes.
 
 Compact at about 100k tokens of context, with exactly this instruction:
 `Resume the super-agent loop: run SKILL.md's After a restart or compaction
@@ -327,10 +330,10 @@ the one push that is not a need. The old thread, in this order:
    fails, recreate the deleted schedules (the backstop only while an entry is
    open), start the watcher, post the `status.sh --digest` block and say in
    one chat line that the handover failed: the next morning retries.
-5. Push one notification (PushNotification), and post the same line in chat:
+5. Settle this thread: `t3_thread_organize` action `settle` on it.
+6. Push one notification (PushNotification), and post the same line in chat:
    `Pin the new super agent: <link>`, the successor's `link`. No T3 tool pins
    a thread.
-6. Settle this thread: `t3_thread_organize` action `settle` on it.
 
 **When your first message carries a `Handover:` line, you are the
 successor.** Read the bearings file it names, run After a restart or
