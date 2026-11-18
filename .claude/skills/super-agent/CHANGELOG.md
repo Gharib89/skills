@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.35.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: A guard hook refuses hand writes to the ledger, fleet and quota files
+  ([#1298](https://github.com/Gharib89/skills/pull/1298),
+  [`6adbe31`](https://github.com/Gharib89/skills/commit/6adbe31b177f5e60e76b963550a4012579009cc2))
+
+
 ## v0.34.0 (2026-11-18)
 
 ### Features
