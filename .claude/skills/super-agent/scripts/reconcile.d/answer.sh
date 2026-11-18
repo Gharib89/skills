@@ -8,7 +8,7 @@ reconcile_answer() {
   # The write above already recorded the once-only lists as offered, so a failed
   # status is carried as `status.error`, never in place of this answer.
   status=$(bash "$(dirname "${BASH_SOURCE[0]}")/../status.sh" --ledger "$ledger" ${status_flags[@]+"${status_flags[@]}"} 2>/dev/null) \
-    || status=$(jq -c '{error}' <<<"$status" 2>/dev/null) || status='{"error":"status.sh failed"}'
+    || status=$(jq -ce '{error}' <<<"$status" 2>/dev/null) || status='{"error":"status.sh failed"}'
 
   # The ledger goes in on stdin: one argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
   skill=$(sa_skill_stale)

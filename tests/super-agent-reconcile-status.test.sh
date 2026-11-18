@@ -64,5 +64,11 @@ out=$(R); rc=$?
 check_rc "a status that fails after the write still exits 0" 0 "$rc"
 check "and the answer keeps the row it shows only once, the status error with it" \
   "$repo#32 true" "$(jq -r '"\(.dropped[0].key) \(.status.error != null)"' <<<"$out")"
+cp -r "$s" "$tmp/sc"; printf 'exit 1\n' > "$tmp/sc/status.sh" # a status that dies with no output
+L wait $repo#33 --reason r >/dev/null; sa_issue $repo 33 closed
+out=$(bash "$tmp/sc/reconcile.sh" --ledger "$led"); rc=$?
+check_rc "a status dying silently still exits 0" 0 "$rc"
+check "and the answer keeps its dropped row, the status error with it" \
+  "$repo#33 status.sh failed" "$(jq -r '"\(.dropped[0].key) \(.status.error)"' <<<"$out")"
 
 finish
