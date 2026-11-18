@@ -8,7 +8,7 @@
 #          [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]...
 #   ledger --ledger <file> add --task <slug> --thread <id> [--worktree <path>] [--branch <name>]
 #          [--repo <owner/name>] [--machine <name>] [--environment <id>] [--instance <id>]
-#          [--model <id>] [--effort <level>] [--area <path>]...
+#          [--model <id>] [--effort <level>] [--area <path>]... [--interactive]
 #   ledger --ledger <file> adopt <the same flags as add>
 #   ledger --ledger <file> get <key>
 #   ledger --ledger <file> list [--open]
@@ -28,6 +28,10 @@
 #   ledger --ledger <file> unneed <key>
 #   ledger --ledger <file> limit <owner/name> --reviewer <name>
 #   ledger --ledger <file> unlimit <owner/name>
+#   ledger --ledger <file> pause <key>
+#   ledger --ledger <file> unpause <key>
+#   ledger --ledger <file> drop <key>
+#   ledger --ledger <file> reset-stalls <key>
 #
 # A key is `<owner/name>#<number>`, or `task:<slug>` for a `task` entry. `--ledger` comes first and names the file,
 # which a first `add` creates. `add` starts an entry at stage `launched`, stalls
@@ -77,7 +81,18 @@
 # `--branch`), and `reconcile` closes it on its thread's rest, never on an issue's or
 # a PR's state. `adopt` takes `add`'s flags and records a thread someone else launched
 # (`adopted` true, kind `task` unless `--repo` and `--number` name a ticket); the
-# watcher and `reconcile` treat it like a launched one.
+# watcher and `reconcile` treat it like a launched one. `--interactive` marks a task
+# whose skill waits on the owner by design (a grill): `reconcile` counts it no stall
+# and does not settle it on its rest, so it leaves on `drop`.
+# `pause` is the owner taking an open entry's thread ("take <key>"): a `paused` entry
+# keeps its stage, so it still takes its machine's slot, and `reconcile` and `watch`
+# count it no stall and raise no step-in for it; a paused ticket entry settles on its
+# PR merging or its issue closing, read from GitHub alone, with no cleanup owed, and a
+# paused task stays until `drop` or `unpause`. `unpause` gives a paused entry back: the
+# mark and the `observed` baseline go, so the next `reconcile` watches from the
+# thread's state then, its runs since the pause counting no stall. `drop` removes an
+# entry of any stage. `reset-stalls` zeroes an open entry's stall count and restarts
+# its stall window, and records a dated ruling naming the key and the count it replaced.
 # A `need` is something only the owner can settle: one row in `needs` per key
 # (the entry, or a waiting ticket), its one action, `since` when and whether its
 # push went out. A repeat with the same action keeps `since` and `pushed`, a new
@@ -103,16 +118,20 @@
 #         {waiting: {key, repo, number, reason, since, order, after}}; `unwait` {key,
 #         removed}; `need` {need: {key, action, since, pushed}}; `pushed`
 #         {need}; `unneed` {key, removed}; `limit` {limit: {repo, reviewer,
-#         since}}; `unlimit` {repo, removed}; `list` also holds `waiting`,
+#         since}}; `unlimit` {repo, removed}; `pause` and `unpause` {key, paused};
+#         `drop` {key, removed}; `reset-stalls` {key, stalls, ruling};
+#         `list` also holds `waiting`,
 #         `needs` and `review_limits`; any failure {error}
 # exit: 0 ok · 1 the key is already in, or not in, the ledger, `stage`, an
-#       identity field, a ruling that `pin` or a migration row names but the
-#       ledger lacks, or a second `migrate-rulings` · 2 usage, a value that is not JSON, an
-#       unreadable or wrong-shaped ledger, or a write that failed
+#       identity field, an entry that ended (`pause`, `reset-stalls`) or is not
+#       paused and open (`unpause`), a ruling that `pin` or a migration row names
+#       but the ledger lacks, or a second `migrate-rulings` · 2 usage, a value
+#       that is not JSON, an unreadable or wrong-shaped ledger, or a write that
+#       failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
+usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | pause <key> | unpause <key> | drop <key> | reset-stalls <key>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -121,9 +140,11 @@ cmd=${1:-}; [ $# -gt 0 ] && shift
 case $cmd in
   add|adopt)
     repo='' number='' thread='' worktree='' branch='' machine='' environment='' instance='' model='' effort='' areas='[]' kind='' task='' adopted=false
+    interactive=false
     [ "$cmd" != adopt ] || adopted=true
     while [ $# -gt 0 ]; do
       case $1 in
+        --interactive) interactive=true; shift; continue ;;
         --area) sa_flag_value "$usage" "${2:-}"; areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas") ;;
         --repo) sa_flag_value "$usage" "${2:-}"; repo=$2 ;;
         --number) sa_flag_value "$usage" "${2:-}"; number=$2 ;;
@@ -150,6 +171,8 @@ case $cmd in
       [ -z "$kind$number" ] || sa_tooling "$usage"
       kind=task key="task:$task"
     else
+      # only a task runs a skill that waits on the owner
+      ! $interactive || sa_tooling "$usage"
       kind=${kind:-ship}
       case $number in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
       [ -n "$repo" ] && [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage"
@@ -161,14 +184,15 @@ case $cmd in
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "${number:-null}" --arg t "$thread" \
       --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg env "$environment" --arg inst "$instance" --arg model "$model" \
-      --arg effort "$effort" --arg now "$now" --argjson areas "$areas" --arg kind "$kind" --argjson adopted "$adopted" --arg task "$task" \
+      --arg effort "$effort" --arg now "$now" --argjson areas "$areas" --arg kind "$kind" --argjson adopted "$adopted" --arg task "$task" --argjson ia "$interactive" \
       '{key: $k, repo: (if $repo == "" then null else $repo end), number: (if $task == "" then $n else null end),
         thread: $t, worktree: $w, branch: $b, machine: $m, areas: $areas, kind: $kind, adopted: $adopted,
         environment_id: (if $env == "" then null else $env end),
         instance_id: (if $inst == "" then null else $inst end),
         model: (if $model == "" then null else $model end),
         effort: (if $effort == "" then null else $effort end),
-        stage: "launched", stalls: 0, observed: null, launched_at: $now, updated_at: $now}')
+        stage: "launched", stalls: 0, observed: null, launched_at: $now, updated_at: $now}
+        + (if $ia then {interactive: true} else {} end)')
     sa_update "$ledger" "$sa_jq_norm"'del(.entries[$old]) | .entries[$k] = $e | .waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' \
       --arg k "$key" --arg old "$old" --argjson e "$entry"
     jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$entry" '{ledger: $l, key: $k, entry: $e}' ;;
@@ -234,46 +258,11 @@ case $cmd in
       --arg e "$effort" --arg env "$environment" --arg inst "$instance" --arg now "$now" --arg kind "$kind" --argjson areas "${areas:-null}"
     jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$(jq -c --arg k "$key" '.entries[$k]' <<<"$doc")" \
       '{ledger: $l, key: $k, entry: $e}' ;;
-  wait)
-    [ $# -ge 3 ] || sa_tooling "$usage"
-    key=$1; shift; reason='' order='' after=''
-    while [ $# -gt 0 ]; do
-      case $1 in
-        --reason) sa_flag_value "$usage" "${2:-}"; reason=$2 ;;
-        --order) sa_flag_value "$usage" "${2:-}"; case $2 in ''|*[!0-9]*|??????????*) sa_tooling "$usage" ;; esac; order=$2 ;;
-        --after) sa_flag_value "$usage" "${2:-}"; after=$2 ;;
-        *) sa_tooling "$usage" ;;
-      esac
-      shift 2
-    done
-    [ -n "$reason" ] || sa_tooling "$usage"
-    for k in "$key" ${after:+"$after"}; do
-      case $k in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
-      case ${k##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
-    done
-    jq -en --arg a "$after" --arg k "$key" "$sa_jq_norm"'($a|norm_repo)!=($k|norm_repo)' >/dev/null || sa_tooling "$usage"
-    sa_lock "$ledger"; sa_read "$ledger"
-    jq -e --arg k "$(sa_key "$doc" "$key")" '.entries[$k] | . != null and (.stage != "settled" and .stage != "closed")' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
-    # A repeat keeps the first `since` (how long it has waited is the report's
-    # point) and the order and blocker it is not given anew (placement rewrites
-    # a row's reason and knows neither).
-    row=$(jq -cn --arg k "$key" --arg r "${key%#*}" --argjson n "${key##*#}" --arg why "$reason" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      --arg order "$order" --arg after "$after" \
-      --argjson old "$(jq -c --arg k "$key" "$sa_jq_norm"'(.waiting // []) | map(select((.key | norm_repo) == ($k | norm_repo))) | first // null' <<<"$doc")" \
-      '{key: $k, repo: $r, number: $n, reason: $why, since: ($old.since // $now),
-        order: (if $order != "" then ($order | tonumber) else $old.order end),
-        after: (if $after != "" then $after else $old.after end)}')
-    sa_update "$ledger" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))) + [$w])' --arg k "$key" --argjson w "$row"
-    jq -cn --argjson w "$row" '{waiting: $w}' ;;
-  unwait)
-    [ $# -eq 1 ] || sa_tooling "$usage"
-    sa_lock "$ledger"; sa_read "$ledger"
-    had=$(jq -r --arg k "$1" "$sa_jq_norm"'[(.waiting // [])[] | select((.key | norm_repo) == ($k | norm_repo))] | length > 0' <<<"$doc")
-    [ "$had" != true ] || sa_update "$ledger" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' --arg k "$1"
-    jq -cn --arg k "$1" --argjson r "$had" '{key: $k, removed: $r}' ;;
+  wait|unwait)
+    source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/waiting.sh" && ledger_waiting "$cmd" "$@" ;;
   ruling|allowed|scoped|pin|migrate-rulings)
     source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/rulings.sh" && ledger_rulings "$cmd" "$@" ;;
-  need|pushed|unneed|limit|unlimit)
+  need|pushed|unneed|limit|unlimit|pause|unpause|drop|reset-stalls)
     source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/owner.sh" && ledger_owner "$cmd" "$@" ;;
   *) sa_tooling "$usage" ;;
 esac

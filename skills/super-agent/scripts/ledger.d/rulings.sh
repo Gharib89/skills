@@ -20,8 +20,7 @@ ledger_rulings() {
         *) sa_tooling "$usage" ;;
       esac
     done
-    ruling=$(jq -cn --arg d "$today" --arg t "$text" --argjson a "$allow" --arg r "$rrepo" "$sa_jq_live"'
-      {date: $d, text: $t, allow: $a, repo: (if $r == "" then null else $r end)} | .expires = expiry | .pinned = false')
+    ruling=$(sa_ruling_row "$text" "$allow" "$rrepo")
     sa_update "$ledger" '.rulings += [$r]' --argjson r "$ruling"
     jq -cn --argjson r "$ruling" '{ruling: $r}' ;;
   allowed)
