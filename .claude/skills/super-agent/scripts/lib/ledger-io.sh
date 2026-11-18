@@ -30,7 +30,7 @@ sa_read() {
   # a ruling's date decides its lapse, so one without a readable date is refused here
   jq -e 'all(.rulings[]; (.date | type) == "string"
     and .date == (.date | try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null))' "$1" >/dev/null \
-    || sa_tooling "$1: every ruling needs a date, YYYY-MM-DD"
+    || sa_tooling "$1: every ruling needs a date that is a calendar day, YYYY-MM-DD"
   doc=$(cat "$1")
 }
 
