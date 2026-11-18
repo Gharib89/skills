@@ -18,6 +18,8 @@
 # The backstop is the wake that runs `pulse.sh` while a watcher lives; hourly,
 # since a faster one found nothing to do and cost context on each wake. It
 # belongs to the loop, not the owner's choices, so no yes is asked for it.
+# Its trigger shape, {type: "interval", everyMs} with everyMs at least 60000, is
+# the one the T3 `schedule_task` tool's own schema declares (read 2026-11-18).
 #
 # stdout: {morning: {...}, backstop: {...same fields}, retro: [{repo, title,
 #         bind, schedule, prompt}]}: `bind` `this-thread` or `repo-project`,
