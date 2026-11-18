@@ -43,18 +43,18 @@
 # `--area` replace the stored value when given and leave it when omitted; use
 # `add` over a finished triage entry, `rethread` for a thread that failed. A write
 # holds the ledger's lock (`<ledger>.lock`) from its read to a temp file beside
-# the ledger renamed onto it, so concurrent writes all land. A ruling is the owner's answer to a hold, dated, and
-# it lapses 7 days later (`expires`, the last day it is in force) unless `pin`
-# (by its date and exact text) marks it lasting: a lapsed ruling stays in the file
-# and is left out of `list`, `allowed` and `scoped`, and a lasting preference
-# belongs in the fleet file or a ship profile, per ADR 0021. `migrate-rulings`
-# applies the owner-approved list once ([{date, text, mark: pin|lapse|move, to}],
-# `to` the fleet key or profile line a moved ruling now lives in): a moved or
-# unmarked ruling lapses now, as a lapse does. Each
+# the ledger renamed onto it, so concurrent writes all land. A ruling is the owner's answer to a hold, dated. Each
 # `--allow` is a call the answer lets a supervised thread make without a hold,
 # and `allowed` lists them. `--repo` scopes a ruling to one repo so the gate-hold
 # step-in can cite it for that repo's later holds, and `scoped` lists the rulings
 # that have a repo (one repo's, compared without regard to case, with `--repo`).
+# A ruling lapses 7 days after its date: `expires` holds the last day it is in
+# force, and `list`, `allowed` and `scoped` leave a lapsed one out while the file
+# keeps it. `pin <date> <text>` keeps one in force for good. `migrate-rulings`
+# applies the owner-approved list once, a JSON array of {date, text, mark:
+# pin|lapse|move, to}, `to` naming where a moved ruling now lives: a `pin` row
+# pins its ruling, and a `lapse` row, a `move` row or a ruling the list leaves
+# out gets yesterday as its `expires`.
 # A ruling has no brief or machine scope: `--brief` and `--machine` are refused,
 # and a ruling an older ledger marked brief-bound reads as a plain one. An entry's `--machine`
 # is the fleet file's key for the machine the thread runs on (`local` means the
@@ -106,8 +106,8 @@
 #         since}}; `unlimit` {repo, removed}; `list` also holds `waiting`,
 #         `needs` and `review_limits`; any failure {error}
 # exit: 0 ok · 1 the key is already in, or not in, the ledger, `stage`, an
-#       identity field, a ruling `pin` or the list names that the ledger lacks, or
-#       a second migration · 2 usage, a value that is not JSON, an
+#       identity field, a ruling that `pin` or a migration row names but the
+#       ledger lacks, or a second `migrate-rulings` · 2 usage, a value that is not JSON, an
 #       unreadable or wrong-shaped ledger, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }

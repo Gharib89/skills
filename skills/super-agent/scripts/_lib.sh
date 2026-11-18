@@ -104,11 +104,12 @@ sa_window_flag() { case $2 in ''|0|*[!0-9]*) sa_tooling "$1" ;; esac; }
 # shellcheck disable=SC2034  # read by the scripts that source this file
 sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 
-# A ruling still in force on `$today` (YYYY-MM-DD, sa_today): pinned, or on or
-# before its `expires`. One written before expiries lapses 7 days after its date.
-# shellcheck disable=SC2034  # read by ledger.sh and ledger.d/rulings.sh
-sa_jq_live='def live($today): .pinned == true
-  or (.expires // (.date + "T00:00:00Z" | fromdateiso8601 + 7 * 86400 | strftime("%Y-%m-%d"))) >= $today;'
+# A ruling's `expiry`, the last day it is in force, 7 days after its date; and
+# whether it is `live($today)` (YYYY-MM-DD, sa_today): pinned, or on or before its
+# `expires`, which one written before expiries lacks.
+# shellcheck disable=SC2034  # read by ledger.d/rulings.sh
+sa_jq_live='def expiry: .date + "T00:00:00Z" | fromdateiso8601 + 7 * 86400 | strftime("%Y-%m-%d");
+  def live($today): .pinned == true or (.expires // expiry) >= $today;'
 
 # sa_today: the UTC date of sa_now_s, so `SA_NOW` pins a ruling's date and lapse.
 sa_today() { date -u -d "@$(sa_now_s)" +%F; }

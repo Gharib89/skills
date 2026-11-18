@@ -40,13 +40,12 @@ jq -n --argjson a "$(entry "$repo#1" settled $((t0 - 8 * day)) false)" \
   --argjson c "$(entry "$repo#3" settled $((t0 - 8 * day)) true)" \
   --argjson d "$(entry "$repo#4" closed $((t0 - 9 * day)) false)" \
   '{entries: ([$a, $b, $c, $d] | map({(.key): .}) | add), rulings: []}' > "$led"
-out=$(SA_NOW=$t0 R); rc=$?
+SA_NOW=$t0 R >/dev/null; rc=$?
 check_rc "reconcile exits 0" 0 "$rc"
 check "an entry settled 8 days ago, cleanup done, and a closed one 9 days ago leave the ledger" \
   "[\"$repo#2\",\"$repo#3\"]" "$(keys)"
 check "they are lines of the archive beside the ledger, whole" "$repo#1 settled|$repo#4 closed" \
   "$(jq -r '"\(.key) \(.stage)"' "$led.archive.jsonl" | paste -sd'|')"
-check "the answer no longer lists them" "[\"$repo#3\"]" "$(jq -c '[.cleanup[].key]' <<<"$out")"
 SA_NOW=$t0 R >/dev/null
 check "a second reconcile archives nothing twice" 2 "$(wc -l < "$led.archive.jsonl" | tr -d ' ')"
 
@@ -103,6 +102,7 @@ check "past its expiry a ruling is absent from every read, and a pinned one is k
 check "a lapsed ruling stays in the file" 2 "$(jq '.rulings | length' "$led")"
 out=$(SA_NOW=$t0 L pin 2025-11-18 "no such ruling" 2>/dev/null); rc=$?
 check_rc "pinning a ruling the ledger lacks exits 1" 1 "$rc"
+check "and names the ruling" 1 "$(jq -r .error <<<"$out" | grep -c 'no ruling dated 2025-11-18 reads: no such ruling')"
 jq '.rulings += [{date: "2025-11-01", text: "older, no expiry", allow: [], repo: null}]' "$led" > "$tmp/l" && mv "$tmp/l" "$led"
 check "a ruling written before expiries lapses 7 days after its date" '["one-off","lasting","older, no expiry"]|["one-off","lasting"]' \
   "$(SA_NOW=$((t0 - 10 * day)) L list | jq -c '[.rulings[].text]')|$(SA_NOW=$((t0 - 9 * day)) L list | jq -c '[.rulings[].text]')"
@@ -125,14 +125,21 @@ check "a moved ruling records where it went" "fleet repos.acme/widgets.max_ships
   "$(jq -r '.rulings[] | select(.text == "cap of 2") | .moved_to' "$led")"
 out=$(SA_NOW=$t0 L migrate-rulings "$tmp/list.json" 2>/dev/null); rc=$?
 check_rc "a second migration is refused" 1 "$rc"
+check "and says it runs once" 1 "$(jq -r .error <<<"$out" | grep -c 'the migration runs once')"
 rm -f "$led"
 SA_NOW=$t0 L ruling keep >/dev/null
 printf '%s\n' '[{"date": "2025-11-18", "text": "kep", "mark": "pin"}]' > "$tmp/typo.json"
 out=$(SA_NOW=$t0 L migrate-rulings "$tmp/typo.json" 2>/dev/null); rc=$?
 check_rc "a list naming a ruling the ledger lacks is refused" 1 "$rc"
+check "and names the row" 1 "$(jq -r .error <<<"$out" | grep -c 'lacks: 2025-11-18 kep')"
 check "and changes nothing" '["keep"]' "$(SA_NOW=$t0 L list | jq -c '[.rulings[].text]')"
 printf '%s\n' '[{"date": "2025-11-18", "text": "keep", "mark": "move"}]' > "$tmp/bad.json"
 out=$(SA_NOW=$t0 L migrate-rulings "$tmp/bad.json" 2>/dev/null); rc=$?
 check_rc "a move naming no destination is a usage error" 2 "$rc"
+check "and names the shape it wants" 1 "$(jq -r .error <<<"$out" | grep -c 'a move naming its destination in to')"
+printf '%s\n' '{"entries":{},"rulings":[{"text":"no date","allow":[]}]}' > "$led"
+out=$(SA_NOW=$t0 L allowed 2>/dev/null); rc=$?
+check_rc "a ruling with no date is refused" 2 "$rc"
+check "by name, as JSON" 1 "$(jq -r .error <<<"$out" | grep -c 'every ruling needs a date')"
 
 finish

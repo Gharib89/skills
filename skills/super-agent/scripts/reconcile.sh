@@ -14,7 +14,7 @@
 # `--kind triage` entry has no PR: it is `settled` when its thread has run and
 # is at rest and the issue carries neither `needs-triage` nor `needs-info` (a grill
 # waiting on the owner has the second). A `triage` entry settled within the last
-# 7 days is read again, thread only: one whose run count grew, or that runs, goes back to `at-rest` or
+# `sa_settled_days` (7) days is read again, thread only: one whose run count grew, or that runs, goes back to `at-rest` or
 # `running` and is named in `woke`. A `--kind task` entry has no ticket: it is
 # `running` while its thread runs and `settled` once the thread has run and is at
 # rest, whatever any issue or PR says. Settling the
@@ -59,7 +59,7 @@
 # ends is marked `cleanup_owed` (a merged ship PR also `verify_owed`), and the rows
 # below stay in every answer until the super agent clears the field with
 # `ledger set <key> cleanup_owed false` (or `verify_owed false`). An entry that
-# ends is stamped `settled_at`; 7 days later, with neither field owed, it moves
+# ends is stamped `settled_at`; `sa_settled_days` later, with neither field owed, it moves
 # whole to `<ledger>.archive.jsonl`, one JSON line each, and leaves the ledger.
 #
 # A merged ship entry whose ticket is a sub-issue gets one look at its parent (`parents_done`
@@ -198,7 +198,7 @@ while IFS= read -r entry; do
   entries=$(jq -c --argjson e "$entry" --arg s "$stage" --arg r "$reason" --argjson o "$obs" --argjson n "$stalls" \
     '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, kind: ($e.kind // "ship"), from: $e.stage, stage: $s, reason: $r, stalls: $n, observed: $o}]' <<<"$entries")
 done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open)' <<<"$doc")
-# A settled triage entry settled within sa_settled_days is read again (reconcile.d/woke.sh).
+# A triage entry settled within the last sa_settled_days is read again (reconcile.d/woke.sh).
 woke='[]'
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/woke.sh" || sa_tooling "cannot source reconcile.d/woke.sh"
 reconcile_woke

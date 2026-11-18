@@ -7,7 +7,7 @@
 ledger_rulings() {
   local cmd=$1 list today yesterday missing text allow rrepo ruling srepo
   shift
-  today=$(sa_today) yesterday=$(date -u -d "@$(($(sa_now_s) - 86400))" +%F)
+  today=$(sa_today)
   case $cmd in
   ruling)
     [ $# -ge 1 ] || sa_tooling "$usage"
@@ -20,9 +20,8 @@ ledger_rulings() {
         *) sa_tooling "$usage" ;;
       esac
     done
-    ruling=$(jq -cn --arg d "$today" --arg t "$text" --argjson a "$allow" --arg r "$rrepo" \
-      '{date: $d, text: $t, allow: $a, repo: (if $r == "" then null else $r end),
-        expires: ($d + "T00:00:00Z" | fromdateiso8601 + 7 * 86400 | strftime("%Y-%m-%d")), pinned: false}')
+    ruling=$(jq -cn --arg d "$today" --arg t "$text" --argjson a "$allow" --arg r "$rrepo" "$sa_jq_live"'
+      {date: $d, text: $t, allow: $a, repo: (if $r == "" then null else $r end)} | .expires = expiry | .pinned = false')
     sa_update "$ledger" '.rulings += [$r]' --argjson r "$ruling"
     jq -cn --argjson r "$ruling" '{ruling: $r}' ;;
   allowed)
@@ -43,9 +42,8 @@ ledger_rulings() {
     sa_update "$ledger" '.rulings |= map(if .date == $d and .text == $t then .pinned = true else . end)' --arg d "$1" --arg t "$2"
     jq -c --arg d "$1" --arg t "$2" '{pinned: [.rulings[] | select(.date == $d and .text == $t)]}' <<<"$doc" ;;
   migrate-rulings)
-    # The owner-approved list: [{date, text, mark: pin|lapse|move, to}], `to`
-    # naming the fleet key or ship profile line a moved ruling now lives in.
     [ $# -eq 1 ] || sa_tooling "$usage"
+    yesterday=$(date -u -d "@$(($(sa_now_s) - 86400))" +%F)
     list=$(jq -c . "$1" 2>/dev/null) || sa_tooling "$1: not JSON"
     jq -e 'type == "array" and all(.[]; (.date | type) == "string" and (.text | type) == "string"
       and (.mark | IN("pin", "lapse", "move")) and (.mark != "move" or ((.to | type) == "string" and .to != "")))' <<<"$list" >/dev/null \

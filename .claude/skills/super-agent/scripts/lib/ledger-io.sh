@@ -1,6 +1,7 @@
 # Reading and writing the ledger, sourced by _lib.sh: sa_read, the bare
-# sa_write, and sa_lock and sa_update, the one way a ledger is written; and
-# sa_pid_runs, which tells a live lock holder from a reused pid.
+# sa_write, and sa_lock and sa_update, the one way a ledger is written;
+# sa_pid_runs, which tells a live lock holder from a reused pid; and sa_archive,
+# which moves old ended entries out of the ledger.
 
 # sa_pid_runs <pid> <glob>...: the pid is alive and its command line matches one
 # of the globs, so a pid reused by another process after a kill or a reboot does
@@ -26,6 +27,9 @@ sa_read() {
   jq -e . "$1" >/dev/null 2>&1 || sa_tooling "$1: not JSON"
   jq -e '(.entries | type) == "object"' "$1" >/dev/null || sa_tooling "$1: entries must be an object"
   jq -e '(.rulings | type) == "array"' "$1" >/dev/null || sa_tooling "$1: rulings must be an array"
+  # a ruling's date decides its lapse, so one without a readable date is refused here
+  jq -e 'all(.rulings[]; (.date | type) == "string" and (.date | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")))' "$1" >/dev/null \
+    || sa_tooling "$1: every ruling needs a date, YYYY-MM-DD"
   doc=$(cat "$1")
 }
 
@@ -87,8 +91,9 @@ sa_update() {
   sa_write "$ledger" "$doc"
 }
 
-# Days a settled entry stays in the ledger, and a settled triage thread is
-# re-read, after it settled (ADR 0021). `settled_before($cut)`: an entry that
+# sa_settled_days: how many days after an entry ends (`settled` or `closed`,
+# stamped `settled_at`) it stays in the ledger, and how long a settled triage
+# thread is still re-read (ADR 0021). `settled_before($cut)`: an entry that
 # settled before the epoch `$cut`, by `settled_at`, or `updated_at` for one
 # settled before that stamp; one with neither is never old.
 sa_settled_days=7

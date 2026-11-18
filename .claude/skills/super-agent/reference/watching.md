@@ -61,9 +61,10 @@ both owed fields.
 - A `--kind triage` entry settles when its thread has run, is at rest, and the
   issue carries neither `needs-triage` nor `needs-info`: a grill waiting on the
   owner has `needs-info` and stays `at-rest`.
-- `reconcile` reads a settled triage entry's thread once more each run. A run
-  count above the settled one, or a running thread, reopens it (`woke`). The
-  watcher does not see a settled entry, so a `woke` shows at the next reconcile.
+- `reconcile` reads the thread of a triage entry settled in the last 7 days once
+  more each run; an older one is not read. A run count above the settled one,
+  or a running thread, reopens it (`woke`). The watcher does not see a settled
+  entry, so a `woke` shows at the next reconcile.
 
 ## Settling a task entry
 
