@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.29.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: A /ship run merges a triage fix PR, and a non-ticket ask becomes a task thread
+  ([#1292](https://github.com/Gharib89/skills/pull/1292),
+  [`8083024`](https://github.com/Gharib89/skills/commit/8083024a7cd0d96df21f48bc6f4578dcdb6184bd))
+
+
 ## v0.28.1 (2026-11-18)
 
 ### Bug Fixes
