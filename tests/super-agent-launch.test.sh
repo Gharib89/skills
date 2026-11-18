@@ -75,6 +75,8 @@ check "with --note the Note: line follows the contract line and ends the message
 check "with --note the triage message is still the invocation, the contract line and the note" 3 "$(wc -l <<<"$withnote")"
 reset; issue 12 "Another one" ready-for-agent
 check "without --note a ship message is the invocation alone" "/ship 12" "$(L 12 | jq -r .args.message)"
+check "with --note a ship message is the invocation plus one Note: line" "$(printf '/ship 12\nNote: Look at the logs first.')" \
+  "$(L 12 --note "Look at the logs first." | jq -r .args.message)"
 # The fleet's waivers and the ledger's rulings both exist here, and none of them
 # reaches the launch message.
 bash "$s/ledger.sh" --ledger "$led" ruling "Scoped ruling text." --repo "$repo" >/dev/null
@@ -83,8 +85,8 @@ bash "$s/ledger.sh" --ledger "$led" ruling "deny nothing" --allow "git push to t
 for t in "12 ready-for-agent 0" "11 needs-triage 1"; do
   set -- $t; issue "$1" "Another one" "$2"
   msg=$(L "$1" --note "Only this." | jq -r .args.message)
-  check "a $2 message carries no waiver, ruling, shared-machine, merge allowance, branch or merge line" 0 \
-    "$(grep -ciE 'waiver|Codex answers|ruling|Scoped ruling|git push|share this machine|pkill|flock|Merge allowance|worktree you start in|branch it holds|merge\.sh' <<<"$msg")"
+  check "a $2 message carries no waiver, ruling, shared-machine, merge allowance, branch, last-message or merge line" 0 \
+    "$(grep -ciE 'waiver|Codex answers|ruling|Scoped ruling|git push|share this machine|pkill|flock|Merge allowance|worktree you start in|branch it holds|last message|merge\.sh' <<<"$msg")"
   check "a $2 message holds the waiting line $3 time(s)" "$3" "$(grep -c 'Waiting on my own' <<<"$msg")"
 done
 
