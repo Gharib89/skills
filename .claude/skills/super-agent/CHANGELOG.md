@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.26.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: Remove brief-bound rulings and fleet brief lines
+  ([#1272](https://github.com/Gharib89/skills/pull/1272),
+  [`bf73d0e`](https://github.com/Gharib89/skills/commit/bf73d0e1f1e48037db4006313969dfb035757383))
+
+
 ## v0.25.0 (2026-11-16)
 
 ### Features
