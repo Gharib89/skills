@@ -5,11 +5,11 @@ The one agent the owner talks to about every open ticket in every repo: a pinned
 _Avoid_: router, orchestrator, chief of staff, dispatcher
 
 **Supervised thread**:
-One T3 thread the super agent launched, in its own worktree on whichever machine runs it, recorded as an entry of the ledger: for a ticket (kind `ship` or `triage`) or for any other job the owner asked for (kind **task**: a grill, a deploy, decks, a review). A thread someone else launched that the owner asks it to watch is **adopted**, with the same entry. Every one is watched until it is at rest, whatever its kind; the super agent touches no thread the ledger does not hold, except the probe threads it launches and, to settle them once at rest, the helper and review threads a supervised thread started.
-_Avoid_: worker, worker thread, child thread, held thread
+One T3 thread the super agent launched, in its own worktree on whichever machine runs it, recorded as an entry of the ledger: for a ticket (kind `ship` or `triage`) or for any other job the owner asked for (kind **task**: a grill, a deploy, decks, a review). A thread someone else launched that the owner asks it to watch is **adopted**, with the same entry. Every one is watched until it is at rest, whatever its kind, unless the owner takes it: a taken thread is **paused**, neither watched, nudged nor merged by the super agent, until the owner gives it back, its ticket closes or merges (it then settles with nothing for the super agent to clean up), or, for a task, the owner drops it. A thread that waits on the owner by design, such as a grill, is **interactive** and never counts as stalled; the super agent touches no thread the ledger does not hold, except the probe threads it launches and, to settle them once at rest, the helper and review threads a supervised thread started.
+_Avoid_: worker, worker thread, child thread, held thread (held is a permission-held call or a gate-held ticket), taken thread (taken is a won claim)
 
 **Ledger**:
-The super agent's JSON file in the state directory, one entry per supervised thread it holds (a ticket's, keyed by issue, or a task's, keyed `task:<slug>` and closed on its thread's rest, never on an issue's state; an adopted entry marked as such), with the thread, model, stage and stall count, plus the owner's standing rulings, each dated. It is how a compacted or restarted super agent still knows what it owns; GitHub stays the record for issues, blocking edges and PRs.
+The super agent's JSON file in the state directory, one entry per supervised thread it holds (a ticket's, keyed by issue, or a task's, keyed `task:<slug>` and closed on its thread's rest, never on an issue's state; an adopted entry marked as such), with the thread, model, stage and stall count, plus the owner's recent rulings, each dated and lapsing after a week unless pinned (a lasting preference lives where a script reads it: the fleet file or the repo's ship profile). A settled entry moves to the ledger's archive a week after it settles. It is how a compacted or restarted super agent still knows what it owns; GitHub stays the record for issues, blocking edges and PRs.
 _Avoid_: board, roster (that is drive-session's), wiki, memory
 
 **Waiting list**:
@@ -17,7 +17,7 @@ The ledger's `waiting` rows, in order: the owner's queue. A row is a ticket with
 _Avoid_: backlog, pending list, a queue kept in a scratch file
 
 **Status block**:
-The one report the owner reads, printed by the super agent's status script from the ledger alone and posted as printed: the rows `Needs you`, `Merged`, `Running` and `Waiting`, an empty row left out, each ticket a link and each task or adopted entry marked as one, ending on the provider instance the super agent itself runs on. A wake that changed no row posts none, and only a new open need sends a push; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
+The one report the owner reads, printed by every reconcile from the ledger alone and posted as printed: the rows `Needs you`, `Merged`, `Running` and `Waiting`, an empty row left out, each ticket a link and each task or adopted entry marked as one, ending on the provider instance the super agent itself runs on. A wake that changed no row posts none, and only a new open need sends a push; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
 _Avoid_: report (prose written fresh on each wake), summary, dashboard
 
 **Watcher**:
@@ -33,7 +33,7 @@ A row in one of the three lists reconcile prints for what the super agent owes a
 _Avoid_: todo, task (that is a ledger kind), notification
 
 **Stall**:
-A supervised thread at rest with its ticket not done: its run completed with no merged PR and no merge-gate summary, or no new run for the stall window. Each stall raises the ticket's stall count and each real step lowers it; the count decides whether the super agent nudges, sends the missing fact, or starts a fresh thread or escalates.
+A supervised thread at rest with its ticket not done: its run completed with no merged PR and no merge-gate summary, or no new run for the stall window. A run stopped on a usage limit is not stalled before its reset, since T3 resumes it then. Each stall raises the ticket's stall count and each real step lowers it; the count decides whether the super agent nudges, sends the missing fact, or starts a fresh thread or escalates.
 _Avoid_: hang, idle (idle is a thread state, not a judgement), crash
 
 **Merge-gate ruler**:
