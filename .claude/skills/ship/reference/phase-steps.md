@@ -7,8 +7,8 @@
 Run `base-fresh` first, because CI tests the merge ref, so a branch that
 predates a merge still goes green while every "does this exist?" answer taken
 from the worktree was pre-merge; behind, follow its advice, re-run, continue.
-Confirm every `Carry:` file matches the main checkout's copy: one differing is
-`carried file modified`, because ship never edits untracked secrets. Then run
+Run `carry-check` on the `Carry:` files: one `differs` or `missing` is
+`carried file modified`. Then run
 the gate at the profile's `Location:` from the worktree, inline, and `run-file
 gate record` its JSON; read unparseable output or a missing `gates.secrets`
 as `unavailable`. Verdict `fail`: fix loop. Gate `deferred-to-ci`: proceed, the
