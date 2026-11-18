@@ -54,9 +54,26 @@ ones:
    word, telling the run to merge through `merge.sh` and name that waiver in
    its PR body. A hold none matches goes to whoever `merge_gate_ruler` names,
    and the step-in carries that ruling once it exists. A triage run that
-   reports a PR it opened to ship a small proven fix inline is at a gate too:
-   tell it the PR gets a review round and green CI, then stops for you to
-   merge, without `merge.sh`, which has no gate record for it.
+   reports a PR it opened to ship a small proven fix inline is at a gate too,
+   and you never merge it. Assign the issue to the gh login the repo needs
+   (`gh issue edit <n> --repo <owner/name> --add-assignee <login>`), because
+   `--rework` admits only an issue its own identity holds, then launch `/ship
+   <n> --rework "<feedback>"` with `t3_thread_launch` on the instance and tier
+   `route.sh` picks ([Routing](routing.md)), never `launch.sh` (it would build a
+   `/triage` message for this issue). Place it where the triage entry ran: the
+   entry's `machine` and `environment` (`ledger.sh --ledger <ledger> get
+   <key>`) as `environmentId` where they name another machine, and the repo's
+   `projectId` resolved as in [Sending the launch](#sending-the-launch). Its
+   feedback text, such as "take this PR through review and the merge gate", is
+   what stops `no feedback`; a plain `/ship <n>` stops `existing PR`. Point
+   the ticket's
+   entry at the new thread with `ledger.sh --ledger <ledger> rethread <key>
+   --thread <id> --worktree <the launched thread's path> --branch <the PR's
+   `*-<n>` head branch> --kind ship`, plus the `--instance`, `--model` and
+   `--effort` route picked, so the merge is verified like any ship PR. The
+   run's gate, review round and `merge.sh` merge the PR. A `not reworkable`
+   stop, such as `branch mismatch` when the PR does not head on the one
+   `*-<n>` branch, is a need for the owner.
 4. **The owner's answer to a need the thread raised**: the answer, as the owner
    gave it, into the thread whose need it settles.
 5. **A hard finding from verification**: the verified acceptance-criterion gap
