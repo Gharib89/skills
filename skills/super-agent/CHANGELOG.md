@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.34.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: The backstop runs hourly and posts nothing when no row changed
+  ([#1299](https://github.com/Gharib89/skills/pull/1299),
+  [`72069fe`](https://github.com/Gharib89/skills/commit/72069fe91b4e283beef18c4515536b7e5666c1aa))
+
+
 ## v0.33.0 (2026-11-18)
 
 ### Features
