@@ -180,7 +180,6 @@ sa_skill_source='Gharib89/skills'
 # its opening and closing `---`, under any key; a SKILL.md carries it as
 # `metadata.version`), else "": a missing, repeated or malformed version
 # (`0.67`, `v1.0.0`, a pre-release) is unread, never a number, and a body line is never read.
-# shellcheck disable=SC2034  # read by launch.sh
 sa_jq_ver='def ver: split(".") | map(tonumber);
   def skill_version: split("\n") | if .[0] != "---" then "" else .[1:]
     | [.[:(index("---") // 0)][] | capture("^  version: (?<v>.*)$").v]
