@@ -12,13 +12,16 @@ SKILL.md's `## Setup`.
 ## Schedules
 
 Offer these once setup has written the fleet file, and create one only after
-the owner's yes: a schedule runs unattended, so the owner chooses each one.
+the owner's yes: a schedule runs unattended, so the owner chooses each one
+(the backstop aside, below).
 
 1. Run `scripts/schedules.sh --fleet <fleet>` (`--morning HH:MM` and
    `--retro-day 0-6` when the owner named a time). It proposes `morning`, the
    ledger report on each day of the fleet file's `work_week`, and one weekly
    `retro` row per active repo, on the work week's last day unless
    `--retro-day` names another.
+   Its `backstop` row is not offered: SKILL.md's The loop step 3 creates it
+   with no question.
 2. Show the proposal: each title, schedule and prompt.
 3. Ask in chat, numbered options with yes first as the recommendation, one
    option per schedule or a single yes for all.
