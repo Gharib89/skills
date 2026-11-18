@@ -164,6 +164,36 @@ sa_remote_flag() {
 # stall. Defined once here, where the observation matches it.
 sa_waiting_line='Waiting on my own background work.'
 
+# The lowest installed ship a ship launch accepts: `launch.sh` answers `stale_ship` below
+# it, so the repo is refreshed first. 0.67.0 is the first ship whose SKILL.md asks for
+# `sa_waiting_line`; an older copy waits without it, and its waits read as stalls.
+# shellcheck disable=SC2034  # read by launch.sh
+sa_min_ship='0.67.0'
+
+# Where the super agent's source copy lives, the repo `npx skills add` refreshes it from.
+sa_skill_source='Gharib89/skills'
+
+# `ver`: a dotted version as an array of numbers, so versions compare by number.
+# shellcheck disable=SC2034  # read by launch.sh
+sa_jq_ver='def ver: split(".") | map(tonumber? // 0);'
+
+# sa_skill_version <owner/name> <path>: the `metadata.version` of the SKILL.md at <path>
+# on the repo's default branch, through `gh` REST; nothing printed when it cannot be read.
+sa_skill_version() {
+  gh api "repos/$1/contents/$2" 2>/dev/null </dev/null \
+    | jq -r '.content // "" | gsub("\\s"; "") | @base64d' 2>/dev/null | sed -n 's/^  version: //p'
+}
+
+# sa_skill_stale: {loaded, source, stale}, this copy's super-agent version (the one
+# running) against the source copy's, the one a refresh installs; `stale` true when the
+# loaded one is older, null with either version unread.
+sa_skill_stale() {
+  jq -cn --arg l "$(sed -n 's/^  version: //p' "$(dirname "${BASH_SOURCE[0]}")/../SKILL.md")" \
+    --arg s "$(sa_skill_version "$sa_skill_source" skills/super-agent/SKILL.md)" "$sa_jq_ver"'
+    {loaded: (if $l == "" then null else $l end), source: (if $s == "" then null else $s end),
+     stale: (if $l == "" or $s == "" then null else ($l | ver) < ($s | ver) end)}'
+}
+
 # The contract line a triage launch carries (`launch.sh`): the triage skill is upstream,
 # so no SKILL.md this repo owns can ask a triage run for the waiting line the way ship's
 # does (ADR 0020). Built from `sa_waiting_line`, never a second copy of its text.
