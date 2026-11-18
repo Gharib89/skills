@@ -38,6 +38,7 @@ check_rc "$x --help exits 0" 0 "$rc"
 out=$(bash "$s/$x.sh" --bogus 2>/dev/null); rc=$?
 check "$x: a bad flag answers its usage line" "$(sed -n 1p <<<"$(bash "$s/$x.sh" --help)")" "$(jq -r .error <<<"$out")"
 check_rc "$x: a bad flag exits 2" 2 "$rc"
+check_rc "$x with an unwritable --out exits 2 before any refresh" "2 " "$(sa_skill_file Gharib89/skills skills/super-agent/SKILL.md 99.0.0; bash "$s/$x.sh" --ledger "$led" --from th-old --out /nonexistent/b.md >/dev/null 2>&1; echo "$? $(cat "$SA_FAKE/npx-calls" 2>/dev/null)")"
 check_rc "$x without --out exits 2" 2 "$(bash "$s/$x.sh" --ledger "$led" --from th-old >/dev/null 2>&1; echo $?)"
 
 # --- the bearings file, from the ledger -----------------------------------------
@@ -53,7 +54,7 @@ check "a settled entry is not in the bearings" 0 "$(bash "$s/ledger.sh" --ledger
   jq '.entries["acme/widgets#3"].stage = "settled"' "$led" > "$tmp/l" && mv "$tmp/l" "$led"; H >/dev/null; grep -c 'acme/widgets#3' "$bear")"
 check "the ledger is only read" "$(cat "$led")" "$(H >/dev/null; cat "$led")"
 rm -f "$led"; out=$(H); rc=$?
-check "an empty ledger still writes the bearings, with no entries" "0 0" "$rc $(grep -c '^- ' "$bear")"
+check "a missing ledger still writes the bearings, with no entries" "0 0" "$rc $(grep -c '^- ' "$bear")"
 
 # --- the refresh, only when the loaded copy is stale ----------------------------
 seed

@@ -47,7 +47,7 @@ jq -cn --slurpfile f "$fleet" --arg m "$morning" --arg d "$day" '
   | (if $d == "" then $week[-1] else ($d | tonumber) end) as $d
   | {morning: {title: "Super agent morning report", bind: "this-thread",
      schedule: {type: "fixed_time", timeOfDay: $m, weekdays: $week},
-     prompt: "Morning report: start with the daily handover (SKILL.md, Daily handover): run handover.sh, then stop the watcher, delete the schedules bound to this thread, launch the successor, settle, and push the pin request. The successor recreates the schedules and posts the status.sh --digest block as printed."},
+     prompt: "Morning report: start with the daily handover, the steps of SKILL.md Daily handover in order. The successor it launches posts the status.sh --digest block as printed."},
    retro: [($f[0].active_repos // [])[] | {repo: ., title: "Retro run \(.)", bind: "repo-project",
      schedule: {type: "fixed_time", timeOfDay: "09:00", weekdays: [$d]},
      prompt: "/retro-run"}]}'

@@ -157,7 +157,9 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    {loaded, source, stale}: `stale` true means this running copy is older than
    the one on `Gharib89/skills`. Say so once in chat, naming both
    versions (no ledger need: no entry is stale): the next
-   [daily handover](#daily-handover) refreshes it.
+   [daily handover](#daily-handover) refreshes it. With no morning report
+   scheduled, the refresh, `npx skills@1.8.1 add Gharib89/skills --skill
+   super-agent --agent claude-code -g -y`, is the owner's to run or approve.
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
    action it prints (Acting on the summary), run `scripts/status.sh --ledger
@@ -303,31 +305,40 @@ step.`
 ## Daily handover
 
 The morning report starts a fresh super-agent thread, so compactions and stale
-context never pile up in one. The old thread, in this order:
+context never pile up in one. It is the one exception to The loop's watcher
+rule and to the Hard rules: the successor is launched without a claim and is
+never recorded or watched, this thread settles itself, and its pin request is
+the one push that is not a need. The old thread, in this order:
 
 1. `scripts/handover.sh --ledger <ledger> --from $T3CODE_THREAD_ID --out
-   <state dir>/super-agent/bearings.md`. It refreshes the global super-agent
-   copy when the loaded one is stale and writes the bearings file from the
-   ledger. Exit 1 (the refresh failed) still hands over; say so in chat.
-2. Stop the watcher's background task (TaskStop), so two super agents never
-   run on one ledger.
+   <bearings file>`, `<bearings file>` being `bearings.md` beside the ledger.
+   It refreshes the global super-agent copy when the loaded one is stale and
+   writes the bearings file from the ledger. Exit 1 (the refresh failed)
+   still hands over; say so in chat.
+2. Stop the watcher: TaskStop its background task, found with TaskList (none
+   running is fine), so two super agents never run on one ledger.
 3. `list_scheduled_tasks`, note the morning report's time, and
    `delete_scheduled_task` each schedule bound to this thread (the morning
    report and the backstop); retro-runs are bound to repo projects and stay.
-4. Launch the successor with `t3_thread_launch` in this thread's project, on
-   this thread's provider instance and model, its message `/super-agent`
-   then `Handover: read <bearings file>. Morning report at <HH:MM>.` If the
-   launch fails, recreate the deleted schedules, start the watcher and say so:
-   the next morning tries again.
-5. Settle this thread: `t3_thread_organize` action `settle` on it.
-6. Push one notification (PushNotification): `Pin the new super agent:
-   <link>`, the successor's `link`. No T3 tool pins a thread.
+4. Launch the successor with `t3_thread_launch` in this thread's project, no
+   worktree, on this thread's provider instance and model (`t3 thread show
+   $T3CODE_THREAD_ID --json`), its message two lines: `/super-agent`, then
+   `Handover: read <bearings file>. Morning report at <HH:MM>.` If the launch
+   fails, recreate the deleted schedules (the backstop only while an entry is
+   open), start the watcher, post the `status.sh --digest` block and say in
+   one chat line that the handover failed: the next morning retries.
+5. Push one notification (PushNotification), and post the same line in chat:
+   `Pin the new super agent: <link>`, the successor's `link`. No T3 tool pins
+   a thread.
+6. Settle this thread: `t3_thread_organize` action `settle` on it.
 
-The successor reads the bearings file, runs After a restart or compaction,
-then recreates the two schedules bound to itself with no question asked (the
-owner's yes to the morning report covers them): the morning report from
-`scripts/schedules.sh --fleet <fleet> --morning <HH:MM>`, the backstop as The
-loop's step 3 says. It then posts the `status.sh --digest` block.
+**When your first message carries a `Handover:` line, you are the
+successor.** Read the bearings file it names, run After a restart or
+compaction, then recreate the schedules bound to this thread with no question
+asked (the owner's yes to the morning report covers them): the morning report
+from `scripts/schedules.sh --fleet <fleet> --morning <HH:MM>`, `<HH:MM>` from
+the `Handover:` line, and the backstop as The loop's step 3 says. Then post
+the `status.sh --digest` block.
 
 ## Hard rules
 

@@ -105,8 +105,8 @@ One class of mistake or gap seen in two or more tickets. It is filed once as an 
 _Avoid_: pattern, trend, retro item
 
 **Daily handover**:
-The first step of the morning report: the super agent refreshes its own skill copy when it is stale, writes the bearings file, stops its watcher, deletes its own schedules, launches a successor thread and settles itself, then asks the owner to pin the successor. Only one super agent runs on a ledger at a time.
-_Avoid_: rollover, restart, rotation
+The morning report's hand-off from the running super agent thread to a fresh one it launches with a bearings file, refreshing a stale super-agent copy first; the old thread then settles and the owner pins the new one. Only one super agent runs on a ledger at a time.
+_Avoid_: rollover, rotation
 
 **Bearings file**:
 The Markdown file `handover.sh` writes from the ledger for the successor: the predecessor thread, the ledger, the skill versions, and the open entries, needs and waiting rows. It is a starting summary; the ledger stays the record.
