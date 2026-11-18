@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Propose the recurring schedules the owner may say yes to, one JSON answer: a
-# morning ledger report and a weekly retro-run per active repo. It only
-# proposes, creates nothing and reads nothing off GitHub or T3; the super agent
-# makes each with `schedule_task` after the owner's yes.
+# Propose the recurring schedules, one JSON answer: a morning ledger report, the
+# hourly backstop and a weekly retro-run per active repo. It only proposes,
+# creates nothing and reads nothing off GitHub or T3; the super agent makes the
+# morning report and each retro-run with `schedule_task` after the owner's yes,
+# and the backstop without asking.
 #
 #   schedules --fleet <file> [--morning <HH:MM>] [--retro-day <0-6>]
 #
@@ -14,7 +15,13 @@
 # own T3 project. The prompts
 # carry no path or host: the thread already knows its ledger.
 #
-# stdout: {morning: {title, bind, schedule, prompt}, retro: [{repo, title,
+# The backstop is the wake that runs `pulse.sh` while a watcher lives; hourly,
+# since a faster one found nothing to do and cost context on each wake. It
+# belongs to the loop, not the owner's choices, so no yes is asked for it.
+# Its trigger shape, {type: "interval", everyMs} with everyMs at least 60000, is
+# the one the T3 `schedule_task` tool's own schema declares (read 2026-11-18).
+#
+# stdout: {morning: {...}, backstop: {...same fields}, retro: [{repo, title,
 #         bind, schedule, prompt}]}: `bind` `this-thread` or `repo-project`,
 #         `schedule` the `schedule_task` trigger object; `retro` is empty when
 #         the fleet file has no active repos
@@ -48,6 +55,9 @@ jq -cn --slurpfile f "$fleet" --arg m "$morning" --arg d "$day" '
   | {morning: {title: "Super agent morning report", bind: "this-thread",
      schedule: {type: "fixed_time", timeOfDay: $m, weekdays: $week},
      prompt: "Morning report: start with the daily handover, the steps of SKILL.md Daily handover in order. The successor it launches posts the status.sh --digest block as printed."},
+   backstop: {title: "Super agent backstop", bind: "this-thread",
+     schedule: {type: "interval", everyMs: 3600000},
+     prompt: "Backstop: run scripts/pulse.sh and follow SKILL.md step 4"},
    retro: [($f[0].active_repos // [])[] | {repo: ., title: "Retro run \(.)", bind: "repo-project",
      schedule: {type: "fixed_time", timeOfDay: "09:00", weekdays: [$d]},
      prompt: "/retro-run"}]}'

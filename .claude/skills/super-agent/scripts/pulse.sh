@@ -17,7 +17,7 @@
 # carries it until a need silences it. A dead watcher is `alive` false whatever
 # else holds.
 #
-# stdout: {alive, changed, summary, skill}: `summary` is reconcile's whole answer when
+# stdout: {alive, changed, end_turn, summary, skill}: `summary` is reconcile's whole answer when
 #         `changed`, null when not; `skill` is reconcile's `skill`, on every
 #         answer: a stale copy alone is no change
 # exit: 0 an answer · 2 usage, or reconcile's own exit 2 (its answer, not a pulse's,
@@ -54,4 +54,4 @@ jq -cn --argjson s "$summary" --argjson a "$alive" --argjson held "$held" "$sa_j
         | select(type == "array" and length > 0)] | length > 0) as $lists
   | ($lists or ([$s.entries[] | select(.from != .stage)] | length > 0)
      or $s.status.block != "" or ($s.status.unpushed | length > 0)) as $c
-  | {alive: $a, changed: $c, summary: (if $c then $s else null end), skill: $s.skill}'
+  | {alive: $a, changed: $c, end_turn: ($a and ($c | not)), summary: (if $c then $s else null end), skill: $s.skill}'
