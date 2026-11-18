@@ -31,7 +31,9 @@ the owner's yes: a schedule runs unattended, so the owner chooses each one.
      from `t3_project_list`, `bindToCurrentThread` false, prompt
      `/retro-run`.
 5. On a no, or no answer, create nothing. Delete a schedule only on the
-   owner's word.
+   owner's word, or in the
+   [daily handover](../SKILL.md#daily-handover), which recreates it in the
+   successor thread.
 
 ## A recurring find
 

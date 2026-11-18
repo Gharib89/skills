@@ -8,7 +8,8 @@
 #
 # The morning report runs in the super agent's own thread at `--morning`
 # (default 08:00) on the fleet file's `work_week` (weekday numbers, 0 is
-# Sunday, in week order; default Monday to Friday); each retro-run runs weekly
+# Sunday, in week order; default Monday to Friday), and starts with the daily
+# handover to a fresh super-agent thread; each retro-run runs weekly
 # on `--retro-day` (default the work week's last day) at 09:00 in that repo's
 # own T3 project. The prompts
 # carry no path or host: the thread already knows its ledger.
@@ -46,7 +47,7 @@ jq -cn --slurpfile f "$fleet" --arg m "$morning" --arg d "$day" '
   | (if $d == "" then $week[-1] else ($d | tonumber) end) as $d
   | {morning: {title: "Super agent morning report", bind: "this-thread",
      schedule: {type: "fixed_time", timeOfDay: $m, weekdays: $week},
-     prompt: "Morning report: run reconcile.sh, then status.sh --digest, and post its block as printed. Start the watcher only if none runs."},
+     prompt: "Morning report: start with the daily handover (SKILL.md, Daily handover): run handover.sh, then stop the watcher, delete the schedules bound to this thread, launch the successor, settle, and push the pin request. The successor recreates the schedules and posts the status.sh --digest block as printed."},
    retro: [($f[0].active_repos // [])[] | {repo: ., title: "Retro run \(.)", bind: "repo-project",
      schedule: {type: "fixed_time", timeOfDay: "09:00", weekdays: [$d]},
      prompt: "/retro-run"}]}'
