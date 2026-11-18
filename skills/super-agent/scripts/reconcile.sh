@@ -17,7 +17,11 @@
 # `sa_settled_days` (7) days is read again, thread only: one whose run count grew, or that runs, goes back to `at-rest` or
 # `running` and is named in `woke`. A `--kind task` entry has no ticket: it is
 # `running` while its thread runs and `settled` once the thread has run and is at
-# rest, whatever any issue or PR says. Settling the
+# rest, whatever any issue or PR says, unless it is `interactive` (it waits on the
+# owner: never settled on rest, no stall). A `paused` entry counts no stall and owes
+# no cleanup: a ticket's is read from GitHub alone and settles on a merged PR or a
+# closed issue, a task's is not read. `resumed` (give-back) takes the thread's run
+# count as judged. Settling the
 # thread in T3 is the super agent's act, on each entry `settled` names, and it
 # never archives. It keeps each entry's stall count: +1 for a stall (a run that
 # completed with no merged PR and no merge-gate summary, counted once per run,
@@ -142,16 +146,27 @@ fail() { # <kind> <detail>: record the error of the entry in $key
   doc=$(jq -c --arg k "$key" --arg kind "$1" '.entries[$k].error = $kind' <<<"$doc")
 }
 while IFS= read -r entry; do
-  checked=$((checked + 1))
   key=$(jq -r .key <<<"$entry")
-  if ! sa_observe "$entry"; then fail "$obs_kind" "$obs_detail"; continue; fi
+  paused=$(jq -r '.paused == true' <<<"$entry") interactive=$(jq -r '.interactive == true' <<<"$entry")
+  # a paused task's thread is the owner's until `drop`: nothing to read
+  [ "$paused" = true ] && [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ] && continue
+  checked=$((checked + 1))
   stage='' reason=''
-  # running, or at rest on the waiting line inside the window: still working
-  active=$(jq -r --argjson w "$window" --argjson now "$now_s" "$sa_jq_active"'active($w; $now)' <<<"$obs")
+  if [ "$paused" = true ]; then
+    # a paused ticket's thread is the owner's: its end is read from GitHub alone
+    active=false
+    if ! sa_pr_of "$entry"; then fail "$obs_kind" "$obs_detail"; continue; fi
+    obs=$(jq -c --argjson pr "$pr_obs" '(.observed // {}) + {pr: $pr}' <<<"$entry")
+  elif ! sa_observe "$entry"; then fail "$obs_kind" "$obs_detail"; continue
+  else
+    # running, or at rest on the waiting line inside the window: still working
+    active=$(jq -r --argjson w "$window" --argjson now "$now_s" "$sa_jq_active"'active($w; $now)' <<<"$obs")
+  fi
   if [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ]; then
-    # a task has no ticket: only its thread says whether it is done
+    # a task has no ticket: only its thread says whether it is done; an interactive
+    # one waits on the owner at rest, so it leaves on `drop`
     if [ "$active" = true ]; then stage=running
-    elif [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] && [ "$(jq -r .pending <<<"$obs")" -eq 0 ]; then stage=settled
+    elif [ "$interactive" != true ] && [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] && [ "$(jq -r .pending <<<"$obs")" -eq 0 ]; then stage=settled
     else stage=at-rest; fi
   else
     case $(jq -r .pr.state <<<"$obs") in
@@ -166,18 +181,24 @@ while IFS= read -r entry; do
         if [ "$(jq -r .state <<<"$issue")" = closed ]; then stage=closed reason=issue-closed
         elif [ "$active" = true ]; then stage=running
         elif [ "$(jq -r '.kind // "ship"' <<<"$entry")" = triage ] \
-            && [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] \
+            && [ "$(jq -r '.run_count // 0' <<<"$obs")" -ge 1 ] \
             && ! jq -e '[.labels[]?.name] | index("needs-triage") or index("needs-info")' <<<"$issue" >/dev/null; then stage=settled
         else stage=at-rest; fi ;;
     esac
   fi
+  # a paused ticket ends on a merged PR or a closed issue, and otherwise keeps its stage
+  if [ "$paused" = true ]; then
+    if [ "$(jq -r .pr.state <<<"$obs")" = merged ] || [ "$reason" = issue-closed ]; then stage=settled; else stage=$(jq -r .stage <<<"$entry"); fi
+    reason=''
+  fi
   stall='' stalls=$(jq -r '.stalls // 0' <<<"$entry")
-  case $stage in running|at-rest)
+  # no stall is counted for a paused entry, nor for an interactive one (it waits on the owner)
+  case $paused$interactive:$stage in falsefalse:running|falsefalse:at-rest)
     verdict=$(jq -cn --argjson e "$entry" --argjson n "$obs" --arg now "$now" --argjson w "$window" --argjson active "$active" '
       def down: if . > 0 then . - 1 else 0 end;
       ($now | fromdateiso8601) as $t
       | {stalls: ($e.stalls // 0), rest_since: $e.rest_since, judged_run: ($e.judged_run // 0), stall: null}
-      | if $e.observed == null then .
+      | if $e.observed == null then (if $e.resumed == true then .judged_run = $n.run_count else . end)
         else
           (if $e.observed.pr.state == "none" and $n.pr.state == "open" then .stalls |= down else . end)
           | if $active or $n.pending > 0 then .rest_since = null
@@ -198,8 +219,8 @@ while IFS= read -r entry; do
   # an end owes the super agent its cleanup, and a merged ship PR a criteria check;
   # each stays owed until the super agent clears it (`ledger set <key> <field> false`)
   doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
-    '.entries[$k] |= (.stage = $s | .observed = $o | .error = null | .updated_at = $now
-      | if $s == "settled" or $s == "closed" then .cleanup_owed = true | .settled_at = $now else . end
+    '.entries[$k] |= (.stage = $s | .observed = $o | .error = null | .updated_at = $now | del(.resumed)
+      | if $s == "settled" or $s == "closed" then .settled_at = $now | if .paused != true then .cleanup_owed = true else . end else . end
       | if (.kind // "ship") == "ship" and ($s == "merged" or $s == "settled") and $o.pr.state == "merged" and .verify_owed == null
         then .verify_owed = true else . end)' <<<"$doc")
   if [ -n "$stall" ]; then
@@ -207,7 +228,7 @@ while IFS= read -r entry; do
       '. + [{key: $k, thread: $t, stalls: $n, reason: $r}]' <<<"$stalled")
   fi
   entries=$(jq -c --argjson e "$entry" --arg s "$stage" --arg r "$reason" --argjson o "$obs" --argjson n "$stalls" \
-    '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, kind: ($e.kind // "ship"), from: $e.stage, stage: $s, reason: $r, stalls: $n, observed: $o}]' <<<"$entries")
+    '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, kind: ($e.kind // "ship"), from: $e.stage, stage: $s, reason: $r, stalls: $n, observed: $o, paused: ($e.paused == true)}]' <<<"$entries")
 done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open)' <<<"$doc")
 # A triage entry settled within the last sa_settled_days is read again (reconcile.d/woke.sh).
 woke='[]'
@@ -217,9 +238,8 @@ reconcile_woke
 unqueued='[]'
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/unqueued.sh" || sa_tooling "cannot source reconcile.d/unqueued.sh"
 reconcile_unqueued
-# The waiting list: the owner's queue (reconcile.d/waiting.sh).
-issue_read() { gh api "repos/$1/issues/$2" 2>/dev/null </dev/null; } # <owner/name> <number>
-unreadable() { errors=$(jq -c --arg k "$1" --arg d "$2" '. + [{key: $k, kind: "issue-unreadable", detail: {key: $d}}]' <<<"$errors"); } # <row key> <the key that failed to read>
+# The waiting list: the owner's queue. A closed issue drops its row; a row is
+# ready when its blocker merged and its repo has a free ship slot.
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/waiting.sh" || sa_tooling "cannot source reconcile.d/waiting.sh"
 reconcile_waiting
 # A merged ship entry's spec parent, listed once when its sub-issues are all closed.
@@ -235,40 +255,5 @@ sa_archive "$ledger" "$now_s"
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 
 sa_unlock
-# The write above already recorded the once-only lists as offered, so a failed
-# status is carried as `status.error`, never in place of this answer.
-status=$(bash "$(dirname "${BASH_SOURCE[0]}")/status.sh" --ledger "$ledger" ${status_flags[@]+"${status_flags[@]}"} 2>/dev/null) \
-  || status=$(jq -c '{error}' <<<"$status" 2>/dev/null) || status='{"error":"status.sh failed"}'
-
-# The ledger goes in on stdin: one argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
-skill=$(sa_skill_stale)
-jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" --argjson sk "$skill" --argjson status "$status" "$sa_jq_norm"'
-  . as $d |
-  def pick($stage; f): [$e[] | select(.stage == $stage) | f];
-  def entries: [$d.entries[]?];
-  def needed($k; $r): [($d.needs // [])[] | select((.key | norm_repo) == ($k | norm_repo) and (.reason == null or .reason == $r))] | length > 0;
-  {ledger: $l, checked: $n,
-   entries: [$e[] | {key, from, stage, stalls, observed}],
-   stalled: $st,
-   settled: pick("settled"; {key, thread, worktree, kind}),
-   closed: pick("closed"; {key, thread, worktree, reason}),
-   at_rest: pick("at-rest"; {key, thread}),
-   woke: $wk,
-   ready: $rd,
-   dropped: $dr,
-   unqueued: $uq,
-   parents_done: $pd,
-   cleanup: [entries[] | select((.stage == "settled" or .stage == "closed") and .cleanup_owed == true)
-     | {key, thread, worktree, kind: (.kind // "ship"), stage, environment_id: (.environment_id // null)}],
-   verify: [entries[] | select((.kind // "ship") == "ship" and .verify_owed == true and (.stage == "merged" or .stage == "settled"))
-     | {key, repo, number, pr: .observed.pr.number, stage}],
-   escalate: [entries[]
-     | (if .stage == "settled" then null
-        elif .stage == "closed" then
-          (if .cleanup_owed == true then {reason: (if .observed.pr.state == "closed" then "pr-closed" else "issue-closed" end), detail: null} else null end)
-        elif (.observed.pending // 0) > 0 then {reason: "permission-hold", detail: .observed.pending}
-        elif .error != null then {reason: "fault", detail: .error}
-        elif .stage == "at-rest" and (.stalls // 0) >= 3 then {reason: "stall-cap", detail: .stalls}
-        else null end) as $r
-     | select($r != null and (needed(.key; $r.reason) | not)) | {key, thread, reason: $r.reason, detail: $r.detail}],
-   errors: $errs, skill: $sk, status: $status}' <<<"$doc"
+source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/answer.sh" || sa_tooling "cannot source reconcile.d/answer.sh"
+reconcile_answer

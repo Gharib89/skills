@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.32.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: Owner overrides get flags, and the owner can take a thread and give it back
+  ([#1296](https://github.com/Gharib89/skills/pull/1296),
+  [`19839e0`](https://github.com/Gharib89/skills/commit/19839e04e834f15094bad346043441af89e8ff82))
+
+
 ## v0.31.0 (2026-11-18)
 
 ### Features

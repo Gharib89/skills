@@ -1,13 +1,43 @@
-# The owner's needs and a repo's reviewer limit: the arms of `ledger` that `need`,
-# `pushed`, `unneed`, `limit` and `unlimit` take, sourced by it. They read the
+# The owner's needs, a repo's reviewer limit and the owner's overrides on an entry: the
+# arms of `ledger` that `need`, `pushed`, `unneed`, `limit`, `unlimit`, `pause`,
+# `unpause`, `drop` and `reset-stalls` take, sourced by it. They read the
 # caller's $usage, $ledger and $doc, which `ledger.sh` sets.
 
-# shellcheck disable=SC2154  # usage, ledger and sa_jq_norm come from ledger.sh and _lib.sh
+# shellcheck disable=SC2154  # usage, ledger, sa_jq_norm and sa_jq_open come from ledger.sh and _lib.sh
 
 ledger_owner() {
-  local cmd=$1 key action reason="" row had repo reviewer
+  local cmd=$1 key action reason="" row had repo reviewer now stalls ruling
   shift
   case $cmd in
+  pause|unpause|drop|reset-stalls)
+    [ $# -eq 1 ] || sa_tooling "$usage"
+    sa_lock "$ledger"; sa_read "$ledger"
+    key=$(sa_key "$doc" "$1")
+    jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$1 is not in the ledger"
+    now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    case $cmd in
+    pause)
+      jq -e --arg k "$key" "$sa_jq_open"'.entries[$k] | is_open' <<<"$doc" >/dev/null || sa_fail "$key has ended: nothing to pause"
+      sa_update "$ledger" '.entries[$k] |= (.paused = true | .updated_at = $now)' --arg k "$key" --arg now "$now"
+      jq -cn --arg k "$key" '{key: $k, paused: true}' ;;
+    unpause)
+      jq -e --arg k "$key" "$sa_jq_open"'.entries[$k] | .paused == true and is_open' <<<"$doc" >/dev/null || sa_fail "$key is not a paused open entry: nothing to give back"
+      # watching restarts from the thread as it is now: `resumed` has the next
+      # reconcile take its run count as already judged
+      sa_update "$ledger" '.entries[$k] |= (.paused = false | .observed = null | .rest_since = null | .resumed = true | .updated_at = $now)' \
+        --arg k "$key" --arg now "$now"
+      jq -cn --arg k "$key" '{key: $k, paused: false}' ;;
+    drop)
+      sa_update "$ledger" 'del(.entries[$k])' --arg k "$key"
+      jq -cn --arg k "$key" '{key: $k, removed: true}' ;;
+    reset-stalls)
+      jq -e --arg k "$key" "$sa_jq_open"'.entries[$k] | is_open' <<<"$doc" >/dev/null || sa_fail "$key has ended: no stalls to reset"
+      stalls=$(jq -r --arg k "$key" '.entries[$k].stalls // 0' <<<"$doc")
+      ruling=$(sa_ruling_row "Owner reset-stalls: $key from $stalls stalls to 0.")
+      sa_update "$ledger" '.entries[$k] |= (.stalls = 0 | .rest_since = null | .updated_at = $now) | .rulings += [$r]' \
+        --arg k "$key" --arg now "$now" --argjson r "$ruling"
+      jq -cn --arg k "$key" --argjson r "$ruling" '{key: $k, stalls: 0, ruling: $r}' ;;
+    esac ;;
   need)
     { [ $# -eq 3 ] || [ $# -eq 5 ]; } && [ "$2" = --action ] || sa_tooling "$usage"
     key=$1; sa_flag_value "$usage" "$3"; action=$3

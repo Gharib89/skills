@@ -10,25 +10,34 @@
 #          --machine <key> --thread <id> [--area <path>]... [--gpu]
 #          [--account <login>] [--blocked-by <n>]... [--instance <id>]
 #          [--raise <n>] [--wanted yes|no] [--readings <file>] [--exclude <key>]...
-#          [--note <text>] [--out <file>]
+#          [--owner-go] [--skill <name>] [--note <text>] [--out <file>]
 #   launch record --launch <file> --thread <id> --ledger <file> [--rethread]
 #          [--worktree <path>] [--remote <environment id>=<dir>]...
 #   launch record --task <slug> --thread <id> --ledger <file> [--worktree <path>]
 #          [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>]
-#          [--remote <environment id>=<dir>]...
+#          [--remote <environment id>=<dir>]... [--interactive]
 #
 # --machine is this machine's fleet key and --thread the super agent's own thread,
 # which `claim` records; --quota is the saved `quota` read of this wake. --area,
 # --gpu, --account, --blocked-by, --readings and --exclude go to `place`,
 # --instance and --raise to `route`. --wanted answers a route's `ask`: `yes`
-# launches the wanted tier, `no` the default one. --note is the owner's note for
-# this ticket, one line: a newline in it exits 2. --out also writes the answer to a file, only when it launches; `record`
-# reads that file as --launch.
+# launches the wanted tier, `no` the default one. --owner-go is the owner's go past
+# the 5 hour floor and the weekly reserve when no instance passes them (`route`); a
+# launch that used it carries `owner_go` in `record`, and `record` writes a dated
+# ruling naming the override and the ticket. --skill <name> is the owner naming the
+# skill to run in place of the one the labels pick: installed in the repo
+# (`.claude/skills/<name>/SKILL.md` on its default branch), or else on this machine
+# (`~/.claude/skills/<name>/SKILL.md`), which then places the thread here alone.
+# `ship` and `triage` keep their kinds, and any other skill records a `task` entry
+# keyed `task:<name>-<repo name>-<n>`, interactive when the skill waits on the owner
+# by design (`sa_interactive_skills`, `_lib.sh`). --note is the owner's note for
+# this ticket, one line: a newline in it exits 2. --out also writes the answer to a
+# file, only when it launches; `record` reads that file as --launch.
 # The ticket's Size label picks the tier (M when it has none, `size_source` says
 # so); `ready-for-agent` is a `ship` launch, `needs-triage` a `triage` one.
 # The launch message (`args.message`) is the owner-skill invocation (`/ship <n>`,
-# `/triage <n>`), plus one `Note: <text>` line with --note: every rule a run follows
-# lives in its skill, its repo's profile or the global rules, and the super agent says
+# `/triage <n>`, or `/<name> <n>` with --skill), plus one `Note: <text>` line with
+# --note: every rule a run follows lives in its skill, its repo's profile or the global rules, and the super agent says
 # anything more only at a step-in (ADR 0020). One exception: a `/triage` message carries
 # the waiting-line contract line (`sa_triage_contract`, `_lib.sh`) between the invocation
 # and the note, because the triage skill is upstream and no SKILL.md this repo owns can.
@@ -40,7 +49,7 @@
 # new thread (the stall ladder's rung 3) instead of adding one. Every thread the
 # super agent launches is recorded, whatever its kind: `record --task <slug>` is for
 # one that is no ticket's (a grill, a deploy, a review), from no launch answer, as a
-# `task` entry (`ledger`); `--worktree` is read from `t3 thread show` when omitted
+# `task` entry (`ledger`), --interactive when it waits on the owner by design; `--worktree` is read from `t3 thread show` when omitted
 # and the thread is on this machine. `record` reads the entry back from the ledger
 # before it answers, and fails with `unrecorded launch` (exit 1) when neither
 # `--launch` nor `--task` names the entry to write or the ledger does not hold it.
@@ -50,8 +59,12 @@
 #         `t3_thread_launch` arguments (environmentId on a remote machine only,
 #         title, workspaceStrategy, modelSelection, message), `needs` the
 #         arguments only an MCP read can fill (`projectId`, from `t3_project_list`
-#         on the placed machine), `record` what `record` writes. `launch` false:
+#         on the placed machine), `record` what `record` writes (a --skill
+#         task's also its `repo` and `interactive`, an --owner-go launch's
+#         `owner_go`). `launch` false:
 #         {reason, detail}, `reason` one of `no_owner_skill` (detail the labels),
+#         `no_skill` (detail {skill}: --skill names a skill installed nowhere; read
+#         before the claim, so none is taken),
 #         `stale_ship` (installed, minimum: the repo's installed ship is below
 #         `sa_min_ship`; read before the claim, so none is taken),
 #         `claimed` or `stale` (the claim), `ask` (route's wanted, tier, bucket,
@@ -70,7 +83,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file> --machine <key> --thread <id> [--area <path>]... [--gpu] [--account <login>] [--blocked-by <n>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--readings <file>] [--exclude <key>]... [--note <text>] [--out <file>] | launch record (--launch <file> [--rethread] | --task <slug> [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>]) --thread <id> --ledger <file> [--worktree <path>] [--remote <environment id>=<dir>]...'
+usage='usage: launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file> --machine <key> --thread <id> [--area <path>]... [--gpu] [--account <login>] [--blocked-by <n>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--readings <file>] [--exclude <key>]... [--owner-go] [--skill <name>] [--note <text>] [--out <file>] | launch record (--launch <file> [--rethread] | --task <slug> [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>] [--interactive]) --thread <id> --ledger <file> [--worktree <path>] [--remote <environment id>=<dir>]...'
 sa_help "$usage" "$@"
 here=$(dirname "${BASH_SOURCE[0]}")
 # sub <script> <args>...: one script's answer in $out and its exit in $rc. Its exit 2
@@ -83,77 +96,7 @@ sub() {
 
 if [ "${1:-}" = record ]; then
   shift
-  launchf='' thread='' ledger='' worktree='' remotes=() rethread='' task='' tbranch='' trepo='' tmachine='' tenv=''
-  while [ $# -gt 0 ]; do
-    case $1 in --rethread) rethread=1; shift; continue ;; esac
-    sa_flag_value "$usage" "${2:-}"
-    case $1 in
-      --launch) launchf=$2 ;; --thread) thread=$2 ;; --ledger) ledger=$2 ;; --worktree) worktree=$2 ;;
-      --task) task=$2 ;; --branch) tbranch=$2 ;; --repo) trepo=$2 ;; --machine) tmachine=$2 ;; --environment) tenv=$2 ;;
-      --remote) sa_remote_flag "$usage" "$2"; remotes+=(--remote "$2") ;;
-      *) sa_tooling "$usage" ;;
-    esac
-    shift 2
-  done
-  [ -n "$thread" ] && [ -n "$ledger" ] || sa_tooling "$usage"
-  if [ -z "$launchf" ] && [ -z "$task" ]; then
-    jq -cn '{error: "unrecorded launch: name the entry to write, --launch <file> or --task <slug>"}'
-    printf '%s\n' "unrecorded launch: name the entry to write, --launch <file> or --task <slug>" >&2; exit 1
-  fi
-  [ -z "$launchf" ] || [ -z "$task" ] || sa_tooling "record: --launch and --task are two ways to name the entry, give one"
-  if [ -n "$task" ]; then
-    # a thread that is no ticket's: no launch answer, so the entry comes from the flags
-    key="task:$task"
-    [ -z "$tenv" ] || [ -n "$tmachine" ] || sa_tooling "record --task: --environment needs --machine, or the slot lands on this machine"
-    tmachine=${tmachine:-local}
-    if [ -z "$worktree" ] && [ -z "$tenv" ]; then
-      raw=$(t3 thread show "$thread" --json 2>/dev/null </dev/null) \
-        && worktree=$(grep '^{"' <<<"$raw" | tail -1 | jq -r '.thread.worktreePath // empty' 2>/dev/null) || worktree=''
-    fi
-    sub ledger --ledger "$ledger" add --task "$task" --thread "$thread" --machine "$tmachine" ${worktree:+--worktree "$worktree"} \
-      ${tbranch:+--branch "$tbranch"} ${trepo:+--repo "$trepo"} ${tenv:+--environment "$tenv"}
-  else
-    jq -e '.launch == true and (.record | type) == "object"' "$launchf" >/dev/null 2>&1 || sa_tooling "$launchf: not a launch answer that launched"
-    rec=$(jq -c .record "$launchf")
-    env=$(jq -r '.environment_id // empty' <<<"$rec")
-    if [ -z "$worktree" ]; then
-      [ -z "$env" ] || sa_tooling "a launch on a linked machine needs --worktree"
-      raw=$(t3 thread show "$thread" --json 2>/dev/null </dev/null) || sa_tooling "cannot read thread $thread: pass --worktree"
-      worktree=$(grep '^{"' <<<"$raw" | tail -1 | jq -r '.thread.worktreePath // empty' 2>/dev/null)
-      [ -n "$worktree" ] || sa_tooling "thread $thread has no worktree path: pass --worktree"
-    fi
-    aflags=()
-    while IFS= read -r a; do aflags+=(--area "$a"); done < <(jq -r '.areas[]' <<<"$rec")
-    key=$(jq -r .key <<<"$rec")
-    fields=(--thread "$thread" --worktree "$worktree" --branch "$(jq -r .branch <<<"$rec")" --kind "$(jq -r .kind <<<"$rec")"
-      --instance "$(jq -r .instance_id <<<"$rec")" --model "$(jq -r .model <<<"$rec")" --effort "$(jq -r .effort <<<"$rec")"
-      ${env:+--environment "$env"} ${aflags[@]+"${aflags[@]}"})
-    machine=$(jq -r .machine <<<"$rec")
-    if [ -n "$rethread" ]; then
-      # rethread keeps the entry's machine, so a thread on another machine sets it after.
-      sub ledger --ledger "$ledger" rethread "$key" "${fields[@]}"
-      if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" set "$key" machine "$(jq -cn --arg m "$machine" '$m')"; fi
-      if [ "$rc" = 0 ]; then
-        sub ledger --ledger "$ledger" get "$key"
-        [ "$rc" = 0 ] || sa_tooling "cannot read entry $key"
-        out=$(jq -c '{entry: .}' <<<"$out") || sa_tooling "cannot read entry $key"
-      fi
-    else
-      sub ledger --ledger "$ledger" add --repo "${key%#*}" --number "${key##*#}" --machine "$machine" "${fields[@]}"
-    fi
-  fi
-  [ "$rc" = 0 ] || { printf '%s\n' "$out"; exit 1; }
-  entry=$(jq -c .entry <<<"$out")
-  # The entry is read back: a launch is finished only once the ledger holds its thread.
-  sub ledger --ledger "$ledger" get "$key"
-  if [ "$rc" != 0 ] || [ "$(jq -r '.thread // empty' <<<"$out")" != "$thread" ]; then
-    jq -cn --arg k "$key" --arg t "$thread" '{error: "unrecorded launch: \($k) has no ledger entry for thread \($t)"}'
-    printf 'unrecorded launch: %s has no ledger entry for thread %s\n' "$key" "$thread" >&2; exit 1
-  fi
-  sub reconcile --ledger "$ledger" ${remotes[@]+"${remotes[@]}"}
-  [ "$rc" = 0 ] && jq -e '.checked != null' >/dev/null <<<"$out" || sa_tooling "reconcile gave no answer"
-  jq -cn --argjson e "$entry" --argjson r "$out" '{key: $e.key, entry: $e, reconcile: {checked: $r.checked, errors: $r.errors}, status: $r.status}'
-  exit 0
+  source "$here/launch.d/record.sh" || sa_tooling "cannot source launch.d/record.sh"
 fi
 
 key=${1:-}; [ $# -gt 0 ] && shift
@@ -161,11 +104,11 @@ case $key in */*#[0-9]*) ;; *) sa_tooling "$usage" ;; esac
 repo=${key%#*} number=${key##*#}
 case $number in *[!0-9]*) sa_tooling "$usage" ;; esac
 fleet='' ledger='' quota='' machine='' thread='' raise='' named='' wanted='' readings='' note='' outf='' gpu=''
-account=''
+account='' go='' skill=''
 pargs=()
 areas='[]'
 while [ $# -gt 0 ]; do
-  case $1 in --gpu) gpu=--gpu; shift; continue ;; esac
+  case $1 in --gpu) gpu=--gpu; shift; continue ;; --owner-go) go=--owner-go; shift; continue ;; esac
   sa_flag_value "$usage" "${2:-}"
   case $1 in
     --fleet) fleet=$2 ;; --ledger) ledger=$2 ;; --quota) quota=$2 ;; --machine) machine=$2 ;; --thread) thread=$2 ;;
@@ -175,6 +118,7 @@ while [ $# -gt 0 ]; do
     --area) areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas"); pargs+=(--area "$2") ;;
     --blocked-by) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; pargs+=(--blocked-by "$2") ;;
     --exclude) pargs+=(--exclude "$2") ;;
+    --skill) case $2 in .*|*[!A-Za-z0-9._-]*) sa_tooling "$usage" ;; esac; skill=$2 ;;
     *) sa_tooling "$usage" ;;
   esac
   shift 2
@@ -193,8 +137,22 @@ answer() { jq -cn --arg k "$key" --arg r "$1" --argjson d "$2" '{key: $k, launch
 issue=$(gh api "repos/$repo/issues/$number" 2>/dev/null </dev/null) && jq -e '.labels | type == "array"' <<<"$issue" >/dev/null 2>&1 \
   || sa_tooling "cannot read $repo#$number"
 labels=$(jq -c '[.labels[].name]' <<<"$issue")
-kind=$(jq -r 'if index("ready-for-agent") then "ship" elif index("needs-triage") then "triage" else "" end' <<<"$labels")
-[ -n "$kind" ] || answer no_owner_skill "$labels"
+if [ -n "$skill" ]; then
+  # the owner named the skill: it must be installed where the thread can load it, and a
+  # copy only this machine holds keeps the thread here (a 404 is the one "not in the repo")
+  if ! err=$(gh api "repos/$repo/contents/.claude/skills/$skill/SKILL.md" 2>&1 >/dev/null </dev/null); then
+    case $err in *"HTTP 404"*) ;; *) sa_tooling "cannot read $repo's .claude/skills/$skill" ;; esac
+    [ -f "$HOME/.claude/skills/$skill/SKILL.md" ] || answer no_skill "$(jq -cn --arg s "$skill" '{skill: $s}')"
+    while IFS= read -r m; do pargs+=(--exclude "$m"); done < <(jq -r --arg o "$machine" '.machines | keys[] | select(. != $o)' "$fleet")
+  fi
+  case $skill in ship|triage) kind=$skill ;; *) kind=task ;; esac
+else
+  kind=$(jq -r 'if index("ready-for-agent") then "ship" elif index("needs-triage") then "triage" else "" end' <<<"$labels")
+  [ -n "$kind" ] || answer no_owner_skill "$labels"
+  skill=$kind
+fi
+interactive=false
+case $sa_interactive_skills in *" $skill "*) [ "$kind" != task ] || interactive=true ;; esac
 size=$(jq -r '[.[] | select(IN("XS", "S", "M", "L", "XL"))] | first // ""' <<<"$labels")
 size_source=label; [ -n "$size" ] || { size=M size_source=default; }
 
@@ -213,7 +171,7 @@ rc=0; sub claim --repo "$repo" --number "$number" --machine "$machine" --thread 
 claim=$(jq -r .status <<<"$out")
 
 # 3. The route.
-sub route --size "$size" --quota "$quota" ${raise:+--raise "$raise"} ${named:+--instance "$named"}
+sub route --size "$size" --quota "$quota" ${raise:+--raise "$raise"} ${named:+--instance "$named"} ${go:+"$go"}
 [ "$rc" = 0 ] && jq -e 'type == "object"' <<<"$out" >/dev/null 2>&1 || sa_tooling "route gave no answer"
 route=$out
 jq -e '.instance_id != null' <<<"$route" >/dev/null || answer no_instance "$(jq -c '{reason}' <<<"$route")"
@@ -242,14 +200,14 @@ slug=$(jq -r '.title // ""' <<<"$issue" | sed 's/^[^:]*: *//' | tr 'A-Z' 'a-z' |
 if [ "${#slug}" -gt 32 ]; then slug=${slug:0:32}; slug=${slug%-*}; fi
 [ -n "$slug" ] || slug=ticket
 type=$(jq -r 'if index("bug") then "fix" elif index("documentation") then "docs" elif index("refactor") then "refactor" elif index("chore") then "chore" else "feat" end' <<<"$labels")
-[ "$kind" = ship ] || type=triage
+case $kind in ship) ;; triage) type=triage ;; *) type=$skill ;; esac
 branch="$type/$slug-$number"
 
 # `record` is what the ledger entry carries: the fleet's machine key and the
 # routed tier's model and effort, one spelling each.
 answer_json=$(jq -cn --arg k "$key" --arg kind "$kind" --arg size "$size" --arg ss "$size_source" --arg claim "$claim" \
   --argjson route "$route" --argjson use "\"$use\"" --argjson placed "$placed" --argjson sel "$selection" --argjson areas "$areas" \
-  --arg base "$base" --arg branch "$branch" --arg slug "$slug" --arg msg "/$kind $number" \
+  --arg base "$base" --arg branch "$branch" --arg slug "$slug" --arg msg "/$skill $number" --arg skill "$skill" --argjson ia "$interactive" \
   --arg note "$note" --arg n "$number" --arg short "${repo#*/}" --arg contract "$([ "$kind" = triage ] && printf %s "$sa_triage_contract")" '
   ($route[$use]) as $tier
   | {key: $k, launch: true, kind: $kind, size: $size, size_source: $ss, claim: $claim,
@@ -258,8 +216,10 @@ answer_json=$(jq -cn --arg k "$key" --arg kind "$kind" --arg size "$size" --arg 
              modelSelection: $sel, message: ([$msg, $contract, (if $note == "" then "" else "Note: \($note)" end)] | map(select(. != "")) | join("\n"))}
             + (if $placed.environment_id == null then {} else {environmentId: $placed.environment_id} end)),
      needs: ["projectId"],
-     record: {key: $k, kind: $kind, machine: $placed.machine, environment_id: $placed.environment_id, instance_id: $route.instance_id,
-              model: $tier.model, effort: $tier.effort, areas: $areas, branch: $branch}}') \
+     record: ({key: (if $kind == "task" then "task:\($skill)-\($short)-\($n)" else $k end), kind: $kind, machine: $placed.machine, environment_id: $placed.environment_id, instance_id: $route.instance_id,
+              model: $tier.model, effort: $tier.effort, areas: $areas, branch: $branch}
+              + (if $kind == "task" then {repo: ($k | sub("#.*$"; "")), interactive: $ia} else {} end)
+              + (if $route.owner_go == true then {owner_go: true} else {} end))}') \
   || sa_tooling "cannot build the launch answer"
 [ -z "$outf" ] || printf '%s\n' "$answer_json" > "$outf" || sa_tooling "cannot write $outf"
 printf '%s\n' "$answer_json"

@@ -89,6 +89,8 @@ command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 
 # Reading and writing the ledger.
 source "$(dirname "${BASH_SOURCE[0]}")/lib/ledger-io.sh" || { printf '{"error":"cannot source lib/ledger-io.sh"}\n'; exit 2; }
+# A ruling's row and its lapse.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/rulings.sh" || { printf '{"error":"cannot source lib/rulings.sh"}\n'; exit 2; }
 
 # sa_uri <text>: URI-encoded, since a `/` in a branch name otherwise addresses
 # another resource.
@@ -105,16 +107,6 @@ sa_window_flag() { case $2 in ''|0|*[!0-9]*) sa_tooling "$1" ;; esac; }
 # The filter every script shares for an entry still being followed.
 # shellcheck disable=SC2034  # read by the scripts that source this file
 sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
-
-# A ruling's `expiry`, the last day it is in force, 7 days after its date; and
-# whether it is `live($today)` (YYYY-MM-DD, sa_today): pinned, or on or before its
-# `expires`, which one written before expiries lacks.
-# shellcheck disable=SC2034  # read by ledger.sh and ledger.d/rulings.sh
-sa_jq_live='def expiry: .date + "T00:00:00Z" | fromdateiso8601 + 7 * 86400 | strftime("%Y-%m-%d");
-  def live($today): .pinned == true or (.expires // expiry) >= $today;'
-
-# sa_today: the UTC date of sa_now_s, so `SA_NOW` pins a ruling's date and lapse.
-sa_today() { date -u -d "@$(sa_now_s)" +%F; }
 
 # The one normaliser of each kind, as jq defs a script prepends to its filter.
 # `norm_repo` is for an `owner/name` and for a ledger key `owner/name#n`: the host
@@ -151,6 +143,11 @@ sa_remote_flag() {
 # running until the stall window passes, so it raises no `run-finished` and adds no
 # stall. Defined once here, where the observation matches it.
 sa_waiting_line='Waiting on my own background work.'
+
+# The skills that wait on the owner by design (a grill): `launch --skill` records an entry
+# for one as interactive, which never counts as stalled and never settles on its rest.
+# shellcheck disable=SC2034  # read by launch.sh, which sources this file
+sa_interactive_skills=' grilling grill-me grill-with-artifact grill-with-docs '
 
 # The lowest installed ship a ship launch accepts: `launch.sh` answers `stale_ship` below
 # it, so the repo is refreshed first. 0.67.0 is the first ship whose SKILL.md asks for

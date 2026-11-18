@@ -1,14 +1,15 @@
-# The waiting list: the owner's queue. A closed issue drops its row; a row is
-# ready when its blocker merged and its repo has a free ship slot. Sourced by
-# `reconcile`. It reads and sets the caller's $doc, $ready and $dropped, reads
-# $fleet, and calls the caller's `issue_read` and `unreadable` (which records the
-# error).
+# The waiting list's pass of `reconcile`, sourced by it: a row whose issue closed is
+# dropped, and a row is ready when its blocker merged and its repo has a free ship
+# slot. It reads and writes the caller's $doc, $errors and $fleet, and leaves
+# $ready and $dropped.
 
-# shellcheck disable=SC2154  # doc, ready, dropped and fleet come from reconcile.sh and _lib.sh
+# shellcheck disable=SC2154  # doc, errors, fleet and the sa_jq_* helpers come from reconcile.sh and _lib.sh
 
 reconcile_waiting() {
-  local row key repo issue state after blocker bstate max used
+  local key repo issue state after blocker bstate max used row
   ready='[]' dropped='[]'
+  issue_read() { gh api "repos/$1/issues/$2" 2>/dev/null </dev/null; } # <owner/name> <number>
+  unreadable() { errors=$(jq -c --arg k "$1" --arg d "$2" '. + [{key: $k, kind: "issue-unreadable", detail: {key: $d}}]' <<<"$errors"); } # <row key> <the key that failed to read>
   while IFS= read -r row; do
     key=$(jq -r .key <<<"$row") repo=$(jq -r .repo <<<"$row")
     issue=$(issue_read "$repo" "$(jq -r .number <<<"$row")") || issue=''

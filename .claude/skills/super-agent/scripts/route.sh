@@ -3,7 +3,7 @@
 # issue's Size label, or the driver for a bounded text job, from `quota`'s
 # answer.
 #
-#   route --size <XS|S|M|L|XL> [--raise <n>] [--instance <id>] --quota <file>
+#   route --size <XS|S|M|L|XL> [--raise <n>] [--instance <id>] [--owner-go] --quota <file>
 #   route --job text [--claude] --quota <file>
 #
 # --quota is a file holding `quota`'s output. The tier ladder is Sonnet medium,
@@ -19,6 +19,10 @@
 # (a `claude` instance) whose 5 hour bucket is under the 5 hour floor, is skipped.
 # The floor and the reserve are fractions the quota read carries from the fleet
 # file (`floors.five_hour`, default 0.1; `floors.weekly_reserve`, default 0.05).
+# --owner-go is the owner's go past both, taken only when no instance passes them:
+# then a floor or the reserve skips none, and only a failed auth, a weekly bucket at 0
+# or no model for the tier still skips one (`owner_go` true: the pick is an instance
+# the go let through).
 # Of the rest the one with the most weekly headroom wins, its weekly remaining
 # times its `weekly_weight` (default 1, the quota read carries it from the fleet
 # entry: 40% of a seat three times the size is more work than 60% of one), an
@@ -45,7 +49,7 @@
 # is under 50% and agy's Claude weekly bucket is not, both known.
 #
 # stdout: with --size: {size, raise, default, wanted, tier, ask, reason, bucket,
-#         instance_id, model, options, wanted_model, wanted_options}, each tier a {model, effort}; `tier` is
+#         instance_id, model, options, wanted_model, wanted_options, owner_go}, each tier a {model, effort}; `tier` is
 #         what to launch now and `ask` true when `wanted` needs the owner's yes
 #         first; `bucket` the weekly bucket read, {provider (the instance id),
 #         id, remaining}, null when unknown; `instance_id` the T3 instance to
@@ -64,9 +68,9 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: route --size <XS|S|M|L|XL> [--raise <n>] [--instance <id>] --quota <file> | --job text [--claude] --quota <file>'
+usage='usage: route --size <XS|S|M|L|XL> [--raise <n>] [--instance <id>] [--owner-go] --quota <file> | --job text [--claude] --quota <file>'
 sa_help "$usage" "$@"
-size='' raise=0 job='' claude=false quota='' named=''
+size='' raise=0 job='' claude=false quota='' named='' go=false
 while [ $# -gt 0 ]; do
   case $1 in
     --size) sa_flag_value "$usage" "${2:-}"; size=$2; shift 2 ;;
@@ -74,13 +78,14 @@ while [ $# -gt 0 ]; do
     --instance) sa_flag_value "$usage" "${2:-}"; named=$2; shift 2 ;;
     --job) sa_flag_value "$usage" "${2:-}"; job=$2; shift 2 ;;
     --claude) claude=true; shift ;;
+    --owner-go) go=true; shift ;;
     --quota) sa_flag_value "$usage" "${2:-}"; quota=$2; shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
 done
 [ -n "$quota" ] || sa_tooling "$usage"
 if [ -n "$job" ]; then
-  [ "$job" = text ] && [ -z "$size" ] && [ "$raise" = 0 ] && [ -z "$named" ] || sa_tooling "$usage"
+  [ "$job" = text ] && [ -z "$size" ] && [ "$raise" = 0 ] && [ -z "$named" ] && ! $go || sa_tooling "$usage"
 else
   case $size in XS|S|M|L|XL) ;; *) sa_tooling "$usage" ;; esac
   ! $claude || sa_tooling "$usage"
@@ -111,7 +116,7 @@ if [ -n "$job" ]; then
       else {job: "text", driver: "claude", group: null, model: null, reason: "stays on Claude Code"} end' "$quota" || sa_tooling "$quota: cannot be read"
   exit 0
 fi
-jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg named "$named" '
+jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg named "$named" --argjson go "$go" '
   [{model: "sonnet", effort: "medium"}, {model: "opus", effort: "medium"}, {model: "opus", effort: "high"}] as $ladder
   | ({XS: 0, S: 0, M: 1, L: 2, XL: 2}[$size]) as $d
   | ([$d + $raise, 2] | min) as $w
@@ -130,12 +135,15 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
                     elif .bucket != null and .bucket.remaining < $res then "weekly under the weekly reserve \($res)"
                     elif $drv == "claude" and .fivehour != null and .fivehour.remaining < $f5 then "5 hour bucket under the 5 hour floor \($f5)"
                     elif $drv == "pi" and ([$models[] as $m | (.value.models[$m] // null)] | any(. == null)) then "no model for the tier"
-                    else null end)}] as $cands
+                    else null end)}] as $all
+  | ($go and ([$all[] | select(.skip == null and (.lr | not))] | length) == 0) as $past
+  | [$all[] | if $past and (.skip // "" | test("floor|reserve")) and (.driver != "pi" or ([$models[] as $m | (.value.models[$m] // null)] | all(. != null)))
+      then .skip = null | .went = true else . end] as $cands
   | ([$cands[] | select(.skip == null)] as $ok
       | (if ($ok | any(.lr | not)) then [$ok[] | select(.lr | not)] else $ok end)
       | sort_by([(if .bucket == null then 1 else 0 end), -((.bucket.remaining // 0) * (.value.weekly_weight // 1)), (if .driver == "claude" then 0 else 1 end), .key]) | first) as $pick
   | (if $pick == null or $pick.bucket == null then null else {provider: $pick.key, id: $pick.bucket.id, remaining: $pick.bucket.remaining} end) as $bucket
-  | ([$cands[] | select(.skip != null and (.skip | test("floor|reserve"))) | "\(.key) \(.skip)"] | join(", ")) as $floored
+  | ([$all[] | select(.skip != null and (.skip | test("floor|reserve"))) | "\(.key) \(.skip)"] | join(", ")) as $floored
   | ($w > $d and $bucket != null and $bucket.remaining < $low) as $ask
   | (if $w > $d and ($bucket == null or $ask) then $ladder[$d] else $ladder[$w] end) as $tier
   | def model($t): if $pick == null then null elif $pick.lr then ($pick.value.models[$t.model] // null) else ($pick.value.models[$t.model] // $t.model) end;
@@ -152,10 +160,11 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
        elif $bucket == null then "quota unknown: default tier"
        elif $ask then "weekly under 50%: the owner decides the raise"
        else "weekly at or above 50%: raised" end)
-       + (if $pick != null and $floored != "" then " (skipped: \($floored))" else "" end)),
+       + (if $pick != null and $floored != "" then (if $past then " (owner go past: \($floored))" else " (skipped: \($floored))" end) else "" end)),
      bucket: $bucket,
      instance_id: ($pick.key // null),
      model: model($tier),
      options: options($tier),
      wanted_model: model($ladder[$w]),
-     wanted_options: options($ladder[$w])}' "$quota" || sa_tooling "$quota: cannot be read"
+     wanted_options: options($ladder[$w]),
+     owner_go: ($pick.went == true)}' "$quota" || sa_tooling "$quota: cannot be read"
