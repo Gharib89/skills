@@ -82,8 +82,10 @@ case $tool in
     [[ $path =~ (^|/)$state$ ]] && refuse "$path" ;;
   Bash)
     cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
-    # A quoted target may hold spaces: `> '/home/a b/.../ledger.json'`.
-    [[ $cmd =~ \>[\|\>]?[[:space:]]*([\"\'][^\"\']*|[^[:space:]\;\&\|]*)($state) ]] && refuse "${BASH_REMATCH[2]}"
+    # A quoted target may hold spaces: `> '/home/a b/.../ledger.json'`. Each quote closes
+    # right after the file name, so a quoted `>` earlier in a read is no redirect.
+    [[ $cmd =~ \>[\|\>]?[[:space:]]*(\"[^\"]*($state)\"|\'[^\']*($state)\'|[^[:space:]\;\&\|]*($state)) ]] \
+      && refuse "${BASH_REMATCH[2]}${BASH_REMATCH[4]}${BASH_REMATCH[6]}"
     # Split into simple commands in bash: a sed `\n` replacement is unspecified in POSIX.
     split=${cmd//&&/$'\n'}; split=${split//||/$'\n'}; split=${split//;/$'\n'}; split=${split//|/$'\n'}
     while IFS= read -r seg; do

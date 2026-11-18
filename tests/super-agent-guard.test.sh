@@ -34,6 +34,8 @@ refused "a Write of the quota file" "$(tool Write "$st/quota.json")" 'quota.sh -
 refused "a redirection into the ledger" "$(bash_call "jq .x $st/ledger.json > $st/ledger.json")" 'ledger.sh'
 refused "a redirection to a quoted path with spaces" "$(bash_call "cat /tmp/new.json > '/home/a b/.local/state/super-agent/ledger.json'")" 'ledger.sh'
 passes "a comparison in a jq filter over the ledger" "$(bash_call "jq '.a > 1' $st/ledger.json")"
+passes "a quoted > in a read of the ledger" "$(bash_call "grep '<a>' $st/ledger.json")"
+refused "a redirection to a double-quoted path with spaces" "$(bash_call "echo x > \"/home/a b/.config/super-agent/fleet.json\"")" 'fleet.sh'
 refused "an appended redirection" "$(bash_call "echo '{}' >> $st/ledger.json")" 'ledger.sh'
 refused "a mv over the ledger" "$(bash_call "mv /tmp/new.json $st/ledger.json")" 'ledger.sh'
 refused "a tee into the fleet file" "$(bash_call "echo '{}' | tee ~/.config/super-agent/fleet.json")" 'fleet.sh'
