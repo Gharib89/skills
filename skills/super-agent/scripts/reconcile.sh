@@ -32,8 +32,9 @@
 # stall window counts as running: no stall, and its stage as a running thread's;
 # past the window it is an ordinary rest. An entry whose thread, PR or issue cannot be read is reported in
 # `errors`, its `error` set to the kind (cleared by the next good read), and
-# left in its stage. The ledger is written once, atomically, after
-# the last entry. An entry with an `environment_id` lives on a linked machine,
+# left in its stage. The ledger is written once, after the last entry, by
+# applying what this run changed to the ledger as it stands then
+# (reconcile.d/write.sh), so a write made meanwhile is kept. An entry with an `environment_id` lives on a linked machine,
 # where `t3 thread show` cannot reach: it is read from `<dir>/<thread id>.json`
 # of the `--remote` for its environment, a file the super agent saved from
 # `t3_thread_read`, and matched by id and worktree path like a local one. An
@@ -118,6 +119,7 @@ done
   || sa_tooling "$fleet: every repos.<owner/name>.max_ships must be a whole number of 1 or more"
 
 sa_read "$ledger"
+read_doc=$doc
 # A batch is running while an entry is open: it began when the earliest of them launched.
 batch_since=$(jq -r "$sa_jq_open"'[.entries[] | select(is_open) | .launched_at] | min // empty' <<<"$doc")
 now_s=$(sa_now_s) now=$(date -u -d "@$now_s" +%Y-%m-%dT%H:%M:%SZ)
@@ -244,7 +246,10 @@ ready=$(jq -c 'map(del(.repo))' <<<"$ready")
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/parents.sh" || sa_tooling "cannot source reconcile.d/parents.sh"
 parents_done='[]' parents_changed=0
 reconcile_parents
-[ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] && [ "$dropped" = '[]' ] && [ "$parents_changed" -eq 0 ] || sa_write "$ledger" "$doc"
+if ! { [ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] && [ "$dropped" = '[]' ] && [ "$parents_changed" -eq 0 ]; }; then
+  source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/write.sh" || sa_tooling "cannot source reconcile.d/write.sh"
+  reconcile_write
+fi
 # The stamp `notify` reads: a reconcile ran, so a super agent is answering its wakes.
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 

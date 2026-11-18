@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.28.1 (2026-11-18)
+
+### Bug Fixes
+
+- **super-agent**: Every ledger write is serialized, so concurrent writes stop overwriting each
+  other ([#1293](https://github.com/Gharib89/skills/pull/1293),
+  [`89f55d1`](https://github.com/Gharib89/skills/commit/89f55d1b85693623c6aa5030a622bd1d8e7b7392))
+
+
 ## v0.28.0 (2026-11-18)
 
 ### Features
