@@ -45,6 +45,8 @@ passes "quota.sh --save" "$(bash_call "$s/quota.sh --fleet ~/.config/super-agent
 refused "a cp onto the ledger" "$(bash_call "cp /tmp/new.json $st/ledger.json")" 'ledger.sh'
 passes "a backup copy of the ledger" "$(bash_call "cp $st/ledger.json /tmp/ledger.bak")"
 passes "a script call chained before an unrelated rm" "$(bash_call "bash $s/ledger.sh --ledger $st/ledger.json pause x; rm /tmp/foo")"
+passes "a ledger.sh ruling whose text names rm and mv" "$(bash_call "bash $s/ledger.sh --ledger $st/ledger.json ruling 'may rm build output' --allow 'rm -rf build'; bash $s/ledger.sh --ledger $st/ledger.json need k --action 'mv the fixture'")"
+refused "a mutating command after an env assignment and sudo" "$(bash_call "FOO=1 sudo rm $st/ledger.json")" 'ledger.sh'
 passes "a read through jq" "$(bash_call "jq .entries $st/ledger.json > /tmp/out.json")"
 passes "a read piped to tee" "$(bash_call "jq . $st/ledger.json | tee /tmp/out.json")"
 passes "an Edit of another file" "$(tool Edit /repo/ledger.json)"
@@ -73,5 +75,10 @@ for shape in '{"hooks":"x"}' '{"hooks":{"PreToolUse":{}}}'; do
     check "$m on $shape names the field" 1 "$(jq -r .error <<<"$out" | grep -c hooks)"
   done
 done
+mkdir -p "$tmp/dir.json"
+for m in --install --status; do
+  check_rc "$m on a settings path that cannot be read exits 2" 2 "$(bash "$s/guard.sh" "$m" --settings "$tmp/dir.json" >/dev/null 2>&1; echo $?)"
+done
+check "and the path is left a directory" yes "$([ -d "$tmp/dir.json" ] && echo yes || echo no)"
 check_rc "a settings file that is no JSON exits 2" 2 "$(printf 'x' > "$cfg"; bash "$s/guard.sh" --install --settings "$cfg" >/dev/null 2>&1; echo $?)"
 finish

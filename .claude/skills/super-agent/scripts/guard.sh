@@ -39,7 +39,7 @@ if [ $# -gt 0 ]; then
   case $mode in install|status) ;; *) sa_tooling "$usage" ;; esac
   if [ "${1:-}" = --settings ]; then sa_flag_value "$usage" "${2:-}"; settings=$2; shift 2; fi
   [ $# -eq 0 ] || sa_tooling "$usage"
-  cur=$([ -f "$settings" ] && cat "$settings" || echo '{}')
+  if [ -e "$settings" ]; then cur=$(cat "$settings") || sa_tooling "cannot read $settings"; else cur='{}'; fi
   jq -e 'type == "object"' <<<"$cur" >/dev/null 2>&1 || sa_tooling "$settings is not a JSON object"
   jq -e '(.hooks // {}) | type == "object"' <<<"$cur" >/dev/null || sa_tooling "$settings: .hooks must be an object"
   jq -e '(.hooks.PreToolUse // []) | type == "array"' <<<"$cur" >/dev/null || sa_tooling "$settings: .hooks.PreToolUse must be an array"
@@ -85,10 +85,12 @@ case $tool in
     # Split into simple commands in bash: a sed `\n` replacement is unspecified in POSIX.
     split=${cmd//&&/$'\n'}; split=${split//||/$'\n'}; split=${split//;/$'\n'}; split=${split//|/$'\n'}
     while IFS= read -r seg; do
-      [[ $seg =~ (^|[[:space:]])(mv|tee|rm|truncate|dd|sed[[:space:]]+-[a-zA-Z]*i|perl[[:space:]]+-[a-zA-Z]*i)([[:space:]]|$) ]] \
+      # Judge the command word only, so a script call whose text says `rm` passes.
+      while [[ $seg =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*|sudo|command)[[:space:]]+(.*)$ ]]; do seg=${BASH_REMATCH[2]}; done
+      [[ $seg =~ ^[[:space:]]*(mv|tee|rm|truncate|dd|sed[[:space:]]+-[a-zA-Z]*i|perl[[:space:]]+-[a-zA-Z]*i)([[:space:]]|$) ]] \
         && [[ $seg =~ ($state) ]] && refuse "${BASH_REMATCH[1]}"
       # A copy only writes its last word, so copying the file elsewhere is a read.
-      [[ $seg =~ (^|[[:space:]])(cp|install|ln)([[:space:]]|$) ]] \
+      [[ $seg =~ ^[[:space:]]*(cp|install|ln)([[:space:]]|$) ]] \
         && [[ $seg =~ ($state)[\"\']?[[:space:]]*$ ]] && refuse "${BASH_REMATCH[1]}"
     done <<<"$split" ;;
 esac
