@@ -155,9 +155,9 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    the watcher; `changed` true makes its `summary` the answer step 5 acts on.
    **A stale copy.** Every pulse and reconcile answer carries `skill`
    {loaded, source, stale}: `stale` true means this running copy is older than
-   the one on `Gharib89/skills`. Say so once in chat, naming both versions,
-   and push it once: the refresh, `npx skills add gharib89/skills -g -s
-   super-agent -y`, is the owner's to run or approve.
+   the one on `Gharib89/skills`. Say so once, in the Escalation format,
+   naming both versions: the refresh, `npx skills@1.8.1 add gharib89/skills
+   -g -s super-agent -y`, is the owner's to run or approve.
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
    action it prints (Acting on the summary), run `scripts/status.sh --ledger
@@ -246,7 +246,7 @@ The owner decides these, and you decide everything else:
 - a supervised thread at rung 3 of the stall ladder whose ticket's premise or
   scope is the problem;
 - a ticket whose labels name no owner skill, or whose repo has no T3 project
-  on any machine that fits.
+  on any machine that fits;
 - a ship launch answering `stale_ship`: the repo's installed ship
   (`detail.installed`) is below `detail.minimum`, so its threads would wait
   without the waiting line; the owner refreshes the repo's skills first, and

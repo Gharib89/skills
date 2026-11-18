@@ -175,13 +175,14 @@ sa_min_ship='0.67.0'
 sa_skill_source='Gharib89/skills'
 
 # `ver`: an X.Y.Z version as an array of numbers, so versions compare by number.
-# `skill_version`: the one `  version: X.Y.Z` line of a SKILL.md's text, else "": a
-# missing, repeated or malformed version (`0.67`, `v1.0.0`, a pre-release) is unread,
-# never a number.
+# `skill_version`: the one `  version: X.Y.Z` line in a SKILL.md's frontmatter (between
+# its opening and closing `---`), else "": a missing, repeated or malformed version
+# (`0.67`, `v1.0.0`, a pre-release) is unread, never a number, and a body line is never read.
 # shellcheck disable=SC2034  # read by launch.sh
 sa_jq_ver='def ver: split(".") | map(tonumber);
-  def skill_version: [split("\n")[] | capture("^  version: (?<v>.*)$").v]
-    | if length == 1 and (.[0] | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) then .[0] else "" end;'
+  def skill_version: split("\n") | if .[0] != "---" then "" else .[1:]
+    | [.[:(index("---") // 0)][] | capture("^  version: (?<v>.*)$").v]
+    | if length == 1 and (.[0] | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) then .[0] else "" end end;'
 
 # sa_skill_version <owner/name> <path>: the version of the SKILL.md at <path> on the
 # repo's default branch, through `gh` REST; nothing printed when it cannot be read.

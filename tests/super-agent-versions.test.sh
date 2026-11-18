@@ -53,6 +53,9 @@ check "a ship above the minimum launches" true "$(L 7 --area x | jq .launch)"
 reset; issue 8 "widgets: a question" needs-triage S
 sa_skill_file "$repo" "$ship" 0.0.1
 check "a triage launch reads no ship version" true "$(L 8 --area x | jq .launch)"
+reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+sa_route "repos/$repo/contents/$ship" "$(jq -cn '{content: ("---\nmetadata:\n  version: 0.66.3\n---\nExample:\n  version: 9.9.9\n" | @base64)}')"
+check "only the frontmatter's version is read, never a body line" stale_ship "$(L 7 --area x | jq -r .reason)"
 for v in 0.67 0.67.0-rc1 abc; do
   reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
   sa_skill_file "$repo" "$ship" "$v"
