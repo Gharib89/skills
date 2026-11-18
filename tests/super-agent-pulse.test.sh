@@ -56,6 +56,13 @@ out=$(P); rc=$?
 check_rc "a pulse exits 0" 0 "$rc"
 check "one JSON object is the whole answer" 1 "$(jq -s length <<<"$out")"
 check "a live watcher with nothing changed is alive and quiet" "true false null" "$(jq -r '[.alive, .changed, (.summary | tostring)] | join(" ")' <<<"$out")"
+L need $repo#5 --action "approve the held call" >/dev/null
+out=$(P)
+check "an unpushed need is a change, its push named in the summary" 'true ["Gharib89/skills#5"]' "$(jq -r '"\(.changed) \(.summary.status.unpushed | map(.key) | tojson)"' <<<"$out")"
+check "and the summary carries the block to post" "Needs you (1): [skills#5](https://github.com/$repo/issues/5) approve the held call" "$(jq -r .summary.status.block <<<"$out")"
+L pushed $repo#5 >/dev/null
+check "once pushed and posted the pulse is quiet again" false "$(P | jq .changed)"
+L unneed $repo#5 >/dev/null; R >/dev/null
 stop
 out=$(P)
 check "a lock holding a dead pid is a dead watcher" false "$(jq .alive <<<"$out")"
@@ -109,6 +116,7 @@ R >/dev/null
 rm "$SA_FAKE/threads/t-5.json"
 check "an error row is a change" true "$(P | jq .changed)"
 L need "$repo#5" --action "refresh the thread read" >/dev/null
+L pushed "$repo#5" >/dev/null; R >/dev/null # the need pushed and its block posted
 check "an entry's error with its need recorded is not" false "$(P | jq .changed)"
 sa_issue $repo 30 open
 L wait "$repo#31" --reason r >/dev/null

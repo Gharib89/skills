@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# super-agent's `reconcile` carries the status block on every answer, over fake
+# `t3` and `gh` on PATH (tests/super-agent-fake.sh): only the rows that changed
+# since the last block, Merged only for merges since then, and each new need
+# listed as unpushed until `ledger pushed` marks it.
+set -uo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
+source tests/lib.sh
+source tests/super-agent-fake.sh
+
+s=skills/super-agent/scripts
+tmp=$(mktemp -d) || exit 2
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/bin" "$tmp/fake"
+export PATH="$tmp/bin:$PATH" SA_FAKE=$tmp/fake
+sa_fake_install "$tmp/bin"
+led=$tmp/ledger.json
+repo=Gharib89/skills
+R() { bash "$s/reconcile.sh" --ledger "$led" "$@"; }
+L() { bash "$s/ledger.sh" --ledger "$led" "$@"; }
+
+# fixture: tickets 5 and 6, each with a running thread, no PR and an open issue
+for n in 5 6; do
+  L add --repo $repo --number $n --thread "t-$n" --worktree "/wt/$n" --branch "feat/x-$n" >/dev/null
+  sa_thread "t-$n" running 1 0 "/wt/$n" "feat/x-$n"
+  sa_pr $repo "feat/x-$n" none
+  sa_issue $repo "$n" open
+done
+
+u=https://github.com/$repo
+out=$(R --instance claude_small)
+check "the first reconcile carries every row, then the instance line" \
+  "Running (2): [skills#5]($u/issues/5) running, [skills#6]($u/issues/6) running
+Super agent on claude_small" "$(jq -r .status.block <<<"$out")"
+check "a reconcile with no row changed carries no block" 'false ' "$(R | jq -r '"\(.status.changed) \(.status.block)"')"
+sa_issue $repo 30 open; L wait $repo#30 --reason r >/dev/null
+check "a changed row is the only row it carries" "Waiting (1): [skills#30]($u/issues/30)" "$(R | jq -r .status.block)"
+sa_pr $repo feat/x-5 merged; sa_thread t-5 idle 2 0 /wt/5 feat/x-5
+check "a merge carries the Merged row and the Running row it changed" \
+  "Merged (1): [skills#5]($u/issues/5) PR [7]($u/pull/7)
+Running (1): [skills#6]($u/issues/6) running" "$(R | jq -r .status.block)"
+check "the next reconcile does not list that merge again" "" "$(R | jq -r .status.block)"
+sa_pr $repo feat/x-6 merged; sa_thread t-6 idle 2 0 /wt/6 feat/x-6
+check "Merged lists only the merges since the last block, and an emptied row says none" \
+  "Merged (1): [skills#6]($u/issues/6) PR [7]($u/pull/7)
+Running: none" "$(R | jq -r .status.block)"
+L need $repo#30 --action "approve the scope fork" >/dev/null
+out=$(R)
+check "a new need is listed as unpushed" '["Gharib89/skills#30"]' "$(jq -c '[.status.unpushed[].key]' <<<"$out")"
+check "and its row is carried" "Needs you (1): [skills#30]($u/issues/30) approve the scope fork" "$(jq -r .status.block <<<"$out")"
+check "a reconcile before the push lists it still" '["Gharib89/skills#30"]' "$(R | jq -c '[.status.unpushed[].key]')"
+L pushed $repo#30 >/dev/null
+check "once marked pushed it is no longer listed" '[]' "$(R | jq -c .status.unpushed)"
+
+finish

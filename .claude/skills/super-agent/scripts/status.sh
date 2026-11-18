@@ -16,10 +16,12 @@
 # Running ticket names the provider instance it launched on, where the ledger holds one.
 # Each ticket is a Markdown link to its issue, a merged one's PR a second
 # link. The ledger keeps the rows of the last block it printed (`status`), so a
-# run knows whether any row changed since. A plain run prints the block only when
-# a row changed, and a run with nothing changed prints none; `--digest` prints
-# the whole block whatever changed (the owner's "status", the morning report, an
-# emptied waiting list) and then counts every Merged ticket as listed.
+# run knows whether any row changed since. A plain run (`reconcile` makes one on
+# every wake) prints only the rows that changed, a row that emptied as
+# `<row>: none`, and a run with nothing changed prints none; `--digest` prints
+# every row whatever changed (the owner's "status", the morning report, an
+# emptied waiting list). Any printed block counts its Merged tickets as listed, so
+# Merged holds only the merges since the last block.
 #
 # With --quota <file> (`quota`'s answer), a posted block ends with one `Quota <id>`
 # line per provider instance: its weekly and 5 hour remaining as a percentage, or
@@ -31,8 +33,8 @@
 # `Super agent on <id>`, after any Quota lines. Like them it never makes a block post.
 #
 # stdout: {block, changed, unpushed: [{key, action, since}]}: `block` the text to
-#         post ("" when nothing changed and no digest was asked, or when nothing
-#         is open), `changed` true when a row differs from the last printed
+#         post ("" when nothing changed and no digest was asked, or when a
+#         digest finds nothing open), `changed` true when a row differs from the last printed
 #         block, `unpushed` the open needs whose push has not gone out, each of
 #         which `ledger pushed` marks once sent
 # exit: 0 a block or none · 2 usage, an unreadable or wrong-shaped ledger or
@@ -88,21 +90,28 @@ now=$(jq -c "$sa_jq_norm$sa_jq_waiting"'
 printed=$(jq -ec '(.status // {}) as $s | if ($s | type) == "object" and (($s.merged_ack // []) | type) == "array" then $s.rows // {} else error end' <<<"$doc") \
   || sa_tooling "$ledger: status is not an object with a merged_ack array"
 changed=$(jq -r --argjson p "$printed" '.rows != $p' <<<"$now")
-block=$(jq -r --argjson d "$digest" --argjson c "$changed" --argjson q "$qdoc" --arg inst "$instance" '
+# A digest prints every row; a plain run only the rows that differ from the last
+# block, a row that emptied as `<row>: none` (bar Merged, which empties by being
+# listed).
+block=$(jq -r --argjson d "$digest" --argjson p "$printed" --argjson q "$qdoc" --arg inst "$instance" '
   def pct: if . == null then "unknown" else "\((. * 100) | round)%" end;
   def bucket($p; $w): [$p.buckets[]? | select(if $w == "5h" then .window == "5h" else .window == "weekly" and (if $p.driver == "claude" then .id == "week" elif $p.driver == "pi" then ((.group // "") | startswith("Claude")) else true end) end)] | first | .remaining;
-  ([("Needs you", "Merged", "Running", "Waiting", "Reviewer limit") as $n | .rows[$n] // empty]) as $rows
+  . as $now
+  | [("Needs you", "Merged", "Running", "Waiting", "Reviewer limit") as $n
+      | if $d then $now.rows[$n] // empty
+        elif $now.rows[$n] == $p[$n] then empty
+        elif $now.rows[$n] != null then $now.rows[$n]
+        elif $n == "Merged" then empty
+        else "\($n): none" end] as $rows
   | ([($q.providers // {}) | to_entries[] | "Quota \(.key): weekly \(bucket(.value; "weekly") | pct), 5 hour \(bucket(.value; "5h") | pct)"]) as $qlines
-  | if ($d or $c) and ($rows | length) > 0 then ($rows + $qlines + (if $inst == "" then [] else ["Super agent on \($inst)"] end)) | join("\n") else "" end' <<<"$now") \
+  | if ($rows | length) > 0 then ($rows + $qlines + (if $inst == "" then [] else ["Super agent on \($inst)"] end)) | join("\n") else "" end' <<<"$now") \
   || sa_tooling "$quota: not a quota read"
 
-# What the next run compares with. A digest also counts its Merged tickets as
-# listed, so the row it printed leaving is no change: the stored rows are the
+# What the next run compares with. A printed block counts its Merged tickets as
+# listed, so the next block lists only the merges since: the stored rows are the
 # ones left after that.
-if [ "$digest" = true ]; then
+if [ -n "$block" ]; then
   sa_update "$ledger" '.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}' --argjson n "$now"
-elif [ "$changed" = true ]; then
-  sa_update "$ledger" '.status = {rows: $n.rows, merged_ack: (.status.merged_ack // [])}' --argjson n "$now"
 fi
 
 jq -cn --arg b "$block" --argjson c "$changed" --argjson u "$(jq -c .unpushed <<<"$now")" '{block: $b, changed: $c, unpushed: $u}'

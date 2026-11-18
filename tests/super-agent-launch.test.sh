@@ -199,6 +199,6 @@ sa_pr $repo fix/add-a-frobnicator-to-the-7 open
 sa_thread t-7 idle 1 0 /wt/seven fix/add-a-frobnicator-to-the-7
 rec=$(bash "$s/reconcile.sh" --ledger "$led")
 check "e2e: the next reconcile finds the entry at rest with its PR open" '{"checked":1,"at_rest":1,"errors":0}' "$(jq -c '{checked, at_rest: (.at_rest | length), errors: (.errors | length)}' <<<"$rec")"
-check "e2e: status lists it under Running" 1 "$(bash "$s/status.sh" --ledger "$led" | jq -r .block | grep -c 'Running (1): .*widgets#7')"
+check "e2e: its status block lists it under Running" 1 "$(jq -r .status.block <<<"$rec" | grep -c 'Running (1): .*widgets#7')"
 
 finish

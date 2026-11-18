@@ -3,7 +3,7 @@
 # the super agent judges from one JSON answer and not from child transcripts.
 #
 #   reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]...
-#             [--fleet <file>]
+#             [--fleet <file>] [--quota <file>] [--instance <id>]
 #
 # Looks at every open entry's thread and PR (the same look `watch` takes),
 # writes it into the entry as `observed`, the baseline the next `watch`
@@ -64,11 +64,17 @@
 # below): when the ticket reads closed and every sub-issue of the open parent is closed, the
 # parent is listed once, for the super agent to close (reconcile itself closes nothing).
 #
+# Last, it runs `status` over the ledger it wrote (`--quota` and `--instance` go
+# to it) and carries its answer as `status`: the status block's rows that changed
+# since the last block, and the needs whose push has not gone out. The super agent
+# posts `block` as printed and pushes each `unpushed` need: nothing else reports.
+#
 # Each run stamps `<ledger>.reconciled` with its epoch second, which `notify` reads
 # to tell a super agent that answered a wake from one that did not.
 #
 # stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, ready,
-#         dropped, unqueued, parents_done, cleanup, verify, escalate, errors, skill}:
+#         dropped, unqueued, parents_done, cleanup, verify, escalate, errors, skill, status}:
+#         `status` is `status`'s answer {block, changed, unpushed};
 #         `skill` {loaded, source, stale}: the running super-agent copy's version
 #         against the one on `sa_skill_source`'s default branch, `stale` true when
 #         the running one is older, null when either version cannot be read;
@@ -99,14 +105,15 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>]'
+usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>] [--quota <file>] [--instance <id>]'
 sa_help "$usage" "$@"
-ledger='' window=$sa_stall_window fleet=''
+ledger='' window=$sa_stall_window fleet='' status_flags=()
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2 ;;
     --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
+    --quota|--instance) sa_flag_value "$usage" "${2:-}"; status_flags+=("$1" "$2"); shift 2 ;;
     --stall-window) sa_flag_value "$usage" "${2:-}"; sa_window_flag "$usage" "$2"; window=$2; shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
@@ -214,34 +221,11 @@ done < <(jq -c '.entries[] | select(.stage == "settled" and .kind == "triage")' 
 unqueued='[]'
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/unqueued.sh" || sa_tooling "cannot source reconcile.d/unqueued.sh"
 reconcile_unqueued
-# The waiting list: the owner's queue. A closed issue drops its row; a row is
-# ready when its blocker merged and its repo has a free ship slot.
-ready='[]' dropped='[]'
+# The waiting list: the owner's queue (reconcile.d/waiting.sh).
 issue_read() { gh api "repos/$1/issues/$2" 2>/dev/null </dev/null; } # <owner/name> <number>
 unreadable() { errors=$(jq -c --arg k "$1" --arg d "$2" '. + [{key: $k, kind: "issue-unreadable", detail: {key: $d}}]' <<<"$errors"); } # <row key> <the key that failed to read>
-while IFS= read -r row; do
-  key=$(jq -r .key <<<"$row") repo=$(jq -r .repo <<<"$row")
-  issue=$(issue_read "$repo" "$(jq -r .number <<<"$row")") || issue=''
-  state=$(jq -r '.state // empty' <<<"$issue" 2>/dev/null)
-  if [ -z "$state" ]; then unreadable "$key" "$key"; continue; fi
-  if [ "$state" = closed ]; then
-    doc=$(jq -c --arg k "$key" "$sa_jq_norm"'.waiting |= map(select((.key | norm_repo) != ($k | norm_repo)))' <<<"$doc")
-    dropped=$(jq -c --arg k "$key" '. + [{key: $k, reason: "issue-closed"}]' <<<"$dropped"); continue
-  fi
-  after=$(jq -r '.after // empty' <<<"$row")
-  if [ -n "$after" ] && ! jq -e --arg k "$after" "$sa_jq_norm"'[.entries[] | select(.key | norm_repo == ($k | norm_repo)) | .stage] | any(IN("merged", "settled"))' <<<"$doc" >/dev/null; then
-    blocker=$(issue_read "${after%#*}" "${after##*#}") || blocker=''
-    bstate=$(jq -r '.state // empty' <<<"$blocker" 2>/dev/null)
-    if [ -z "$bstate" ]; then unreadable "$key" "$after"; continue; fi
-    # A closed issue means merged unless it was closed as not planned.
-    [ "$bstate" = closed ] && [ "$(jq -r '.state_reason // empty' <<<"$blocker")" != not_planned ] || continue
-  fi
-  max=$([ -z "$fleet" ] || jq -r --arg r "$repo" "$sa_jq_norm"'[(.repos // {}) | to_entries[] | select(.key | norm_repo == ($r | norm_repo)) | .value.max_ships] | first // empty' "$fleet")
-  used=$(jq -r --arg r "$repo" --argjson ready "$ready" "$sa_jq_open$sa_jq_norm"'[.entries[] | select(is_open and ((.repo // "") | norm_repo) == ($r | norm_repo))] | length + ([$ready[] | select(.repo | norm_repo == ($r | norm_repo))] | length)' <<<"$doc")
-  [ "$used" -lt "${max:-3}" ] || continue
-  ready=$(jq -c --argjson r "$row" '. + [$r | {key, repo, order, after, reason, since}]' <<<"$ready")
-done < <(jq -c "$sa_jq_waiting"'waiting_list[]' <<<"$doc")
-ready=$(jq -c 'map(del(.repo))' <<<"$ready")
+source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/waiting.sh" || sa_tooling "cannot source reconcile.d/waiting.sh"
+reconcile_waiting
 # A merged ship entry's spec parent, listed once when its sub-issues are all closed.
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/parents.sh" || sa_tooling "cannot source reconcile.d/parents.sh"
 parents_done='[]' parents_changed=0
@@ -253,9 +237,13 @@ fi
 # The stamp `notify` reads: a reconcile ran, so a super agent is answering its wakes.
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 
+sa_unlock
+status=$(bash "$(dirname "${BASH_SOURCE[0]}")/status.sh" --ledger "$ledger" "${status_flags[@]}") \
+  || { printf '%s\n' "$status"; exit 2; }
+
 # The ledger goes in on stdin: one argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
 skill=$(sa_skill_stale)
-jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" --argjson sk "$skill" "$sa_jq_norm"'
+jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" --argjson sk "$skill" --argjson status "$status" "$sa_jq_norm"'
   . as $d |
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
   def entries: [$d.entries[]?];
@@ -284,4 +272,4 @@ jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson 
         elif .stage == "at-rest" and (.stalls // 0) >= 3 then {reason: "stall-cap", detail: .stalls}
         else null end) as $r
      | select($r != null and (needed(.key; $r.reason) | not)) | {key, thread, reason: $r.reason, detail: $r.detail}],
-   errors: $errs, skill: $sk}' <<<"$doc"
+   errors: $errs, skill: $sk, status: $status}' <<<"$doc"

@@ -73,6 +73,14 @@ sa_lock() {
   trap '[ "$(cat "$sa_locked.lock" 2>/dev/null)" = "$$" ] && rm -f "$sa_locked.lock"' EXIT
 }
 
+# sa_unlock: release sa_lock's lock before this process exits, so a script it
+# runs next (reconcile's `status`) can take it. A no-op when none is held.
+sa_unlock() {
+  [ -n "${sa_locked:-}" ] || return 0
+  [ "$(cat "$sa_locked.lock" 2>/dev/null)" != "$$" ] || rm -f "$sa_locked.lock"
+  sa_locked=''
+}
+
 # sa_update <ledger> <jq filter> [jq args]...: the one way to write the ledger.
 # Under sa_lock it re-reads the ledger, applies the filter to what it holds now
 # and writes the result through sa_write, leaving it in $doc. Two writers that

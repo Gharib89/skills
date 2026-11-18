@@ -101,6 +101,7 @@ check "and a need on it in another case silences it" '[]' "$(RC | jq -c '[.escal
 # a waiting row that duplicates a settled entry in another case is no error row for pulse
 printf '%s\n' '{"rulings":[],"entries":{"acme/widgets#5":{"key":"acme/widgets#5","repo":"acme/widgets","number":5,"stage":"settled","observed":{}}},"waiting":[{"key":"ACME/Widgets#5","reason":"r","since":"2026-11-01T00:00:00Z"}]}' > "$rled"
 sa_issue acme/widgets 5 open; sa_gh_fail "/issues/5" 2
+bash "$s/status.sh" --ledger "$rled" >/dev/null # its block already posted
 check "pulse: an error on a key the ledger holds in another case is not a change" false "$(bash "$s/pulse.sh" --ledger "$rled" | jq .changed)"
 rm -f "$SA_FAKE/gh-fail"
 

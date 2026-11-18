@@ -20,8 +20,8 @@ the owner's yes: a schedule runs unattended, so the owner chooses each one.
    `retro` row per active repo, on the work week's last day unless
    `--retro-day` names another.
 2. Show the proposal: each title, schedule and prompt.
-3. Ask with AskUserQuestion, yes first as the recommendation, one option per
-   schedule or a single yes for all.
+3. Ask in chat, numbered options with yes first as the recommendation, one
+   option per schedule or a single yes for all.
 4. On a yes, run `list_scheduled_tasks` and skip any schedule that already
    exists for the same thread or project, so a re-offer never doubles one.
    Create each remaining one with `schedule_task`, its `schedule` and `prompt`
