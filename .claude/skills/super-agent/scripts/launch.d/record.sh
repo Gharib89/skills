@@ -1,10 +1,12 @@
-# The `launch record` form, sourced by `launch.sh` after its `record` word: it writes
-# the ledger entry from a launch answer (--launch) or for a task (--task), reads it
+# The `launch record` form, sourced by `launch.sh` after its `record` word: it binds
+# the thread to the entry a launch answer (--launch) names, or writes one for a task
+# (--task), reads it
 # back and runs the baseline reconcile; a launch answer carrying `owner_go` also gets
-# its ruling, once the entry is written. It reads the caller's $usage and `sub`, and
+# its ruling, once the entry is written. It reads the caller's $usage, `sub`,
+# `rec_fields` and `rec_add`, and
 # exits.
 
-# shellcheck disable=SC2154  # usage, out and rc come from launch.sh and its sub
+# shellcheck disable=SC2154  # usage, out, rc and fields come from launch.sh and its sub
 
 launchf='' thread='' ledger='' worktree='' remotes=() rethread='' task='' tbranch='' trepo='' tmachine='' tenv='' ia=()
 while [ $# -gt 0 ]; do
@@ -46,30 +48,19 @@ else
     worktree=$(grep '^{"' <<<"$raw" | tail -1 | jq -r '.thread.worktreePath // empty' 2>/dev/null)
     [ -n "$worktree" ] || sa_tooling "thread $thread has no worktree path: pass --worktree"
   fi
-  aflags=()
-  while IFS= read -r a; do aflags+=(--area "$a"); done < <(jq -r '.areas[]' <<<"$rec")
   key=$(jq -r .key <<<"$rec")
-  kind=$(jq -r .kind <<<"$rec")
-  fields=(--thread "$thread" --worktree "$worktree" --branch "$(jq -r .branch <<<"$rec")"
-    --instance "$(jq -r .instance_id <<<"$rec")" --model "$(jq -r .model <<<"$rec")" --effort "$(jq -r .effort <<<"$rec")"
-    ${env:+--environment "$env"} ${aflags[@]+"${aflags[@]}"})
-  machine=$(jq -r .machine <<<"$rec")
-  if [ "$kind" = task ] && [ -z "$rethread" ]; then
-    # a --skill launch's entry: a task keyed by the skill and the ticket, its repo kept
-    [ "$(jq -r .interactive <<<"$rec")" != true ] || ia=(--interactive)
-    sub ledger --ledger "$ledger" add --task "${key#task:}" --repo "$(jq -r .repo <<<"$rec")" --machine "$machine" \
-      "${fields[@]}" ${ia[@]+"${ia[@]}"}
-  elif [ -n "$rethread" ]; then
+  if [ -n "$rethread" ]; then
     # rethread keeps the entry's machine, so a thread on another machine sets it after.
-    sub ledger --ledger "$ledger" rethread "$key" --kind "$kind" "${fields[@]}"
-    if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" set "$key" machine "$(jq -cn --arg m "$machine" '$m')"; fi
+    rec_fields "$rec"
+    sub ledger --ledger "$ledger" rethread "$key" --kind "$(jq -r .kind <<<"$rec")" --thread "$thread" --worktree "$worktree" "${fields[@]}"
+    if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" set "$key" machine "$(jq -c .machine <<<"$rec")"; fi
     if [ "$rc" = 0 ]; then
       sub ledger --ledger "$ledger" get "$key"
       [ "$rc" = 0 ] || sa_tooling "cannot read entry $key"
       out=$(jq -c '{entry: .}' <<<"$out") || sa_tooling "cannot read entry $key"
     fi
   else
-    sub ledger --ledger "$ledger" add --repo "${key%#*}" --number "${key##*#}" --kind "$kind" --machine "$machine" "${fields[@]}"
+    rec_add "$rec" --thread "$thread" --worktree "$worktree"
   fi
 fi
 [ "$rc" = 0 ] || { printf '%s\n' "$out"; exit 1; }

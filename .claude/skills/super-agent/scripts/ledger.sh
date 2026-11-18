@@ -44,7 +44,7 @@
 # entry whose stage is `settled` or `closed` (a triaged ticket that now ships) or
 # `launching` (`record` binding the thread) replaces it; over any other entry it refuses. `set` takes any
 # field but the entry's identity (key, repo, number) and `stage`, which only
-# `reconcile` moves (`add` and `rethread` start one at launched). `rethread` points a
+# `reconcile` moves (`add` and `rethread` start one at launched, `add --launching` at launching). `rethread` points a
 # ticket's entry at a fresh thread and starts its tracking over (stage
 # launched, stalls 0, no observed state), so the key stays one entry; `--environment` names the new thread's linked
 # machine, and without it the entry is this machine's again. `--kind` and
@@ -221,7 +221,7 @@ case $cmd in
     value=$(jq -c . <<<"$3" 2>/dev/null) && [ -n "$value" ] || sa_tooling "the value is not JSON: $3"
     case $field in
       key|repo|number) sa_fail "$field is the entry's identity and cannot be set" ;;
-      stage) sa_fail "stage is moved by reconcile only (add and rethread start it at launched)" ;;
+      stage) sa_fail "stage is moved by reconcile only (add starts it at launched or launching, rethread at launched)" ;;
     esac
     sa_lock "$ledger"; sa_read "$ledger"
     key=$(sa_key "$doc" "$key")

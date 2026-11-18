@@ -20,9 +20,10 @@
 # The floor and the reserve are fractions the quota read carries from the fleet
 # file (`floors.five_hour`, default 0.1; `floors.weekly_reserve`, default 0.05).
 # In the last hour of a weekly window the reserve is 0: an instance whose weekly
-# bucket's `resets_at` (epoch, from `quota`) is at most 3600 s ahead of now
-# (`SA_NOW` pins it for tests) is skipped on the reserve no more, so queued work
-# spends the last of that week; its 5 hour floor and a weekly bucket at 0 still skip it.
+# bucket's `resets_at` (epoch, from `quota`; null keeps the reserve) is at most
+# 3600 s ahead of now (`SA_NOW` pins it for tests) has a reserve of 0, so queued
+# work spends the last of that week; its 5 hour floor and a weekly bucket at 0
+# still skip it.
 # --owner-go is the owner's go past both, taken only when no instance passes them:
 # then a floor or the reserve skips none, and only a failed auth, a weekly bucket at 0
 # or no model for the tier still skips one (`owner_go` true: the pick is an instance

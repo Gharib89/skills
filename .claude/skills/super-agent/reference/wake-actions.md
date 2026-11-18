@@ -104,9 +104,11 @@ it in one chat line, key and title.
 
 ## launching
 
-An entry `launch` wrote at stage `launching` that no `record` bound a thread to:
-the turn ended between `launch` and `record`, or `t3_thread_launch` failed. Find
-its thread with `t3_thread_list` by the launch file's `args.title`; found, run
-`launch.sh record --launch <launch file> --thread <id> --ledger <ledger>`. With
-none, launch the ticket again: the new launch replaces the entry. The entry
-still takes its machine's slot until one of these settles it.
+A row for a launch this turn made is in flight: finish its launch and `record`,
+and act on the row no further. Otherwise it is an entry `launch` wrote at stage
+`launching` that no `record` bound a thread to: the turn ended between `launch`
+and `record`, or `t3_thread_launch` failed. Find its thread with
+`t3_thread_list` by the launch file's `args.title`; found, run `launch.sh record
+--launch <launch file> --thread <id> --ledger <ledger>`. With none, launch the
+ticket again: the new launch replaces the entry. The entry still takes its
+machine's slot until one of these settles it.

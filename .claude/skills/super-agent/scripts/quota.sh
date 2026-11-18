@@ -100,20 +100,23 @@ parse_agy() {
 }
 
 # resets_at <text>: the reset as an epoch second, or null. Claude prints `Nov 11, 12pm
-# (Africa/Cairo)`: its zone must have a zoneinfo file, since `date` reads one it does
-# not know as UTC, and a day with no year that falls over a day before now is next year's.
+# (Africa/Cairo)`: its zone must name a zoneinfo file, since `date` reads one it does
+# not know as UTC. A day with no year takes now's year (`sa_now_s`), or the next when
+# that falls over a day before now; a time with no day is null.
 resets_at() {
-  local text=$1 tz=UTC at
+  local text=${1//,/} tz=UTC at y
   [[ $text =~ [0-9] ]] || { printf null; return; }
   if [[ $text =~ ^(.*[^ ])\ *\(([^()]+)\)$ ]]; then
     text=${BASH_REMATCH[1]} tz=${BASH_REMATCH[2]}
-    [ -f "/usr/share/zoneinfo/$tz" ] || { printf null; return; }
+    [[ $tz != *..* ]] && [ -f "/usr/share/zoneinfo/$tz" ] || { printf null; return; }
   fi
-  at=$(TZ=$tz date -d "${text//,/}" +%s 2>/dev/null) || { printf null; return; }
-  if ! [[ $text =~ [0-9]{4} ]] && [ "$at" -lt $(($(sa_now_s) - 86400)) ]; then
-    at=$(TZ=$tz date -d "${text//,/} next year" +%s 2>/dev/null) || { printf null; return; }
+  if ! [[ $text =~ [0-9]{4} ]]; then
+    y=$(TZ=$tz date -d "@$(sa_now_s)" +%Y)
+    at=$(TZ=$tz date -d "$text $y" +%s 2>/dev/null) || { printf null; return; }
+    [ "$at" -ge $(($(sa_now_s) - 86400)) ] || y=$((y + 1))
+    text+=" $y"
   fi
-  printf '%s' "$at"
+  TZ=$tz date -d "$text" +%s 2>/dev/null || printf null
 }
 
 out='{}'
