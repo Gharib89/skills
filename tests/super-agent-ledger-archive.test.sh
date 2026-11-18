@@ -149,6 +149,12 @@ for d in 2025-13-45 2025-02-30; do
   check_rc "a ruling dated $d, no calendar day, is refused" 2 "$rc"
   check "the same way, $d" 1 "$(jq -r .error <<<"$out" | grep -c 'every ruling needs a date that is a calendar day')"
 done
+for f in '"expires":42' '"expires":"2025-02-30"' '"pinned":"yes"'; do
+  printf '{"entries":{},"rulings":[{"date":"2025-11-18","text":"bad field","allow":[],%s}]}\n' "$f" > "$led"
+  out=$(SA_NOW=$t0 L allowed 2>/dev/null); rc=$?
+  check_rc "a ruling with $f is refused" 2 "$rc"
+  check "by its field, $f" 1 "$(jq -r .error <<<"$out" | grep -c 'expires that is a calendar day and pinned that is true or false')"
+done
 printf '%s\n' '{"entries":{},"rulings":[{"date":"2024-02-29","text":"leap day","allow":["c"],"pinned":true}]}' > "$led"
 check "a leap day is a calendar day" '["c"]' "$(SA_NOW=$t0 L allowed | jq -c '[.allowed[].call]')"
 

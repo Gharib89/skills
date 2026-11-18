@@ -27,10 +27,12 @@ sa_read() {
   jq -e . "$1" >/dev/null 2>&1 || sa_tooling "$1: not JSON"
   jq -e '(.entries | type) == "object"' "$1" >/dev/null || sa_tooling "$1: entries must be an object"
   jq -e '(.rulings | type) == "array"' "$1" >/dev/null || sa_tooling "$1: rulings must be an array"
-  # a ruling's date decides its lapse, so one without a readable date is refused here
-  jq -e 'all(.rulings[]; (.date | type) == "string"
-    and .date == (.date | try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null))' "$1" >/dev/null \
+  # a ruling's date, expires and pinned decide its lapse, so a wrong shape is refused here
+  local day='def day: type == "string" and . == (try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null);'
+  jq -e "$day"'all(.rulings[]; .date | day)' "$1" >/dev/null \
     || sa_tooling "$1: every ruling needs a date that is a calendar day, YYYY-MM-DD"
+  jq -e "$day"'all(.rulings[]; (.expires == null or (.expires | day)) and (.pinned | IN(null, true, false)))' "$1" >/dev/null \
+    || sa_tooling "$1: a ruling may carry only an expires that is a calendar day and pinned that is true or false"
   doc=$(cat "$1")
 }
 

@@ -113,8 +113,8 @@ skip this section.
    repo's own PR), then save the approved rows as a JSON array and run
    `ledger.sh --ledger <ledger> migrate-rulings <list.json>`. It refuses two
    things: a row whose date and text match no ruling (fix the row from `list`
-   and rerun) and any run after the first. Report its `pinned`, `lapsed` and
-   `moved` in the next status block.
+   and rerun) and any run after the first. Send the owner its `pinned`,
+   `lapsed` and `moved` lists in a push: the status block does not carry them.
 
 ## The digest
 
