@@ -19,6 +19,7 @@ reconcile_answer() {
     def needed($k; $r): [($d.needs // [])[] | select((.key | norm_repo) == ($k | norm_repo) and (.reason == null or .reason == $r))] | length > 0;
     {ledger: $l, checked: $n,
      entries: [$e[] | {key, from, stage, stalls, observed}],
+     launching: [entries[] | select(.stage == "launching") | {key, since: .launched_at}],
      stalled: $st,
      settled: pick("settled"; {key, thread, worktree, kind}),
      closed: pick("closed"; {key, thread, worktree, reason}),

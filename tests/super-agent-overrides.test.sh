@@ -10,6 +10,7 @@ source tests/lib.sh
 source tests/super-agent-fake.sh
 extra=$(command -v sleep ln setsid)
 source tests/super-agent-launch-lib.sh
+unlaunch=1 # each case reads one launch's answer; the launching entry is super-agent-launch-prerecord's
 for t in $extra; do "$tmp/tools/ln" -s "$t" "$tmp/tools/" 2>/dev/null || /bin/ln -s "$t" "$tmp/tools/" || exit 2; done
 mkdir -p "$SA_FAKE/threads" "$tmp/home"
 export HOME=$tmp/home

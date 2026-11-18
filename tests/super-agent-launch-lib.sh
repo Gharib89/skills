@@ -32,8 +32,16 @@ issue() { # <number> <title> <label>...
   sa_route "repos/$repo/issues/$n/comments" '[]'
 }
 L() { # <number> [<launch flags>...]: the launch call for one ticket of the repo
-  local n=$1; shift
-  bash "$s/launch.sh" "$repo#$n" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine home --thread th-super "$@"
+  local n=$1 rc k; shift
+  bash "$s/launch.sh" "$repo#$n" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine home --thread th-super "$@"; rc=$?
+  # With $unlaunch set, a test that reads only each launch's answer drops the `launching`
+  # entry it recorded, which would otherwise take the next case's slot.
+  if [ -n "${unlaunch:-}" ] && [ -f "$led" ]; then
+    for k in $(jq -r '.entries[] | select(.stage == "launching") | .key' "$led"); do
+      bash "$s/ledger.sh" --ledger "$led" drop "$k" >/dev/null
+    done
+  fi
+  return "$rc"
 }
 reset() {
   rm -f "$led" "$SA_FAKE/calls" "$SA_FAKE/on-post" "$out_f"

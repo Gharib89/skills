@@ -9,6 +9,7 @@
 #   ledger --ledger <file> add --task <slug> --thread <id> [--worktree <path>] [--branch <name>]
 #          [--repo <owner/name>] [--machine <name>] [--environment <id>] [--instance <id>]
 #          [--model <id>] [--effort <level>] [--area <path>]... [--interactive]
+#   ledger --ledger <file> add --launching <the add flags, less --thread and --worktree>
 #   ledger --ledger <file> adopt <the same flags as add>
 #   ledger --ledger <file> get <key>
 #   ledger --ledger <file> list [--open]
@@ -36,9 +37,12 @@
 # A key is `<owner/name>#<number>`, or `task:<slug>` for a `task` entry. `--ledger` comes first and names the file,
 # which a first `add` creates. `add` starts an entry at stage `launched`, stalls
 # 0, observed null: `reconcile` fills `observed`, the baseline `watch` compares
-# against, and `error`, the fault kind it last failed to read. `add` over an
-# entry whose stage is `settled` or `closed` (a triaged ticket that now ships)
-# replaces it; over any other entry it refuses. `set` takes any
+# against, and `error`, the fault kind it last failed to read. `add --launching`
+# is `launch` recording a ticket before its thread exists: stage `launching`,
+# `thread` and `worktree` null, which `watch` and `reconcile` do not read (reconcile
+# lists it in `launching`) and which still takes its machine's slot. `add` over an
+# entry whose stage is `settled` or `closed` (a triaged ticket that now ships) or
+# `launching` (`record` binding the thread) replaces it; over any other entry it refuses. `set` takes any
 # field but the entry's identity (key, repo, number) and `stage`, which only
 # `reconcile` moves (`add` and `rethread` start one at launched). `rethread` points a
 # ticket's entry at a fresh thread and starts its tracking over (stage
@@ -131,7 +135,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | pause <key> | unpause <key> | drop <key> | reset-stalls <key>'
+usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | add --launching <the add flags, less --thread and --worktree> | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | pause <key> | unpause <key> | drop <key> | reset-stalls <key>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -140,11 +144,12 @@ cmd=${1:-}; [ $# -gt 0 ] && shift
 case $cmd in
   add|adopt)
     repo='' number='' thread='' worktree='' branch='' machine='' environment='' instance='' model='' effort='' areas='[]' kind='' task='' adopted=false
-    interactive=false
+    interactive=false launching=false
     [ "$cmd" != adopt ] || adopted=true
     while [ $# -gt 0 ]; do
       case $1 in
         --interactive) interactive=true; shift; continue ;;
+        --launching) [ "$cmd" = add ] || sa_tooling "$usage"; launching=true; shift; continue ;;
         --area) sa_flag_value "$usage" "${2:-}"; areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas") ;;
         --repo) sa_flag_value "$usage" "${2:-}"; repo=$2 ;;
         --number) sa_flag_value "$usage" "${2:-}"; number=$2 ;;
@@ -162,7 +167,8 @@ case $cmd in
       esac
       shift 2
     done
-    [ -n "$thread" ] || sa_tooling "$usage"
+    # a launching entry has no thread yet, and every other has one
+    if $launching; then [ -z "$thread$worktree" ] || sa_tooling "$usage"; else [ -n "$thread" ] || sa_tooling "$usage"; fi
     # a task on a linked machine counts against that machine's slots, so it names it
     [ -z "$task" ] || [ -z "$environment" ] || [ -n "$machine" ] || sa_tooling "$usage"
     machine=${machine:-local}
@@ -175,23 +181,24 @@ case $cmd in
       ! $interactive || sa_tooling "$usage"
       kind=${kind:-ship}
       case $number in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
-      [ -n "$repo" ] && [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage"
+      [ -n "$repo" ] && { [ -n "$worktree" ] || $launching; } && [ -n "$branch" ] || sa_tooling "$usage"
       key="$repo#$number"
     fi
     sa_lock "$ledger"; sa_read "$ledger"
     old=$(sa_key "$doc" "$key")
-    jq -e --arg k "$old" '.entries[$k] and (.entries[$k].stage | IN("settled", "closed") | not)' <<<"$doc" >/dev/null && sa_fail "$key is already in the ledger"
+    jq -e --arg k "$old" '.entries[$k] and (.entries[$k].stage | IN("settled", "closed", "launching") | not)' <<<"$doc" >/dev/null && sa_fail "$key is already in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "${number:-null}" --arg t "$thread" \
       --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg env "$environment" --arg inst "$instance" --arg model "$model" \
       --arg effort "$effort" --arg now "$now" --argjson areas "$areas" --arg kind "$kind" --argjson adopted "$adopted" --arg task "$task" --argjson ia "$interactive" \
+      --argjson launching "$launching" \
       '{key: $k, repo: (if $repo == "" then null else $repo end), number: (if $task == "" then $n else null end),
-        thread: $t, worktree: $w, branch: $b, machine: $m, areas: $areas, kind: $kind, adopted: $adopted,
+        thread: (if $launching then null else $t end), worktree: (if $launching then null else $w end), branch: $b, machine: $m, areas: $areas, kind: $kind, adopted: $adopted,
         environment_id: (if $env == "" then null else $env end),
         instance_id: (if $inst == "" then null else $inst end),
         model: (if $model == "" then null else $model end),
         effort: (if $effort == "" then null else $effort end),
-        stage: "launched", stalls: 0, observed: null, launched_at: $now, updated_at: $now}
+        stage: (if $launching then "launching" else "launched" end), stalls: 0, observed: null, launched_at: $now, updated_at: $now}
         + (if $ia then {interactive: true} else {} end)')
     sa_update "$ledger" "$sa_jq_norm"'del(.entries[$old]) | .entries[$k] = $e | .waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' \
       --arg k "$key" --arg old "$old" --argjson e "$entry"
