@@ -72,6 +72,7 @@ contract.
 | `run-file call` | any phase, before each direct call, writing its `## Direct calls` line |
 | `run-file note` | any phase, for each attested line (`Round:`, `Stop:`, `Past-cap:`, `Docs-only:`, `Criterion`, `Noted:`, `Filed:`), one line each, appended under its section |
 | `base-fresh` | 5, and after every conflict resolution |
+| `carry-check` | 5, after `base-fresh` |
 | `<Location:>` from the profile `[--small <node>] [--base <ref>]` | 5 (the repo's own local gate) |
 | `open-pr` | 6 |
 | `reflect` | 6 |

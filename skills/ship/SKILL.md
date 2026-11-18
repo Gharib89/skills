@@ -126,9 +126,9 @@ then the self-review loop, per
 in the Run file, every finding carries a disposition, `close 4` took the
 evidence lines, and docs-sync landed or is skipped in one line.
 
-**5 · Local gate.** `base-fresh`, the `Carry:` check, then the gate, per
+**5 · Local gate.** `base-fresh`, `carry-check`, then the gate, per
 [phase-steps.md](reference/phase-steps.md#phase-5-local-gate).
-**Done when:** `base-fresh` answered `fresh: true`, the `Carry:` files match,
+**Done when:** `base-fresh` answered `fresh: true`, `carry-check` `ok: true`,
 and the recorded verdict reads `verdict: pass` with `gates.secrets` present.
 
 **6 · Open PR.** `open-pr`, then `reflect`, per
