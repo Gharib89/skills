@@ -15,8 +15,9 @@
 # ledger holds: its `escalate` row carries it until a need silences it. A dead
 # watcher is `alive` false whatever else holds.
 #
-# stdout: {alive, changed, summary}: `summary` is reconcile's whole answer when
-#         `changed`, null when not
+# stdout: {alive, changed, summary, skill}: `summary` is reconcile's whole answer when
+#         `changed`, null when not; `skill` is reconcile's `skill`, on every
+#         answer: a stale copy alone is no change
 # exit: 0 an answer · 2 usage, or reconcile's own exit 2 (its answer, not a pulse's,
 #       is printed)
 set -uo pipefail
@@ -52,4 +53,4 @@ jq -cn --argjson s "$summary" --argjson a "$alive" --argjson held "$held" "$sa_j
      | [to_entries[] | select(.key | IN("ledger", "checked", "entries", "at_rest") | not) | .value
         | select(type == "array" and length > 0)] | length > 0) as $lists
   | ($lists or ([$s.entries[] | select(.from != .stage)] | length > 0)) as $c
-  | {alive: $a, changed: $c, summary: (if $c then $s else null end)}'
+  | {alive: $a, changed: $c, summary: (if $c then $s else null end), skill: $s.skill}'

@@ -52,6 +52,8 @@
 #         arguments only an MCP read can fill (`projectId`, from `t3_project_list`
 #         on the placed machine), `record` what `record` writes. `launch` false:
 #         {reason, detail}, `reason` one of `no_owner_skill` (detail the labels),
+#         `stale_ship` (installed, minimum: the repo's installed ship is below
+#         `sa_min_ship`; read before the claim, so none is taken),
 #         `claimed` or `stale` (the claim), `ask` (route's wanted, tier, bucket,
 #         reason), `no_instance` (route's reason), `need_reading` (place's
 #         machine and environment_id) or `waiting` (place's reason and
@@ -60,7 +62,8 @@
 #         when it refused the entry, or {error: "unrecorded launch: ..."}
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
-#       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a claim, issue or placement the host or a script refused, or a record
+#       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a claim, issue or placement the host or a script refused, an installed ship version
+#       that cannot be read as X.Y.Z, or a record
 #       whose reconcile failed after the entry was written (do not record again)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -192,6 +195,15 @@ kind=$(jq -r 'if index("ready-for-agent") then "ship" elif index("needs-triage")
 [ -n "$kind" ] || answer no_owner_skill "$labels"
 size=$(jq -r '[.[] | select(IN("XS", "S", "M", "L", "XL"))] | first // ""' <<<"$labels")
 size_source=label; [ -n "$size" ] || { size=M size_source=default; }
+
+# 1b. A ship launch needs the repo's installed ship at `sa_min_ship` or above, read before
+# the claim so a refused launch leaves none.
+if [ "$kind" = ship ]; then
+  installed=$(sa_skill_version "$repo" .claude/skills/ship/SKILL.md)
+  [ -n "$installed" ] || sa_tooling "cannot read the installed ship version of $repo"
+  jq -en --arg i "$installed" --arg m "$sa_min_ship" "$sa_jq_ver"'($i | ver) >= ($m | ver)' >/dev/null \
+    || answer stale_ship "$(jq -cn --arg i "$installed" --arg m "$sa_min_ship" '{installed: $i, minimum: $m}')"
+fi
 
 # 2. The claim: a comment, never an assignment.
 rc=0; sub claim --repo "$repo" --number "$number" --machine "$machine" --thread "$thread"
