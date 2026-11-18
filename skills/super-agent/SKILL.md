@@ -155,9 +155,10 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    the watcher; `changed` true makes its `summary` the answer step 5 acts on.
    **A stale copy.** Every pulse and reconcile answer carries `skill`
    {loaded, source, stale}: `stale` true means this running copy is older than
-   the one on `Gharib89/skills`. Say so once, in the Escalation format,
-   naming both versions: the refresh, `npx skills@1.8.1 add gharib89/skills
-   -g -s super-agent -y`, is the owner's to run or approve.
+   the one on `Gharib89/skills`. Say so once in chat, naming both
+   versions (no ledger need: no entry is stale): the refresh, `npx
+   skills@1.8.1 add gharib89/skills -g -s super-agent -y`, is the owner's to
+   run or approve.
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
    action it prints (Acting on the summary), run `scripts/status.sh --ledger

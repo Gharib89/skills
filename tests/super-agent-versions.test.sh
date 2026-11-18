@@ -56,6 +56,11 @@ check "a triage launch reads no ship version" true "$(L 8 --area x | jq .launch)
 reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
 sa_route "repos/$repo/contents/$ship" "$(jq -cn '{content: ("---\nmetadata:\n  version: 0.66.3\n---\nExample:\n  version: 9.9.9\n" | @base64)}')"
 check "only the frontmatter's version is read, never a body line" stale_ship "$(L 7 --area x | jq -r .reason)"
+for body in 'metadata:\n  version: 0.67.0\n' '---\nmetadata:\n  version: 0.67.0\n'; do
+  reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+  sa_route "repos/$repo/contents/$ship" "$(jq -cn --arg b "$body" '{content: ($b | gsub("\\\\n"; "\n") | @base64)}')"
+  check "a SKILL.md with no opening or no closing --- is unread: exit 2 ($body)" 2 "$(L 7 --area x >/dev/null 2>&1; echo $?)"
+done
 for v in 0.67 0.67.0-rc1 abc; do
   reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
   sa_skill_file "$repo" "$ship" "$v"

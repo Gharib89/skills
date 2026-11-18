@@ -170,13 +170,15 @@ sa_waiting_line='Waiting on my own background work.'
 # shellcheck disable=SC2034  # read by launch.sh
 sa_min_ship='0.67.0'
 
-# The repo the super agent's own skill is published from: a refresh (`npx skills add`)
-# installs from it, so its default branch holds the version a refresh would bring.
+# The repo the super agent's own skill is published from: a refresh
+# (`npx skills@1.8.1 add`) installs from it, so its default branch holds the version a
+# refresh would bring.
 sa_skill_source='Gharib89/skills'
 
 # `ver`: an X.Y.Z version as an array of numbers, so versions compare by number.
 # `skill_version`: the one `  version: X.Y.Z` line in a SKILL.md's frontmatter (between
-# its opening and closing `---`), else "": a missing, repeated or malformed version
+# its opening and closing `---`, under any key; a SKILL.md carries it as
+# `metadata.version`), else "": a missing, repeated or malformed version
 # (`0.67`, `v1.0.0`, a pre-release) is unread, never a number, and a body line is never read.
 # shellcheck disable=SC2034  # read by launch.sh
 sa_jq_ver='def ver: split(".") | map(tonumber);
