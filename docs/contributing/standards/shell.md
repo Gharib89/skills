@@ -58,7 +58,8 @@ exceptions bound these rules.
   PR list and issue with `gh api` (`reconcile` also reads the issue of each
   waiting row and of its `--after` blocker, and the issue of a merged ticket
   with its parent issue, and the version of super-agent's own SKILL.md on
-  its source repo through `contents/`), and its thread with the `t3` CLI,
+  its source repo through `contents/`, a read `handover` makes too), and its
+  thread with the `t3` CLI,
   for the same reason: it composes no other skill, so no adapter is beside it;
   both only read. Its `claim` posts and deletes its own claim comment with
   `gh api`

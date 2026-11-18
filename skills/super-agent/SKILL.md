@@ -158,9 +158,10 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    **A stale copy.** Every pulse and reconcile answer carries `skill`
    {loaded, source, stale}: `stale` true means this running copy is older than
    the one on `Gharib89/skills`. Say so once in chat, naming both
-   versions (no ledger need: no entry is stale): the refresh, `npx
-   skills@1.8.1 add Gharib89/skills --skill super-agent --agent claude-code -g
-   -y`, is the owner's to run or approve.
+   versions (no ledger need: no entry is stale): the next
+   [daily handover](#daily-handover) refreshes it. With no morning report
+   scheduled, the refresh, `npx skills@1.8.1 add Gharib89/skills --skill
+   super-agent --agent claude-code -g -y`, is the owner's to run or approve.
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
    action it prints (Acting on the summary), run `scripts/status.sh --ledger
@@ -298,10 +299,20 @@ list, the rulings and the needs; never rebuild it from the transcript):
 --ledger <ledger> --fleet <fleet>`, then start the watcher, then do the
 summary's rows (Acting on the summary) and launch its `ready` rows; `list`'s
 other `waiting` rows get a place rerun when a machine could have come back.
+Then `list_scheduled_tasks`: a morning report bound here whose prompt is not
+the one `scripts/schedules.sh --fleet <fleet>` proposes is deleted and
+recreated with that prompt at its own time, under the owner's earlier yes.
 
 Compact at about 100k tokens of context, with exactly this instruction:
 `Resume the super-agent loop: run SKILL.md's After a restart or compaction
 step.`
+
+## Daily handover
+
+The morning report starts a fresh super-agent thread, so compactions and stale
+context never pile up in one: follow
+[reference/handover.md](reference/handover.md), both as the old thread and as
+the successor (your first message carries a `Handover:` line).
 
 ## Hard rules
 
@@ -309,12 +320,15 @@ step.`
   kind**: record it before your turn ends (The loop). The exceptions are a
   probe or scratch thread you read and settle within the same turn, and a
   thread a supervised thread started, which you settle once at rest and do
-  nothing else with.
-- Touch only threads the ledger holds, your probe threads and the helper
-  threads the first rule settles.
+  nothing else with, and the [daily handover](#daily-handover)'s successor,
+  launched unclaimed and never recorded.
+- Touch only threads the ledger holds, your probe threads, the helper
+  threads the first rule settles, and this thread itself at the daily
+  handover.
 - Route and verify; the supervised thread implements, and its owner skill
   merges.
 - Settle a finished thread; never archive one. Remove a worktree only through
   `worktree.sh`, which takes only a settled or closed entry's clean one.
-- Launch only on a claim of your own and the owner's go: a claim is never
-  taken over, and the daily offer never launches.
+- Launch only on a claim of your own and the owner's go, the daily
+  handover's successor aside: a claim is never taken over, and the daily
+  offer never launches.
