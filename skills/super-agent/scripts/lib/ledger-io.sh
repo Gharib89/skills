@@ -28,7 +28,8 @@ sa_read() {
   jq -e '(.entries | type) == "object"' "$1" >/dev/null || sa_tooling "$1: entries must be an object"
   jq -e '(.rulings | type) == "array"' "$1" >/dev/null || sa_tooling "$1: rulings must be an array"
   # a ruling's date decides its lapse, so one without a readable date is refused here
-  jq -e 'all(.rulings[]; (.date | type) == "string" and (.date | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")))' "$1" >/dev/null \
+  jq -e 'all(.rulings[]; (.date | type) == "string"
+    and .date == (.date | try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null))' "$1" >/dev/null \
     || sa_tooling "$1: every ruling needs a date, YYYY-MM-DD"
   doc=$(cat "$1")
 }

@@ -93,8 +93,9 @@ migration sets that field, and from then on skip this section.
 
 1. Read every ruling, lapsed or not:
    `SA_NOW=<epoch of the oldest ruling's date at 00:00 UTC> ledger.sh --ledger
-   <ledger> list`. Draft one row per ruling in the shape `ledger.sh --help`
-   gives for `migrate-rulings`.
+   <ledger> list`. Draft one row per ruling as `{date, text, mark, to}`:
+   `mark` is `pin`, `lapse` or `move`, and a move's `to` names its
+   destination.
 2. Propose a mark for each: a preference a script reads moves to its fleet key
    or ship profile line, a `--repo` gate-hold ruling that holds for good moves
    to the fleet file's standing waivers, and any other ruling is pinned when it

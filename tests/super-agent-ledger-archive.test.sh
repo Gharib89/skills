@@ -141,5 +141,9 @@ printf '%s\n' '{"entries":{},"rulings":[{"text":"no date","allow":[]}]}' > "$led
 out=$(SA_NOW=$t0 L allowed 2>/dev/null); rc=$?
 check_rc "a ruling with no date is refused" 2 "$rc"
 check "by name, as JSON" 1 "$(jq -r .error <<<"$out" | grep -c 'every ruling needs a date')"
+printf '%s\n' '{"entries":{},"rulings":[{"date":"2025-13-45","text":"bad date","allow":[]}]}' > "$led"
+out=$(SA_NOW=$t0 L allowed 2>/dev/null); rc=$?
+check_rc "a ruling whose date is no calendar day is refused" 2 "$rc"
+check "the same way" 1 "$(jq -r .error <<<"$out" | grep -c 'every ruling needs a date')"
 
 finish

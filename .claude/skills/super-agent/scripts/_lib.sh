@@ -107,7 +107,7 @@ sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 # A ruling's `expiry`, the last day it is in force, 7 days after its date; and
 # whether it is `live($today)` (YYYY-MM-DD, sa_today): pinned, or on or before its
 # `expires`, which one written before expiries lacks.
-# shellcheck disable=SC2034  # read by ledger.d/rulings.sh
+# shellcheck disable=SC2034  # read by ledger.sh and ledger.d/rulings.sh
 sa_jq_live='def expiry: .date + "T00:00:00Z" | fromdateiso8601 + 7 * 86400 | strftime("%Y-%m-%d");
   def live($today): .pinned == true or (.expires // expiry) >= $today;'
 
