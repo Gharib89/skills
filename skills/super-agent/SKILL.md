@@ -50,7 +50,8 @@ follow [reference/setup.md](reference/setup.md).
 Every launch, a rethread included, runs on the instance and tier `route.sh`
 picks, which `launch.sh` runs for you:
 
-1. Run `scripts/quota.sh --fleet <fleet> --save <file> --wake <id>` here, `<id>`
+1. Run `scripts/quota.sh --fleet <fleet> --save <file> --wake <id>` here,
+   `<file>` `super-agent/quota.json` under `$XDG_STATE_HOME` and `<id>`
    made once per wake (the epoch). Every launch of the wake reuses the saved
    read (`launch.sh --quota <file>`); the next wake's id reads again. Quota is
    per provider instance; a remote machine is never extra quota.
@@ -237,6 +238,10 @@ The other lists report:
 
 Each override the owner gives has a flag; never edit the ledger, fleet or quota
 file by hand to stand in for one.
+A PreToolUse hook, `scripts/guard.sh`, refuses an Edit, a Write, a redirection
+or an `mv` onto those three files and names the script to use; a refusal means
+an override has no flag yet, so report it to the owner instead of working
+around it.
 
 Each `<thread>` below is the entry's ledger key.
 
