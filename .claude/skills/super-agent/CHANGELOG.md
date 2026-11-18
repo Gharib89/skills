@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.31.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: Settled entries archive after 7 days, rulings lapse unless pinned, and a one-time
+  migration sorts today's rulings ([#1295](https://github.com/Gharib89/skills/pull/1295),
+  [`5fa5728`](https://github.com/Gharib89/skills/commit/5fa5728fd400e132433694b43c542d3b9dd4405b))
+
+
 ## v0.30.0 (2026-11-18)
 
 ### Features

@@ -1,6 +1,7 @@
 # Reading and writing the ledger, sourced by _lib.sh: sa_read, the bare
-# sa_write, and sa_lock and sa_update, the one way a ledger is written; and
-# sa_pid_runs, which tells a live lock holder from a reused pid.
+# sa_write, and sa_lock and sa_update, the one way a ledger is written;
+# sa_pid_runs, which tells a live lock holder from a reused pid; and sa_archive,
+# which moves old ended entries out of the ledger.
 
 # sa_pid_runs <pid> <glob>...: the pid is alive and its command line matches one
 # of the globs, so a pid reused by another process after a kill or a reboot does
@@ -26,6 +27,12 @@ sa_read() {
   jq -e . "$1" >/dev/null 2>&1 || sa_tooling "$1: not JSON"
   jq -e '(.entries | type) == "object"' "$1" >/dev/null || sa_tooling "$1: entries must be an object"
   jq -e '(.rulings | type) == "array"' "$1" >/dev/null || sa_tooling "$1: rulings must be an array"
+  # a ruling's date, expires and pinned decide its lapse, so a wrong shape is refused here
+  local day='def day: type == "string" and . == (try (strptime("%Y-%m-%d") | mktime | strftime("%Y-%m-%d")) catch null);'
+  jq -e "$day"'all(.rulings[]; .date | day)' "$1" >/dev/null \
+    || sa_tooling "$1: every ruling needs a date that is a calendar day, YYYY-MM-DD"
+  jq -e "$day"'all(.rulings[]; (.expires == null or (.expires | day)) and (.pinned | IN(null, true, false)))' "$1" >/dev/null \
+    || sa_tooling "$1: a ruling may carry only an expires that is a calendar day and pinned that is true or false"
   doc=$(cat "$1")
 }
 
@@ -93,4 +100,30 @@ sa_update() {
   new=$(jq -c "$@" "$filter" <<<"$doc") && [ -n "$new" ] || sa_tooling "cannot update $ledger"
   doc=$new
   sa_write "$ledger" "$doc"
+}
+
+# sa_settled_days: how many days after an entry ends (`settled` or `closed`,
+# stamped `settled_at`) it stays in the ledger, and how long a settled triage
+# thread is still re-read (ADR 0021). `settled_before($cut)`: an entry that
+# settled before the epoch `$cut`, by `settled_at`, or `updated_at` for one
+# settled before that stamp; one with neither is never old.
+sa_settled_days=7
+# shellcheck disable=SC2034  # read by reconcile.sh
+sa_jq_settled_before='def settled_before($cut): (.settled_at // .updated_at) as $at | $at != null and ($at | fromdateiso8601) < $cut;'
+
+# sa_archive <ledger> <now epoch>: under the lock, each entry settled or closed
+# more than sa_settled_days ago with no cleanup or criteria check owed is appended, whole,
+# to `<ledger>.archive.jsonl` and dropped from the ledger, so a wake reads only
+# what the super agent may still act on. The append comes first: a crash between
+# the two leaves the entry in both, never in neither. Leaves the ledger in $doc.
+sa_archive() {
+  local ledger=$1 gone
+  sa_lock "$ledger"
+  sa_read "$ledger"
+  gone=$(jq -c --argjson cut "$(($2 - sa_settled_days * 86400))" "$sa_jq_settled_before"'.entries[]
+    | select((.stage == "settled" or .stage == "closed") and .cleanup_owed != true and .verify_owed != true
+      and settled_before($cut))' <<<"$doc") || sa_tooling "cannot read $ledger"
+  [ -n "$gone" ] || return 0
+  printf '%s\n' "$gone" >> "$ledger.archive.jsonl" || sa_tooling "cannot write $ledger.archive.jsonl"
+  sa_update "$ledger" 'del(.entries[$k[]])' --argjson k "$(jq -sc 'map(.key)' <<<"$gone")"
 }

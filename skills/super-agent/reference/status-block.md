@@ -88,6 +88,43 @@ repo's later holds too adds `--repo <owner/name>`, and `ledger.sh --ledger
 <ledger> scoped` lists it with its `repo` for the
 [gate-hold step-in](step-ins.md#the-step-ins).
 
+A ruling lapses 7 days after its date: `list`, `allowed` and `scoped` leave it
+out from then on. When the owner says one should last, pin it with
+`ledger.sh --ledger <ledger> pin <date> <text>`, its date and exact text as
+`list` shows them. A preference a script reads lives where the script reads it:
+a per-repo cap, a reviewer order or the work week in the fleet file or the
+repo's ship profile, and a gate-hold ruling that holds for good in the fleet
+file's standing waivers.
+
+### The one-time rulings migration
+
+Run this once, while the ledger has no `rulings_migrated` field
+(`jq .rulings_migrated <ledger>` prints `null`) and holds a ruling written
+before expiries (`jq '[.rulings[] | select(.expires == null)] | length'
+<ledger>` prints more than 0); the migration sets that field, and from then on
+skip this section.
+
+1. Read every ruling, lapsed or not:
+   `SA_NOW=<epoch of the oldest ruling's date at 00:00 UTC> ledger.sh --ledger
+   <ledger> list`. Draft one row per ruling as `{date, text, mark, to}`:
+   `mark` is `pin`, `lapse` or `move`, and a move's `to` names its
+   destination.
+2. Propose a mark for each: a preference a script reads moves to its fleet key
+   or ship profile line, a `--repo` gate-hold ruling that holds for good moves
+   to the fleet file's standing waivers, and any other ruling is pinned when it
+   still holds and lapses otherwise.
+3. Put the list on a page for the owner (an artifact, the rows grouped by mark
+   with your reason for each), and post its link with a push. Wait for the
+   owner to approve it or edit it; a row they strike is left unmarked, which
+   lapses, unless its ruling already has its own `expires`, which it keeps.
+4. Write each `move` into its destination first (the fleet key as
+   [setup.md](setup.md) edits the fleet file, a profile line through that
+   repo's own PR), then save the approved rows as a JSON array and run
+   `ledger.sh --ledger <ledger> migrate-rulings <list.json>`. It refuses two
+   things: a row whose date and text match no ruling (fix the row from `list`
+   and rerun) and any run after the first. Send the owner its `pinned`,
+   `lapsed` and `moved` lists in a push: the status block does not carry them.
+
 ## The digest
 
 `status.sh --ledger <ledger> --digest` prints every row whatever changed, and

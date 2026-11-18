@@ -17,6 +17,8 @@
 #          --branch <name> [--kind ship|triage|task] [--environment <id>] [--instance <id>]
 #          [--model <id>] [--effort <level>] [--area <path>]...
 #   ledger --ledger <file> ruling <text> [--allow <call>]... [--repo <owner/name>]
+#   ledger --ledger <file> pin <date> <text>
+#   ledger --ledger <file> migrate-rulings <list.json>
 #   ledger --ledger <file> allowed
 #   ledger --ledger <file> scoped [--repo <owner/name>]
 #   ledger --ledger <file> wait <key> --reason <text> [--order <n>] [--after <key>]
@@ -41,11 +43,18 @@
 # `--area` replace the stored value when given and leave it when omitted; use
 # `add` over a finished triage entry, `rethread` for a thread that failed. A write
 # holds the ledger's lock (`<ledger>.lock`) from its read to a temp file beside
-# the ledger renamed onto it, so concurrent writes all land. A ruling is the owner's answer to a hold, dated; each
+# the ledger renamed onto it, so concurrent writes all land. A ruling is the owner's answer to a hold, dated. Each
 # `--allow` is a call the answer lets a supervised thread make without a hold,
 # and `allowed` lists them. `--repo` scopes a ruling to one repo so the gate-hold
 # step-in can cite it for that repo's later holds, and `scoped` lists the rulings
 # that have a repo (one repo's, compared without regard to case, with `--repo`).
+# A ruling lapses 7 days after its date: `expires` holds the last day it is in
+# force, and `list`, `allowed` and `scoped` leave a lapsed one out while the file
+# keeps it. `pin <date> <text>` keeps one in force for good. `migrate-rulings`
+# applies the owner-approved list once, a JSON array of {date, text, mark:
+# pin|lapse|move, to}, `to` naming where a moved ruling now lives: a `pin` row
+# pins its ruling, and a `lapse` row, a `move` row or a ruling with no
+# `expires` the list leaves out gets yesterday as its `expires`.
 # A ruling has no brief or machine scope: `--brief` and `--machine` are refused,
 # and a ruling an older ledger marked brief-bound reads as a plain one. An entry's `--machine`
 # is the fleet file's key for the machine the thread runs on (`local` means the
@@ -87,20 +96,23 @@
 # stdout: `add` {ledger, key, entry}; `get` the entry; `list` {ledger, entries,
 #         rulings}, `entries` an array of entries (`--open` leaves out settled
 #         and closed ones); `set` {key, field, value}; `rethread` {ledger, key, entry}; `ruling` {ruling:
-#         {date, text, allow, repo}}; `allowed` {allowed: [{date, call, line}]};
+#         {date, text, allow, repo, expires, pinned}}; `pin` {pinned:
+#         [ruling]}; `migrate-rulings` {pinned: [{date, text}], lapsed: [{date,
+#         text}], moved: [{date, text, to}]}; `allowed` {allowed: [{date, call, line}]};
 #         `scoped` {scoped: [{date, text, repo}]}; `wait`
 #         {waiting: {key, repo, number, reason, since, order, after}}; `unwait` {key,
 #         removed}; `need` {need: {key, action, since, pushed}}; `pushed`
 #         {need}; `unneed` {key, removed}; `limit` {limit: {repo, reviewer,
 #         since}}; `unlimit` {repo, removed}; `list` also holds `waiting`,
 #         `needs` and `review_limits`; any failure {error}
-# exit: 0 ok · 1 the key is already in, or not in, the ledger, `stage`, or an
-#       identity field · 2 usage, a value that is not JSON, an
+# exit: 0 ok · 1 the key is already in, or not in, the ledger, `stage`, an
+#       identity field, a ruling that `pin` or a migration row names but the
+#       ledger lacks, or a second `migrate-rulings` · 2 usage, a value that is not JSON, an
 #       unreadable or wrong-shaped ledger, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
+usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -171,7 +183,7 @@ case $cmd in
     case ${1:-} in --open) open=true; shift ;; esac
     [ $# -eq 0 ] || sa_tooling "$usage"
     sa_read "$ledger"
-    jq -c --arg l "$ledger" --argjson open "$open" "$sa_jq_open$sa_jq_waiting"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings, waiting: waiting_list, needs: (.needs // []), review_limits: (.review_limits // [])}' <<<"$doc" ;;
+    jq -c --arg l "$ledger" --argjson open "$open" --arg today "$(sa_today)" "$sa_jq_open$sa_jq_waiting$sa_jq_live"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings: [.rulings[] | select(live($today))], waiting: waiting_list, needs: (.needs // []), review_limits: (.review_limits // [])}' <<<"$doc" ;;
   set)
     [ $# -eq 3 ] || sa_tooling "$usage"
     key=$1 field=$2
@@ -222,31 +234,6 @@ case $cmd in
       --arg e "$effort" --arg env "$environment" --arg inst "$instance" --arg now "$now" --arg kind "$kind" --argjson areas "${areas:-null}"
     jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$(jq -c --arg k "$key" '.entries[$k]' <<<"$doc")" \
       '{ledger: $l, key: $k, entry: $e}' ;;
-  ruling)
-    [ $# -ge 1 ] || sa_tooling "$usage"
-    text=$1; shift; allow='[]' rrepo=''
-    while [ $# -gt 0 ]; do
-      case $1 in
-        --brief|--machine) sa_tooling "ruling $1 is retired: no launch message or machine scope reads a ruling. $(sa_brief_where)" ;;
-        --repo) sa_flag_value "$usage" "${2:-}"; rrepo=$2; shift 2 ;;
-        --allow) sa_flag_value "$usage" "${2:-}"; allow=$(jq -c --arg c "$2" '. + [$c]' <<<"$allow"); shift 2 ;;
-        *) sa_tooling "$usage" ;;
-      esac
-    done
-    ruling=$(jq -cn --arg d "$(date -u +%F)" --arg t "$text" --argjson a "$allow" --arg r "$rrepo" \
-      '{date: $d, text: $t, allow: $a, repo: (if $r == "" then null else $r end)}')
-    sa_update "$ledger" '.rulings += [$r]' --argjson r "$ruling"
-    jq -cn --argjson r "$ruling" '{ruling: $r}' ;;
-  allowed)
-    [ $# -eq 0 ] || sa_tooling "$usage"
-    sa_read "$ledger"
-    jq -c '{allowed: [.rulings[] | .date as $d | (.allow // [])[] | {date: $d, call: .,
-      line: "Run `\(.)` without a hold: the owner allowed it on \($d)."}]}' <<<"$doc" ;;
-  scoped)
-    srepo=''
-    case $# in 0) ;; 2) [ "$1" = --repo ] || sa_tooling "$usage"; sa_flag_value "$usage" "$2"; srepo=$2 ;; *) sa_tooling "$usage" ;; esac
-    sa_read "$ledger"
-    jq -c --arg r "$srepo" "$sa_jq_norm"'{scoped: [.rulings[] | select(.repo != null and ($r == "" or (.repo | norm_repo) == ($r | norm_repo))) | {date, text, repo}]}' <<<"$doc" ;;
   wait)
     [ $# -ge 3 ] || sa_tooling "$usage"
     key=$1; shift; reason='' order='' after=''
@@ -284,6 +271,8 @@ case $cmd in
     had=$(jq -r --arg k "$1" "$sa_jq_norm"'[(.waiting // [])[] | select((.key | norm_repo) == ($k | norm_repo))] | length > 0' <<<"$doc")
     [ "$had" != true ] || sa_update "$ledger" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' --arg k "$1"
     jq -cn --arg k "$1" --argjson r "$had" '{key: $k, removed: $r}' ;;
+  ruling|allowed|scoped|pin|migrate-rulings)
+    source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/rulings.sh" && ledger_rulings "$cmd" "$@" ;;
   need|pushed|unneed|limit|unlimit)
     source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/owner.sh" && ledger_owner "$cmd" "$@" ;;
   *) sa_tooling "$usage" ;;
