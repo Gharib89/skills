@@ -35,6 +35,13 @@ L ruling "after a crash" >/dev/null; rc=$?
 check_rc "a dead writer's lock is taken over" 0 "$rc"
 check "and the write lands" "after a crash" "$(jq -r '.rulings[].text' "$led")"
 check "the lock is gone once the write ends" "" "$(ls "$led".lock* 2>/dev/null)"
+# A takeover cut short leaves its marker; the refusal names both files.
+bash -c 'exit 0' & dead=$!; wait "$dead"
+printf '%s\n' "$dead" > "$led.lock"; : > "$led.lock.takeover"
+out=$(SA_LOCK_TRIES=3 L ruling "behind a cut-short takeover" 2>/dev/null); rc=$?
+check_rc "a dead lock beside a leftover takeover marker is exit 2" 2 "$rc"
+check "the refusal names both files" "$led.lock is held by pid $dead and a takeover was cut short; remove $led.lock and $led.lock.takeover if no ledger write runs" "$(jq -r .error <<<"$out")"
+rm -f "$led.lock" "$led.lock.takeover"
 # A pid reused after a kill or a reboot by a process that is no ledger writer.
 sleep 30 & other=$!
 printf '%s\n' "$other" > "$led.lock"
@@ -47,10 +54,15 @@ out=$(SA_LOCK_TRIES=3 L ruling "behind an empty lock" 2>/dev/null); rc=$?
 check_rc "a lock that reads empty is kept, and the wait ends in exit 2" 2 "$rc"
 check "the refusal names the lock" "$led.lock is held by pid unknown; remove it if no ledger write runs" "$(jq -r .error <<<"$out")"
 check "and the empty lock is still there" yes "$([ -f "$led.lock" ] && [ ! -s "$led.lock" ] && echo yes)"
-printf '%s\n' "$$" > "$led.lock"
+# A live writer started by a relative path (`bash ledger.sh` from its folder).
+mkdir -p "$tmp/rel"; printf 'sleep 30\n' > "$tmp/rel/ledger.sh"
+(cd "$tmp/rel" && exec bash ledger.sh) & holder=$!
+sleep 0.2
+printf '%s\n' "$holder" > "$led.lock"
 out=$(SA_LOCK_TRIES=3 L ruling "behind a live lock" 2>/dev/null); rc=$?
-check_rc "a live holder outlasting the wait is exit 2" 2 "$rc"
-check "the refusal names its pid" "$led.lock is held by pid $$; remove it if no ledger write runs" "$(jq -r .error <<<"$out")"
+kill "$holder" 2>/dev/null; wait "$holder" 2>/dev/null
+check_rc "a live holder run by a relative path, outlasting the wait, is exit 2" 2 "$rc"
+check "the refusal names its pid" "$led.lock is held by pid $holder; remove it if no ledger write runs" "$(jq -r .error <<<"$out")"
 check "and neither write landed" "past a reused pid" "$(jq -r '.rulings[-1].text' "$led")"
 rm -f "$led.lock"
 for bad in x 0 08; do
@@ -117,6 +129,12 @@ out=$(PATH="$tmp/mid:$PATH" bash "$s/reconcile.sh" --ledger "$led"); rc=$?
 check_rc "reconcile exits 0 over a re-spelled waiting row" 0 "$rc"
 check "reconcile reports the row dropped" "$repo#7" "$(jq -r '.dropped[].key' <<<"$out")"
 check "and the re-spelled row is dropped with it" 0 "$(jq '.waiting | length' "$led")"
+
+# A status whose merged_ack is no array is refused by name before the write.
+printf '%s\n' '{"entries":{},"rulings":[],"status":{"merged_ack":"x"}}' > "$led"
+out=$(bash "$s/status.sh" --ledger "$led" --digest 2>/dev/null); rc=$?
+check_rc "status refuses a merged_ack that is no array" 2 "$rc"
+check "and names the field" "$led: status is not an object with a merged_ack array" "$(jq -r .error <<<"$out")"
 
 # --- no script writes the ledger but sa_update -----------------------------------
 # sa_write is the bare write; outside lib/ledger-io.sh it may name only the fleet and

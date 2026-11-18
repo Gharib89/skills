@@ -85,7 +85,8 @@ now=$(jq -c "$sa_jq_norm$sa_jq_waiting"'
      unpushed: [(.needs // [])[] | select(.pushed != true) | {key, action, since}]}' <<<"$doc") \
   && [ -n "$now" ] || sa_tooling "$ledger: needs, waiting and entries are not the shapes status reads"
 
-printed=$(jq -c '.status.rows // {}' <<<"$doc") || sa_tooling "$ledger: status is not an object"
+printed=$(jq -ec '(.status // {}) as $s | if ($s | type) == "object" and (($s.merged_ack // []) | type) == "array" then $s.rows // {} else error end' <<<"$doc") \
+  || sa_tooling "$ledger: status is not an object with a merged_ack array"
 changed=$(jq -r --argjson p "$printed" '.rows != $p' <<<"$now")
 block=$(jq -r --argjson d "$digest" --argjson c "$changed" --argjson q "$qdoc" --arg inst "$instance" '
   def pct: if . == null then "unknown" else "\((. * 100) | round)%" end;

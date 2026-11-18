@@ -2,14 +2,17 @@
 # sa_write, and sa_lock and sa_update, the one way a ledger is written; and
 # sa_pid_runs, which tells a live lock holder from a reused pid.
 
-# sa_pid_runs <pid> <glob>: the pid is alive and its command line matches the
-# glob, so a pid reused by another process after a kill or a reboot does not
-# pass for a lock's holder. /bin/ps by its full path, which Linux and macOS both
-# ship, and which the tests' fake `ps` on PATH does not shadow.
+# sa_pid_runs <pid> <glob>...: the pid is alive and its command line matches one
+# of the globs, so a pid reused by another process after a kill or a reboot does
+# not pass for a lock's holder. /bin/ps by its full path, which Linux and macOS
+# both ship, and which the tests' fake `ps` on PATH does not shadow.
 sa_pid_runs() {
-  local args
-  # shellcheck disable=SC2053  # $2 is a glob on purpose
-  args=$(/bin/ps -p "$1" -o args= 2>/dev/null) && [[ $args == $2 ]]
+  local args g
+  args=$(/bin/ps -p "$1" -o args= 2>/dev/null) || return 1
+  shift
+  # shellcheck disable=SC2053  # each glob matches on purpose
+  for g in "$@"; do [[ $args == $g ]] && return 0; done
+  return 1
 }
 
 # sa_read <ledger>: the ledger's JSON in $doc, an empty one for a file not yet
@@ -45,9 +48,9 @@ sa_write() {
 # lands inside. `<ledger>.lock` holds the holder's pid, created with noclobber
 # (an exclusive create in bash itself, so it needs no tool beyond the shell) and
 # removed on exit by the EXIT trap this sets, so a script that writes the ledger
-# sets no EXIT trap of its own. One whose pid is gone, or now runs no
-# super-agent script (a pid reused after a kill or a reboot), is a dead writer's,
-# taken over under `<ledger>.lock.takeover` so two waiters never both remove it; one
+# sets no EXIT trap of its own. One whose pid is gone, or now runs none of the
+# scripts that write a ledger (a pid reused after a kill or a reboot), is a dead
+# writer's, taken over under `<ledger>.lock.takeover` so two waiters never both remove it; one
 # that reads empty is kept, since its writer may not have written its pid yet. A
 # live holder is waited on for 30 s at most (SA_LOCK_TRIES polls of 0.05 s, 600
 # unless a test sets fewer). A second call is a no-op.
@@ -59,12 +62,13 @@ sa_lock() {
   for ((try = 0; try < ${SA_LOCK_TRIES:-600}; try++)); do
     (set -C; printf '%s\n' "$$" > "$1.lock") 2>/dev/null && { sa_locked=$1; break; }
     pid=$(cat "$1.lock" 2>/dev/null)
-    if [ -n "$pid" ] && ! sa_pid_runs "$pid" '*super-agent*' && (set -C; : > "$1.lock.takeover") 2>/dev/null; then
+    if [ -n "$pid" ] && ! sa_pid_runs "$pid" '*ledger.sh*' '*status.sh*' '*reconcile.sh*' && (set -C; : > "$1.lock.takeover") 2>/dev/null; then
       [ "$(cat "$1.lock" 2>/dev/null)" != "$pid" ] || rm -f "$1.lock"
       rm -f "$1.lock.takeover"; continue
     fi
     sleep 0.05 2>/dev/null
   done
+  [ "${sa_locked:-}" = "$1" ] || { [ -e "$1.lock.takeover" ] && sa_tooling "$1.lock is held by pid ${pid:-unknown} and a takeover was cut short; remove $1.lock and $1.lock.takeover if no ledger write runs"; }
   [ "${sa_locked:-}" = "$1" ] || sa_tooling "$1.lock is held by pid ${pid:-unknown}; remove it if no ledger write runs"
   trap '[ "$(cat "$sa_locked.lock" 2>/dev/null)" = "$$" ] && rm -f "$sa_locked.lock"' EXIT
 }
