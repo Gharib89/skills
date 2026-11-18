@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # super-agent's ledger writes are serialized: concurrent `ledger` writes all
 # land, a write made while `reconcile` reads T3 and GitHub survives its write,
-# and no script writes the ledger except through `sa_update` in _lib.sh.
+# and no script writes the ledger except through `sa_update` in lib/ledger-io.sh.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -112,10 +112,10 @@ check "reconcile reports the row dropped" "$repo#7" "$(jq -r '.dropped[].key' <<
 check "and the re-spelled row is dropped with it" 0 "$(jq '.waiting | length' "$led")"
 
 # --- no script writes the ledger but sa_update -----------------------------------
-# sa_write is the bare write; outside _lib.sh it may name only the fleet and
+# sa_write is the bare write; outside lib/ledger-io.sh it may name only the fleet and
 # quota files, never a ledger.
 check "sa_write names no ledger outside sa_update" "" \
-  "$(grep -rn 'sa_write' "$s" | grep -v "^$s/_lib.sh:" | grep -v 'sa_write "\$fleet' | grep -v 'sa_write "\$fleet_file"' | grep -v 'sa_write "\$save"')"
+  "$(grep -rn 'sa_write' "$s" | grep -v "^$s/lib/ledger-io.sh:" | grep -v 'sa_write "\$fleet' | grep -v 'sa_write "\$fleet_file"' | grep -v 'sa_write "\$save"')"
 check "nothing redirects into a ledger" "" "$(grep -rnE '>>? *"\$(ledger|led|1)"' "$s")"
 
 finish

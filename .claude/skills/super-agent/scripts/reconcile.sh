@@ -68,7 +68,10 @@
 # to tell a super agent that answered a wake from one that did not.
 #
 # stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, ready,
-#         dropped, unqueued, parents_done, cleanup, verify, escalate, errors}:
+#         dropped, unqueued, parents_done, cleanup, verify, escalate, errors, skill}:
+#         `skill` {loaded, source, stale}: the running super-agent copy's version
+#         against the one on `sa_skill_source`'s default branch, `stale` true when
+#         the running one is older, null when either version cannot be read;
 #         `entries` one {key, from, stage, stalls, observed} per open entry that
 #         was read; `stalled` one {key, thread, stalls, reason} per stall counted
 #         now, `reason` `run-completed` or `stall-window`;
@@ -251,7 +254,8 @@ fi
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 
 # The ledger goes in on stdin: one argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
-jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" "$sa_jq_norm"'
+skill=$(sa_skill_stale)
+jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" --argjson sk "$skill" "$sa_jq_norm"'
   . as $d |
   def pick($stage; f): [$e[] | select(.stage == $stage) | f];
   def entries: [$d.entries[]?];
@@ -280,4 +284,4 @@ jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson 
         elif .stage == "at-rest" and (.stalls // 0) >= 3 then {reason: "stall-cap", detail: .stalls}
         else null end) as $r
      | select($r != null and (needed(.key; $r.reason) | not)) | {key, thread, reason: $r.reason, detail: $r.detail}],
-   errors: $errs}' <<<"$doc"
+   errors: $errs, skill: $sk}' <<<"$doc"

@@ -85,75 +85,8 @@ command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 # never watched again, except a settled `triage` entry, which `reconcile` re-reads
 # for a new run (`woke`).
 
-# sa_read <ledger>: the ledger's JSON in $doc, an empty one for a file not yet
-# written. A file that is not JSON or has the wrong shape is refused by name,
-# since valid JSON of the wrong shape fails at its first use, far from the file.
-# It sets a variable rather than printing, so a refusal's JSON reaches stdout
-# and not a command substitution.
-# shellcheck disable=SC2034  # doc is read by the scripts that call it
-sa_read() {
-  [ -f "$1" ] || { doc='{"entries":{},"rulings":[]}'; return 0; }
-  jq -e . "$1" >/dev/null 2>&1 || sa_tooling "$1: not JSON"
-  jq -e '(.entries | type) == "object"' "$1" >/dev/null || sa_tooling "$1: entries must be an object"
-  jq -e '(.rulings | type) == "array"' "$1" >/dev/null || sa_tooling "$1: rulings must be an array"
-  doc=$(cat "$1")
-}
-
-# sa_write <ledger> <json>: a temp file beside the ledger, then a rename, so a
-# reader sees the old ledger or the new one and a crash leaves the old one whole.
-# A ledger is written through sa_update only; the fleet and quota files call this.
-sa_write() {
-  local dir tmp
-  dir=$(dirname "$1")
-  mkdir -p "$dir" || sa_tooling "cannot create $dir"
-  tmp=$(mktemp "$dir/.ledger.XXXXXX") || sa_tooling "cannot write in $dir"
-  trap 'rm -f "$tmp"; trap - RETURN' RETURN
-  if printf '%s\n' "$2" | jq . > "$tmp" && mv "$tmp" "$1"; then return 0; fi
-  rm -f "$tmp"
-  sa_tooling "cannot write $1"
-}
-
-# sa_lock <ledger>: an exclusive lock on the ledger, held until this process
-# exits, so a read and the write it leads to are one step no other ledger write
-# lands inside. `<ledger>.lock` holds the holder's pid, created with noclobber
-# (an exclusive create in bash itself, so it needs no tool beyond the shell) and
-# removed on exit by the EXIT trap this sets, so a script that writes the ledger
-# sets no EXIT trap of its own. One whose pid is gone is a dead writer's, taken
-# over under `<ledger>.lock.takeover` so two waiters never both remove it; one
-# that reads empty is kept, since its writer may not have written its pid yet. A
-# live holder is waited on for 30 s at most (SA_LOCK_TRIES polls of 0.05 s, 600
-# unless a test sets fewer). A second call is a no-op.
-sa_lock() {
-  [ "${sa_locked:-}" = "$1" ] && return 0
-  local pid='' try
-  case ${SA_LOCK_TRIES:-600} in 0*|*[!0-9]*) sa_tooling "SA_LOCK_TRIES must be a whole number of 1 or more" ;; esac
-  mkdir -p "$(dirname "$1")" || sa_tooling "cannot create $(dirname "$1")"
-  for ((try = 0; try < ${SA_LOCK_TRIES:-600}; try++)); do
-    (set -C; printf '%s\n' "$$" > "$1.lock") 2>/dev/null && { sa_locked=$1; break; }
-    pid=$(cat "$1.lock" 2>/dev/null)
-    if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null && (set -C; : > "$1.lock.takeover") 2>/dev/null; then
-      [ "$(cat "$1.lock" 2>/dev/null)" != "$pid" ] || rm -f "$1.lock"
-      rm -f "$1.lock.takeover"; continue
-    fi
-    sleep 0.05 2>/dev/null
-  done
-  [ "${sa_locked:-}" = "$1" ] || sa_tooling "$1.lock is held by pid ${pid:-unknown}; remove it if no ledger write runs"
-  trap '[ "$(cat "$sa_locked.lock" 2>/dev/null)" = "$$" ] && rm -f "$sa_locked.lock"' EXIT
-}
-
-# sa_update <ledger> <jq filter> [jq args]...: the one way to write the ledger.
-# Under sa_lock it re-reads the ledger, applies the filter to what it holds now
-# and writes the result through sa_write, leaving it in $doc. Two writers that
-# each wrote back the copy they read would keep only the last one's change.
-sa_update() {
-  local ledger=$1 filter=$2 new
-  shift 2
-  sa_lock "$ledger"
-  sa_read "$ledger"
-  new=$(jq -c "$@" "$filter" <<<"$doc") && [ -n "$new" ] || sa_tooling "cannot update $ledger"
-  doc=$new
-  sa_write "$ledger" "$doc"
-}
+# Reading and writing the ledger.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/ledger-io.sh" || { printf '{"error":"cannot source lib/ledger-io.sh"}\n'; exit 2; }
 
 # sa_uri <text>: URI-encoded, since a `/` in a branch name otherwise addresses
 # another resource.
@@ -206,6 +139,44 @@ sa_remote_flag() {
 # running until the stall window passes, so it raises no `run-finished` and adds no
 # stall. Defined once here, where the observation matches it.
 sa_waiting_line='Waiting on my own background work.'
+
+# The lowest installed ship a ship launch accepts: `launch.sh` answers `stale_ship` below
+# it, so the repo is refreshed first. 0.67.0 is the first ship whose SKILL.md asks for
+# `sa_waiting_line`; an older copy waits without it, and its waits read as stalls.
+# shellcheck disable=SC2034  # read by launch.sh
+sa_min_ship='0.67.0'
+
+# The repo the super agent's own skill is published from: a refresh
+# (`npx skills@1.8.1 add`) installs from it, so its default branch holds the version a
+# refresh would bring.
+sa_skill_source='Gharib89/skills'
+
+# `ver`: an X.Y.Z version as an array of numbers, so versions compare by number.
+# `skill_version`: the one `  version: X.Y.Z` line in a SKILL.md's frontmatter (between
+# its opening and closing `---`, under any key; a SKILL.md carries it as
+# `metadata.version`), else "": a missing, repeated or malformed version
+# (`0.67`, `v1.0.0`, a pre-release) is unread, never a number, and a body line is never read.
+sa_jq_ver='def ver: split(".") | map(tonumber);
+  def skill_version: split("\n") | if .[0] != "---" then "" else .[1:]
+    | [.[:(index("---") // 0)][] | capture("^  version: (?<v>.*)$").v]
+    | if length == 1 and (.[0] | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) then .[0] else "" end end;'
+
+# sa_skill_version <owner/name> <path>: the version of the SKILL.md at <path> on the
+# repo's default branch, through `gh` REST; nothing printed when it cannot be read.
+sa_skill_version() {
+  gh api "repos/$1/contents/$2" 2>/dev/null </dev/null \
+    | jq -r "$sa_jq_ver"'.content // "" | gsub("\\s"; "") | @base64d | skill_version' 2>/dev/null
+}
+
+# sa_skill_stale: {loaded, source, stale}, the version of the super-agent copy running
+# this script against the one on `sa_skill_source`; `stale` true when the loaded one is
+# older, null with either version unread.
+sa_skill_stale() {
+  jq -cn --arg l "$(jq -Rsr "$sa_jq_ver"'skill_version' "$(dirname "${BASH_SOURCE[0]}")/../SKILL.md" 2>/dev/null)" \
+    --arg s "$(sa_skill_version "$sa_skill_source" skills/super-agent/SKILL.md)" "$sa_jq_ver"'
+    {loaded: (if $l == "" then null else $l end), source: (if $s == "" then null else $s end),
+     stale: (if $l == "" or $s == "" then null else ($l | ver) < ($s | ver) end)}'
+}
 
 # The contract line a triage launch carries (`launch.sh`): the triage skill is upstream,
 # so no SKILL.md this repo owns can ask a triage run for the waiting line the way ship's
