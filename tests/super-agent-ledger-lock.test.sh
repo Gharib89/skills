@@ -27,6 +27,25 @@ for i in $(seq "$n"); do L wait "$repo#$i" --reason busy >/dev/null & done
 wait
 check "$n concurrent waiting rows all land" "$n" "$(jq '.waiting | length' "$led")"
 
+# --- the lock itself ------------------------------------------------------------
+rm -f "$led"
+bash -c 'exit 0' & dead=$!; wait "$dead"
+printf '%s\n' "$dead" > "$led.lock"
+L ruling "after a crash" >/dev/null; rc=$?
+check_rc "a dead writer's lock is taken over" 0 "$rc"
+check "and the write lands" "after a crash" "$(jq -r '.rulings[].text' "$led")"
+check "the lock is gone once the write ends" "" "$(ls "$led".lock* 2>/dev/null)"
+: > "$led.lock"
+out=$(SA_LOCK_TRIES=3 L ruling "behind an empty lock" 2>/dev/null); rc=$?
+check_rc "a lock that reads empty is kept, and the wait ends in exit 2" 2 "$rc"
+check "the refusal names the lock" "$led.lock is held by pid unknown; remove it if no ledger write runs" "$(jq -r .error <<<"$out")"
+printf '%s\n' "$$" > "$led.lock"
+out=$(SA_LOCK_TRIES=3 L ruling "behind a live lock" 2>/dev/null); rc=$?
+check_rc "a live holder outlasting the wait is exit 2" 2 "$rc"
+check "the refusal names its pid" "$led.lock is held by pid $$; remove it if no ledger write runs" "$(jq -r .error <<<"$out")"
+check "and neither write landed" "after a crash" "$(jq -r '.rulings[].text' "$led")"
+rm -f "$led.lock"
+
 # --- a write made while reconcile runs survives it -----------------------------
 rm -f "$led"
 L add --repo $repo --number 5 --thread t-5 --worktree /wt/5 --branch feat/x-5 >/dev/null

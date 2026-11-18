@@ -117,18 +117,24 @@ sa_write() {
 # exits, so a read and the write it leads to are one step no other ledger write
 # lands inside. `<ledger>.lock` holds the holder's pid, created with noclobber
 # (an exclusive create in bash itself, so it needs no tool beyond the shell) and
-# removed on exit. One whose pid is gone is a dead writer's, taken over; one that
-# reads empty is kept, since its writer may not have written its pid yet. A live
-# holder is waited on for 30 s at most. A second call is a no-op.
+# removed on exit by the EXIT trap this sets, so a script that sources this file
+# sets no EXIT trap of its own. One whose pid is gone is a dead writer's, taken
+# over under `<ledger>.lock.takeover` so two waiters never both remove it; one
+# that reads empty is kept, since its writer may not have written its pid yet. A
+# live holder is waited on for 30 s at most (SA_LOCK_TRIES polls of 0.05 s, 600
+# unless a test sets fewer). A second call is a no-op.
 sa_lock() {
   [ "${sa_locked:-}" = "$1" ] && return 0
   local pid='' try
   mkdir -p "$(dirname "$1")" || sa_tooling "cannot create $(dirname "$1")"
-  for ((try = 0; try < 600; try++)); do
+  for ((try = 0; try < ${SA_LOCK_TRIES:-600}; try++)); do
     (set -C; printf '%s\n' "$$" > "$1.lock") 2>/dev/null && { sa_locked=$1; break; }
     pid=$(cat "$1.lock" 2>/dev/null)
-    if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then rm -f "$1.lock"; continue; fi
-    sleep 0.05 2>/dev/null || read -rt 0.05 <> <(:)
+    if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null && (set -C; : > "$1.lock.takeover") 2>/dev/null; then
+      [ "$(cat "$1.lock" 2>/dev/null)" != "$pid" ] || rm -f "$1.lock"
+      rm -f "$1.lock.takeover"; continue
+    fi
+    sleep 0.05 2>/dev/null
   done
   [ "${sa_locked:-}" = "$1" ] || sa_tooling "$1.lock is held by pid ${pid:-unknown}; remove it if no ledger write runs"
   trap '[ "$(cat "$sa_locked.lock" 2>/dev/null)" = "$$" ] && rm -f "$sa_locked.lock"' EXIT
