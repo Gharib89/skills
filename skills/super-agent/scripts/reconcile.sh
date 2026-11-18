@@ -200,8 +200,7 @@ while IFS= read -r entry; do
         end')
     stalls=$(jq -r .stalls <<<"$verdict") stall=$(jq -r '.stall // ""' <<<"$verdict")
     doc=$(jq -c --arg k "$key" --argjson v "$verdict" \
-      '.entries[$k] |= (.stalls = $v.stalls | .rest_since = $v.rest_since | .judged_run = $v.judged_run
-         )' <<<"$doc") ;;
+      '.entries[$k] |= (.stalls = $v.stalls | .rest_since = $v.rest_since | .judged_run = $v.judged_run)' <<<"$doc") ;;
   esac
   # an end owes the super agent its cleanup, and a merged ship PR a criteria check;
   # each stays owed until the super agent clears it (`ledger set <key> <field> false`)

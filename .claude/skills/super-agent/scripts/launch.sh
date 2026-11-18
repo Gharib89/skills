@@ -29,10 +29,10 @@
 # (`.claude/skills/<name>/SKILL.md` on its default branch), or else on this machine
 # (`~/.claude/skills/<name>/SKILL.md`), which then places the thread here alone.
 # `ship` and `triage` keep their kinds, and any other skill records a `task` entry
-# keyed `task:<name>-<repo name>-<n>`, interactive when the skill waits on the owner by
-# design (`sa_interactive_skills`, `_lib.sh`). --note is the owner's note for this
-# ticket, one line: a newline in it exits 2. --out also writes the answer to a file,
-# only when it launches; `record` reads that file as --launch.
+# keyed `task:<name>-<repo name>-<n>`, interactive when the skill waits on the owner
+# by design (`sa_interactive_skills`, `_lib.sh`). --note is the owner's note for
+# this ticket, one line: a newline in it exits 2. --out also writes the answer to a
+# file, only when it launches; `record` reads that file as --launch.
 # The ticket's Size label picks the tier (M when it has none, `size_source` says
 # so); `ready-for-agent` is a `ship` launch, `needs-triage` a `triage` one.
 # The launch message (`args.message`) is the owner-skill invocation (`/ship <n>`,

@@ -135,7 +135,7 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
                     elif $drv == "claude" and .fivehour != null and .fivehour.remaining < $f5 then "5 hour bucket under the 5 hour floor \($f5)"
                     elif $drv == "pi" and ([$models[] as $m | (.value.models[$m] // null)] | any(. == null)) then "no model for the tier"
                     else null end)}] as $all
-  | ($go and ([$all[] | select(.skip == null)] | length) == 0) as $past
+  | ($go and ([$all[] | select(.skip == null and (.lr | not))] | length) == 0) as $past
   | [$all[] | if $past and (.skip // "" | test("floor|reserve")) and (.driver != "pi" or ([$models[] as $m | (.value.models[$m] // null)] | all(. != null)))
       then .skip = null else . end] as $cands
   | ([$cands[] | select(.skip == null)] as $ok

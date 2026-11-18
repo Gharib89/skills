@@ -113,7 +113,7 @@
 #         `needs` and `review_limits`; any failure {error}
 # exit: 0 ok · 1 the key is already in, or not in, the ledger, `stage`, or an
 #       identity field, an entry that ended (`pause`, `reset-stalls`) or is not
-#       paused (`unpause`) · 2 usage, a value that is not JSON, an
+#       paused and open (`unpause`) · 2 usage, a value that is not JSON, an
 #       unreadable or wrong-shaped ledger, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }

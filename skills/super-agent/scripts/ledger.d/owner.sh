@@ -21,7 +21,7 @@ ledger_owner() {
       sa_update "$ledger" '.entries[$k] |= (.paused = true | .updated_at = $now)' --arg k "$key" --arg now "$now"
       jq -cn --arg k "$key" '{key: $k, paused: true}' ;;
     unpause)
-      jq -e --arg k "$key" '.entries[$k].paused == true' <<<"$doc" >/dev/null || sa_fail "$key is not paused: nothing to give back"
+      jq -e --arg k "$key" "$sa_jq_open"'.entries[$k] | .paused == true and is_open' <<<"$doc" >/dev/null || sa_fail "$key is not a paused open entry: nothing to give back"
       # watching restarts from the thread as it is now: `resumed` has the next
       # reconcile take its run count as already judged
       sa_update "$ledger" '.entries[$k] |= (.paused = false | .observed = null | .rest_since = null | .resumed = true | .updated_at = $now)' \

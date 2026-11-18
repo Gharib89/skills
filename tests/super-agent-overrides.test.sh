@@ -46,6 +46,9 @@ jq -cn '{providers: {a: {driver: "claude", auth: "ok", buckets: [{id: "week", wi
   b: {driver: "claude", auth: "ok", buckets: [{id: "week", window: "weekly", remaining: 0.5}, {id: "five", window: "5h", remaining: 0.8}]}}}' > "$tmp/q4.json"
 check "with an instance inside the floors, --owner-go is not used and routes as without it" "b false" \
   "$(bash "$s/route.sh" --size S --quota "$tmp/q4.json" --owner-go | jq -r '"\(.instance_id) \(.owner_go)"')"
+jq '.providers.cur = {driver: "cursor", auth: "ok", route: true, buckets: []}' "$quota" > "$tmp/q5.json"
+check "a last-resort instance does not stand in for the go" "claudeAgent true" \
+  "$(bash "$s/route.sh" --size S --quota "$tmp/q5.json" --owner-go | jq -r '"\(.instance_id) \(.owner_go)"')"
 
 # --- --skill launches a named skill; an interactive entry gets no stall -----------------
 reset; issue 9 "widgets: settle the design" enhancement
@@ -133,6 +136,8 @@ ship_entry 22 th-22; R >/dev/null; LG pause $repo#22 >/dev/null
 sa_issue $repo 22 closed
 R >/dev/null
 check "a paused entry whose issue closed settles with no cleanup owed" "settled null" "$(LG get $repo#22 | jq -r '"\(.stage) \(.cleanup_owed | tostring)"')"
+check "unpause of a paused entry that ended exits 1, its baseline kept" "1 false" \
+  "$(LG unpause $repo#22 >/dev/null 2>&1; echo $?) $(LG get $repo#22 | jq -r '.observed == null')"
 LG add --repo $repo --number 23 --kind triage --thread th-23 --worktree /wt/23 --branch triage/x-23 --machine home >/dev/null
 sa_thread th-23 idle 1 0 /wt/23 triage/x-23; sa_pr $repo triage/x-23 none; sa_issue $repo 23 open needs-triage
 R >/dev/null; LG pause $repo#23 >/dev/null; sa_issue $repo 23 closed; R >/dev/null
