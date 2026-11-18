@@ -75,15 +75,15 @@
 # watcher and `reconcile` treat it like a launched one. `--interactive` marks a task
 # whose skill waits on the owner by design (a grill): `reconcile` counts it no stall
 # and does not settle it on its rest, so it leaves on `drop`.
-# `pause` is the owner taking an open entry's thread ("take <slug>"): a `paused` entry
+# `pause` is the owner taking an open entry's thread ("take <key>"): a `paused` entry
 # keeps its stage, so it still takes its machine's slot, and `reconcile` and `watch`
 # count it no stall and raise no step-in for it; a paused ticket entry settles on its
 # PR merging or its issue closing, read from GitHub alone, with no cleanup owed, and a
-# paused task leaves only on `drop`. `unpause` gives it back ("give back <slug>"): the
+# paused task stays until `drop` or `unpause`. `unpause` gives a paused entry back: the
 # mark and the `observed` baseline go, so the next `reconcile` watches from the
 # thread's state then, its runs since the pause counting no stall. `drop` removes an
-# entry ("drop <slug>"). `reset-stalls` zeroes an entry's stall count and restarts its
-# stall window, and records a dated ruling naming the key and the count it replaced.
+# entry of any stage. `reset-stalls` zeroes an open entry's stall count and restarts
+# its stall window, and records a dated ruling naming the key and the count it replaced.
 # A `need` is something only the owner can settle: one row in `needs` per key
 # (the entry, or a waiting ticket), its one action, `since` when and whether its
 # push went out. A repeat with the same action keeps `since` and `pushed`, a new
@@ -108,10 +108,12 @@
 #         removed}; `need` {need: {key, action, since, pushed}}; `pushed`
 #         {need}; `unneed` {key, removed}; `limit` {limit: {repo, reviewer,
 #         since}}; `unlimit` {repo, removed}; `pause` and `unpause` {key, paused};
-#         `drop` {key, removed}; `reset-stalls` {key, stalls, ruling}; `list` also holds `waiting`,
+#         `drop` {key, removed}; `reset-stalls` {key, stalls, ruling};
+#         `list` also holds `waiting`,
 #         `needs` and `review_limits`; any failure {error}
 # exit: 0 ok · 1 the key is already in, or not in, the ledger, `stage`, or an
-#       identity field · 2 usage, a value that is not JSON, an
+#       identity field, an entry that ended (`pause`, `reset-stalls`) or is not
+#       paused (`unpause`) · 2 usage, a value that is not JSON, an
 #       unreadable or wrong-shaped ledger, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -254,8 +256,7 @@ case $cmd in
         *) sa_tooling "$usage" ;;
       esac
     done
-    ruling=$(jq -cn --arg d "$(date -u +%F)" --arg t "$text" --argjson a "$allow" --arg r "$rrepo" \
-      '{date: $d, text: $t, allow: $a, repo: (if $r == "" then null else $r end)}')
+    ruling=$(sa_ruling_row "$text" "$allow" "$rrepo")
     sa_update "$ledger" '.rulings += [$r]' --argjson r "$ruling"
     jq -cn --argjson r "$ruling" '{ruling: $r}' ;;
   allowed)

@@ -17,7 +17,11 @@
 # thread only: one whose run count grew, or that runs, goes back to `at-rest` or
 # `running` and is named in `woke`. A `--kind task` entry has no ticket: it is
 # `running` while its thread runs and `settled` once the thread has run and is at
-# rest, whatever any issue or PR says. Settling the
+# rest, whatever any issue or PR says, unless it is `interactive` (it waits on the
+# owner: never settled on rest, no stall). A `paused` entry counts no stall and owes
+# no cleanup: a ticket's is read from GitHub alone and settles on a merged PR or a
+# closed issue, a task's is not read. `resumed` (give-back) takes the thread's run
+# count as judged. Settling the
 # thread in T3 is the super agent's act, on each entry `settled` names, and it
 # never archives. It keeps each entry's stall count: +1 for a stall (a run that
 # completed with no merged PR and no merge-gate summary, counted once per run,
@@ -197,12 +201,12 @@ while IFS= read -r entry; do
     stalls=$(jq -r .stalls <<<"$verdict") stall=$(jq -r '.stall // ""' <<<"$verdict")
     doc=$(jq -c --arg k "$key" --argjson v "$verdict" \
       '.entries[$k] |= (.stalls = $v.stalls | .rest_since = $v.rest_since | .judged_run = $v.judged_run
-         | if has("resumed") then .resumed = null else . end)' <<<"$doc") ;;
+         )' <<<"$doc") ;;
   esac
   # an end owes the super agent its cleanup, and a merged ship PR a criteria check;
   # each stays owed until the super agent clears it (`ledger set <key> <field> false`)
   doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
-    '.entries[$k] |= (.stage = $s | .observed = $o | .error = null | .updated_at = $now
+    '.entries[$k] |= (.stage = $s | .observed = $o | .error = null | .updated_at = $now | del(.resumed)
       | if ($s == "settled" or $s == "closed") and .paused != true then .cleanup_owed = true else . end
       | if (.kind // "ship") == "ship" and ($s == "merged" or $s == "settled") and $o.pr.state == "merged" and .verify_owed == null
         then .verify_owed = true else . end)' <<<"$doc")
@@ -226,7 +230,7 @@ while IFS= read -r entry; do
   doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
     '.entries[$k] |= (.stage = $s | .observed += $o | .rest_since = null | .updated_at = $now)' <<<"$doc")
   woke=$(jq -c --argjson e "$entry" '. + [{key: $e.key, thread: $e.thread, kind: $e.kind}]' <<<"$woke")
-done < <(jq -c '.entries[] | select(.stage == "settled" and .kind == "triage")' <<<"$doc")
+done < <(jq -c '.entries[] | select(.stage == "settled" and .kind == "triage" and .paused != true)' <<<"$doc")
 # Issues filed while a batch runs that nothing holds: offered once, then remembered.
 unqueued='[]'
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/unqueued.sh" || sa_tooling "cannot source reconcile.d/unqueued.sh"

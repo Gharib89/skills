@@ -64,7 +64,7 @@ fi
 
 # The rows as the ledger holds them now: {rows: {needs, merged, running, waiting}
 # (a row absent when empty), merged_keys, unpushed}.
-now=$(jq -c "$sa_jq_norm$sa_jq_waiting"'
+now=$(jq -c "$sa_jq_norm$sa_jq_waiting$sa_jq_open"'
   def short: sub("^[^/]*/"; "");
   def link($repo; $n): "[\($repo | short)#\($n)](https://github.com/\($repo)/issues/\($n))";
   def keylink: if startswith("task:") then . else link(sub("#.*$"; ""); sub("^.*#"; "")) end;
@@ -79,7 +79,7 @@ now=$(jq -c "$sa_jq_norm$sa_jq_waiting"'
       and (.key as $k | $ack | map(norm_repo) | index($k | norm_repo) | not))] as $merged
   | {rows: (row("Needs you"; [(.needs // [])[] | "\(.key | keylink) \(.action)"]; "; ")
       + row("Merged"; [$merged[] | "\(link(.repo; .number))" + (if .observed.pr.number then " PR [\(.observed.pr.number)](https://github.com/\(.repo)/pull/\(.observed.pr.number))" else "" end)]; ", ")
-      + row("Running"; [.entries[] | select((.stage | IN("launched", "running", "at-rest")) or (.paused == true and (.stage | IN("settled", "closed") | not)))
+      + row("Running"; [.entries[] | select((.stage | IN("launched", "running", "at-rest")) or (.paused == true and is_open))
           | "\(tlabel) \(state)" + (if .instance_id then " on \(.instance_id)" else "" end) + (if .paused == true then " (paused)" else "" end)]; ", ")
       + row("Waiting"; [waiting_list[] | .key | keylink]; ", ")
       + row("Reviewer limit"; [(.review_limits // [])[] | "\(.repo) merging on the fallback reviewer only (\(.reviewer) hit its usage limit at \(.since))"]; "; ")),

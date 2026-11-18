@@ -19,8 +19,9 @@
 # (a `claude` instance) whose 5 hour bucket is under the 5 hour floor, is skipped.
 # The floor and the reserve are fractions the quota read carries from the fleet
 # file (`floors.five_hour`, default 0.1; `floors.weekly_reserve`, default 0.05).
-# --owner-go is the owner's go past both: they read as 0, so only a failed auth
-# or a weekly bucket at 0 still skips an instance.
+# --owner-go is the owner's go past both, taken only when no instance passes them:
+# then a floor or the reserve skips none, and only a failed auth, a weekly bucket at 0
+# or no model for the tier still skips one (`owner_go` true says the go was used).
 # Of the rest the one with the most weekly headroom wins, its weekly remaining
 # times its `weekly_weight` (default 1, the quota read carries it from the fleet
 # entry: 40% of a seat three times the size is more work than 60% of one), an
@@ -47,7 +48,7 @@
 # is under 50% and agy's Claude weekly bucket is not, both known.
 #
 # stdout: with --size: {size, raise, default, wanted, tier, ask, reason, bucket,
-#         instance_id, model, options, wanted_model, wanted_options}, each tier a {model, effort}; `tier` is
+#         instance_id, model, options, wanted_model, wanted_options, owner_go}, each tier a {model, effort}; `tier` is
 #         what to launch now and `ask` true when `wanted` needs the owner's yes
 #         first; `bucket` the weekly bucket read, {provider (the instance id),
 #         id, remaining}, null when unknown; `instance_id` the T3 instance to
@@ -118,8 +119,8 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
   [{model: "sonnet", effort: "medium"}, {model: "opus", effort: "medium"}, {model: "opus", effort: "high"}] as $ladder
   | ({XS: 0, S: 0, M: 1, L: 2, XL: 2}[$size]) as $d
   | ([$d + $raise, 2] | min) as $w
-  | (if $go then 0 else .floors.five_hour // 0.1 end) as $f5
-  | (if $go then 0 else .floors.weekly_reserve // 0.05 end) as $res
+  | (.floors.five_hour // 0.1) as $f5
+  | (.floors.weekly_reserve // 0.05) as $res
   | ([$ladder[$d].model, $ladder[$w].model] | unique) as $models
   | def weekly($e): [$e.value.buckets[]? | select(.window == "weekly"
       and (if $e.driver == "pi" then ((.group // "") | startswith("Claude")) else .id == "week" end))] | first;
@@ -133,12 +134,15 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
                     elif .bucket != null and .bucket.remaining < $res then "weekly under the weekly reserve \($res)"
                     elif $drv == "claude" and .fivehour != null and .fivehour.remaining < $f5 then "5 hour bucket under the 5 hour floor \($f5)"
                     elif $drv == "pi" and ([$models[] as $m | (.value.models[$m] // null)] | any(. == null)) then "no model for the tier"
-                    else null end)}] as $cands
+                    else null end)}] as $all
+  | ($go and ([$all[] | select(.skip == null)] | length) == 0) as $past
+  | [$all[] | if $past and (.skip // "" | test("floor|reserve")) and (.driver != "pi" or ([$models[] as $m | (.value.models[$m] // null)] | all(. != null)))
+      then .skip = null else . end] as $cands
   | ([$cands[] | select(.skip == null)] as $ok
       | (if ($ok | any(.lr | not)) then [$ok[] | select(.lr | not)] else $ok end)
       | sort_by([(if .bucket == null then 1 else 0 end), -((.bucket.remaining // 0) * (.value.weekly_weight // 1)), (if .driver == "claude" then 0 else 1 end), .key]) | first) as $pick
   | (if $pick == null or $pick.bucket == null then null else {provider: $pick.key, id: $pick.bucket.id, remaining: $pick.bucket.remaining} end) as $bucket
-  | ([$cands[] | select(.skip != null and (.skip | test("floor|reserve"))) | "\(.key) \(.skip)"] | join(", ")) as $floored
+  | ([$all[] | select(.skip != null and (.skip | test("floor|reserve"))) | "\(.key) \(.skip)"] | join(", ")) as $floored
   | ($w > $d and $bucket != null and $bucket.remaining < $low) as $ask
   | (if $w > $d and ($bucket == null or $ask) then $ladder[$d] else $ladder[$w] end) as $tier
   | def model($t): if $pick == null then null elif $pick.lr then ($pick.value.models[$t.model] // null) else ($pick.value.models[$t.model] // $t.model) end;
@@ -155,10 +159,11 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
        elif $bucket == null then "quota unknown: default tier"
        elif $ask then "weekly under 50%: the owner decides the raise"
        else "weekly at or above 50%: raised" end)
-       + (if $pick != null and $floored != "" then " (skipped: \($floored))" else "" end)),
+       + (if $pick != null and $floored != "" then (if $past then " (owner go past: \($floored))" else " (skipped: \($floored))" end) else "" end)),
      bucket: $bucket,
      instance_id: ($pick.key // null),
      model: model($tier),
      options: options($tier),
      wanted_model: model($ladder[$w]),
-     wanted_options: options($ladder[$w])}' "$quota" || sa_tooling "$quota: cannot be read"
+     wanted_options: options($ladder[$w]),
+     owner_go: ($past and $pick != null)}' "$quota" || sa_tooling "$quota: cannot be read"

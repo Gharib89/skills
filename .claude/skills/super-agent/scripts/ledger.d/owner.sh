@@ -21,6 +21,7 @@ ledger_owner() {
       sa_update "$ledger" '.entries[$k] |= (.paused = true | .updated_at = $now)' --arg k "$key" --arg now "$now"
       jq -cn --arg k "$key" '{key: $k, paused: true}' ;;
     unpause)
+      jq -e --arg k "$key" '.entries[$k].paused == true' <<<"$doc" >/dev/null || sa_fail "$key is not paused: nothing to give back"
       # watching restarts from the thread as it is now: `resumed` has the next
       # reconcile take its run count as already judged
       sa_update "$ledger" '.entries[$k] |= (.paused = false | .observed = null | .rest_since = null | .resumed = true | .updated_at = $now)' \
@@ -30,8 +31,9 @@ ledger_owner() {
       sa_update "$ledger" 'del(.entries[$k])' --arg k "$key"
       jq -cn --arg k "$key" '{key: $k, removed: true}' ;;
     reset-stalls)
+      jq -e --arg k "$key" "$sa_jq_open"'.entries[$k] | is_open' <<<"$doc" >/dev/null || sa_fail "$key has ended: no stalls to reset"
       stalls=$(jq -r --arg k "$key" '.entries[$k].stalls // 0' <<<"$doc")
-      ruling=$(jq -cn --arg d "$(date -u +%F)" --arg t "Owner reset-stalls: $key from $stalls stalls to 0." '{date: $d, text: $t, allow: [], repo: null}')
+      ruling=$(sa_ruling_row "Owner reset-stalls: $key from $stalls stalls to 0.")
       sa_update "$ledger" '.entries[$k] |= (.stalls = 0 | .rest_since = null | .updated_at = $now) | .rulings += [$r]' \
         --arg k "$key" --arg now "$now" --argjson r "$ruling"
       jq -cn --arg k "$key" --argjson r "$ruling" '{key: $k, stalls: 0, ruling: $r}' ;;

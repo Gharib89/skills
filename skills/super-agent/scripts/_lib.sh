@@ -173,6 +173,13 @@ sa_skill_version() {
     | jq -r "$sa_jq_ver"'.content // "" | gsub("\\s"; "") | @base64d | skill_version' 2>/dev/null
 }
 
+# sa_ruling_row <text> [<allow json> [<repo>]]: a dated ruling row, the one shape `ledger`
+# writes under `rulings`
+sa_ruling_row() {
+  jq -cn --arg d "$(date -u +%F)" --arg t "$1" --argjson a "${2:-[]}" --arg r "${3:-}" \
+    '{date: $d, text: $t, allow: $a, repo: (if $r == "" then null else $r end)}'
+}
+
 # sa_skill_stale: {loaded, source, stale}, the version of the super-agent copy running
 # this script against the one on `sa_skill_source`; `stale` true when the loaded one is
 # older, null with either version unread.

@@ -29,8 +29,8 @@ the one each step runs. A script that reads the ledger takes it by
 `super-agent/ledger.json` under `$XDG_STATE_HOME` (`~/.local/state` when
 unset), your own machine's state directory. A ledger key is `<owner/name>#<n>`,
 or `task:<slug>` for a `task` entry. Reconcile alone moves an entry's `stage`
-and `stalls`: never set `stalls` by hand, bar
-[the reset](reference/stall-ladder.md#the-ladder). `notify.sh` is the
+and `stalls`: never set `stalls` by hand; the one reset is
+[`reset-stalls`](reference/stall-ladder.md#the-ladder). `notify.sh` is the
 watcher's alarm ([watching](reference/watching.md#the-notify-command)): you
 never run it.
 
@@ -237,19 +237,27 @@ The other lists report:
 Each override the owner gives has a flag; never edit the ledger, fleet or quota
 file by hand to stand in for one.
 
-- "Go past the quota": `launch.sh ... --owner-go`. Route reads the 5 hour floor
-  and the weekly reserve as 0, and the launch records a dated ruling naming it.
-- "Run <skill> on <ticket>": `launch.sh ... --skill <name>`, any skill the repo
-  or this machine installs, in place of the one the labels pick (`no_skill`
-  when none does). A skill other than ship or triage records a `task` entry; a
-  grill's is **interactive**: no stall, and it leaves only on `drop`.
-- "Take <slug>": `ledger.sh --ledger <ledger> pause <key>`. The entry is
-  **paused**: it keeps its slot, gets no nudge, no step-in and no gate ruling,
-  and is read from GitHub alone; a ticket's settles when its PR merges or its
-  issue closes, with no cleanup (the thread and worktree are the owner's).
-- "Give back <slug>": `unpause <key>`, then reconcile: watching restarts from
-  the thread's state now. "Drop <slug>": `drop <key>`, the only way a paused or
-  interactive task leaves.
+Each `<thread>` below is the entry's ledger key.
+
+- "Go past the quota": `launch.sh ... --owner-go`. When no instance passes the
+  5 hour floor and the weekly reserve, route skips both, and `record` writes a
+  dated ruling naming the override.
+- "Run <skill> on <ticket>": `launch.sh ... --skill <name>`, in place of the
+  skill the labels pick. It must be installed in the repo or on this machine
+  (`no_skill` when it is in neither); one only this machine holds keeps the
+  thread here. A skill other than ship or triage records a
+  `task:<name>-<repo name>-<n>` entry; a grill's is **interactive**: no stall,
+  and it leaves only on `drop`. A grill thread you record with `launch record
+  --task` takes `--interactive` the same way.
+- "Take <thread>": `ledger.sh --ledger <ledger> pause <key>`. The entry is
+  **paused**: it keeps its slot, gets no step-in, and is read from GitHub alone;
+  a ticket's settles when its PR merges or its issue closes, with no cleanup
+  (the thread and worktree are the owner's).
+- "Give back <thread>": `unpause <key>`, then reconcile: watching restarts from
+  the thread's state now.
+- "Drop <thread>": `drop <key>` removes the entry, leaving its claim and
+  worktree to the owner. An interactive task leaves no other way, and a paused
+  task stays until it is dropped or given back.
 - "Reset its stalls": `reset-stalls <key>`, which records a ruling.
 
 ## Escalation

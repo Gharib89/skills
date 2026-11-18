@@ -175,18 +175,17 @@ while :; do
   while IFS= read -r entry; do
     key=$(jq -r .key <<<"$entry") thread=$(jq -r .thread <<<"$entry")
     read_ok=false event=''
-    if [ "$(jq -r '.paused == true' <<<"$entry")" = true ]; then
-      # paused: the thread is the owner's, so only the PR merging wakes, and a paused task nothing
-      [ "$(jq -r '.kind // "ship"' <<<"$entry")" != task ] || continue
+    paused=$(jq -r '.paused == true' <<<"$entry")
+    # a paused task's thread is the owner's until `drop`: nothing to read
+    [ "$paused" = true ] && [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ] && continue
+    if [ "$paused" = true ] || [ -n "$(jq -r '.environment_id // empty' <<<"$entry")" ]; then
+      # remote or paused: GitHub only, over the thread fields of the last reconcile; a
+      # paused thread is the owner's, so only its PR merging wakes
       if sa_pr_of "$entry"; then
         read_ok=true obs=$(jq -c --argjson pr "$pr_obs" '.observed + {pr: $pr}' <<<"$entry")
-        event=$(jq -rn --argjson e "$entry" --argjson n "$obs" 'if $n.pr.state == "merged" and $e.observed.pr.state != "merged" then "pr-merged" else empty end')
-      fi
-    elif [ -n "$(jq -r '.environment_id // empty' <<<"$entry")" ]; then
-      # remote: GitHub only, over the thread fields of the last reconcile
-      if sa_pr_of "$entry"; then
-        read_ok=true obs=$(jq -c --argjson pr "$pr_obs" '.observed + {pr: $pr}' <<<"$entry")
-        event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs")
+        if [ "$paused" = true ]; then
+          event=$(jq -rn --argjson e "$entry" --argjson n "$obs" 'if $n.pr.state == "merged" and $e.observed.pr.state != "merged" then "pr-merged" else empty end')
+        else event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs"); fi
       fi
     elif sa_observe "$entry"; then
       read_ok=true
