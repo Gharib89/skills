@@ -62,20 +62,30 @@ issue 11 "Something is off" needs-triage
 out=$(L 11)
 check "a needs-triage ticket takes /triage, a triage/ branch and the default size M" '["/triage 11","triage/something-is-off-11","M","default"]' \
   "$(jq -c '[(.args.message | split("\n")[0]), .args.workspaceStrategy.branch, .size, .size_source]' <<<"$out")"
-check "without --note a triage message is the invocation alone" "/triage 11" "$(jq -r .args.message <<<"$out")"
-check "with --note a triage message is the invocation plus one Note: line" "$(printf '/triage 11\nNote: Look at the logs first.')" \
-  "$(L 11 --note "Look at the logs first." | jq -r .args.message)"
+# The triage skill is upstream, so no SKILL.md this repo owns can tell a triage run the
+# waiting line: the launch message carries one contract line for it (ADR 0020).
+waitl=$(sed -n "s/^sa_waiting_line='\(.*\)'\$/\1/p" "$s/_lib.sh")
+check "without --note a triage message is the invocation, then one contract line holding the waiting line" 2 "$(jq -r .args.message <<<"$out" | wc -l)"
+check "the triage message's first line is the invocation" "/triage 11" "$(jq -r '.args.message | split("\n")[0]' <<<"$out")"
+check "the triage contract line holds sa_waiting_line's exact text" 1 "$(jq -r '.args.message | split("\n")[1]' <<<"$out" | grep -cF -- "\`$waitl\`")"
+check "the triage contract line says the final message is the outcome, never the waiting line" 1 \
+  "$(jq -r '.args.message | split("\n")[1]' <<<"$out" | grep -c 'final message is the triage outcome, never that line')"
+withnote=$(L 11 --note "Look at the logs first." | jq -r .args.message)
+check "with --note the Note: line follows the contract line and ends the message" "Note: Look at the logs first." "$(tail -1 <<<"$withnote")"
+check "with --note the triage message is still the invocation, the contract line and the note" 3 "$(wc -l <<<"$withnote")"
 reset; issue 12 "Another one" ready-for-agent
 check "without --note a ship message is the invocation alone" "/ship 12" "$(L 12 | jq -r .args.message)"
 # The fleet's waivers and the ledger's rulings both exist here, and none of them
 # reaches the launch message.
 bash "$s/ledger.sh" --ledger "$led" ruling "Scoped ruling text." --repo "$repo" >/dev/null
 bash "$s/ledger.sh" --ledger "$led" ruling "deny nothing" --allow "git push to the branch" >/dev/null
-for t in "12 ready-for-agent" "11 needs-triage"; do
+# Ship's SKILL.md carries the waiting line, so only a triage message holds it.
+for t in "12 ready-for-agent 0" "11 needs-triage 1"; do
   set -- $t; issue "$1" "Another one" "$2"
   msg=$(L "$1" --note "Only this." | jq -r .args.message)
-  check "a $2 message carries no waiver, ruling, shared-machine, merge allowance, waiting, branch or last-message line" 0 \
-    "$(grep -ciE 'waiver|Codex answers|ruling|Scoped ruling|git push|share this machine|pkill|flock|Merge allowance|Waiting on my own|worktree you start in|branch it holds|last message|merge\.sh' <<<"$msg")"
+  check "a $2 message carries no waiver, ruling, shared-machine, merge allowance, branch or merge line" 0 \
+    "$(grep -ciE 'waiver|Codex answers|ruling|Scoped ruling|git push|share this machine|pkill|flock|Merge allowance|worktree you start in|branch it holds|merge\.sh' <<<"$msg")"
+  check "a $2 message holds the waiting line $3 time(s)" "$3" "$(grep -c 'Waiting on my own' <<<"$msg")"
 done
 
 # --- the flags place and route take pass through -------------------------------------

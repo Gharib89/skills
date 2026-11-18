@@ -17,7 +17,11 @@ threads (ADR 0020).
 <n>`, `/triage <n>`), plus one `Note: <text>` line when you passed `--note`.
 Send it unedited. Every rule the run follows lives in its owner skill, its
 repo's ship profile or the global rules it loads, so nothing rides on the
-launch message: no waiver, ruling, merge allowance or output contract.
+launch message: no waiver, ruling or merge allowance. The one exception is a
+`/triage` message, which carries a contract line after the invocation (and
+before the note): a turn that only waits on its own background work ends on the
+waiting line, and the final message is the triage outcome. The triage skill is
+upstream, so no `SKILL.md` this repo owns can say it; ship's does.
 
 ## Sending the launch
 

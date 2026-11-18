@@ -16,7 +16,8 @@ lists the fields; this file holds the rules behind them.
   or pending to done), `pr-merged` and `pr-closed`. Its thread fields stay the
   last reconcile's, so the thread's own finish is read on a wake.
 - A thread at rest whose last message ends on the waiting line
-  (`Waiting on my own background work.`, set by ship's run contract) is still
+  (`Waiting on my own background work.`, set by ship's run contract, or for a
+  triage thread by the contract line its launch message carries) is still
   working: it raises no `run-finished` event and gains no stall until the stall
   window has passed since the thread rested (its `updatedAt`), then the rest
   counts like any other. Reconcile reads it the same way, as `running`.
