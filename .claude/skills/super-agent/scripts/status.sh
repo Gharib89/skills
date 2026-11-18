@@ -99,10 +99,9 @@ block=$(jq -r --argjson d "$digest" --argjson c "$changed" --argjson q "$qdoc" -
 # listed, so the row it printed leaving is no change: the stored rows are the
 # ones left after that.
 if [ "$digest" = true ]; then
-  doc=$(jq -c --argjson n "$now" '.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}' <<<"$doc") || sa_tooling "$ledger: status is not an object"
-else
-  doc=$(jq -c --argjson n "$now" '.status = {rows: $n.rows, merged_ack: (.status.merged_ack // [])}' <<<"$doc") || sa_tooling "$ledger: status is not an object"
+  sa_update "$ledger" '.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}' --argjson n "$now"
+elif [ "$changed" = true ]; then
+  sa_update "$ledger" '.status = {rows: $n.rows, merged_ack: (.status.merged_ack // [])}' --argjson n "$now"
 fi
-if [ "$digest" = true ] || [ "$changed" = true ]; then sa_write "$ledger" "$doc"; fi
 
 jq -cn --arg b "$block" --argjson c "$changed" --argjson u "$(jq -c .unpushed <<<"$now")" '{block: $b, changed: $c, unpushed: $u}'

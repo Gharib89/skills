@@ -101,6 +101,7 @@ sa_read() {
 
 # sa_write <ledger> <json>: a temp file beside the ledger, then a rename, so a
 # reader sees the old ledger or the new one and a crash leaves the old one whole.
+# A ledger is written through sa_update only; the fleet and quota files call this.
 sa_write() {
   local dir tmp
   dir=$(dirname "$1")
@@ -110,6 +111,41 @@ sa_write() {
   if printf '%s\n' "$2" | jq . > "$tmp" && mv "$tmp" "$1"; then return 0; fi
   rm -f "$tmp"
   sa_tooling "cannot write $1"
+}
+
+# sa_lock <ledger>: an exclusive lock on the ledger, held until this process
+# exits, so a read and the write it leads to are one step no other ledger write
+# lands inside. `<ledger>.lock` holds the holder's pid, created with noclobber
+# (an exclusive create in bash itself, so it needs no tool beyond the shell) and
+# removed on exit. One whose pid is gone is a dead writer's, taken over; one that
+# reads empty is kept, since its writer may not have written its pid yet. A live
+# holder is waited on for 30 s at most. A second call is a no-op.
+sa_lock() {
+  [ "${sa_locked:-}" = "$1" ] && return 0
+  local pid='' try
+  mkdir -p "$(dirname "$1")" || sa_tooling "cannot create $(dirname "$1")"
+  for ((try = 0; try < 600; try++)); do
+    (set -C; printf '%s\n' "$$" > "$1.lock") 2>/dev/null && { sa_locked=$1; break; }
+    pid=$(cat "$1.lock" 2>/dev/null)
+    if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null; then rm -f "$1.lock"; continue; fi
+    sleep 0.05 2>/dev/null || read -rt 0.05 <> <(:)
+  done
+  [ "${sa_locked:-}" = "$1" ] || sa_tooling "$1.lock is held by pid ${pid:-unknown}; remove it if no ledger write runs"
+  trap '[ "$(cat "$sa_locked.lock" 2>/dev/null)" = "$$" ] && rm -f "$sa_locked.lock"' EXIT
+}
+
+# sa_update <ledger> <jq filter> [jq args]...: the one way to write the ledger.
+# Under sa_lock it re-reads the ledger, applies the filter to what it holds now
+# and writes the result through sa_write, leaving it in $doc. Two writers that
+# each wrote back the copy they read would keep only the last one's change.
+sa_update() {
+  local ledger=$1 filter=$2 new
+  shift 2
+  sa_lock "$ledger"
+  sa_read "$ledger"
+  new=$(jq -c "$@" "$filter" <<<"$doc") && [ -n "$new" ] || sa_tooling "cannot update $ledger"
+  doc=$new
+  sa_write "$ledger" "$doc"
 }
 
 # sa_uri <text>: URI-encoded, since a `/` in a branch name otherwise addresses

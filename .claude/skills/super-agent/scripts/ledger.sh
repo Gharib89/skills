@@ -142,7 +142,7 @@ case $cmd in
       [ -n "$repo" ] && [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage"
       key="$repo#$number"
     fi
-    sa_read "$ledger"
+    sa_lock "$ledger"; sa_read "$ledger"
     old=$(sa_key "$doc" "$key")
     jq -e --arg k "$old" '.entries[$k] and (.entries[$k].stage | IN("settled", "closed") | not)' <<<"$doc" >/dev/null && sa_fail "$key is already in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -156,7 +156,8 @@ case $cmd in
         model: (if $model == "" then null else $model end),
         effort: (if $effort == "" then null else $effort end),
         stage: "launched", stalls: 0, observed: null, launched_at: $now, updated_at: $now}')
-    sa_write "$ledger" "$(jq -c --arg k "$key" --arg old "$old" --argjson e "$entry" "$sa_jq_norm"'del(.entries[$old]) | .entries[$k] = $e | .waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' <<<"$doc")"
+    sa_update "$ledger" "$sa_jq_norm"'del(.entries[$old]) | .entries[$k] = $e | .waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' \
+      --arg k "$key" --arg old "$old" --argjson e "$entry"
     jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$entry" '{ledger: $l, key: $k, entry: $e}' ;;
   get)
     [ $# -eq 1 ] || sa_tooling "$usage"
@@ -178,12 +179,12 @@ case $cmd in
       key|repo|number) sa_fail "$field is the entry's identity and cannot be set" ;;
       stage) sa_fail "stage is moved by reconcile only (add and rethread start it at launched)" ;;
     esac
-    sa_read "$ledger"
+    sa_lock "$ledger"; sa_read "$ledger"
     key=$(sa_key "$doc" "$key")
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$key is not in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    sa_write "$ledger" "$(jq -c --arg k "$key" --arg f "$field" --argjson v "$value" --arg now "$now" \
-      '.entries[$k][$f] = $v | .entries[$k].updated_at = $now' <<<"$doc")"
+    sa_update "$ledger" '.entries[$k][$f] = $v | .entries[$k].updated_at = $now' \
+      --arg k "$key" --arg f "$field" --argjson v "$value" --arg now "$now"
     jq -cn --arg k "$key" --arg f "$field" --argjson v "$value" '{key: $k, field: $f, value: $v}' ;;
   rethread)
     [ $# -ge 1 ] || sa_tooling "$usage"
@@ -204,21 +205,20 @@ case $cmd in
       shift 2
     done
     [ -n "$thread" ] || sa_tooling "$usage"
-    sa_read "$ledger"
+    sa_lock "$ledger"; sa_read "$ledger"
     key=$(sa_key "$doc" "$key")
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$key is not in the ledger"
     case $key in task:*) ;; *) [ -n "$worktree" ] && [ -n "$branch" ] || sa_tooling "$usage" ;; esac
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    doc=$(jq -c --arg k "$key" --arg t "$thread" --arg w "$worktree" --arg b "$branch" --arg m "$model" \
-      --arg e "$effort" --arg env "$environment" --arg inst "$instance" --arg now "$now" --arg kind "$kind" --argjson areas "${areas:-null}" \
-      '.entries[$k] |= (.thread = $t | .worktree = $w | .branch = $b
+    sa_update "$ledger" '.entries[$k] |= (.thread = $t | .worktree = $w | .branch = $b
         | .environment_id = (if $env == "" then null else $env end)
         | .instance_id = (if $inst == "" then null else $inst end)
         | .model = (if $m == "" then null else $m end) | .effort = (if $e == "" then null else $e end)
         | .stage = "launched" | .stalls = 0 | .observed = null | .error = null | .rest_since = null
         | .judged_run = 0 | del(.cleanup_owed, .verify_owed) | .kind = (if $kind == "" then .kind else $kind end) | .areas = ($areas // .areas)
-        | .launched_at = $now | .updated_at = $now)' <<<"$doc")
-    sa_write "$ledger" "$doc"
+        | .launched_at = $now | .updated_at = $now)' \
+      --arg k "$key" --arg t "$thread" --arg w "$worktree" --arg b "$branch" --arg m "$model" \
+      --arg e "$effort" --arg env "$environment" --arg inst "$instance" --arg now "$now" --arg kind "$kind" --argjson areas "${areas:-null}"
     jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$(jq -c --arg k "$key" '.entries[$k]' <<<"$doc")" \
       '{ledger: $l, key: $k, entry: $e}' ;;
   ruling)
@@ -232,10 +232,9 @@ case $cmd in
         *) sa_tooling "$usage" ;;
       esac
     done
-    sa_read "$ledger"
     ruling=$(jq -cn --arg d "$(date -u +%F)" --arg t "$text" --argjson a "$allow" --arg r "$rrepo" \
       '{date: $d, text: $t, allow: $a, repo: (if $r == "" then null else $r end)}')
-    sa_write "$ledger" "$(jq -c --argjson r "$ruling" '.rulings += [$r]' <<<"$doc")"
+    sa_update "$ledger" '.rulings += [$r]' --argjson r "$ruling"
     jq -cn --argjson r "$ruling" '{ruling: $r}' ;;
   allowed)
     [ $# -eq 0 ] || sa_tooling "$usage"
@@ -265,7 +264,7 @@ case $cmd in
       case ${k##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
     done
     jq -en --arg a "$after" --arg k "$key" "$sa_jq_norm"'($a|norm_repo)!=($k|norm_repo)' >/dev/null || sa_tooling "$usage"
-    sa_read "$ledger"
+    sa_lock "$ledger"; sa_read "$ledger"
     jq -e --arg k "$(sa_key "$doc" "$key")" '.entries[$k] | . != null and (.stage != "settled" and .stage != "closed")' <<<"$doc" >/dev/null && sa_fail "$key already has a thread in the ledger"
     # A repeat keeps the first `since` (how long it has waited is the report's
     # point) and the order and blocker it is not given anew (placement rewrites
@@ -276,13 +275,13 @@ case $cmd in
       '{key: $k, repo: $r, number: $n, reason: $why, since: ($old.since // $now),
         order: (if $order != "" then ($order | tonumber) else $old.order end),
         after: (if $after != "" then $after else $old.after end)}')
-    sa_write "$ledger" "$(jq -c --arg k "$key" --argjson w "$row" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))) + [$w])' <<<"$doc")"
+    sa_update "$ledger" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))) + [$w])' --arg k "$key" --argjson w "$row"
     jq -cn --argjson w "$row" '{waiting: $w}' ;;
   unwait)
     [ $# -eq 1 ] || sa_tooling "$usage"
-    sa_read "$ledger"
+    sa_lock "$ledger"; sa_read "$ledger"
     had=$(jq -r --arg k "$1" "$sa_jq_norm"'[(.waiting // [])[] | select((.key | norm_repo) == ($k | norm_repo))] | length > 0' <<<"$doc")
-    [ "$had" != true ] || sa_write "$ledger" "$(jq -c --arg k "$1" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' <<<"$doc")"
+    [ "$had" != true ] || sa_update "$ledger" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' --arg k "$1"
     jq -cn --arg k "$1" --argjson r "$had" '{key: $k, removed: $r}' ;;
   need|pushed|unneed|limit|unlimit)
     source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/owner.sh" && ledger_owner "$cmd" "$@" ;;
