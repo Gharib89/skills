@@ -76,6 +76,17 @@ read_of idle x; jq -c '.items = [] | .hasMore = false' "$tmp/read.json" > "$tmp/
 rep "$tmp/empty.json" --dir "$tmp/dir" >/dev/null
 check "no assistant message gives an empty messages list" "[]" "$(jq -c .messages "$tmp/dir/t-6.json")"
 
+# --- the last assistant message is the highest position, whatever order the items come in
+read_of idle "the last one"; jq -c '.items |= reverse' "$tmp/read.json" > "$tmp/rev.json"
+rep "$tmp/rev.json" --dir "$tmp/dir" >/dev/null
+check "reversed items still give the position-13 message" "the last one" "$(jq -r '.messages[0].text' "$tmp/dir/t-6.json")"
+
+# --- a thread id with a slash would name a file outside the directory ------------------
+read_of idle x; jq -c '.thread.threadId = "../t-6"' "$tmp/read.json" > "$tmp/slash.json"
+rm -f "$tmp/dir/t-6.json" "$tmp/t-6.json"
+rep "$tmp/slash.json" --dir "$tmp/dir" >/dev/null 2>&1; check_rc "a thread id with a slash exits 2" 2 "$?"
+check "and writes no file" "no" "$([ -e "$tmp/t-6.json" ] || [ -e "$tmp/dir/t-6.json" ] && echo yes || echo no)"
+
 # --- bad input is tooling ---------------------------------------------------------------
 printf 'not json\n' > "$tmp/bad.json"
 rep "$tmp/bad.json" --dir "$tmp/dir" >/dev/null 2>&1; check_rc "a file that is not JSON exits 2" 2 "$?"
@@ -83,7 +94,7 @@ echo '{"messages":[]}' > "$tmp/bad.json"
 rep "$tmp/bad.json" --dir "$tmp/dir" >/dev/null 2>&1; check_rc "a read with no thread object exits 2" 2 "$?"
 rep "$tmp/read.json" >/dev/null 2>&1; check_rc "no --dir exits 2" 2 "$?"
 # each field reconcile requires, or the file would read as `shape`
-for f in status runCount pendingRequestCount; do
+for f in threadId status runCount pendingRequestCount; do
   read_of idle x; jq -c --arg f "$f" 'del(.thread[$f])' "$tmp/read.json" > "$tmp/bad.json"
   rm -f "$tmp/dir/t-6.json"
   rep "$tmp/bad.json" --dir "$tmp/dir" >/dev/null 2>&1; check_rc "a read with no $f exits 2" 2 "$?"

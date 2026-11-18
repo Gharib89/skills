@@ -176,6 +176,18 @@ sa_triage_contract="A turn that ends only to wait on your own background work (a
 # shellcheck disable=SC2034  # read by watch.sh and reconcile.sh
 sa_jq_active='def active($w; $now): .status == "running" or (.waiting == true and ($now - .rest_at) < $w);'
 
+# `thread_shape` for a `t3 thread show --json` answer or a reply file: the thread
+# fields `sa_observe` needs, with their types. Defined once so `reply.sh` refuses
+# exactly what `sa_observe` would call `shape`.
+# shellcheck disable=SC2034  # read by sa_observe and reply.sh
+sa_jq_thread_shape='def thread_shape: (.thread | type) == "object"
+  and (.thread.threadId | type) == "string" and (.thread.status | type) == "string"
+  and (.thread.runCount | type) == "number" and (.thread.pendingRequestCount | type) == "number";'
+
+# sa_thread_file_ok <thread id>: a thread id that names a file inside a reply
+# directory, never one with a `/` that would reach outside it.
+sa_thread_file_ok() { case $1 in */*) return 1 ;; esac; }
+
 # sa_observe <entry>: one look at an entry's thread (through the `t3` CLI, or for
 # an entry with an `environment_id` through its reply file) and
 # its PR (through `gh` REST) as a snapshot in $obs:
@@ -199,8 +211,7 @@ sa_observe() {
   env=$(jq -r '.environment_id // empty' <<<"$1") reason='' file=''
   if [ -n "$env" ]; then
     dir=$(jq -r --arg e "$env" '.[$e] // empty' <<<"$sa_remote_dirs")
-    # a thread id with a `/` would name a file outside the reply directory
-    case $thread in */*) dir='' ;; esac
+    sa_thread_file_ok "$thread" || dir=''
     if [ -z "$dir" ]; then reason=no-remote
     else
       file=$dir/$thread.json
@@ -214,9 +225,7 @@ sa_observe() {
     raw=$(t3 thread show "$thread" --json --messages 1 2>/dev/null </dev/null) || { obs_kind='thread-unreadable'; return 1; }
     line=$(grep '^{"' <<<"$raw" | tail -1)
   fi
-  if [ -z "$reason" ] && ! jq -e '.thread | (.threadId | type) == "string" and (.status | type) == "string"
-      and (.runCount | type) == "number" and (.pendingRequestCount | type) == "number"' \
-      <<<"$line" >/dev/null 2>&1; then reason=shape; fi
+  if [ -z "$reason" ] && ! jq -e "$sa_jq_thread_shape"'thread_shape' <<<"$line" >/dev/null 2>&1; then reason=shape; fi
   if [ -n "$reason" ]; then
     obs_kind='thread-unreadable'
     # a remote read names why and which file, so a missing --remote reads apart from a wrong-shaped save

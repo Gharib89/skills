@@ -36,12 +36,8 @@ done
 [ -n "$read_file" ] && [ -n "$dir" ] || sa_tooling "$usage"
 [ -f "$read_file" ] || sa_tooling "$read_file: no such file"
 
-reply=$(jq -c '
-  if (.items | type) != "array"
-     or (.thread | type) != "object"
-     or (.thread.threadId | type) != "string" or (.thread.status | type) != "string"
-     or (.thread.runCount | type) != "number" or (.thread.pendingRequestCount | type) != "number"
-  then empty else
+reply=$(jq -c "$sa_jq_thread_shape"'
+  if (.items | type) != "array" or (thread_shape | not) then empty else
     ([.items[] | select(.type == "assistant_message")] | sort_by(.position) | last) as $last
     | {thread: (.thread | {threadId, status, runCount, pendingRequestCount, worktreePath, branch, updatedAt}
           | with_entries(select(.value != null))),
@@ -57,6 +53,6 @@ if [ "$(jq -r .older <<<"$reply")" = true ]; then
   sa_fail "the page holds no assistant message and hasMore is true: read the thread again with a larger limit"
 fi
 thread=$(jq -r .thread.threadId <<<"$reply")
-case $thread in */*) sa_tooling "$thread: a thread id with a slash cannot name a file" ;; esac
+sa_thread_file_ok "$thread" || sa_tooling "$thread: a thread id with a slash cannot name a file"
 mkdir -p "$dir" && jq -c 'del(.truncated, .older)' <<<"$reply" > "$dir/$thread.json" || sa_tooling "$dir: cannot write"
 jq -cn --arg f "$dir/$thread.json" --arg t "$thread" --arg s "$(jq -r .thread.status <<<"$reply")" '{file: $f, thread: $t, status: $s}'
