@@ -71,6 +71,24 @@ sa_thread t-5 idle 2 0 /wt/5 feat/x-5 "$wl" $past
 R >/dev/null
 check "and settles once the window has passed" settled "$(stage 5)"
 
+# --- a usage limit stop: running until its reset plus the window ----------------
+# Rest at 2020-01-01T00:00:00Z is 02:00 in Cairo (UTC+2), so "resets 6:10pm" is 16:10Z that day.
+fixture
+limit="You've hit your 5-hour limit · resets 6:10pm (Africa/Cairo)"
+reset=$(date -u -d 2020-01-01T16:10:00Z +%s) # a fixed stamp converted, no clock read
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$limit" $past
+SA_NOW=$((reset - 3600)) R >/dev/null
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$limit" $past
+out=$(SA_NOW=$((reset + 899)) R)
+check "a rest on a limit line inside reset plus the window is running" running "$(stage 5)"
+check "and no stall" "" "$(stalled "$out")"
+check "its count stays 0" 0 "$(stalls 5)"
+out=$(SA_NOW=$((reset + 900)) R)
+check "the same rest at reset plus the window is at-rest" at-rest "$(stage 5)"
+check "and the run that completed is a stall" "$repo#5 1 run-completed" "$(stalled "$out")"
+sa_thread t-5 idle 2 0 /wt/5 feat/x-5 "Stopped, no limit named." $past
+check "a rest with no limit line is a rest" at-rest "$(SA_NOW=$((reset - 3600)) R >/dev/null; stage 5)"
+
 # --- cleanup: what the super agent owes after an entry ends --------------------
 cleanup() { jq -r '[.cleanup[] | "\(.key) \(.thread) \(.worktree) \(.kind) \(.stage)"] | join(",")' <<<"$1"; }
 fixture
