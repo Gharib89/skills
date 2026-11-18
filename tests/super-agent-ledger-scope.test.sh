@@ -29,9 +29,10 @@ out=$(M ruling "reviews are Claude self-review only" --brief 2>/dev/null); rc=$?
 check_rc "--brief exits 2" 2 "$rc"
 check "and names where such a rule belongs now" "1 1 1" \
   "$(for w in "ship profile" "plain ruling" "global rules"; do jq -r .error <<<"$out" | grep -c "$w"; done | paste -sd' ')"
-check "a plain ruling carries no brief or machine key" '["allow","date","repo","text"]' "$(M ruling plain | jq -c '.ruling | keys')"
+check "a plain ruling carries no brief or machine key" '["allow","date","expires","pinned","repo","text"]' "$(M ruling plain | jq -c '.ruling | keys')"
 old=$tmp/old-ledger.json
-printf '%s\n' '{"entries":{},"rulings":[{"date":"2026-11-01","text":"old brief-bound","allow":["a call"],"brief":true,"repo":"acme/widgets","machine":"box"},{"date":"2026-11-02","text":"old plain","allow":[],"brief":false,"repo":null,"machine":null}]}' > "$old"
+export SA_NOW=1762128000 # 2025-11-03: inside the old rulings' 7 days, which ADR 0021 lapses after
+printf '%s\n' '{"entries":{},"rulings":[{"date":"2025-11-01","text":"old brief-bound","allow":["a call"],"brief":true,"repo":"acme/widgets","machine":"box"},{"date":"2025-11-02","text":"old plain","allow":[],"brief":false,"repo":null,"machine":null}]}' > "$old"
 check "a ledger with the old mark still lists every ruling" '["old brief-bound","old plain"]' "$(bash "$s/ledger.sh" --ledger "$old" list | jq -c '[.rulings[].text]')"
 check "and still applies each ruling's allowed call" '["a call"]' "$(bash "$s/ledger.sh" --ledger "$old" allowed | jq -c '[.allowed[].call]')"
 check "and lists the one scoped to a repo" '["old brief-bound"]' "$(bash "$s/ledger.sh" --ledger "$old" scoped | jq -c '[.scoped[].text]')"

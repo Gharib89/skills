@@ -77,6 +77,36 @@ repo's later holds too adds `--repo <owner/name>`, and `ledger.sh --ledger
 <ledger> scoped` lists it with its `repo` for the
 [gate-hold step-in](step-ins.md#the-step-ins).
 
+A ruling lapses 7 days after its date: `list`, `allowed` and `scoped` leave it
+out from then on (ADR 0021). When the owner says one should last, pin it with
+`ledger.sh --ledger <ledger> pin <date> <text>`, its date and exact text as
+`list` shows them. A preference a script can read does not stay a ruling: a
+per-repo cap, a reviewer order or the work week goes to the fleet file, and a
+gate-hold ruling that holds for good goes to the fleet file's standing waivers.
+
+### The one-time rulings migration
+
+The rulings recorded before lapses existed are sorted once, by the owner:
+
+1. Draft the list from `ledger.sh --ledger <ledger> list`, run with `SA_NOW` set
+   to the epoch of the oldest ruling's date so none reads as lapsed: one row per
+   ruling, `{date, text, mark, to}`, `mark` being `pin`, `lapse` or `move`, and
+   `to`, for a move, the fleet key or ship profile line it moves to. Propose a
+   mark for each by the kind ADR 0021 gives it: an unscoped one lapses or is
+   pinned, a `--repo` one lapses or moves to the fleet file's standing waivers,
+   an `--allow` one lapses or is pinned.
+2. Put the list on a page for the owner (an artifact, the rows grouped by mark
+   with your reason for each), and post its link with a push. Wait for the
+   owner to approve it or edit it; a row they strike is left unmarked, which
+   lapses.
+3. Write each `move` into its destination first (the fleet key as
+   [setup.md](setup.md) edits the fleet file, a profile line through that
+   repo's own PR), then save the
+   approved rows as a JSON array and run `ledger.sh --ledger <ledger>
+   migrate-rulings <list.json>`. It refuses a row naming a ruling the ledger
+   lacks and a second run; a ruling the list leaves out lapses. Report its
+   `pinned`, `lapsed` and `moved` in the next status block.
+
 ## The digest
 
 `status.sh --ledger <ledger> --digest` prints the whole block whatever changed,

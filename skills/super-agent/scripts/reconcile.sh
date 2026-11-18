@@ -13,8 +13,8 @@
 # is `running`, a thread at rest with the ticket undone is `at-rest`. A
 # `--kind triage` entry has no PR: it is `settled` when its thread has run and
 # is at rest and the issue carries neither `needs-triage` nor `needs-info` (a grill
-# waiting on the owner has the second). A settled `triage` entry is read again,
-# thread only: one whose run count grew, or that runs, goes back to `at-rest` or
+# waiting on the owner has the second). A `triage` entry settled within the last
+# 7 days is read again, thread only: one whose run count grew, or that runs, goes back to `at-rest` or
 # `running` and is named in `woke`. A `--kind task` entry has no ticket: it is
 # `running` while its thread runs and `settled` once the thread has run and is at
 # rest, whatever any issue or PR says. Settling the
@@ -58,7 +58,9 @@
 # The wake's actions are printed, not derived from the lists above: an entry that
 # ends is marked `cleanup_owed` (a merged ship PR also `verify_owed`), and the rows
 # below stay in every answer until the super agent clears the field with
-# `ledger set <key> cleanup_owed false` (or `verify_owed false`).
+# `ledger set <key> cleanup_owed false` (or `verify_owed false`). An entry that
+# ends is stamped `settled_at`; 7 days later, with neither field owed, it moves
+# whole to `<ledger>.archive.jsonl`, one JSON line each, and leaves the ledger.
 #
 # A merged ship entry whose ticket is a sub-issue gets one look at its parent (`parents_done`
 # below): when the ticket reads closed and every sub-issue of the open parent is closed, the
@@ -186,7 +188,7 @@ while IFS= read -r entry; do
   # each stays owed until the super agent clears it (`ledger set <key> <field> false`)
   doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
     '.entries[$k] |= (.stage = $s | .observed = $o | .error = null | .updated_at = $now
-      | if $s == "settled" or $s == "closed" then .cleanup_owed = true else . end
+      | if $s == "settled" or $s == "closed" then .cleanup_owed = true | .settled_at = $now else . end
       | if (.kind // "ship") == "ship" and ($s == "merged" or $s == "settled") and $o.pr.state == "merged" and .verify_owed == null
         then .verify_owed = true else . end)' <<<"$doc")
   if [ -n "$stall" ]; then
@@ -196,20 +198,10 @@ while IFS= read -r entry; do
   entries=$(jq -c --argjson e "$entry" --arg s "$stage" --arg r "$reason" --argjson o "$obs" --argjson n "$stalls" \
     '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, kind: ($e.kind // "ship"), from: $e.stage, stage: $s, reason: $r, stalls: $n, observed: $o}]' <<<"$entries")
 done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open)' <<<"$doc")
-# A settled triage entry is read again, thread only: a grill that runs again
-# after its owner answers must not go unwatched. An entry settled with no
-# `observed` baseline has nothing to compare and is skipped, and an unreadable
-# thread is left alone (a deleted one would otherwise error on every reconcile).
+# A settled triage entry settled within sa_settled_days is read again (reconcile.d/woke.sh).
 woke='[]'
-while IFS= read -r entry; do
-  key=$(jq -r .key <<<"$entry")
-  sa_thread_only=1 sa_observe "$entry" || continue
-  stage=$(jq -r 'if $e.observed.run_count == null then "" elif .status == "running" then "running" elif .run_count > $e.observed.run_count then "at-rest" else "" end' --argjson e "$entry" <<<"$obs")
-  [ -n "$stage" ] || continue
-  doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
-    '.entries[$k] |= (.stage = $s | .observed += $o | .rest_since = null | .updated_at = $now)' <<<"$doc")
-  woke=$(jq -c --argjson e "$entry" '. + [{key: $e.key, thread: $e.thread, kind: $e.kind}]' <<<"$woke")
-done < <(jq -c '.entries[] | select(.stage == "settled" and .kind == "triage")' <<<"$doc")
+source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/woke.sh" || sa_tooling "cannot source reconcile.d/woke.sh"
+reconcile_woke
 # Issues filed while a batch runs that nothing holds: offered once, then remembered.
 unqueued='[]'
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/unqueued.sh" || sa_tooling "cannot source reconcile.d/unqueued.sh"
@@ -250,6 +242,7 @@ if ! { [ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] && [
   source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/write.sh" || sa_tooling "cannot source reconcile.d/write.sh"
   reconcile_write
 fi
+sa_archive "$ledger" "$now_s"
 # The stamp `notify` reads: a reconcile ran, so a super agent is answering its wakes.
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 

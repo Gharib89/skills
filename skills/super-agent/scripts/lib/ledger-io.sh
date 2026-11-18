@@ -86,3 +86,28 @@ sa_update() {
   doc=$new
   sa_write "$ledger" "$doc"
 }
+
+# Days a settled entry stays in the ledger, and a settled triage thread is
+# re-read, after it settled (ADR 0021). `settled_before($cut)`: an entry that
+# settled before the epoch `$cut`, by `settled_at`, or `updated_at` for one
+# settled before that stamp; one with neither is never old.
+sa_settled_days=7
+# shellcheck disable=SC2034  # read by reconcile.sh
+sa_jq_settled_before='def settled_before($cut): (.settled_at // .updated_at) as $at | $at != null and ($at | fromdateiso8601) < $cut;'
+
+# sa_archive <ledger> <now epoch>: under the lock, each entry settled or closed
+# more than sa_settled_days ago with no cleanup or criteria check owed is appended, whole,
+# to `<ledger>.archive.jsonl` and dropped from the ledger, so a wake reads only
+# what the super agent may still act on. The append comes first: a crash between
+# the two leaves the entry in both, never in neither. Leaves the ledger in $doc.
+sa_archive() {
+  local ledger=$1 gone
+  sa_lock "$ledger"
+  sa_read "$ledger"
+  gone=$(jq -c --argjson cut "$(($2 - sa_settled_days * 86400))" "$sa_jq_settled_before"'.entries[]
+    | select((.stage == "settled" or .stage == "closed") and .cleanup_owed != true and .verify_owed != true
+      and settled_before($cut))' <<<"$doc") || sa_tooling "cannot read $ledger"
+  [ -n "$gone" ] || return 0
+  printf '%s\n' "$gone" >> "$ledger.archive.jsonl" || sa_tooling "cannot write $ledger.archive.jsonl"
+  sa_update "$ledger" 'del(.entries[$k[]])' --argjson k "$(jq -sc 'map(.key)' <<<"$gone")"
+}
