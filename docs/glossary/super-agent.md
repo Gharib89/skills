@@ -28,6 +28,10 @@ _Avoid_: watchdog, poller, monitor
 The fixed last line, `Waiting on my own background work.`, that ship's run contract, or a `/triage` launch message's contract line, tells a run to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A run's final message is its outcome (the PR URL and the gate state for ship, the triage outcome for triage), never this line.
 _Avoid_: heartbeat, keepalive, status ping
 
+**Limit stop**:
+A thread at rest on a usage-limit line such as `You've hit your 5-hour limit · resets 6:10pm (Africa/Cairo)`. T3 resumes it by itself at the reset, so the watcher and reconcile read it as still working, with no `run-finished` event and no stall, until the reset plus the stall window; a rest still there after that is an ordinary stall. A reset they cannot read leaves an ordinary rest.
+_Avoid_: rate-limit pause
+
 **Wake action**:
 A row in one of the three lists reconcile prints for what the super agent owes after a wake: `cleanup` (an entry ended: settle its thread, remove its worktree), `verify` (a ship PR merged: check it against the issue's criteria) and `escalate` (only the owner can unblock it: a permission hold, a fault, a stall at the cap, a closed PR or issue). A row stays in every answer until the super agent clears its cause (`cleanup_owed` or `verify_owed` set false, or a recorded need), so a wake that does nothing prints it again. The super agent does what the lists print, and never sets an entry's stage: reconcile moves it.
 _Avoid_: todo, task (that is a ledger kind), notification

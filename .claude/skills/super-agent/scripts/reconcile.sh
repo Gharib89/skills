@@ -34,7 +34,9 @@
 # `stall-window` event. A thread holding a permission request is neither. A thread
 # at rest whose last message ends on the waiting line (`sa_waiting_line`) inside the
 # stall window counts as running: no stall, and its stage as a running thread's;
-# past the window it is an ordinary rest. An entry whose thread, PR or issue cannot be read is reported in
+# past the window it is an ordinary rest. So is a thread at rest on a usage-limit line
+# (`... limit · resets 6:10pm (Africa/Cairo)`), until its reset plus the window: T3 resumes it
+# at the reset by itself. An entry whose thread, PR or issue cannot be read is reported in
 # `errors`, its `error` set to the kind (cleared by the next good read), and
 # left in its stage. The ledger is written once, after the last entry, by
 # applying what this run changed to the ledger as it stands then

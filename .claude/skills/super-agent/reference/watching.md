@@ -21,6 +21,11 @@ lists the fields; this file holds the rules behind them.
   working: it raises no `run-finished` event and gains no stall until the stall
   window has passed since the thread rested (its `updatedAt`), then the rest
   counts like any other. Reconcile reads it the same way, as `running`.
+- A thread at rest on a usage-limit line (`... limit · resets 6:10pm
+  (Africa/Cairo)`) is read the same way, with the reset in place of the rest: no
+  `run-finished` and no stall until the reset plus the stall window, since T3
+  resumes it at the reset by itself
+  ([stall ladder](stall-ladder.md#a-usage-limit-stop)).
 - A PR that merges while its thread still runs (or waits on the line) raises
   one `pr-merged` event, when the thread rests or `--stall-window` seconds have
   passed since the merge, whichever comes first. Past the window with the

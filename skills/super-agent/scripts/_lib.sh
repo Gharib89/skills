@@ -91,6 +91,8 @@ command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 source "$(dirname "${BASH_SOURCE[0]}")/lib/ledger-io.sh" || { printf '{"error":"cannot source lib/ledger-io.sh"}\n'; exit 2; }
 # A ruling's row and its lapse.
 source "$(dirname "${BASH_SOURCE[0]}")/lib/rulings.sh" || { printf '{"error":"cannot source lib/rulings.sh"}\n'; exit 2; }
+# A usage-limit stop's reset time.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/limit.sh" || { printf '{"error":"cannot source lib/limit.sh"}\n'; exit 2; }
 
 # sa_uri <text>: URI-encoded, since a `/` in a branch name otherwise addresses
 # another resource.
@@ -126,16 +128,8 @@ sa_jq_waiting='def waiting_list: (.waiting // []) | sort_by([(.order // 1e18), .
 # case, else <key> itself.
 sa_key() { jq -r --arg k "$2" "$sa_jq_norm"'(first(.entries | keys[] | select(norm_repo == ($k | norm_repo))) // $k)' <<<"$1"; }
 
-# `--remote <environment id>=<dir>`, repeatable: where the super agent saved its
-# reads of the threads on that linked machine, one `<thread id>.json` each. `t3
-# thread show` has no environment flag (measured 2026-11-06), so a remote entry
-# is read from these files, which the super agent writes with `t3_thread_read`.
-sa_remote_dirs='{}'
-# sa_remote_flag <usage> <value>: one `--remote` value into $sa_remote_dirs.
-sa_remote_flag() {
-  case $2 in ?*=?*) ;; *) sa_tooling "$1" ;; esac
-  sa_remote_dirs=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$sa_remote_dirs")
-}
+# `--remote` reads of the threads on a linked machine.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/remote.sh" || { printf '{"error":"cannot source lib/remote.sh"}\n'; exit 2; }
 
 # The last line a supervised run writes when it ends a turn only to wait on its own
 # background work (a check, a CI wait, a subagent): ship's run contract (and, for a
@@ -196,8 +190,11 @@ sa_triage_contract="A turn that ends only to wait on your own background work (a
 # `active($w; $now)` for a snapshot (`$obs`): the thread is running, or at rest on
 # the waiting line for less than `$w` seconds (`rest_at`, the thread's last update,
 # is when its run ended). `waiting` is true only with a `rest_at` to time it by.
+# A thread stopped on a usage limit (`limit_reset`, see `sa_observe`) is active until its reset plus `$w`:
+# T3 resumes it by itself at the reset, so a stall before then would nudge a thread about to resume.
 # shellcheck disable=SC2034  # read by watch.sh and reconcile.sh
-sa_jq_active='def active($w; $now): .status == "running" or (.waiting == true and ($now - .rest_at) < $w);'
+sa_jq_active='def active($w; $now): .status == "running" or (.waiting == true and ($now - .rest_at) < $w)
+  or (.limit_reset != null and $now < .limit_reset + $w);'
 
 # `thread_shape` for a `t3 thread show --json` answer or a reply file: the thread
 # fields `sa_observe` needs, with their types. Defined once so `reply.sh` refuses
@@ -217,7 +214,9 @@ sa_thread_file_ok() { case $1 in */*) return 1 ;; esac; }
 # {status, run_count, pending, gate, waiting, rest_at, pr: {number, state}}, `state`
 # one of none, open, merged, closed (a merged PR adds its `merged_at`), `waiting`
 # true when the thread's last assistant message ends on `sa_waiting_line`, `rest_at`
-# the thread's `updatedAt` as an epoch (null when it has none), and `gate` true when the thread's last assistant message
+# the thread's `updatedAt` as an epoch (null when it has none), `limit_reset` the epoch of the reset a
+# limit stop names (absent for any other rest: the last line reads `... limit · resets 6:10pm (Africa/Cairo)`,
+# the first such time after `rest_at` in that zone), and `gate` true when the thread's last assistant message
 # is a ship merge-gate summary, which carries `ship <version>` as a word of its own and its `Unmet criteria` item (ship
 # prints the version in its first reply too, so the version alone is no summary). A thread is found by the id and worktree path the entry holds,
 # never by a process name, which once matched the wrong process. On failure it
@@ -275,7 +274,10 @@ sa_observe() {
        pending: .thread.pendingRequestCount,
        gate: ($text | (test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+") and test("Unmet criteria"))),
        waiting: ($rest != null and (($text | split("\n") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != "")) | last) == $wl)),
-       rest_at: $rest, pr: $pr}' <<<"$line")
+       rest_at: $rest, pr: $pr,
+       limit: ($text | split("\n") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != "")) | last // ""
+         | capture("limit\\s*[·.-]\\s*resets\\s+(?<time>[0-9]{1,2}(:[0-9]{2})?\\s*[ap]m)\\s*\\((?<tz>[A-Za-z0-9_/+-]+)\\)\\s*$"; "i") // null)}' <<<"$line")
+  sa_limit_reset
 }
 
 # sa_pr_of <entry>: the entry's PR, found by its branch through `gh` REST, as
