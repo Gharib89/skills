@@ -42,6 +42,9 @@ refused "a write after a chained command" "$(bash_call "cd /tmp && echo x > $st/
 passes "ledger.sh pause" "$(bash_call "bash $s/ledger.sh --ledger $st/ledger.json pause acme/widgets#7")"
 passes "fleet.sh pin" "$(bash_call "$s/fleet.sh --fleet ~/.config/super-agent/fleet.json pin acme/widgets box")"
 passes "quota.sh --save" "$(bash_call "$s/quota.sh --fleet ~/.config/super-agent/fleet.json --save $st/quota.json --wake 1")"
+refused "a cp onto the ledger" "$(bash_call "cp /tmp/new.json $st/ledger.json")" 'ledger.sh'
+passes "a backup copy of the ledger" "$(bash_call "cp $st/ledger.json /tmp/ledger.bak")"
+passes "a script call chained before an unrelated rm" "$(bash_call "bash $s/ledger.sh --ledger $st/ledger.json pause x; rm /tmp/foo")"
 passes "a read through jq" "$(bash_call "jq .entries $st/ledger.json > /tmp/out.json")"
 passes "a read piped to tee" "$(bash_call "jq . $st/ledger.json | tee /tmp/out.json")"
 passes "an Edit of another file" "$(tool Edit /repo/ledger.json)"
@@ -51,6 +54,7 @@ passes "a call that is no JSON" "not json"
 # --- --install and --status -----------------------------------------------------
 cfg=$tmp/settings.json
 check "status before install" false "$(bash "$s/guard.sh" --status --settings "$cfg" | jq .installed)"
+check "status leaves a missing settings file missing" no "$([ -e "$cfg" ] && echo yes || echo no)"
 out=$(bash "$s/guard.sh" --install --settings "$cfg"); rc=$?
 check_rc "--install exits 0" 0 "$rc"
 check "--install reports a change" true "$(jq .changed <<<"$out")"
@@ -61,5 +65,13 @@ check "and adds no second hook" 1 "$(jq '.hooks.PreToolUse | length' "$cfg")"
 printf '%s\n' '{"model":"x","hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"other"}]}]}}' > "$cfg"
 bash "$s/guard.sh" --install --settings "$cfg" >/dev/null
 check "an existing hook and key are kept" '"x" 2' "$(jq -r '"\(.model|@json) \(.hooks.PreToolUse|length)"' "$cfg")"
+for shape in '{"hooks":"x"}' '{"hooks":{"PreToolUse":{}}}'; do
+  printf '%s\n' "$shape" > "$cfg"
+  for m in --install --status; do
+    out=$(bash "$s/guard.sh" "$m" --settings "$cfg" 2>/dev/null); rc=$?
+    check_rc "$m on $shape exits 2" 2 "$rc"
+    check "$m on $shape names the field" 1 "$(jq -r .error <<<"$out" | grep -c hooks)"
+  done
+done
 check_rc "a settings file that is no JSON exits 2" 2 "$(printf 'x' > "$cfg"; bash "$s/guard.sh" --install --settings "$cfg" >/dev/null 2>&1; echo $?)"
 finish

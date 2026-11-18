@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # The PreToolUse hook that keeps the super agent's state files out of hand edits:
 # it refuses an Edit, Write, MultiEdit or NotebookEdit of the ledger, the fleet file
-# or the quota file, and a Bash command that redirects into one or runs mv, cp, tee,
-# rm, truncate, install, ln, dd or sed -i on one. The refusal names the script that
-# updates that file, so a missing override surfaces as a refusal the super agent
-# reports, not as a forged input. A file is `ledger.json`, `fleet.json` or
+# or the quota file, and a Bash command that redirects into one or runs mv, tee,
+# rm, truncate, dd or sed -i on one, or cp, install or ln onto one. The refusal names
+# the script that updates that file, so a missing override surfaces as a refusal the
+# super agent reports, not as a forged input. A file is `ledger.json`, `fleet.json` or
 # `quota*.json` directly under a `super-agent/` directory. The hook sees the tool
 # call only, so a script's own write through its update entry point is never judged.
+# A guard rail, not a sandbox: it matches the path text, so `cd` into the directory
+# and a relative name, or a shell variable holding the path, get past it.
 #
 #   guard                                      (hook mode: the PreToolUse JSON on stdin)
 #   guard --install [--settings <file>]        add the hook to a Claude settings file
@@ -37,13 +39,16 @@ if [ $# -gt 0 ]; then
   case $mode in install|status) ;; *) sa_tooling "$usage" ;; esac
   if [ "${1:-}" = --settings ]; then sa_flag_value "$usage" "${2:-}"; settings=$2; shift 2; fi
   [ $# -eq 0 ] || sa_tooling "$usage"
-  [ -f "$settings" ] || printf '{}\n' > "$settings" 2>/dev/null || [ "$mode" = status ] || sa_tooling "cannot write $settings"
   cur=$([ -f "$settings" ] && cat "$settings" || echo '{}')
   jq -e 'type == "object"' <<<"$cur" >/dev/null 2>&1 || sa_tooling "$settings is not a JSON object"
-  has=$(jq --argjson e "$entry" '[(.hooks.PreToolUse // [])[] | select(.hooks[]?.command == $e.hooks[0].command)] | length > 0' <<<"$cur")
+  jq -e '(.hooks // {}) | type == "object"' <<<"$cur" >/dev/null || sa_tooling "$settings: .hooks must be an object"
+  jq -e '(.hooks.PreToolUse // []) | type == "array"' <<<"$cur" >/dev/null || sa_tooling "$settings: .hooks.PreToolUse must be an array"
+  has=$(jq --argjson e "$entry" '[(.hooks.PreToolUse // [])[] | select(.hooks[]?.command == $e.hooks[0].command)] | length > 0' <<<"$cur") \
+    || sa_tooling "cannot read the hooks in $settings"
   changed=false
   if [ "$mode" = install ] && [ "$has" = false ]; then
-    jq --argjson e "$entry" '.hooks.PreToolUse = ((.hooks.PreToolUse // []) + [$e])' <<<"$cur" > "$settings.tmp.$$" \
+    mkdir -p "$(dirname "$settings")" \
+      && jq --argjson e "$entry" '.hooks.PreToolUse = ((.hooks.PreToolUse // []) + [$e])' <<<"$cur" > "$settings.tmp.$$" \
       && mv "$settings.tmp.$$" "$settings" || sa_tooling "cannot write $settings"
     has=true changed=true
   fi
@@ -77,9 +82,14 @@ case $tool in
   Bash)
     cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
     [[ $cmd =~ \>[\|\>]?[[:space:]]*[^[:space:]\;\&\|]*($state) ]] && refuse "${BASH_REMATCH[1]}"
+    # Split into simple commands in bash: a sed `\n` replacement is unspecified in POSIX.
+    split=${cmd//&&/$'\n'}; split=${split//||/$'\n'}; split=${split//;/$'\n'}; split=${split//|/$'\n'}
     while IFS= read -r seg; do
-      [[ $seg =~ (^|[[:space:]])(mv|cp|tee|rm|truncate|install|ln|dd|sed[[:space:]]+-[a-zA-Z]*i|perl[[:space:]]+-[a-zA-Z]*i)([[:space:]]|$) ]] || continue
-      [[ $seg =~ ($state) ]] && refuse "${BASH_REMATCH[1]}"
-    done < <(sed 's/&&/\n/g; s/||/\n/g; s/[;|]/\n/g' <<<"$cmd") ;;
+      [[ $seg =~ (^|[[:space:]])(mv|tee|rm|truncate|dd|sed[[:space:]]+-[a-zA-Z]*i|perl[[:space:]]+-[a-zA-Z]*i)([[:space:]]|$) ]] \
+        && [[ $seg =~ ($state) ]] && refuse "${BASH_REMATCH[1]}"
+      # A copy only writes its last word, so copying the file elsewhere is a read.
+      [[ $seg =~ (^|[[:space:]])(cp|install|ln)([[:space:]]|$) ]] \
+        && [[ $seg =~ ($state)[\"\']?[[:space:]]*$ ]] && refuse "${BASH_REMATCH[1]}"
+    done <<<"$split" ;;
 esac
 exit 0
