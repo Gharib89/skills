@@ -4,7 +4,7 @@ description: >-
   Launch, record and watch T3 threads for the owner's tickets until their PRs
   merge. Use when running as the owner's pinned super agent thread in T3 Code.
 metadata:
-  version: 0.33.0
+  version: 0.34.0
 ---
 
 # super-agent
@@ -146,16 +146,16 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    `running`, one already watches, so end the turn. A background Bash stops at
    2 h, so the watcher times out first. Keep one backstop schedule per super
    agent thread, firing while the watcher lives too: `list_scheduled_tasks`
-   first, and only when
-   none is bound here, `schedule_task` on an interval of 1800000 ms bound to
-   this thread, its prompt "Backstop: run scripts/pulse.sh and follow
-   SKILL.md step 4". When `ledger.sh --ledger <ledger> list --open` is empty,
-   `delete_scheduled_task` it: the loop is done.
+   first, and only when none is bound here, `schedule_task` the `backstop` of
+   `scripts/schedules.sh --fleet <fleet>` (hourly, bound to this thread). When
+   `ledger.sh --ledger <ledger> list --open` is empty, `delete_scheduled_task`
+   it: the loop is done.
 4. **Wake.** The watcher's exit or the schedule wakes you. A watcher wake runs
    step 5. A backstop wake runs `scripts/pulse.sh --ledger <ledger> --fleet
    <fleet>` instead, with step 5's flags, `--remote` included (Remote
-   entries, below). Read its `skill` first (below). `alive` true and `changed`
-   false then ends the turn, nothing else read or posted; `alive` false starts
+   entries, below). Read its `skill` first (below). `end_turn` true
+   (`alive` true, `changed` false) ends the turn: it posts nothing, and reads
+   nothing else; `alive` false starts
    the watcher; `changed` true makes its `summary` the answer step 5 acts on.
    **A stale copy.** Every pulse and reconcile answer carries `skill`
    {loaded, source, stale}: `stale` true means this running copy is older than
