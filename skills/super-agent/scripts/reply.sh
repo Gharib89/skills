@@ -13,8 +13,9 @@
 # with no assistant message while `hasMore` says older items exist: the waiting line
 # and the merge-gate summary sit at a message's end, so either read gives a false
 # verdict. Read it again with a larger `maxCharsPerItem` or `limit`. A read whose
-# thread lacks a field `reconcile` requires is refused too, so no file it would call
-# `shape` is written.
+# thread lacks a field `reconcile` requires, or one with no `hasMore`, is refused
+# too: no file `reconcile` would call `shape` is written, and a read that cannot say
+# whether an older page exists gives no verdict.
 #
 # stdout: {file, thread, status}
 # exit: 0 written · 1 the read cannot give a verdict (last message truncated, or no
@@ -37,7 +38,7 @@ done
 [ -f "$read_file" ] || sa_tooling "$read_file: no such file"
 
 reply=$(jq -c "$sa_jq_thread_shape"'
-  if (.items | type) != "array" or (thread_shape | not) then empty else
+  if (.items | type) != "array" or (.hasMore | type) != "boolean" or (thread_shape | not) then empty else
     ([.items[] | select(.type == "assistant_message")] | sort_by(.position) | last) as $last
     | {thread: (.thread | {threadId, status, runCount, pendingRequestCount, worktreePath, branch, updatedAt}
           | with_entries(select(.value != null))),

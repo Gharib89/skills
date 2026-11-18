@@ -76,6 +76,12 @@ read_of idle x; jq -c '.items = [] | .hasMore = false' "$tmp/read.json" > "$tmp/
 rep "$tmp/empty.json" --dir "$tmp/dir" >/dev/null
 check "no assistant message gives an empty messages list" "[]" "$(jq -c .messages "$tmp/dir/t-6.json")"
 
+# a read that omits hasMore cannot say whether an older page holds the last message
+read_of idle x; jq -c 'del(.hasMore)' "$tmp/read.json" > "$tmp/bad.json"
+rm -f "$tmp/dir/t-6.json"
+rep "$tmp/bad.json" --dir "$tmp/dir" >/dev/null 2>&1; check_rc "a read with no hasMore exits 2" 2 "$?"
+check "and writes no file for it" "no" "$([ -e "$tmp/dir/t-6.json" ] && echo yes || echo no)"
+
 # --- the last assistant message is the highest position, whatever order the items come in
 read_of idle "the last one"; jq -c '.items |= reverse' "$tmp/read.json" > "$tmp/rev.json"
 rep "$tmp/rev.json" --dir "$tmp/dir" >/dev/null
