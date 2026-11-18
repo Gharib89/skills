@@ -4,7 +4,7 @@ description: >-
   Launch, record and watch T3 threads for the owner's tickets until their PRs
   merge. Use when running as the owner's pinned super agent thread in T3 Code.
 metadata:
-  version: 0.27.0
+  version: 0.28.0
 ---
 
 # super-agent
@@ -172,9 +172,9 @@ permission hold; a background shell's exit wakes you about 5 s later, and a
 bound schedule wakes you on time (all measured 2026-11-06).
 
 **Remote entries** (an `environment_id`): on each wake, before reconcile or
-pulse, save their `t3_thread_read` and pass `--remote`
-([remote](reference/remote.md)); a pulse without it reads their threads as
-`thread-unreadable`.
+pulse, save their `t3_thread_read`, convert each with `reply.sh` and pass
+`--remote` ([remote](reference/remote.md)); a pulse without it reads their
+threads as `thread-unreadable`.
 
 **The owner steps into a supervised thread.** A message of theirs there leaves
 its entry in the ledger and watched: never unwatch, settle or rethread it for

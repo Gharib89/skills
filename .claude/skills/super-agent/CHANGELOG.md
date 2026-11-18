@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.28.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: A converter turns a saved thread read into the remote reply file
+  ([#1290](https://github.com/Gharib89/skills/pull/1290),
+  [`5c77eba`](https://github.com/Gharib89/skills/commit/5c77ebabfb5d780517afcedb06a2c432ac96e274))
+
+
 ## v0.27.0 (2026-11-18)
 
 ### Features
