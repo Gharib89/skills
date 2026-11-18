@@ -17,8 +17,9 @@ the one push that is not a need. The old thread, in this order:
    still hands over; say so in chat.
 2. Stop the watcher, so two super agents never run on one ledger: TaskStop
    its background shell when its id is in hand, else `kill` the pid
-   `<ledger>.watch` holds (`watch.sh`'s lock; no file means none runs, and a
-   dead pid's lock is taken over by the successor's start).
+   `<ledger>.watch` holds, only when `ps -o args= -p <pid>` shows a
+   `watch.sh` (`watch.sh`'s lock; no file means none runs, and a lock whose
+   pid is gone or reused is taken over by the successor's start).
 3. `list_scheduled_tasks`, note the morning report's time, and
    `delete_scheduled_task` each schedule bound to this thread (the morning
    report and the backstop); retro-runs are bound to repo projects and stay.
