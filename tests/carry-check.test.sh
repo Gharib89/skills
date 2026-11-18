@@ -54,6 +54,19 @@ check "no file content on stdout or stderr" 0 "$(grep -c 'SECRET' <<<"$all")"
 out=$(cd "$main" && "$m" .env 2>"$tmp/err"); rc=$?
 check_rc "run from the main checkout is a tooling error" 2 "$rc"
 
+out=$(cd "$main" && "$m" 2>/dev/null); rc=$?
+check "no files from the main checkout still answers a passing verdict" '{"ok":true,"match":[],"differs":[],"missing":[]}' "$(jq -c . <<<"$out")"
+check_rc "no files from the main checkout exits 0" 0 "$rc"
+
+mkdir -p "$main/adir" "$wt/adir"
+printf 'SECRET-SPACE\n' | tee "$main/a b" "$wt/a b" >/dev/null
+run adir "a b"
+check "an unreadable-as-file path is missing, a name with a space matches" '{"ok":false,"match":["a b"],"differs":[],"missing":["adir"]}' "$(jq -c . <<<"$out")"
+
+for bad in /etc/passwd a/../b a/..; do
+  run "$bad"
+  check_rc "the path $bad is a tooling error" 2 "$rc"
+done
 run --x
 check_rc "a flag typed as a file is a tooling error" 2 "$rc"
 run ../escape

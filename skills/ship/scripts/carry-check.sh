@@ -38,23 +38,23 @@ for f in "$@"; do
 done
 here=$(git rev-parse --show-toplevel 2>/dev/null) || ship_tooling "not inside a git checkout"
 main=$(ship_main_checkout) || ship_tooling "not inside a git checkout"
-[ "$(cd "$here" && pwd -P)" != "$(cd "$main" && pwd -P)" ] || ship_tooling "run from the worktree: in the main checkout each file would match itself"
+[ $# -eq 0 ] || [ "$(cd "$here" && pwd -P)" != "$(cd "$main" && pwd -P)" ] || ship_tooling "run from the worktree: in the main checkout each file would match itself"
 
 match='[]' differs='[]' missing='[]'
 for f in "$@"; do
-  if [ ! -r "$here/$f" ] || [ ! -r "$main/$f" ]; then
-    missing=$(jq --arg f "$f" '. + [$f]' <<<"$missing")
-  elif cmp -s "$here/$f" "$main/$f"; then
-    match=$(jq --arg f "$f" '. + [$f]' <<<"$match")
-  else
-    differs=$(jq --arg f "$f" '. + [$f]' <<<"$differs")
-  fi
+  # cmp exits 2 on a read it could not make (a directory, a vanished file): that
+  # is `missing`, never `differs`.
+  cmp -s "$here/$f" "$main/$f" 2>/dev/null
+  case $? in
+    0) match=$(jq --arg f "$f" '. + [$f]' <<<"$match") ;;
+    1) differs=$(jq --arg f "$f" '. + [$f]' <<<"$differs") ;;
+    *) missing=$(jq --arg f "$f" '. + [$f]' <<<"$missing") ;;
+  esac
 done
 ok=true
 [ "$differs$missing" = '[][]' ] || ok=false
-jq -n --argjson ok "$ok" --argjson m "$match" --argjson d "$differs" --argjson x "$missing" \
-  '{ok: $ok, match: $m, differs: $d, missing: $x}'
-if ! $ok; then
-  printf 'carried files differ or are missing: %s\n' "$(jq -r '(.differs + .missing) | join(", ")' <<<"{\"differs\":$differs,\"missing\":$missing}")" >&2
-fi
+jq -n --argjson ok "$ok" --argjson match "$match" --argjson differs "$differs" --argjson missing "$missing" \
+  '{ok: $ok, match: $match, differs: $differs, missing: $missing}'
+$ok || jq -rn --argjson d "$differs" --argjson m "$missing" \
+  '"carried files differ or are missing: " + (($d + $m) | join(", "))' >&2
 $ok
