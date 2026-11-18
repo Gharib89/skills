@@ -251,7 +251,7 @@ rm -f "$SA_FAKE/calls"
 out=$(R)
 check "a settled triage entry with the same run count is not reported" "[]" "$(jq -c .woke <<<"$out")"
 check "and stays settled" settled "$(stage 9)"
-check "and costs no PR or issue call" "" "$(calls | grep '^gh ' || true)"
+check "and costs no PR or issue call" "" "$(calls | grep '^gh ' | grep -v /contents/ || true)"
 sa_thread t-9 running 2 0 /wt/9 triage/x-9
 out=$(R)
 check "a settled triage thread that runs again is reported in woke" "$repo#9 t-9 triage" "$(jq -r '.woke[] | "\(.key) \(.thread) \(.kind)"' <<<"$out")"

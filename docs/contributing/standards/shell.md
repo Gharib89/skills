@@ -57,7 +57,8 @@ exceptions bound these rules.
   A ninth: `super-agent`'s `watch` and `reconcile` read a supervised ticket's
   PR list and issue with `gh api` (`reconcile` also reads the issue of each
   waiting row and of its `--after` blocker, and the issue of a merged ticket
-  with its parent issue), and its thread with the `t3` CLI,
+  with its parent issue, and the version of super-agent's own SKILL.md on
+  its source repo through `contents/`), and its thread with the `t3` CLI,
   for the same reason: it composes no other skill, so no adapter is beside it;
   both only read. Its `claim` posts and deletes its own claim comment with
   `gh api`
@@ -68,9 +69,10 @@ exceptions bound these rules.
   thread show`; all only read.
   Its `setup` reads the machine's GitHub accounts with `gh auth
   status` and the linked environments with `t3 environment list`, the same way.
-  Its `launch` reads the ticket's labels and title and the repo's default
-  branch with `gh api`, and its `record` reads a thread's worktree with `t3
-  thread show`, the same way; both only read.
+  Its `launch` reads the ticket's labels and title, the repo's default
+  branch and, for a ship launch, the repo's installed ship SKILL.md
+  (`contents/`) with `gh api`, and its `record` reads a thread's worktree
+  with `t3 thread show`, the same way; both only read.
   A direct call made in two runs, where this run can see the other, is a
   candidate mechanic, raised as a Ship note.
 - **A host create posts once, through create-then-verify.** A 5xx can be the

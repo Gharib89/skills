@@ -4,7 +4,7 @@ description: >-
   Launch, record and watch T3 threads for the owner's tickets until their PRs
   merge. Use when running as the owner's pinned super agent thread in T3 Code.
 metadata:
-  version: 0.26.1
+  version: 0.27.0
 ---
 
 # super-agent
@@ -116,8 +116,9 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    claims, routes, places and writes the launch message, and prints `launch:
    true` with `args`, the whole `t3_thread_launch` argument object, or `launch:
    false` with a `reason`: `claimed`, `stale`, `waiting`, `need_reading`, `ask`,
-   `no_owner_skill` or `no_instance`. Act on the reason as Claims, Routing and
-   Placement say; `no_owner_skill` and `no_instance` are escalations. On
+   `no_owner_skill`, `no_instance` or `stale_ship`. Act on the reason as Claims,
+   Routing and Placement say; `no_owner_skill`, `no_instance` and `stale_ship`
+   are escalations (Escalation). On
    `launch: true`, add each name in `needs` to `args` and call
    `t3_thread_launch` with `args`, never `delegate_task`; the steps, and the
    no-project escalation, are in
@@ -149,9 +150,15 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
 4. **Wake.** The watcher's exit or the schedule wakes you. A watcher wake runs
    step 5. A backstop wake runs `scripts/pulse.sh --ledger <ledger> --fleet
    <fleet>` instead, with step 5's flags, `--remote` included (Remote
-   entries, below). `alive` true and `changed` false ends the turn there,
-   nothing else read or posted; `alive` false starts the watcher; `changed`
-   true makes its `summary` the answer step 5 acts on.
+   entries, below). Read its `skill` first (below). `alive` true and `changed`
+   false then ends the turn, nothing else read or posted; `alive` false starts
+   the watcher; `changed` true makes its `summary` the answer step 5 acts on.
+   **A stale copy.** Every pulse and reconcile answer carries `skill`
+   {loaded, source, stale}: `stale` true means this running copy is older than
+   the one on `Gharib89/skills`. Say so once in chat, naming both
+   versions (no ledger need: no entry is stale): the refresh, `npx
+   skills@1.8.1 add Gharib89/skills --skill super-agent --agent claude-code -g
+   -y`, is the owner's to run or approve.
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
    action it prints (Acting on the summary), run `scripts/status.sh --ledger
@@ -240,7 +247,11 @@ The owner decides these, and you decide everything else:
 - a supervised thread at rung 3 of the stall ladder whose ticket's premise or
   scope is the problem;
 - a ticket whose labels name no owner skill, or whose repo has no T3 project
-  on any machine that fits.
+  on any machine that fits;
+- a ship launch answering `stale_ship`: the repo's installed ship
+  (`detail.installed`) is below `detail.minimum`, so its threads would wait
+  without the waiting line; the owner refreshes the repo's skills first, and
+  the ticket launches after.
 
 Placement `waiting` and a same-repo wait are not escalations.
 

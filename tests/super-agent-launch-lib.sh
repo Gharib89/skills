@@ -39,6 +39,7 @@ reset() {
   rm -f "$led" "$SA_FAKE/calls" "$SA_FAKE/on-post" "$out_f"
   sa_machine home 8 16384; sa_load 0.5 12288; sa_environments '[{"environmentId":"env-box","label":"box","status":"reachable"}]'
   sa_route user '{"login":"octo"}'; sa_route "repos/$repo" '{"default_branch":"main"}'
+  sa_skill_file "$repo" .claude/skills/ship/SKILL.md 9.0.0
   echo 2026-11-06T12:00:00Z > "$SA_FAKE/now"
   quota_with 0.8
   printf '{"box":{"load1":1,"free_gb":20}}\n' > "$readings"
