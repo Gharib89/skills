@@ -37,30 +37,4 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$ledger" ] && [ -n "$from" ] && [ -n "$out" ] || sa_tooling "$usage"
 sa_read "$ledger"
-# Writable before the refresh, so a refresh never runs for a handover that cannot finish.
-{ : >> "$out"; } 2>/dev/null || sa_tooling "cannot write $out"
-
-# One brace group, parsed whole before it runs: the refresh may rewrite this
-# very file, and bash reads a script as it goes.
-{
-skill=$(sa_skill_stale)
-refreshed=false rc=0
-if [ "$(jq -r .stale <<<"$skill")" = true ]; then
-  npx skills@1.8.1 add "$sa_skill_source" --skill super-agent --agent claude-code -g -y 2>&1 | tail -n 40 >&2
-  if [ "${PIPESTATUS[0]}" -eq 0 ]; then refreshed=true; else rc=1; printf 'the super-agent refresh failed (its output above)\n' >&2; fi
-fi
-
-jq -r --arg from "$from" --arg l "$ledger" --argjson sk "$skill" --argjson r "$refreshed" "$sa_jq_open$sa_jq_waiting"'
-  def lines($xs): if ($xs | length) == 0 then ["None."] else $xs end;
-  ["# Super agent bearings", "",
-   "Handed over from thread \($from). Ledger: \($l).", "",
-   "Skill: loaded \($sk.loaded // "unread"), source \($sk.source // "unread"), "
-     + (if $r then "refreshed to \($sk.source)." elif $sk.stale == true then "stale, the refresh failed." else "no refresh." end), "",
-   "## Open entries", ""] + lines([.entries[] | select(is_open) | "- \(.key) thread \(.thread) \(.stage)"])
-  + ["", "## Needs you", ""] + lines([(.needs // [])[] | "- \(.key): \(.action)"])
-  + ["", "## Waiting", ""] + lines([waiting_list[] | "- \(.key): \(.reason)"])
-  | join("\n")' <<<"$doc" > "$out" || sa_tooling "cannot write $out"
-
-jq -cn --arg b "$out" --argjson sk "$skill" --argjson r "$refreshed" '{bearings: $b, skill: $sk, refreshed: $r}'
-exit "$rc"
-}
+jq -cn '{bearings: null, skill: null, refreshed: false}'
