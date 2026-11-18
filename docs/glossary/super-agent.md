@@ -25,7 +25,7 @@ The background script the super agent leaves running at the end of each turn: it
 _Avoid_: watchdog, poller, monitor
 
 **Waiting line**:
-The fixed last line, `Waiting on my own background work.`, that ship tells every run to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A run's final message is the PR URL and the gate state, never this line.
+The fixed last line, `Waiting on my own background work.`, that ship's run contract, or a `/triage` launch message's contract line, tells a run to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A run's final message is its outcome (the PR URL and the gate state for ship, the triage outcome for triage), never this line.
 _Avoid_: heartbeat, keepalive, status ping
 
 **Wake action**:
@@ -53,7 +53,7 @@ A merge-gate hold the owner waives in advance, with its condition written out, s
 _Avoid_: auto-merge, merge allowance (that is the permission to merge at all), exception
 
 **Launch message**:
-The first message of a supervised thread: its owner-skill invocation (`/ship <n>`, `/triage <n>`), plus one `Note:` line only when the owner gave one for that ticket. Nothing else rides on it: rules the run must follow live in the skill, the repo's profile or the global rules it loads.
+The first message of a supervised thread: its owner-skill invocation (`/ship <n>`, `/triage <n>`), plus one `Note:` line only when the owner gave one for that ticket. A `/triage` message also carries one contract line after the invocation, since the triage skill is upstream and cannot ask for the waiting line itself. Nothing else rides on it: rules the run must follow live in the skill, the repo's profile or the global rules it loads.
 _Avoid_: launch brief, preamble, system prompt
 
 **Step-in**:

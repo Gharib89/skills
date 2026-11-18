@@ -27,9 +27,11 @@
 # The ticket's Size label picks the tier (M when it has none, `size_source` says
 # so); `ready-for-agent` is a `ship` launch, `needs-triage` a `triage` one.
 # The launch message (`args.message`) is the owner-skill invocation (`/ship <n>`,
-# `/triage <n>`), plus one `Note: <text>` line with --note, and nothing else: every
-# rule a run follows lives in its skill, its repo's profile or the global rules,
-# and the super agent says anything more only at a step-in (ADR 0020).
+# `/triage <n>`), plus one `Note: <text>` line with --note: every rule a run follows
+# lives in its skill, its repo's profile or the global rules, and the super agent says
+# anything more only at a step-in (ADR 0020). One exception: a `/triage` message carries
+# the waiting-line contract line (`sa_triage_contract`, `_lib.sh`) between the invocation
+# and the note, because the triage skill is upstream and no SKILL.md this repo owns can.
 # The fleet file's `merge_gate_ruler` is checked here, `owner` (the default) or
 # `super-agent`, so a fleet the super agent cannot rule a hold from launches nothing.
 # `record` reads the worktree from `t3 thread show` when --worktree is omitted
@@ -234,12 +236,12 @@ branch="$type/$slug-$number"
 answer_json=$(jq -cn --arg k "$key" --arg kind "$kind" --arg size "$size" --arg ss "$size_source" --arg claim "$claim" \
   --argjson route "$route" --argjson use "\"$use\"" --argjson placed "$placed" --argjson sel "$selection" --argjson areas "$areas" \
   --arg base "$base" --arg branch "$branch" --arg slug "$slug" --arg msg "/$kind $number" \
-  --arg note "$note" --arg n "$number" --arg short "${repo#*/}" '
+  --arg note "$note" --arg n "$number" --arg short "${repo#*/}" --arg contract "$([ "$kind" = triage ] && printf %s "$sa_triage_contract")" '
   ($route[$use]) as $tier
   | {key: $k, launch: true, kind: $kind, size: $size, size_source: $ss, claim: $claim,
      args: ({title: "\($short)#\($n) \($slug)",
              workspaceStrategy: {type: "worktree", baseRef: $base, branch: $branch, startFromOrigin: true},
-             modelSelection: $sel, message: (if $note == "" then $msg else "\($msg)\nNote: \($note)" end)}
+             modelSelection: $sel, message: ([$msg, $contract, (if $note == "" then "" else "Note: \($note)" end)] | map(select(. != "")) | join("\n"))}
             + (if $placed.environment_id == null then {} else {environmentId: $placed.environment_id} end)),
      needs: ["projectId"],
      record: {key: $k, kind: $kind, machine: $placed.machine, environment_id: $placed.environment_id, instance_id: $route.instance_id,

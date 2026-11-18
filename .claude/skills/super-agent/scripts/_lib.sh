@@ -158,11 +158,17 @@ sa_remote_flag() {
 }
 
 # The last line a supervised run writes when it ends a turn only to wait on its own
-# background work (a check, a CI wait, a subagent): ship's run contract asks for it
-# word for word, and `sa_observe` reads it as `waiting`. A rest that ends on it is
+# background work (a check, a CI wait, a subagent): ship's run contract (and, for a
+# triage launch, `sa_triage_contract`) asks for it word for word, and `sa_observe` reads it as `waiting`. A rest that ends on it is
 # running until the stall window passes, so it raises no `run-finished` and adds no
 # stall. Defined once here, where the observation matches it.
 sa_waiting_line='Waiting on my own background work.'
+
+# The contract line a triage launch carries (`launch.sh`): the triage skill is upstream,
+# so no SKILL.md this repo owns can ask a triage run for the waiting line the way ship's
+# does (ADR 0020). Built from `sa_waiting_line`, never a second copy of its text.
+# shellcheck disable=SC2034  # read by launch.sh
+sa_triage_contract="A turn that ends only to wait on your own background work (a check, a subagent) ends with this line, word for word, as its last line: \`$sa_waiting_line\` Your final message is the triage outcome, never that line."
 
 # `active($w; $now)` for a snapshot (`$obs`): the thread is running, or at rest on
 # the waiting line for less than `$w` seconds (`rest_at`, the thread's last update,

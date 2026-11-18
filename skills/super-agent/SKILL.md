@@ -180,8 +180,9 @@ carries a supervised thread's transcript.
 
 ## The launch message and the step-ins
 
-`launch.sh` writes the **launch message** into `args.message`: the invocation,
-plus one `Note:` line with `--note`; send it unedited. After it you post into a
+`launch.sh` writes the **launch message** into `args.message`: the invocation
+(for `/triage`, then one waiting-line contract line), plus one `Note:` line with
+`--note`; send it unedited. After it you post into a
 supervised thread only at a **step-in**, exactly five moments: the stall 1
 nudge, the stall 2 missing fact, a gate hold, the owner's answer to a need the
 thread raised, and a hard finding from verification. Nothing is broadcast to
