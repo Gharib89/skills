@@ -79,7 +79,8 @@
 #         warning; `instances` one {instance_id, driver, quota_source, auth,
 #         auth_reason, status} per enabled instance
 # exit: 0 a proposal or a write, failed probes included · 2 usage, a fleet file
-#       that is not JSON or has a field of the wrong shape, a machine probe
+#       that is not JSON, has a field of the wrong shape or a retired `brief`
+#       line under a repo or machine, a machine probe
 #       (hostname, nproc, free, uptime) that failed, or a write that failed
 #
 # Linux only: see the operating system line in SKILL.md.
@@ -137,6 +138,7 @@ if [ -f "$fleet_file" ]; then
     elif ((if .work_week == null then [1] else .work_week end) | type == "array" and length > 0 and length == (unique | length) and all(type == "number" and . >= 0 and . <= 6 and . == floor)) | not then "work_week must be a non-empty list of distinct weekday numbers 0 to 6"
     else empty end' "$fleet_file")
   [ -z "$bad" ] || sa_tooling "$fleet_file: $bad"
+  sa_fleet_no_brief "$fleet_file"
   existing=$(cat "$fleet_file")
 fi
 

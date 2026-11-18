@@ -16,9 +16,9 @@
 #   ledger --ledger <file> rethread <key> --thread <id> --worktree <path>
 #          --branch <name> [--kind ship|triage|task] [--environment <id>] [--instance <id>]
 #          [--model <id>] [--effort <level>] [--area <path>]...
-#   ledger --ledger <file> ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]]
+#   ledger --ledger <file> ruling <text> [--allow <call>]... [--repo <owner/name>]
 #   ledger --ledger <file> allowed
-#   ledger --ledger <file> briefed
+#   ledger --ledger <file> scoped [--repo <owner/name>]
 #   ledger --ledger <file> wait <key> --reason <text> [--order <n>] [--after <key>]
 #   ledger --ledger <file> unwait <key>
 #   ledger --ledger <file> need <key> --action <text> [--reason <word>]
@@ -42,10 +42,11 @@
 # `add` over a finished triage entry, `rethread` for a thread that failed. A write is
 # a temp file beside the ledger, then a rename. A ruling is the owner's answer to a hold, dated; each
 # `--allow` is a call the answer lets a supervised thread make without a hold,
-# and `allowed` lists them. `--brief` marks
-# the ruling brief-bound and `briefed` lists those; no launch message carries one.
-# With `--brief`, `--repo` scopes it so the gate-hold step-in can cite it for that
-# repo; a ruling's `--machine` is stored and no longer read. An entry's `--machine`
+# and `allowed` lists them. `--repo` scopes a ruling to one repo so the gate-hold
+# step-in can cite it for that repo's later holds, and `scoped` lists the rulings
+# that have a repo (one repo's, compared without regard to case, with `--repo`).
+# A ruling has no brief or machine scope: `--brief` and `--machine` are refused,
+# and a ruling an older ledger marked brief-bound reads as a plain one. An entry's `--machine`
 # is the fleet file's key for the machine the thread runs on (`local` means the
 # machine the ledger is on), `--environment` the T3 environment id `place`
 # returned for a linked machine (absent: this machine), which `reconcile` and
@@ -85,8 +86,8 @@
 # stdout: `add` {ledger, key, entry}; `get` the entry; `list` {ledger, entries,
 #         rulings}, `entries` an array of entries (`--open` leaves out settled
 #         and closed ones); `set` {key, field, value}; `rethread` {ledger, key, entry}; `ruling` {ruling:
-#         {date, text, allow, brief, repo, machine}}; `allowed` {allowed: [{date, call, line}]};
-#         `briefed` {briefed: [{date, text, repo, machine}]}; `wait`
+#         {date, text, allow, repo}}; `allowed` {allowed: [{date, call, line}]};
+#         `scoped` {scoped: [{date, text, repo}]}; `wait`
 #         {waiting: {key, repo, number, reason, since, order, after}}; `unwait` {key,
 #         removed}; `need` {need: {key, action, since, pushed}}; `pushed`
 #         {need}; `unneed` {key, removed}; `limit` {limit: {repo, reviewer,
@@ -98,7 +99,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--brief [--repo <owner/name>] [--machine <key>]] | allowed | briefed | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
+usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name>'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -222,20 +223,18 @@ case $cmd in
       '{ledger: $l, key: $k, entry: $e}' ;;
   ruling)
     [ $# -ge 1 ] || sa_tooling "$usage"
-    text=$1; shift; allow='[]' brief=false rrepo='' rmachine=''
+    text=$1; shift; allow='[]' rrepo=''
     while [ $# -gt 0 ]; do
       case $1 in
-        --brief) brief=true; shift ;;
+        --brief|--machine) sa_tooling "ruling $1 is retired: no launch message or machine scope reads a ruling. $(sa_brief_where)" ;;
         --repo) sa_flag_value "$usage" "${2:-}"; rrepo=$2; shift 2 ;;
-        --machine) sa_flag_value "$usage" "${2:-}"; rmachine=$2; shift 2 ;;
         --allow) sa_flag_value "$usage" "${2:-}"; allow=$(jq -c --arg c "$2" '. + [$c]' <<<"$allow"); shift 2 ;;
         *) sa_tooling "$usage" ;;
       esac
     done
-    { [ -z "$rrepo$rmachine" ] || [ "$brief" = true ]; } || sa_tooling "--repo and --machine scope a --brief ruling only"
     sa_read "$ledger"
-    ruling=$(jq -cn --arg d "$(date -u +%F)" --arg t "$text" --argjson a "$allow" --argjson b "$brief" --arg r "$rrepo" --arg m "$rmachine" \
-      '{date: $d, text: $t, allow: $a, brief: $b, repo: (if $r == "" then null else $r end), machine: (if $m == "" then null else $m end)}')
+    ruling=$(jq -cn --arg d "$(date -u +%F)" --arg t "$text" --argjson a "$allow" --arg r "$rrepo" \
+      '{date: $d, text: $t, allow: $a, repo: (if $r == "" then null else $r end)}')
     sa_write "$ledger" "$(jq -c --argjson r "$ruling" '.rulings += [$r]' <<<"$doc")"
     jq -cn --argjson r "$ruling" '{ruling: $r}' ;;
   allowed)
@@ -243,10 +242,11 @@ case $cmd in
     sa_read "$ledger"
     jq -c '{allowed: [.rulings[] | .date as $d | (.allow // [])[] | {date: $d, call: .,
       line: "Run `\(.)` without a hold: the owner allowed it on \($d)."}]}' <<<"$doc" ;;
-  briefed)
-    [ $# -eq 0 ] || sa_tooling "$usage"
+  scoped)
+    srepo=''
+    case $# in 0) ;; 2) [ "$1" = --repo ] || sa_tooling "$usage"; sa_flag_value "$usage" "$2"; srepo=$2 ;; *) sa_tooling "$usage" ;; esac
     sa_read "$ledger"
-    jq -c '{briefed: [.rulings[] | select(.brief == true) | {date, text, repo: (.repo // null), machine: (.machine // null)}]}' <<<"$doc" ;;
+    jq -c --arg r "$srepo" "$sa_jq_norm"'{scoped: [.rulings[] | select(.repo != null and ($r == "" or (.repo | norm_repo) == ($r | norm_repo))) | {date, text, repo}]}' <<<"$doc" ;;
   wait)
     [ $# -ge 3 ] || sa_tooling "$usage"
     key=$1; shift; reason='' order='' after=''

@@ -2,7 +2,7 @@
 # super-agent's `fleet`, driven through its command line over a fleet file: `pin`
 # fixes a repo to one machine and `unpin` frees it, `slots` sets a machine's slot
 # count; each is idempotent, leaves every other key as it was, and refuses a
-# machine the file lacks, a bad count or a bad file.
+# machine the file lacks, a bad count, a bad file or a retired brief line (setup too).
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -12,7 +12,7 @@ tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 fleet=$tmp/fleet.json
 F() { bash "$s/fleet.sh" --fleet "$fleet" "$@"; }
-seed() { printf '%s\n' '{"machines":{"home":{"slots":3,"reserve":1},"box":{"slots":2,"environment_id":"e1"}},"waivers":[{"id":"w"}],"repos":{"acme/widgets":{"max_ships":2,"brief":["x"]}}}' > "$fleet"; }
+seed() { printf '%s\n' '{"machines":{"home":{"slots":3,"reserve":1},"box":{"slots":2,"environment_id":"e1"}},"waivers":[{"id":"w"}],"repos":{"acme/widgets":{"max_ships":2,"note":"x"}}}' > "$fleet"; }
 
 # --- the contract every script keeps ------------------------------------------
 out=$(bash "$s/fleet.sh" --help 2>"$tmp/err"); rc=$?
@@ -33,9 +33,9 @@ out=$(F pin acme/gears box); rc=$?
 check_rc "pin exits 0" 0 "$rc"
 check "it answers the repo's machine" '{"action":"pin","repo":"acme/gears","machine":"box","changed":true}' "$(jq -c '{action, repo, machine, changed}' <<<"$out")"
 check "the file holds it" '"box"' "$(jq -c '.repos["acme/gears"].machine' "$fleet")"
-check "every other key is as it was" '{"machines":{"home":{"slots":3,"reserve":1},"box":{"slots":2,"environment_id":"e1"}},"waivers":[{"id":"w"}],"repos":{"acme/widgets":{"max_ships":2,"brief":["x"]}}}' "$(jq -c 'del(.repos["acme/gears"])' "$fleet")"
+check "every other key is as it was" '{"machines":{"home":{"slots":3,"reserve":1},"box":{"slots":2,"environment_id":"e1"}},"waivers":[{"id":"w"}],"repos":{"acme/widgets":{"max_ships":2,"note":"x"}}}' "$(jq -c 'del(.repos["acme/gears"])' "$fleet")"
 out=$(F pin acme/widgets home)
-check "pinning a repo with other keys keeps them" '{"max_ships":2,"brief":["x"],"machine":"home"}' "$(jq -c '.repos["acme/widgets"]' "$fleet")"
+check "pinning a repo with other keys keeps them" '{"max_ships":2,"note":"x","machine":"home"}' "$(jq -c '.repos["acme/widgets"]' "$fleet")"
 check "pinning it again changes nothing" false "$(F pin acme/widgets home | jq .changed)"
 check "a repo in another case is the same repo" 'false ["acme/gears","acme/widgets"]' "$(F pin Acme/Widgets home | jq -r .changed) $(jq -c '.repos | keys' "$fleet")"
 check "and moving a pin changes it" '"box"' "$(F pin ACME/WIDGETS box >/dev/null; jq -c '.repos["acme/widgets"].machine' "$fleet")"
@@ -46,7 +46,7 @@ check "and leaves the pin as it was" '"box"' "$(jq -c '.repos["acme/widgets"].ma
 # --- unpin -------------------------------------------------------------------------
 out=$(F unpin acme/widgets); rc=$?
 check_rc "unpin exits 0" 0 "$rc"
-check "it removes the pin and keeps the repo's other keys" 'true {"max_ships":2,"brief":["x"]}' "$(jq -r .changed <<<"$out") $(jq -c '.repos["acme/widgets"]' "$fleet")"
+check "it removes the pin and keeps the repo's other keys" 'true {"max_ships":2,"note":"x"}' "$(jq -r .changed <<<"$out") $(jq -c '.repos["acme/widgets"]' "$fleet")"
 check "unpinning a free repo changes nothing" false "$(F unpin acme/widgets | jq .changed)"
 F unpin acme/gears >/dev/null
 check "a repo left with no key is dropped" false "$(jq 'has("repos") and (.repos | has("acme/gears"))' "$fleet")"
@@ -70,5 +70,19 @@ echo '[]' > "$fleet"
 check_rc "a fleet that is not an object exits 2" 2 "$(F slots box 2 >/dev/null 2>&1; echo $?)"
 seed; jq '.repos = []' "$fleet" > "$tmp/r.json"; cp "$tmp/r.json" "$fleet"
 check_rc "repos that is not an object exits 2" 2 "$(F pin acme/w box >/dev/null 2>&1; echo $?)"
+seed; jq '.repos["acme/widgets"].brief = ["x"]' "$fleet" > "$tmp/r.json"; cp "$tmp/r.json" "$fleet"
+out=$(F pin acme/widgets box 2>/dev/null); rc=$?
+check "a repo brief line exits 2, naming it and where such a rule belongs" "2 1 1 1 1" \
+  "$rc $(for w in "repos.acme/widgets.brief" "ship profile" "plain ruling" "global rules"; do jq -r .error <<<"$out" | grep -cF "$w"; done | paste -sd' ')"
+seed; jq '.machines.home.brief = ["x"]' "$fleet" > "$tmp/r.json"; cp "$tmp/r.json" "$fleet"
+out=$(F slots box 3 2>/dev/null); rc=$?
+check "a machine brief line exits 2, naming it" "2 1" "$rc $(jq -r .error <<<"$out" | grep -cF machines.home.brief)"
+check "and leaves the file as it was" 2 "$(jq .machines.box.slots "$fleet")"
+printf '%s\n' '{"repos":{"acme/widgets":{"brief":["x"]}}}' > "$fleet"
+out=$(bash "$s/setup.sh" --fleet "$fleet" --name laptop --write 2>/dev/null); rc=$?
+err=$(jq -r .error <<<"$out"); named=
+for w in "repos.acme/widgets.brief" "ship profile" "plain ruling" "global rules"; do case $err in *"$w"*) named+=y ;; *) named+=n ;; esac; done
+check "setup refuses a repo brief line the same way, and leaves the file alone" "2 yyyy" "$rc $named"
+check "setup leaves the file as it was" '{"repos":{"acme/widgets":{"brief":["x"]}}}' "$(jq -c . "$fleet")"
 
 finish

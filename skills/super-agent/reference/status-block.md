@@ -73,9 +73,9 @@ deny is a ruling with no `--allow`). No ruling rides on a launch message: one
 that changes how ship runs belongs in the repo's ship profile. A ruling of your
 own on a merge-gate hold (`merge_gate_ruler: super-agent`) is recorded the same
 way, then reported in the next block. A gate-hold ruling that holds for one
-repo's later holds too adds `--brief --repo <owner/name>`, the ledger's only
-repo scope until #1268, and `ledger.sh --ledger <ledger> briefed` lists it with
-its `repo` for the [gate-hold step-in](step-ins.md#the-step-ins).
+repo's later holds too adds `--repo <owner/name>`, and `ledger.sh --ledger
+<ledger> scoped` lists it with its `repo` for the
+[gate-hold step-in](step-ins.md#the-step-ins).
 
 ## The digest
 

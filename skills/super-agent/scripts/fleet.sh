@@ -21,7 +21,8 @@
 #         `repo`, `slots` `machine` and `slots`
 # exit: 0 done, `changed` false when the file already said so · 2 usage, a machine
 #       the file lacks, a count that is not allowed, a fleet file that is missing,
-#       not JSON or whose `machines` or `repos` is no object, or a write that failed
+#       not JSON or whose `machines` or `repos` is no object, one that still
+#       carries a `brief` line under a repo or a machine, or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -47,6 +48,7 @@ if [ -n "$repo" ]; then case $repo in */*/*|*/|/*|*[!A-Za-z0-9._/-]*) sa_tooling
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file (run setup first)"
 jq -e 'type == "object" and ((.machines // {}) | type == "object") and ((.repos // {}) | type == "object")' "$fleet" >/dev/null 2>&1 \
   || sa_tooling "$fleet: not a fleet file (an object whose machines and repos are objects)"
+sa_fleet_no_brief "$fleet"
 if [ -n "$machine" ]; then
   jq -e --arg m "$machine" '(.machines // {}) | has($m)' "$fleet" >/dev/null || sa_tooling "$fleet: $machine is not in machines"
 fi
