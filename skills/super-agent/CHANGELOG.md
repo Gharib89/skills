@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.26.1 (2026-11-18)
+
+### Bug Fixes
+
+- **super-agent**: Carry the waiting-line contract in a triage launch message
+  ([#1273](https://github.com/Gharib89/skills/pull/1273),
+  [`4f80000`](https://github.com/Gharib89/skills/commit/4f800008e112a43c60f56c1f5db6976733858134))
+
+
 ## v0.26.0 (2026-11-18)
 
 ### Features
