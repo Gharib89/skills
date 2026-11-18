@@ -86,5 +86,5 @@ if [ -n "$launchf" ] && jq -e '.record.owner_go == true' "$launchf" >/dev/null 2
 fi
 sub reconcile --ledger "$ledger" ${remotes[@]+"${remotes[@]}"}
 [ "$rc" = 0 ] && jq -e '.checked != null' >/dev/null <<<"$out" || sa_tooling "reconcile gave no answer"
-jq -cn --argjson e "$entry" --argjson r "$out" '{key: $e.key, entry: $e, reconcile: {checked: $r.checked, errors: $r.errors}}'
+jq -cn --argjson e "$entry" --argjson r "$out" '{key: $e.key, entry: $e, reconcile: {checked: $r.checked, errors: $r.errors}, status: $r.status}'
 exit 0

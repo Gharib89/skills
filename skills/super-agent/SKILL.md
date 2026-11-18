@@ -133,8 +133,9 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    ([remote](reference/remote.md#steps) step 1). It writes the ledger entry,
    with the fleet's machine key and the routed tier's model and effort, and runs
    the baseline reconcile `watch.sh` compares against; a running watcher picks
-   the entry up from there. A triaged ticket now shipping takes a new launch and
-   record, never `rethread`, which is rung 3's. On the first wake, compare
+   the entry up from there. Post its `status` as step 5 does. A triaged ticket
+   now shipping takes a new launch and record, never `rethread`, which is rung
+   3's. On the first wake, compare
    `.thread.branch` from `t3 thread show` with the entry's branch: the PR is
    found by branch, so when they differ, `ledger.sh --ledger <ledger> set <key>
    branch <json>`.
@@ -163,11 +164,12 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    scheduled, the refresh, `npx skills@1.8.1 add Gharib89/skills --skill
    super-agent --agent claude-code -g -y`, is the owner's to run or approve.
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
-   ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
-   action it prints (Acting on the summary), run `scripts/status.sh --ledger
-   <ledger> --quota <file> --instance <id>` (Escalation format, `<id>` from
-   [the status block](reference/status-block.md#every-wake)), then start the
-   watcher again while an entry is open.
+   ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet> --quota
+   <file> --instance <id>` (`<file>` and `<id>` from
+   [the status block](reference/status-block.md#every-wake)). Do each action
+   it prints (Acting on the summary), post its `status.block` and push each
+   `status.unpushed` need (Escalation format), then start the watcher again
+   while an entry is open.
 
 **No turn ends without a watcher running** while the ledger holds an open
 entry. A supervised thread finishing wakes nothing, and neither does its
@@ -293,12 +295,13 @@ a failure the PR did not cause is never waived, whoever rules**
 
 ### Escalation format
 
-The owner reads one thing: the **status block** `scripts/status.sh --ledger
-<ledger> --quota <file> --instance <id>` prints, posted and pushed as
-[status-block](reference/status-block.md#every-wake) says.
-A need names exactly one action, and a pick from fixed options (approve or deny
-a held call, a scope fork) also opens an AskUserQuestion dialog with the
-recommended option first.
+The owner reads one thing: the **status block**, the `status` every reconcile
+and pulse answer carries, posted as printed and pushed as
+[status-block](reference/status-block.md#every-wake) says; never compose it by
+hand. A need names exactly one action. A pick from fixed options (approve or
+deny a held call, a scope fork) goes out as chat text: the question, numbered
+options with the recommended one first, and the need's push. Never a question
+dialog: it blocks the loop until the owner answers.
 Record each escalation as a need with `ledger.sh --ledger <ledger> need <key>
 --action <text> --reason <word>`, the permission hold and the stall at 3
 included
@@ -324,9 +327,10 @@ repos, to propose it to the owner as a global rule.
 
 One fixed step, read from the ledger alone (it holds every entry, the waiting
 list, the rulings and the needs; never rebuild it from the transcript):
-`scripts/ledger.sh --ledger <ledger> list --open`, then `scripts/reconcile.sh
---ledger <ledger> --fleet <fleet>`, then start the watcher, then do the
-summary's rows (Acting on the summary) and launch its `ready` rows; `list`'s
+`scripts/ledger.sh --ledger <ledger> list --open`, then `scripts/reconcile.sh`
+with step 5's flags, then start the watcher, then do the summary's rows (Acting
+on the summary), post and push its `status` as step 5 does, and launch its
+`ready` rows; `list`'s
 other `waiting` rows get a place rerun when a machine could have come back.
 Then `list_scheduled_tasks`: a morning report bound here whose prompt is not
 the one `scripts/schedules.sh --fleet <fleet>` proposes is deleted and

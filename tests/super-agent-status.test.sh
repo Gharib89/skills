@@ -58,9 +58,8 @@ check "the first block reports a change" true "$(jq .changed <<<"$out")"
 out=$(S)
 check "run twice with no ledger change, the second reports no change" false "$(jq .changed <<<"$out")"
 check "and prints no block" '' "$(jq -r .block <<<"$out")"
-check "a digest prints the whole block whatever changed" "$want" "$(S --digest | jq -r .block)"
+check "a digest prints every row whatever changed, Merged only for merges since the last block" "$(sed 1d <<<"$want")" "$(S --digest | jq -r .block)"
 check "and a run after the digest still reports no change" false "$(S | jq .changed)"
-check "the digest cleared Merged: a later digest leaves it out" "$(sed 1d <<<"$want")" "$(S --digest | jq -r .block)"
 
 # --- Running reads the stage when no PR or gate says more ----------------------
 add 700; add 701
@@ -89,7 +88,8 @@ check "its row joins the actions with semicolons" \
   "$(jq -r '.block | split("\n")[0]' <<<"$out")"
 L unneed Gharib89/skills#681 >/dev/null; L unneed Gharib89/skills#682 >/dev/null
 out=$(S)
-check "clearing the needs drops the row and reports the change" "true 0" "$(jq -r .changed <<<"$out") $(jq -r .block <<<"$out" | grep -c '^Needs')"
+check "clearing the needs reports the change, the row saying none" "true Needs you: none" "$(jq -r .changed <<<"$out") $(jq -r .block <<<"$out")"
+check "and a digest leaves the empty row out" 0 "$(S --digest | jq -r .block | grep -c '^Needs')"
 
 # --- a ledger status never reads GitHub, and a settled triage entry is no merge -
 add 800; L set Gharib89/skills#800 kind '"triage"' >/dev/null; stage 800 settled

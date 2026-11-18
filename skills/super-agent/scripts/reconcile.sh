@@ -3,7 +3,7 @@
 # the super agent judges from one JSON answer and not from child transcripts.
 #
 #   reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]...
-#             [--fleet <file>]
+#             [--fleet <file>] [--quota <file>] [--instance <id>]
 #
 # Looks at every open entry's thread and PR (the same look `watch` takes),
 # writes it into the entry as `observed`, the baseline the next `watch`
@@ -70,11 +70,18 @@
 # below): when the ticket reads closed and every sub-issue of the open parent is closed, the
 # parent is listed once, for the super agent to close (reconcile itself closes nothing).
 #
+# Last, it runs `status` over the ledger it wrote (`--quota` and `--instance` go
+# to it) and carries its answer as `status`: the status block's rows that changed
+# since the last block, and the needs whose push has not gone out. The super agent
+# posts `block` as printed and pushes each `unpushed` need: nothing else reports.
+#
 # Each run stamps `<ledger>.reconciled` with its epoch second, which `notify` reads
 # to tell a super agent that answered a wake from one that did not.
 #
 # stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, ready,
-#         dropped, unqueued, parents_done, cleanup, verify, escalate, errors, skill}:
+#         dropped, unqueued, parents_done, cleanup, verify, escalate, errors, skill, status}:
+#         `status` is `status`'s answer {block, changed, unpushed}, or {error}
+#         when status failed after the write (the rest of the answer stands);
 #         `skill` {loaded, source, stale}: the running super-agent copy's version
 #         against the one on `sa_skill_source`'s default branch, `stale` true when
 #         the running one is older, null when either version cannot be read;
@@ -101,18 +108,19 @@
 #         `issue-unreadable` (a waiting row's issue or its blocker's too), or
 #         `claim-unreadable`, `repo-unreadable` for an `unqueued` read; `checked` counts the open entries it looked at
 # exit: 0 a reconcile, errors in the answer included · 2 usage, an unreadable
-#       ledger, or a write that failed
+#       ledger or --quota file (refused before any write), or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>]'
+usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>] [--quota <file>] [--instance <id>]'
 sa_help "$usage" "$@"
-ledger='' window=$sa_stall_window fleet=''
+ledger='' window=$sa_stall_window fleet='' quota='' status_flags=()
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2 ;;
     --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
+    --quota|--instance) sa_flag_value "$usage" "${2:-}"; status_flags+=("$1" "$2"); [ "$1" = --instance ] || quota=$2; shift 2 ;;
     --stall-window) sa_flag_value "$usage" "${2:-}"; sa_window_flag "$usage" "$2"; window=$2; shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
@@ -123,6 +131,9 @@ done
 
 [ -z "$fleet" ] || jq -e '[(.repos // {})[]? | .max_ships // 1 | type == "number" and . >= 1 and . == floor] | all' "$fleet" >/dev/null 2>&1 \
   || sa_tooling "$fleet: every repos.<owner/name>.max_ships must be a whole number of 1 or more"
+
+# A --quota file status cannot read is refused before any write, not after.
+[ -z "$quota" ] || sa_quota_file "$quota"
 
 sa_read "$ledger"
 read_doc=$doc
@@ -243,35 +254,6 @@ sa_archive "$ledger" "$now_s"
 # The stamp `notify` reads: a reconcile ran, so a super agent is answering its wakes.
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 
-# The ledger goes in on stdin: one argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".
-skill=$(sa_skill_stale)
-jq -c --arg l "$ledger" --argjson n "$checked" --argjson e "$entries" --argjson errs "$errors" --argjson st "$stalled" --argjson wk "$woke" --argjson uq "$unqueued" --argjson rd "$ready" --argjson dr "$dropped" --argjson pd "$parents_done" --argjson sk "$skill" "$sa_jq_norm"'
-  . as $d |
-  def pick($stage; f): [$e[] | select(.stage == $stage and (.paused | not)) | f];
-  def entries: [$d.entries[]?];
-  def needed($k; $r): [($d.needs // [])[] | select((.key | norm_repo) == ($k | norm_repo) and (.reason == null or .reason == $r))] | length > 0;
-  {ledger: $l, checked: $n,
-   entries: [$e[] | {key, from, stage, stalls, observed}],
-   stalled: $st,
-   settled: pick("settled"; {key, thread, worktree, kind}),
-   closed: pick("closed"; {key, thread, worktree, reason}),
-   at_rest: pick("at-rest"; {key, thread}),
-   woke: $wk,
-   ready: $rd,
-   dropped: $dr,
-   unqueued: $uq,
-   parents_done: $pd,
-   cleanup: [entries[] | select((.stage == "settled" or .stage == "closed") and .cleanup_owed == true)
-     | {key, thread, worktree, kind: (.kind // "ship"), stage, environment_id: (.environment_id // null)}],
-   verify: [entries[] | select((.kind // "ship") == "ship" and .verify_owed == true and (.stage == "merged" or .stage == "settled"))
-     | {key, repo, number, pr: .observed.pr.number, stage}],
-   escalate: [entries[]
-     | (if .stage == "settled" or .paused == true then null
-        elif .stage == "closed" then
-          (if .cleanup_owed == true then {reason: (if .observed.pr.state == "closed" then "pr-closed" else "issue-closed" end), detail: null} else null end)
-        elif (.observed.pending // 0) > 0 then {reason: "permission-hold", detail: .observed.pending}
-        elif .error != null then {reason: "fault", detail: .error}
-        elif .stage == "at-rest" and (.stalls // 0) >= 3 then {reason: "stall-cap", detail: .stalls}
-        else null end) as $r
-     | select($r != null and (needed(.key; $r.reason) | not)) | {key, thread, reason: $r.reason, detail: $r.detail}],
-   errors: $errs, skill: $sk}' <<<"$doc"
+sa_unlock
+source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/answer.sh" || sa_tooling "cannot source reconcile.d/answer.sh"
+reconcile_answer
