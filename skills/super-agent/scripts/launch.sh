@@ -52,8 +52,9 @@
 #         arguments only an MCP read can fill (`projectId`, from `t3_project_list`
 #         on the placed machine), `record` what `record` writes. `launch` false:
 #         {reason, detail}, `reason` one of `no_owner_skill` (detail the labels),
-#         `stale_ship` (installed, minimum: the repo's ship is below
-#         `sa_min_ship`, read before the claim), `claimed` or `stale` (the claim), `ask` (route's wanted, tier, bucket,
+#         `stale_ship` (installed, minimum: the repo's installed ship is below
+#         `sa_min_ship`; read before the claim, so none is taken),
+#         `claimed` or `stale` (the claim), `ask` (route's wanted, tier, bucket,
 #         reason), `no_instance` (route's reason), `need_reading` (place's
 #         machine and environment_id) or `waiting` (place's reason and
 #         considered, and the ledger now holds the waiting row).
@@ -61,7 +62,8 @@
 #         when it refused the entry, or {error: "unrecorded launch: ..."}
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
-#       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a claim, issue, installed ship version or placement the host or a script refused, or a record
+#       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a claim, issue or placement the host or a script refused, an installed ship version
+#       that cannot be read as X.Y.Z, or a record
 #       whose reconcile failed after the entry was written (do not record again)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }

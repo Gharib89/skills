@@ -170,25 +170,31 @@ sa_waiting_line='Waiting on my own background work.'
 # shellcheck disable=SC2034  # read by launch.sh
 sa_min_ship='0.67.0'
 
-# Where the super agent's source copy lives, the repo `npx skills add` refreshes it from.
+# The repo the super agent's own skill is published from: a refresh (`npx skills add`)
+# installs from it, so its default branch holds the version a refresh would bring.
 sa_skill_source='Gharib89/skills'
 
-# `ver`: a dotted version as an array of numbers, so versions compare by number.
+# `ver`: an X.Y.Z version as an array of numbers, so versions compare by number.
+# `skill_version`: the one `  version: X.Y.Z` line of a SKILL.md's text, else "": a
+# missing, repeated or malformed version (`0.67`, `v1.0.0`, a pre-release) is unread,
+# never a number.
 # shellcheck disable=SC2034  # read by launch.sh
-sa_jq_ver='def ver: split(".") | map(tonumber? // 0);'
+sa_jq_ver='def ver: split(".") | map(tonumber);
+  def skill_version: [split("\n")[] | capture("^  version: (?<v>.*)$").v]
+    | if length == 1 and (.[0] | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) then .[0] else "" end;'
 
-# sa_skill_version <owner/name> <path>: the `metadata.version` of the SKILL.md at <path>
-# on the repo's default branch, through `gh` REST; nothing printed when it cannot be read.
+# sa_skill_version <owner/name> <path>: the version of the SKILL.md at <path> on the
+# repo's default branch, through `gh` REST; nothing printed when it cannot be read.
 sa_skill_version() {
   gh api "repos/$1/contents/$2" 2>/dev/null </dev/null \
-    | jq -r '.content // "" | gsub("\\s"; "") | @base64d' 2>/dev/null | sed -n 's/^  version: //p'
+    | jq -r "$sa_jq_ver"'.content // "" | gsub("\\s"; "") | @base64d | skill_version' 2>/dev/null
 }
 
-# sa_skill_stale: {loaded, source, stale}, this copy's super-agent version (the one
-# running) against the source copy's, the one a refresh installs; `stale` true when the
-# loaded one is older, null with either version unread.
+# sa_skill_stale: {loaded, source, stale}, the version of the super-agent copy running
+# this script against the one on `sa_skill_source`; `stale` true when the loaded one is
+# older, null with either version unread.
 sa_skill_stale() {
-  jq -cn --arg l "$(sed -n 's/^  version: //p' "$(dirname "${BASH_SOURCE[0]}")/../SKILL.md")" \
+  jq -cn --arg l "$(jq -Rsr "$sa_jq_ver"'skill_version' "$(dirname "${BASH_SOURCE[0]}")/../SKILL.md" 2>/dev/null)" \
     --arg s "$(sa_skill_version "$sa_skill_source" skills/super-agent/SKILL.md)" "$sa_jq_ver"'
     {loaded: (if $l == "" then null else $l end), source: (if $s == "" then null else $s end),
      stale: (if $l == "" or $s == "" then null else ($l | ver) < ($s | ver) end)}'

@@ -16,17 +16,19 @@ pulse() { bash "$s/pulse.sh" --ledger "$led"; }
 
 # --- each wake: the loaded copy against the source copy ---------------------------
 reset
-sa_skill_version Gharib89/skills "$src" 99.0.0
+sa_skill_file Gharib89/skills "$src" 99.0.0
 check "a wake whose loaded copy is older than the source flags it stale" \
   "$(jq -cn --arg l "$loaded" '{loaded: $l, source: "99.0.0", stale: true}')" "$(pulse | jq -c .skill)"
 check "reconcile, the watcher wake, carries the same flag" true "$(bash "$s/reconcile.sh" --ledger "$led" | jq .skill.stale)"
 check "a stale copy alone is no change for the backstop" false "$(pulse | jq .changed)"
-sa_skill_version Gharib89/skills "$src" "${loaded%%.*}.100.0"
+sa_skill_file Gharib89/skills "$src" "${loaded%%.*}.100.0"
 check "versions compare by number, not as text" true "$(pulse | jq .skill.stale)"
-sa_skill_version Gharib89/skills "$src" "$loaded"
+sa_skill_file Gharib89/skills "$src" "$loaded"
 check "a loaded copy at the source's version is not stale" false "$(pulse | jq .skill.stale)"
-sa_skill_version Gharib89/skills "$src" 0.0.1
+sa_skill_file Gharib89/skills "$src" 0.0.1
 check "a loaded copy ahead of the source (a worktree run) is not stale" false "$(pulse | jq .skill.stale)"
+sa_skill_file Gharib89/skills "$src" v99.0.0
+check "a source version that is not X.Y.Z is unread, never a verdict" null "$(pulse | jq .skill.stale)"
 rm -f "$SA_FAKE/gh/$(printf '%s' "repos/Gharib89/skills/contents/$src" | sed 's/[^A-Za-z0-9._-]/_/g')"
 out=$(pulse); rc=$?
 check "an unreadable source copy leaves the flag unknown, and the wake still answers" \
@@ -35,7 +37,7 @@ check "an unreadable source copy leaves the flag unknown, and the wake still ans
 # --- launch: the target repo's installed ship -------------------------------------
 ship=.claude/skills/ship/SKILL.md
 reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
-sa_skill_version "$repo" "$ship" 0.66.3
+sa_skill_file "$repo" "$ship" 0.66.3
 out=$(L 7 --area x --out "$out_f"); rc=$?
 check "a ship below the minimum answers stale_ship with the installed and minimum versions, exit 1" \
   '1 {"launch":false,"reason":"stale_ship","installed":"0.66.3"}' "$rc $(jq -c '{launch, reason, installed: .detail.installed}' <<<"$out")"
@@ -43,14 +45,19 @@ check "the minimum is a version" 1 "$(jq -r .detail.minimum <<<"$out" | grep -cE
 check "a stale_ship launch takes no claim and writes no --out file" "0 absent" \
   "$(grep -c 'issues/7/comments.*POST\|POST.*issues/7/comments' "$SA_FAKE/calls") $([ -e "$out_f" ] && echo present || echo absent)"
 min=$(jq -r .detail.minimum <<<"$out")
-sa_skill_version "$repo" "$ship" "$min"
+sa_skill_file "$repo" "$ship" "$min"
 check "a ship at the minimum launches" true "$(L 7 --area x | jq .launch)"
 reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
-sa_skill_version "$repo" "$ship" "${min%%.*}.$(( $(cut -d. -f2 <<<"$min") + 1 )).0"
+sa_skill_file "$repo" "$ship" "${min%%.*}.$(( $(cut -d. -f2 <<<"$min") + 1 )).0"
 check "a ship above the minimum launches" true "$(L 7 --area x | jq .launch)"
 reset; issue 8 "widgets: a question" needs-triage S
-sa_skill_version "$repo" "$ship" 0.0.1
+sa_skill_file "$repo" "$ship" 0.0.1
 check "a triage launch reads no ship version" true "$(L 8 --area x | jq .launch)"
+for v in 0.67 0.67.0-rc1 abc; do
+  reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+  sa_skill_file "$repo" "$ship" "$v"
+  check "an installed ship version of $v is unread: exit 2, never a launch or stale_ship" 2 "$(L 7 --area x >/dev/null 2>&1; echo $?)"
+done
 reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
 rm -f "$SA_FAKE/gh/$(printf '%s' "repos/$repo/contents/$ship" | sed 's/[^A-Za-z0-9._-]/_/g')"
 out=$(L 7 --area x 2>/dev/null); rc=$?

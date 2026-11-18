@@ -322,9 +322,9 @@ sa_issue() { # <owner/name> <number> <open|closed> [<label>...]
   sa_route "repos/$r/issues/$n" "$(jq -cn --argjson n "$n" --arg s "$st" '{number: $n, state: $s, labels: ($ARGS.positional | map({name: .}))}' --args "$@")"
 }
 
-# sa_skill_version <owner/name> <path> <version>: the contents read of a SKILL.md on the
+# sa_skill_file <owner/name> <path> <version>: the contents read of a SKILL.md on the
 # repo's default branch, its frontmatter carrying that `metadata.version`
-sa_skill_version() {
+sa_skill_file() {
   sa_route "repos/$1/contents/$2" "$(jq -cn --arg v "$3" '{content: ("---\nname: x\nmetadata:\n  version: \($v)\n---\n" | @base64)}')"
 }
 

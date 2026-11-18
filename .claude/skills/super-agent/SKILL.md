@@ -118,8 +118,7 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    false` with a `reason`: `claimed`, `stale`, `waiting`, `need_reading`, `ask`,
    `no_owner_skill`, `no_instance` or `stale_ship`. Act on the reason as Claims,
    Routing and Placement say; `no_owner_skill`, `no_instance` and `stale_ship`
-   are escalations, `stale_ship` naming the repo's installed and minimum ship
-   versions: the repo's ship is refreshed before the ticket launches. On
+   are escalations (Escalation). On
    `launch: true`, add each name in `needs` to `args` and call
    `t3_thread_launch` with `args`, never `delegate_task`; the steps, and the
    no-project escalation, are in
@@ -151,11 +150,14 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
 4. **Wake.** The watcher's exit or the schedule wakes you. A watcher wake runs
    step 5. A backstop wake runs `scripts/pulse.sh --ledger <ledger> --fleet
    <fleet>` instead, with step 5's flags, `--remote` included (Remote
-   entries, below). `alive` true and `changed` false ends the turn there,
-   nothing else read or posted; `alive` false starts the watcher; `changed`
-   true makes its `summary` the answer step 5 acts on. On either wake, a
-   `skill.stale` of true (this loaded copy older than the source's) is
-   flagged for the handover, which refreshes the skill.
+   entries, below). Read its `skill` first (below). `alive` true and `changed`
+   false then ends the turn, nothing else read or posted; `alive` false starts
+   the watcher; `changed` true makes its `summary` the answer step 5 acts on.
+   **A stale copy.** Every pulse and reconcile answer carries `skill`
+   {loaded, source, stale}: `stale` true means this running copy is older than
+   the one on `Gharib89/skills`. Say so once in chat, naming both versions,
+   and push it once: the refresh, `npx skills add gharib89/skills -g -s
+   super-agent -y`, is the owner's to run or approve.
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet>`. Do each
    action it prints (Acting on the summary), run `scripts/status.sh --ledger
@@ -245,6 +247,10 @@ The owner decides these, and you decide everything else:
   scope is the problem;
 - a ticket whose labels name no owner skill, or whose repo has no T3 project
   on any machine that fits.
+- a ship launch answering `stale_ship`: the repo's installed ship
+  (`detail.installed`) is below `detail.minimum`, so its threads would wait
+  without the waiting line; the owner refreshes the repo's skills first, and
+  the ticket launches after.
 
 Placement `waiting` and a same-repo wait are not escalations.
 

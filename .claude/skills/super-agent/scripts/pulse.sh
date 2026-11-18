@@ -16,7 +16,7 @@
 # watcher is `alive` false whatever else holds.
 #
 # stdout: {alive, changed, summary, skill}: `summary` is reconcile's whole answer when
-#         `changed`, null when not; `skill` is reconcile's version flag, on every
+#         `changed`, null when not; `skill` is reconcile's `skill`, on every
 #         answer: a stale copy alone is no change
 # exit: 0 an answer · 2 usage, or reconcile's own exit 2 (its answer, not a pulse's,
 #       is printed)

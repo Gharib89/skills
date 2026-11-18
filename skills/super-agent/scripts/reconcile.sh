@@ -68,10 +68,9 @@
 #
 # stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, ready,
 #         dropped, unqueued, parents_done, cleanup, verify, escalate, errors, skill}:
-#         `skill` {loaded, source, stale}: this copy's super-agent version against the
-#         source copy's on the default branch of `sa_skill_source`, `stale` true when
-#         the loaded one is older (the handover refreshes it), null with `source` when
-#         the source cannot be read;
+#         `skill` {loaded, source, stale}: the running super-agent copy's version
+#         against the one on `sa_skill_source`'s default branch, `stale` true when
+#         the running one is older, null when either version cannot be read;
 #         `entries` one {key, from, stage, stalls, observed} per open entry that
 #         was read; `stalled` one {key, thread, stalls, reason} per stall counted
 #         now, `reason` `run-completed` or `stall-window`;
