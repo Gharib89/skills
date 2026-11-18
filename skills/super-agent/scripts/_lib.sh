@@ -117,7 +117,7 @@ sa_write() {
 # exits, so a read and the write it leads to are one step no other ledger write
 # lands inside. `<ledger>.lock` holds the holder's pid, created with noclobber
 # (an exclusive create in bash itself, so it needs no tool beyond the shell) and
-# removed on exit by the EXIT trap this sets, so a script that sources this file
+# removed on exit by the EXIT trap this sets, so a script that writes the ledger
 # sets no EXIT trap of its own. One whose pid is gone is a dead writer's, taken
 # over under `<ledger>.lock.takeover` so two waiters never both remove it; one
 # that reads empty is kept, since its writer may not have written its pid yet. A
@@ -126,6 +126,7 @@ sa_write() {
 sa_lock() {
   [ "${sa_locked:-}" = "$1" ] && return 0
   local pid='' try
+  case ${SA_LOCK_TRIES:-600} in *[!0-9]*) sa_tooling "SA_LOCK_TRIES must be a whole number" ;; esac
   mkdir -p "$(dirname "$1")" || sa_tooling "cannot create $(dirname "$1")"
   for ((try = 0; try < ${SA_LOCK_TRIES:-600}; try++)); do
     (set -C; printf '%s\n' "$$" > "$1.lock") 2>/dev/null && { sa_locked=$1; break; }

@@ -39,6 +39,7 @@ check "the lock is gone once the write ends" "" "$(ls "$led".lock* 2>/dev/null)"
 out=$(SA_LOCK_TRIES=3 L ruling "behind an empty lock" 2>/dev/null); rc=$?
 check_rc "a lock that reads empty is kept, and the wait ends in exit 2" 2 "$rc"
 check "the refusal names the lock" "$led.lock is held by pid unknown; remove it if no ledger write runs" "$(jq -r .error <<<"$out")"
+check "and the empty lock is still there" yes "$([ -f "$led.lock" ] && [ ! -s "$led.lock" ] && echo yes)"
 printf '%s\n' "$$" > "$led.lock"
 out=$(SA_LOCK_TRIES=3 L ruling "behind a live lock" 2>/dev/null); rc=$?
 check_rc "a live holder outlasting the wait is exit 2" 2 "$rc"
@@ -85,6 +86,23 @@ EOF
 PATH="$tmp/mid:$PATH" bash "$s/reconcile.sh" --ledger "$led" >/dev/null
 check "a rethread made mid-reconcile keeps its fresh tracking" "t-9 launched null" \
   "$(jq -r --arg k "$repo#5" '.entries[$k] | "\(.thread) \(.stage) \(.observed)"' "$led")"
+
+# A waiting row whose issue closed is dropped even when another write re-spelled
+# its key, in another case, while reconcile read GitHub.
+rm -f "$led" "$tmp/mid/done"
+L wait "$repo#7" --reason busy >/dev/null
+sa_issue $repo 7 closed
+cat > "$tmp/mid/gh" <<EOF
+#!/usr/bin/env bash
+if [ ! -f "$tmp/mid/done" ]; then
+  : > "$tmp/mid/done"
+  bash "$PWD/$s/ledger.sh" --ledger "$led" wait "GHARIB89/Skills#7" --reason "still busy" >/dev/null
+fi
+exec "$tmp/bin/gh" "\$@"
+EOF
+out=$(PATH="$tmp/mid:$PATH" bash "$s/reconcile.sh" --ledger "$led")
+check "reconcile reports the row dropped" "$repo#7" "$(jq -r '.dropped[].key' <<<"$out")"
+check "and the re-spelled row is dropped with it" 0 "$(jq '.waiting | length' "$led")"
 
 # --- no script writes the ledger but sa_update -----------------------------------
 # sa_write is the bare write; outside _lib.sh it may name only the fleet and
