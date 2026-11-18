@@ -35,6 +35,13 @@ L ruling "after a crash" >/dev/null; rc=$?
 check_rc "a dead writer's lock is taken over" 0 "$rc"
 check "and the write lands" "after a crash" "$(jq -r '.rulings[].text' "$led")"
 check "the lock is gone once the write ends" "" "$(ls "$led".lock* 2>/dev/null)"
+# A pid reused after a kill or a reboot by a process that is no ledger writer.
+sleep 30 & other=$!
+printf '%s\n' "$other" > "$led.lock"
+SA_LOCK_TRIES=3 L ruling "past a reused pid" >/dev/null; rc=$?
+kill "$other" 2>/dev/null; wait "$other" 2>/dev/null
+check_rc "a lock whose live pid runs no super-agent script is taken over" 0 "$rc"
+check "and that write lands" "past a reused pid" "$(jq -r '.rulings[-1].text' "$led")"
 : > "$led.lock"
 out=$(SA_LOCK_TRIES=3 L ruling "behind an empty lock" 2>/dev/null); rc=$?
 check_rc "a lock that reads empty is kept, and the wait ends in exit 2" 2 "$rc"
@@ -44,14 +51,14 @@ printf '%s\n' "$$" > "$led.lock"
 out=$(SA_LOCK_TRIES=3 L ruling "behind a live lock" 2>/dev/null); rc=$?
 check_rc "a live holder outlasting the wait is exit 2" 2 "$rc"
 check "the refusal names its pid" "$led.lock is held by pid $$; remove it if no ledger write runs" "$(jq -r .error <<<"$out")"
-check "and neither write landed" "after a crash" "$(jq -r '.rulings[].text' "$led")"
+check "and neither write landed" "past a reused pid" "$(jq -r '.rulings[-1].text' "$led")"
 rm -f "$led.lock"
 for bad in x 0 08; do
   out=$(SA_LOCK_TRIES=$bad L ruling "with a bad try count" 2>/dev/null); rc=$?
   check_rc "SA_LOCK_TRIES=$bad is refused with exit 2" 2 "$rc"
   check "and the refusal says why" "SA_LOCK_TRIES must be a whole number of 1 or more" "$(jq -r .error <<<"$out")"
 done
-check "a refused try count writes nothing" "after a crash" "$(jq -r '.rulings[].text' "$led")"
+check "a refused try count writes nothing" "past a reused pid" "$(jq -r '.rulings[-1].text' "$led")"
 
 # --- a write made while reconcile runs survives it -----------------------------
 rm -f "$led"

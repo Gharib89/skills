@@ -1,5 +1,16 @@
 # Reading and writing the ledger, sourced by _lib.sh: sa_read, the bare
-# sa_write, and sa_lock and sa_update, the one way a ledger is written.
+# sa_write, and sa_lock and sa_update, the one way a ledger is written; and
+# sa_pid_runs, which tells a live lock holder from a reused pid.
+
+# sa_pid_runs <pid> <glob>: the pid is alive and its command line matches the
+# glob, so a pid reused by another process after a kill or a reboot does not
+# pass for a lock's holder. /bin/ps by its full path, which Linux and macOS both
+# ship, and which the tests' fake `ps` on PATH does not shadow.
+sa_pid_runs() {
+  local args
+  # shellcheck disable=SC2053  # $2 is a glob on purpose
+  args=$(/bin/ps -p "$1" -o args= 2>/dev/null) && [[ $args == $2 ]]
+}
 
 # sa_read <ledger>: the ledger's JSON in $doc, an empty one for a file not yet
 # written. A file that is not JSON or has the wrong shape is refused by name,
@@ -34,8 +45,9 @@ sa_write() {
 # lands inside. `<ledger>.lock` holds the holder's pid, created with noclobber
 # (an exclusive create in bash itself, so it needs no tool beyond the shell) and
 # removed on exit by the EXIT trap this sets, so a script that writes the ledger
-# sets no EXIT trap of its own. One whose pid is gone is a dead writer's, taken
-# over under `<ledger>.lock.takeover` so two waiters never both remove it; one
+# sets no EXIT trap of its own. One whose pid is gone, or now runs no
+# super-agent script (a pid reused after a kill or a reboot), is a dead writer's,
+# taken over under `<ledger>.lock.takeover` so two waiters never both remove it; one
 # that reads empty is kept, since its writer may not have written its pid yet. A
 # live holder is waited on for 30 s at most (SA_LOCK_TRIES polls of 0.05 s, 600
 # unless a test sets fewer). A second call is a no-op.
@@ -47,7 +59,7 @@ sa_lock() {
   for ((try = 0; try < ${SA_LOCK_TRIES:-600}; try++)); do
     (set -C; printf '%s\n' "$$" > "$1.lock") 2>/dev/null && { sa_locked=$1; break; }
     pid=$(cat "$1.lock" 2>/dev/null)
-    if [ -n "$pid" ] && ! kill -0 "$pid" 2>/dev/null && (set -C; : > "$1.lock.takeover") 2>/dev/null; then
+    if [ -n "$pid" ] && ! sa_pid_runs "$pid" '*super-agent*' && (set -C; : > "$1.lock.takeover") 2>/dev/null; then
       [ "$(cat "$1.lock" 2>/dev/null)" != "$pid" ] || rm -f "$1.lock"
       rm -f "$1.lock.takeover"; continue
     fi
