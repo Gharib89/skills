@@ -73,12 +73,14 @@ skill's base directory.
 
 Setup's last step: run `scripts/guard.sh --install`, which adds one PreToolUse
 entry to `~/.claude/settings.json` (`--settings <file>` names another). It is
-what refuses a hand write to the ledger, fleet or quota file, so the next
-override with no flag shows up as a refusal to report. To see that it is
-installed, run `scripts/guard.sh --status`: `installed` is `true` when the file
-holds the entry for this copy of the script, and `/hooks` in Claude Code lists
-it too. A settings file kept in dotfiles takes the `entry` that `--status`
-prints, added there by hand. A re-run adds nothing when it is already there.
+what refuses a hand write to the ledger, fleet or quota file (an Edit, a Write,
+a redirection or an `mv`) and names the script to use. A refusal means an
+override has no flag yet: report it to the owner, never work around it. To see
+that it is installed, run `scripts/guard.sh --status`: `installed` is `true`
+when the file holds the entry for this copy of the script, and `/hooks` in
+Claude Code lists it too. A settings file kept in dotfiles takes the `entry`
+that `--status` prints, added there by hand. A re-run adds nothing when it is
+already there.
 
 ## Cursor and Grok
 

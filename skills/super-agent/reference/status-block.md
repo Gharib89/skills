@@ -8,36 +8,47 @@
 - [A ruling](#a-ruling)
 - [The digest](#the-digest)
 
-`scripts/` is under this skill's base directory. `status.sh --help` lists its
-fields. Pass `--instance <id>` with this thread's provider instance, read once
-per session from `t3 thread show $T3CODE_THREAD_ID --json`
-(`.thread.providerInstanceId`); without it the block has no `Super agent on`
-line. The block is rows `Needs you`, `Merged`, `Running`, `Waiting` and
-`Reviewer limit`, one line each, an empty row left out, `Needs you` first; each
-ticket is a link, and a `Running` ticket names the provider instance it
-launched on. A `task` entry (a thread that is no ticket's) reads
-`task:<slug> (task)`, and an adopted entry of either kind adds `(adopted)`. A
-posted block ends with one `Quota <instance>` line per provider
-instance, its weekly and 5 hour remaining or `unknown`, then a `Super agent on
-<instance>` line: the instance this thread runs on.
+`scripts/` is under this skill's base directory. Reconcile and pulse print the
+block for you, as `status` in their answer (`status.sh --help` lists its
+fields); never compose it or rewrite it. Pass them `--instance <id>` with this
+thread's provider instance, read once per session from `t3 thread show
+$T3CODE_THREAD_ID --json` (`.thread.providerInstanceId`); without it the block
+has no `Super agent on` line. The rows are `Needs you`, `Merged`, `Running`,
+`Waiting` and `Reviewer limit`, one line each, `Needs you` first; each ticket is
+a link, and a `Running` ticket names the provider instance it launched on. A
+`task` entry (a thread that is no ticket's) reads `task:<slug> (task)`, and an
+adopted entry of either kind adds `(adopted)`. A posted block ends with one
+`Quota <instance>` line per provider instance, its weekly and 5 hour remaining
+or `unknown`, then a `Super agent on <instance>` line: the instance this thread
+runs on.
 
 ## Every wake
 
-After `reconcile.sh`, run `scripts/status.sh --ledger <ledger> --quota <file>
---instance <id>`,
-`<file>` the wake's saved quota read (Routing; read it with `quota.sh --fleet
-<fleet> --save <file> --wake <id>` if no launch did):
+Reconcile (or pulse) with `--quota <file> --instance <id>`, `<file>` the
+latest saved quota read (Routing: `quota.sh --fleet <fleet> --save <file> --wake
+<wake-id>`) and `<id>` this thread's provider instance. `launch.sh record`
+answers a `status` of its own, from its baseline reconcile: post and push it
+the same way. Every `status` answer:
 
-- `block` empty: post nothing, no prose either. A block is empty when no row
-  changed (`changed` false) and no digest was asked.
-- `block` set: post it as printed, with no push. A merge, a launch or a change
-  to the waiting list reaches the owner this way.
+- `block` holds only the rows that changed since the last posted block, a row
+  that emptied reading `<row>: none`, and `Merged` lists only the merges since
+  that block. Post it as printed, with no push. Empty: post nothing, no prose
+  either. A merge, a launch or a change to the waiting list reaches the owner
+  this way.
 - `unpushed` holds a need, whatever `block` says: that need is new, and it is
   the only thing that sends a push, bar the
   [daily handover](../SKILL.md#daily-handover)'s pin request. Send one push
   notification (the PushNotification tool) naming the run and the one action,
-  then run
-  `ledger.sh --ledger <ledger> pushed <key>`.
+  then run `ledger.sh --ledger <ledger> pushed <key>`. Until then every
+  reconcile lists it again. A need you record after this wake's reconcile is
+  pushed and marked the same way at once; its row reaches the next block.
+- A need that asks the owner to pick (approve or deny a held call, a scope
+  fork) goes out as chat text after the block: the question, the options
+  numbered with your recommendation first and marked, and its push. The owner
+  answers in chat. Never open a question dialog: it blocks the loop until
+  answered.
+- A `status` holding only `error` built no block: act on the rest of the
+  answer as usual, and tell the owner that error in chat.
 
 ## A reviewer usage limit
 
@@ -118,8 +129,9 @@ skip this section.
 
 ## The digest
 
-`status.sh --ledger <ledger> --digest` prints the whole block whatever changed,
-and counts every `Merged` ticket as listed, so the next block leaves them out.
+`status.sh --ledger <ledger> --digest` prints every row whatever changed, and
+counts every `Merged` ticket as listed, as any posted block does, so the next
+block leaves them out.
 Run it on the owner's "status", at the morning report and on the wake where
 `ledger.sh list` shows `waiting` empty after the last block's `Waiting` row.
 Give detail about one ticket only when the owner asks about it.

@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.33.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: Reconcile prints the status rows and the unpushed needs, and questions go out as
+  chat text ([#1297](https://github.com/Gharib89/skills/pull/1297),
+  [`2fca9dd`](https://github.com/Gharib89/skills/commit/2fca9dd6540c2c767e8ccf90c8e899e0f0709645))
+
+
 ## v0.32.0 (2026-11-18)
 
 ### Features

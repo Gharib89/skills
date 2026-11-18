@@ -5,15 +5,17 @@
 # is alive when the pid the lock holds is a live `watch.sh`.
 #
 #   pulse --ledger <file> [--fleet <file>] [--stall-window <s>] [--remote <environment id>=<dir>]...
+#         [--quota <file>] [--instance <id>]
 #
 # A backstop turn that finds `alive` true and `changed` false ends there: no
 # transcript read, no status block, no further call. `changed` is true when the
 # reconcile answer holds anything to act on: any of its lists but `entries` and
-# `at_rest` is not empty (a new list counts by default), or an entry's stage
-# moved. A thread at rest that is only waiting for the owner's answer
-# (`at_rest`) is not a change, and nor is an error of an entry that the
-# ledger holds: its `escalate` row carries it until a need silences it. A dead
-# watcher is `alive` false whatever else holds.
+# `at_rest` is not empty (a new list counts by default), an entry's stage
+# moved, or its `status` holds a block to post or a need to push. A thread at
+# rest that is only waiting for the owner's answer (`at_rest`) is not a change,
+# and nor is an error of an entry that the ledger holds: its `escalate` row
+# carries it until a need silences it. A dead watcher is `alive` false whatever
+# else holds.
 #
 # stdout: {alive, changed, summary, skill}: `summary` is reconcile's whole answer when
 #         `changed`, null when not; `skill` is reconcile's `skill`, on every
@@ -23,13 +25,13 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: pulse --ledger <file> [--fleet <file>] [--stall-window <s>] [--remote <environment id>=<dir>]...'
+usage='usage: pulse --ledger <file> [--fleet <file>] [--stall-window <s>] [--remote <environment id>=<dir>]... [--quota <file>] [--instance <id>]'
 sa_help "$usage" "$@"
 ledger='' pass=()
 while [ $# -gt 0 ]; do
   case $1 in
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2 ;;
-    --fleet) sa_flag_value "$usage" "${2:-}" ;;
+    --fleet|--quota|--instance) sa_flag_value "$usage" "${2:-}" ;;
     --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2" ;;
     --stall-window) sa_flag_value "$usage" "${2:-}"; sa_window_flag "$usage" "$2" ;;
     *) sa_tooling "$usage" ;;
@@ -50,5 +52,6 @@ jq -cn --argjson s "$summary" --argjson a "$alive" --argjson held "$held" "$sa_j
   ($s | .errors |= map(select(.key as $k | $held | map(norm_repo) | index($k | norm_repo) | not))
      | [to_entries[] | select(.key | IN("ledger", "checked", "entries", "at_rest") | not) | .value
         | select(type == "array" and length > 0)] | length > 0) as $lists
-  | ($lists or ([$s.entries[] | select(.from != .stage)] | length > 0)) as $c
+  | ($lists or ([$s.entries[] | select(.from != .stage)] | length > 0)
+     or $s.status.block != "" or ($s.status.unpushed | length > 0)) as $c
   | {alive: $a, changed: $c, summary: (if $c then $s else null end), skill: $s.skill}'

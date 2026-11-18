@@ -71,8 +71,10 @@
 #         reason), `no_instance` (route's reason), `need_reading` (place's
 #         machine and environment_id) or `waiting` (place's reason and
 #         considered, and the ledger now holds the waiting row).
-#         record: {key, entry, reconcile: {checked, errors}}, or the ledger's {error}
-#         when it refused the entry, or {error: "unrecorded launch: ..."}
+#         record: {key, entry, reconcile: {checked, errors}, status}, `status`
+#         the baseline reconcile's status answer, its block to post; or the
+#         ledger's {error} when it refused the entry, or {error: "unrecorded
+#         launch: ..."}
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
 #       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a claim, issue or placement the host or a script refused, an installed ship version
