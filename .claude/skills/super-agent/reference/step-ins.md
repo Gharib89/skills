@@ -58,12 +58,15 @@ ones:
    and you never merge it. Assign the issue to the gh login the repo needs
    (`gh issue edit <n> --repo <owner/name> --add-assignee <login>`), because
    `--rework` admits only an issue its own identity holds, then launch `/ship
-   <n> --rework "<feedback>"` with `t3_thread_launch`, never `launch.sh` (it
-   would build a `/triage` message for this issue). Its feedback text, such as
+   <n> --rework "<feedback>"` with `t3_thread_launch` on the instance and tier
+   `route.sh` picks ([Routing](routing.md)), never `launch.sh` (it would build a
+   `/triage` message for this issue). Its feedback text, such as
    "take this PR through review and the merge gate", is what stops `no
    feedback`; a plain `/ship <n>` stops `existing PR`. Point the ticket's
    entry at the new thread with `ledger.sh --ledger <ledger> rethread <key>
-   --thread <id> --kind ship`, so the merge is verified like any ship PR. The
+   --thread <id> --worktree <the launched thread's path> --branch <the PR's
+   `*-<n>` head branch> --kind ship`, plus the `--instance`, `--model` and
+   `--effort` route picked, so the merge is verified like any ship PR. The
    run's gate, review round and `merge.sh` merge the PR. A `not reworkable`
    stop, such as `branch mismatch` when the PR does not head on the one
    `*-<n>` branch, is a need for the owner.
