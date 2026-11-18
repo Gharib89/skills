@@ -55,13 +55,18 @@ ones:
    its PR body. A hold none matches goes to whoever `merge_gate_ruler` names,
    and the step-in carries that ruling once it exists. A triage run that
    reports a PR it opened to ship a small proven fix inline is at a gate too,
-   and you never merge it: launch a `/ship <n> --rework "<feedback>"` thread
-   on the issue (`t3_thread_launch`, recorded like any launch), whose gate,
-   review round and `merge.sh` merge the PR. A plain `/ship <n>` stops
-   `existing PR`; `--rework` admits the one open PR, and its feedback text,
-   such as "take this PR through review and the merge gate", is what stops
-   `no feedback`. It also needs the issue assigned to the run's own identity,
-   so a `not reworkable: not claimed` stop is a need for the owner.
+   and you never merge it. Assign the issue to the gh login the repo needs
+   (`gh issue edit <n> --repo <owner/name> --add-assignee <login>`), because
+   `--rework` admits only an issue its own identity holds, then launch `/ship
+   <n> --rework "<feedback>"` with `t3_thread_launch`, never `launch.sh` (it
+   would build a `/triage` message for this issue). Its feedback text, such as
+   "take this PR through review and the merge gate", is what stops `no
+   feedback`; a plain `/ship <n>` stops `existing PR`. Point the ticket's
+   entry at the new thread with `ledger.sh --ledger <ledger> rethread <key>
+   --thread <id> --kind ship`, so the merge is verified like any ship PR. The
+   run's gate, review round and `merge.sh` merge the PR. A `not reworkable`
+   stop, such as `branch mismatch` when the PR does not head on the one
+   `*-<n>` branch, is a need for the owner.
 4. **The owner's answer to a need the thread raised**: the answer, as the owner
    gave it, into the thread whose need it settles.
 5. **A hard finding from verification**: the verified acceptance-criterion gap
