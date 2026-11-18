@@ -248,8 +248,9 @@ Each `<thread>` below is the entry's ledger key.
   (`no_skill` when it is in neither); one only this machine holds keeps the
   thread here. A skill other than ship or triage records a
   `task:<name>-<repo name>-<n>` entry; a grill's is **interactive**: no stall,
-  and it leaves only on `drop`. A grill thread you record with `launch record
-  --task` takes `--interactive` the same way.
+  and it leaves only on `drop`. A grill thread you record as a task takes
+  `--interactive` the same way: `launch.sh record --task <slug> --thread <id>
+  --ledger <ledger> --interactive`.
 - "Take <thread>": `ledger.sh --ledger <ledger> pause <key>`. The entry is
   **paused**: it keeps its slot, gets no step-in, and is read from GitHub alone;
   a ticket's settles when its PR merges or its issue closes, with no cleanup
