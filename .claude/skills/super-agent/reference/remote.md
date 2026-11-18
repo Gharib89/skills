@@ -60,11 +60,13 @@ Never write, edit or patch one yourself; when `reply.sh` refuses a read,
 fix the read.
 
 `reply.sh <read file> --dir <dir>` prints `{file, thread, status}` and exits 0.
-It exits 1, writing nothing, when the thread's last assistant message was
-truncated (`textTruncated`): the waiting line and the merge-gate summary sit at
-a message's end, so a clipped read gives a false verdict. Read the thread again
-with a larger `maxCharsPerItem`. It exits 2 for a file that is not a
-`t3_thread_read` result.
+It exits 1, writing nothing, when the read cannot give a verdict: the last
+assistant message was truncated (`textTruncated`), or the page holds no
+assistant message while `hasMore` says older items exist. The waiting line and
+the merge-gate summary sit at a message's end, so either gives a false verdict.
+Read the thread again with a larger `maxCharsPerItem` or `limit`. It exits 2 for
+a file that is not a `t3_thread_read` result, one whose thread lacks a field
+reconcile requires included.
 
 The file is one JSON object in the shape `t3 thread show --json` prints:
 

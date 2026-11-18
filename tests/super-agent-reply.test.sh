@@ -64,8 +64,15 @@ out=$(rep "$tmp/read.json" --dir "$tmp/dir" 2>/dev/null); rc=$?
 check_rc "a truncated last message exits 1" 1 "$rc"
 check "and writes no file" "no" "$([ -e "$tmp/dir/t-6.json" ] && echo yes || echo no)"
 
-# --- a thread with no assistant message still converts ----------------------------------
-read_of idle x; jq -c '.items = []' "$tmp/read.json" > "$tmp/empty.json"
+# --- a page that may hide the last assistant message on an older page is refused ----------
+read_of idle x; jq -c '.items = [.items[1]] | .hasMore = true' "$tmp/read.json" > "$tmp/older.json"
+rm -f "$tmp/dir/t-6.json"
+rep "$tmp/older.json" --dir "$tmp/dir" >/dev/null 2>&1; rc=$?
+check_rc "no assistant message with hasMore exits 1" 1 "$rc"
+check "and writes no file" "no" "$([ -e "$tmp/dir/t-6.json" ] && echo yes || echo no)"
+
+# --- a thread with no assistant message, and nothing older, still converts ----------------------------------
+read_of idle x; jq -c '.items = [] | .hasMore = false' "$tmp/read.json" > "$tmp/empty.json"
 rep "$tmp/empty.json" --dir "$tmp/dir" >/dev/null
 check "no assistant message gives an empty messages list" "[]" "$(jq -c .messages "$tmp/dir/t-6.json")"
 
@@ -75,4 +82,11 @@ rep "$tmp/bad.json" --dir "$tmp/dir" >/dev/null 2>&1; check_rc "a file that is n
 echo '{"messages":[]}' > "$tmp/bad.json"
 rep "$tmp/bad.json" --dir "$tmp/dir" >/dev/null 2>&1; check_rc "a read with no thread object exits 2" 2 "$?"
 rep "$tmp/read.json" >/dev/null 2>&1; check_rc "no --dir exits 2" 2 "$?"
+# each field reconcile requires, or the file would read as `shape`
+for f in status runCount pendingRequestCount; do
+  read_of idle x; jq -c --arg f "$f" 'del(.thread[$f])' "$tmp/read.json" > "$tmp/bad.json"
+  rm -f "$tmp/dir/t-6.json"
+  rep "$tmp/bad.json" --dir "$tmp/dir" >/dev/null 2>&1; check_rc "a read with no $f exits 2" 2 "$?"
+  check "and writes no file for it" "no" "$([ -e "$tmp/dir/t-6.json" ] && echo yes || echo no)"
+done
 finish
