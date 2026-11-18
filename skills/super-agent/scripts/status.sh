@@ -20,8 +20,8 @@
 # every wake) prints only the rows that changed, a row that emptied as
 # `<row>: none`, and a run with nothing changed prints none; `--digest` prints
 # every row whatever changed (the owner's "status", the morning report, an
-# emptied waiting list). Any printed block counts its Merged tickets as listed, so
-# Merged holds only the merges since the last block.
+# emptied waiting list). Any printed block counts its Merged tickets as listed,
+# so Merged holds only the merges since the last block.
 #
 # With --quota <file> (`quota`'s answer), a posted block ends with one `Quota <id>`
 # line per provider instance: its weekly and 5 hour remaining as a percentage, or
@@ -34,8 +34,8 @@
 #
 # stdout: {block, changed, unpushed: [{key, action, since}]}: `block` the text to
 #         post ("" when nothing changed and no digest was asked, or when a
-#         digest finds nothing open), `changed` true when a row differs from the last printed
-#         block, `unpushed` the open needs whose push has not gone out, each of
+#         digest finds nothing open), `changed` true when a row differs from
+#         the last printed block, `unpushed` the open needs whose push has not gone out, each of
 #         which `ledger pushed` marks once sent
 # exit: 0 a block or none · 2 usage, an unreadable or wrong-shaped ledger or
 #       --quota file, or a write that failed

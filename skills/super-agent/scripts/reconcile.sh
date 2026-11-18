@@ -101,19 +101,19 @@
 #         `issue-unreadable` (a waiting row's issue or its blocker's too), or
 #         `claim-unreadable`, `repo-unreadable` for an `unqueued` read; `checked` counts the open entries it looked at
 # exit: 0 a reconcile, errors in the answer included · 2 usage, an unreadable
-#       ledger, or a write that failed
+#       ledger or --quota file (refused before any write), or a write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
 usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>] [--quota <file>] [--instance <id>]'
 sa_help "$usage" "$@"
-ledger='' window=$sa_stall_window fleet='' status_flags=()
+ledger='' window=$sa_stall_window fleet='' quota='' status_flags=()
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2 ;;
     --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
-    --quota|--instance) sa_flag_value "$usage" "${2:-}"; status_flags+=("$1" "$2"); shift 2 ;;
+    --quota|--instance) sa_flag_value "$usage" "${2:-}"; status_flags+=("$1" "$2"); [ "$1" = --instance ] || quota=$2; shift 2 ;;
     --stall-window) sa_flag_value "$usage" "${2:-}"; sa_window_flag "$usage" "$2"; window=$2; shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
@@ -124,6 +124,9 @@ done
 
 [ -z "$fleet" ] || jq -e '[(.repos // {})[]? | .max_ships // 1 | type == "number" and . >= 1 and . == floor] | all' "$fleet" >/dev/null 2>&1 \
   || sa_tooling "$fleet: every repos.<owner/name>.max_ships must be a whole number of 1 or more"
+
+# A --quota file status cannot read is refused before any write, not after.
+[ -z "$quota" ] || jq -e '(.providers | type) == "object"' "$quota" >/dev/null 2>&1 || sa_tooling "$quota: not a quota read"
 
 sa_read "$ledger"
 read_doc=$doc
@@ -238,7 +241,7 @@ fi
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 
 sa_unlock
-status=$(bash "$(dirname "${BASH_SOURCE[0]}")/status.sh" --ledger "$ledger" "${status_flags[@]}") \
+status=$(bash "$(dirname "${BASH_SOURCE[0]}")/status.sh" --ledger "$ledger" ${status_flags[@]+"${status_flags[@]}"}) \
   || { printf '%s\n' "$status"; exit 2; }
 
 # The ledger goes in on stdin: one argument over 128 KiB (MAX_ARG_STRLEN) fails with "Argument list too long".

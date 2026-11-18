@@ -58,7 +58,8 @@
 #         reason), `no_instance` (route's reason), `need_reading` (place's
 #         machine and environment_id) or `waiting` (place's reason and
 #         considered, and the ledger now holds the waiting row).
-#         record: {key, entry, reconcile: {checked, errors}}, or the ledger's {error}
+#         record: {key, entry, reconcile: {checked, errors}, status}, or the ledger's {error}:
+#         `status` the baseline reconcile's status answer, its block to post
 #         when it refused the entry, or {error: "unrecorded launch: ..."}
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
@@ -150,7 +151,7 @@ if [ "${1:-}" = record ]; then
   fi
   sub reconcile --ledger "$ledger" ${remotes[@]+"${remotes[@]}"}
   [ "$rc" = 0 ] && jq -e '.checked != null' >/dev/null <<<"$out" || sa_tooling "reconcile gave no answer"
-  jq -cn --argjson e "$entry" --argjson r "$out" '{key: $e.key, entry: $e, reconcile: {checked: $r.checked, errors: $r.errors}}'
+  jq -cn --argjson e "$entry" --argjson r "$out" '{key: $e.key, entry: $e, reconcile: {checked: $r.checked, errors: $r.errors}, status: $r.status}'
   exit 0
 fi
 

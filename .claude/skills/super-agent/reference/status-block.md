@@ -25,8 +25,10 @@ runs on.
 ## Every wake
 
 Reconcile (or pulse) with `--quota <file> --instance <id>`, `<file>` the
-wake's saved quota read (Routing; read it with `quota.sh --fleet <fleet> --save
-<file> --wake <id>` if no launch did). Its `status` answer:
+latest saved quota read (Routing: `quota.sh --fleet <fleet> --save <file>`) and
+`<id>` this thread's provider instance. `launch.sh record` answers a `status` of
+its own, from its baseline reconcile: post and push it the same way. Every
+`status` answer:
 
 - `block` holds only the rows that changed since the last posted block, a row
   that emptied reading `<row>: none`, and `Merged` lists only the merges since
@@ -38,7 +40,8 @@ wake's saved quota read (Routing; read it with `quota.sh --fleet <fleet> --save
   [daily handover](../SKILL.md#daily-handover)'s pin request. Send one push
   notification (the PushNotification tool) naming the run and the one action,
   then run `ledger.sh --ledger <ledger> pushed <key>`. Until then every
-  reconcile lists it again.
+  reconcile lists it again. A need you record after this wake's reconcile is
+  pushed and marked the same way at once; its row reaches the next block.
 - A need that asks the owner to pick (approve or deny a held call, a scope
   fork) goes out as chat text after the block: the question, the options
   numbered with your recommendation first and marked, and its push. The owner

@@ -133,8 +133,9 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    ([remote](reference/remote.md#steps) step 1). It writes the ledger entry,
    with the fleet's machine key and the routed tier's model and effort, and runs
    the baseline reconcile `watch.sh` compares against; a running watcher picks
-   the entry up from there. A triaged ticket now shipping takes a new launch and
-   record, never `rethread`, which is rung 3's. On the first wake, compare
+   the entry up from there. Post its `status` as step 5 does. A triaged ticket
+   now shipping takes a new launch and record, never `rethread`, which is rung
+   3's. On the first wake, compare
    `.thread.branch` from `t3 thread show` with the entry's branch: the PR is
    found by branch, so when they differ, `ledger.sh --ledger <ledger> set <key>
    branch <json>`.

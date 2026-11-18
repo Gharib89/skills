@@ -194,7 +194,8 @@ out=$(L 7 --out "$out_f")
 check "e2e: the launch answers" true "$(jq .launch <<<"$out")"
 sa_thread t-7 running 1 0 /wt/seven fix/add-a-frobnicator-to-the-7
 sa_pr $repo fix/add-a-frobnicator-to-the-7 none
-bash "$s/launch.sh" record --launch "$out_f" --thread t-7 --ledger "$led" >/dev/null
+recd=$(bash "$s/launch.sh" record --launch "$out_f" --thread t-7 --ledger "$led")
+check "e2e: the record answers the launch's block, since its reconcile counts it posted" 1 "$(jq -r .status.block <<<"$recd" | grep -c 'Running (1): .*widgets#7.* running')"
 sa_pr $repo fix/add-a-frobnicator-to-the-7 open
 sa_thread t-7 idle 1 0 /wt/seven fix/add-a-frobnicator-to-the-7
 rec=$(bash "$s/reconcile.sh" --ledger "$led")

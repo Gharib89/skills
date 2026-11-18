@@ -51,5 +51,13 @@ check "and its row is carried" "Needs you (1): [skills#30]($u/issues/30) approve
 check "a reconcile before the push lists it still" '["Gharib89/skills#30"]' "$(R | jq -c '[.status.unpushed[].key]')"
 L pushed $repo#30 >/dev/null
 check "once marked pushed it is no longer listed" '[]' "$(R | jq -c .status.unpushed)"
+jq -cn '{providers: {claude_big: {driver: "claude", buckets: [{id: "week", window: "weekly", remaining: 0.4}]}}}' > "$tmp/q.json"
+L wait $repo#31 --reason r >/dev/null; sa_issue $repo 31 open
+check "--quota reaches status: a posted block ends with its Quota line" "Quota claude_big: weekly 40%, 5 hour unknown" "$(R --quota "$tmp/q.json" | jq -r .status.block | tail -1)"
+L wait $repo#32 --reason r >/dev/null; sa_issue $repo 32 closed
+before=$(cat "$led")
+echo '[]' > "$tmp/nq.json"
+check_rc "a --quota file that is not a quota read exits 2" 2 "$(R --quota "$tmp/nq.json" >/dev/null 2>&1; echo $?)"
+check "before any write: the closed waiting row is still there for the next reconcile" "$before" "$(cat "$led")"
 
 finish

@@ -57,9 +57,10 @@ check_rc "a pulse exits 0" 0 "$rc"
 check "one JSON object is the whole answer" 1 "$(jq -s length <<<"$out")"
 check "a live watcher with nothing changed is alive and quiet" "true false null" "$(jq -r '[.alive, .changed, (.summary | tostring)] | join(" ")' <<<"$out")"
 L need $repo#5 --action "approve the held call" >/dev/null
-out=$(P)
+out=$(P --instance claude_small)
+check "pulse passes --instance on to the block" "Super agent on claude_small" "$(jq -r .summary.status.block <<<"$out" | tail -1)"
 check "an unpushed need is a change, its push named in the summary" 'true ["Gharib89/skills#5"]' "$(jq -r '"\(.changed) \(.summary.status.unpushed | map(.key) | tojson)"' <<<"$out")"
-check "and the summary carries the block to post" "Needs you (1): [skills#5](https://github.com/$repo/issues/5) approve the held call" "$(jq -r .summary.status.block <<<"$out")"
+check "and the summary carries the block to post" "Needs you (1): [skills#5](https://github.com/$repo/issues/5) approve the held call" "$(jq -r .summary.status.block <<<"$out" | head -1)"
 L pushed $repo#5 >/dev/null
 check "once pushed and posted the pulse is quiet again" false "$(P | jq .changed)"
 L unneed $repo#5 >/dev/null; R >/dev/null
