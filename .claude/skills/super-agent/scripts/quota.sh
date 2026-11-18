@@ -39,7 +39,9 @@
 #         `auth` `ok`, `failed` or `unknown`, `auth_reason` null or why;
 #         `buckets` one {id, window, remaining, resets} per bucket, `window` `5h`
 #         or `weekly`, `remaining` a fraction 0 to 1 (agy's buckets add `group`),
-#         `resets` the provider's own reset time as text; a provider also
+#         `resets` the provider's own reset time as text, `resets_at` it as an
+#         epoch second (`route` reads the weekly one), null when `date` cannot
+#         read it or its zone has no zoneinfo file; a provider also
 #         holds `weekly_weight`, `models` and `route` where the fleet entry sets them; `floors` is
 #         {five_hour, weekly_reserve}, a key only where the file sets it;
 #         `read_at` the UTC time of the read, `wake` the --wake id or null. Claude's ids are
@@ -97,6 +99,23 @@ parse_agy() {
     | select(length > 0)' 2>/dev/null
 }
 
+# resets_at <text>: the reset as an epoch second, or null. Claude prints `Nov 11, 12pm
+# (Africa/Cairo)`: its zone must have a zoneinfo file, since `date` reads one it does
+# not know as UTC, and a day with no year that falls over a day before now is next year's.
+resets_at() {
+  local text=$1 tz=UTC at
+  [[ $text =~ [0-9] ]] || { printf null; return; }
+  if [[ $text =~ ^(.*[^ ])\ *\(([^()]+)\)$ ]]; then
+    text=${BASH_REMATCH[1]} tz=${BASH_REMATCH[2]}
+    [ -f "/usr/share/zoneinfo/$tz" ] || { printf null; return; }
+  fi
+  at=$(TZ=$tz date -d "${text//,/}" +%s 2>/dev/null) || { printf null; return; }
+  if ! [[ $text =~ [0-9]{4} ]] && [ "$at" -lt $(($(sa_now_s) - 86400)) ]; then
+    at=$(TZ=$tz date -d "${text//,/} next year" +%s 2>/dev/null) || { printf null; return; }
+  fi
+  printf '%s' "$at"
+}
+
 out='{}'
 # One name per line, split without globbing: the owner wrote these keys.
 IFS=$'\n' read -r -d '' -a names < <(jq -r '(.providers // {}) | keys[]' "$fleet_file") || true
@@ -131,7 +150,11 @@ for name in ${names[@]+"${names[@]}"}; do
         agy|pi) parsed=$(parse_agy <<<"$raw") ;;
         *) parsed='' reason="no parser for driver $driver" ;;
       esac
-      if [ -n "$parsed" ]; then status=available buckets=$parsed
+      if [ -n "$parsed" ]; then
+        status=available buckets='[]'
+        while IFS= read -r bucket; do
+          buckets=$(jq -c --argjson b "$bucket" --argjson at "$(resets_at "$(jq -r '.resets // ""' <<<"$bucket")")" '. + [$b + {resets_at: $at}]' <<<"$buckets")
+        done < <(jq -c '.[]' <<<"$parsed")
       else [ -n "$reason" ] || reason='quota command printed no quota'; fi
     fi
   fi

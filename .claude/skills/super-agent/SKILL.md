@@ -116,7 +116,8 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    (Routing, Placement), `--note <text>` for a line only this ticket's thread
    should read, and `--raise <n>` on a raised launch. It reads the labels
    (`ready-for-agent` takes `/ship <n>`, `needs-triage` takes `/triage <n>`),
-   claims, routes, places and writes the launch message, and prints `launch:
+   claims, routes, places and writes the launch message, records it at
+   stage `launching`, and prints `launch:
    true` with `args`, the whole `t3_thread_launch` argument object, or `launch:
    false` with a `reason`: `claimed`, `stale`, `waiting`, `need_reading`, `ask`,
    `no_owner_skill`, `no_instance` or `stale_ship`. Act on the reason as Claims,
@@ -129,10 +130,10 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
 2. **Record.** Run `scripts/launch.sh record --launch <launch file> --thread
    <id> --ledger <ledger>`, `<id>` the thread id `t3_thread_launch` returned. No
    turn ends between `t3_thread_launch` and this call: `record` fails with
-   `unrecorded launch` when it has no entry to write or the ledger lacks it. A
+   `unrecorded launch` when it has no entry to bind or the ledger lacks it. A
    remote launch also passes `--worktree` and `--remote`
-   ([remote](reference/remote.md#steps) step 1). It writes the ledger entry,
-   with the fleet's machine key and the routed tier's model and effort, and runs
+   ([remote](reference/remote.md#steps) step 1). It binds the thread to that
+   entry and runs
    the baseline reconcile `watch.sh` compares against; a running watcher picks
    the entry up from there. Post its `status` as step 5 does. A triaged ticket
    now shipping takes a new launch and record, never `rethread`, which is rung
@@ -221,6 +222,7 @@ The other lists report:
   nudge, send the missing fact, then a fresh thread on a raised tier
   ([reference/stall-ladder.md](reference/stall-ladder.md)).
 - `ready`: waiting rows to launch, in order. `dropped`: closed issues' rows.
+  `launching`: a launch never recorded.
 - `unqueued`: open issues in an active repo, filed since the batch began, that
   no entry, waiting row or claim holds. Say them in one chat line, each key
   with its title, and ask whether to launch any: reconcile lists each once.

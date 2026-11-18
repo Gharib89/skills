@@ -81,7 +81,7 @@ sa_quota_file() { [ -f "$1" ] && jq -e '(.providers | type) == "object"' "$1" >/
 command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 
 # The stages an entry moves through, by `reconcile` alone (`ledger add` and
-# `rethread` only start one at `launched`): `launched` is an
+# `rethread` only start one, at `launched` or `launching`): `launched` is an
 # entry nothing has observed yet; `merged` is a PR merged whose thread is still
 # running, watched until it rests; `settled` and `closed` end an entry and are
 # never watched again, except a settled `triage` entry, which `reconcile` re-reads

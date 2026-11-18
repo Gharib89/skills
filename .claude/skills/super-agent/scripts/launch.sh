@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # One call for a launch, one for its record. The launch form reads the ticket's
 # labels (owner skill, Size), claims it, routes it, places it and writes its launch
-# message, then prints the whole `t3_thread_launch` argument object, or why it did not
-# launch. The record form takes that answer and the launched thread and writes the
-# ledger entry, then runs the baseline reconcile. Neither calls `t3_thread_launch`:
-# the super agent makes that call.
+# message, records the ticket in the ledger at stage `launching` (no thread yet), then
+# prints the whole `t3_thread_launch` argument object, or why it did not launch. The
+# record form takes that answer and the launched thread, binds the thread id to that
+# entry, then runs the baseline reconcile. Neither calls `t3_thread_launch`: the super
+# agent makes that call.
 #
 #   launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file>
 #          --machine <key> --thread <id> [--area <path>]... [--gpu]
@@ -221,5 +222,23 @@ answer_json=$(jq -cn --arg k "$key" --arg kind "$kind" --arg size "$size" --arg 
               + (if $kind == "task" then {repo: ($k | sub("#.*$"; "")), interactive: $ia} else {} end)
               + (if $route.owner_go == true then {owner_go: true} else {} end))}') \
   || sa_tooling "cannot build the launch answer"
+
+# 6. Record before launch: the entry goes in at stage `launching` before the arguments
+# come out, so a turn cut between `t3_thread_launch` and `record` loses no launch. An
+# open entry for the ticket (a rethread) already records it, and `add` refuses that one.
+rec=$(jq -c .record <<<"$answer_json")
+lflags=(--machine "$(jq -r .machine <<<"$rec")" --branch "$branch" --instance "$(jq -r .instance_id <<<"$rec")"
+  --model "$(jq -r .model <<<"$rec")" --effort "$(jq -r .effort <<<"$rec")")
+[ "$(jq -r '.environment_id // empty' <<<"$rec")" = "" ] || lflags+=(--environment "$(jq -r .environment_id <<<"$rec")")
+while IFS= read -r a; do lflags+=(--area "$a"); done < <(jq -r '.areas[]' <<<"$rec")
+if [ "$kind" = task ]; then
+  [ "$interactive" != true ] || lflags+=(--interactive)
+  sub ledger --ledger "$ledger" add --launching --task "$(jq -r '.key | sub("^task:"; "")' <<<"$rec")" --repo "$repo" "${lflags[@]}"
+else
+  sub ledger --ledger "$ledger" add --launching --repo "$repo" --number "$number" --kind "$kind" "${lflags[@]}"
+fi
+[ "$rc" = 0 ] || jq -e '.error | endswith("is already in the ledger")' <<<"$out" >/dev/null 2>&1 \
+  || sa_tooling "cannot record $key before its launch"
+
 [ -z "$outf" ] || printf '%s\n' "$answer_json" > "$outf" || sa_tooling "cannot write $outf"
 printf '%s\n' "$answer_json"

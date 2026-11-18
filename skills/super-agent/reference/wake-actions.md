@@ -7,6 +7,7 @@
 - [escalate](#escalate)
 - [Merge-gate holds](#merge-gate-holds)
 - [parents_done](#parents_done)
+- [launching](#launching)
 
 `scripts/` is under this skill's base directory. Reconcile marks an entry
 `cleanup_owed` when it settles or closes and a ship entry `verify_owed` when it
@@ -100,3 +101,12 @@ An open parent issue whose sub-issues are all closed, listed once per parent
 ruling 2026-11-13), with `gh api -X PATCH repos/<owner/name>/issues/<n> -f
 state=closed -f state_reason=completed`, verify `state` closed by REST, and say
 it in one chat line, key and title.
+
+## launching
+
+An entry `launch` wrote at stage `launching` that no `record` bound a thread to:
+the turn ended between `launch` and `record`, or `t3_thread_launch` failed. Find
+its thread with `t3_thread_list` by the launch file's `args.title`; found, run
+`launch.sh record --launch <launch file> --thread <id> --ledger <ledger>`. With
+none, launch the ticket again: the new launch replaces the entry. The entry
+still takes its machine's slot until one of these settles it.
