@@ -175,7 +175,8 @@ while IFS= read -r entry; do
   fi
   # a paused ticket ends on a merged PR or a closed issue, and otherwise keeps its stage
   if [ "$paused" = true ]; then
-    case $stage:$reason in settled:|closed:issue-closed) stage=settled reason='' ;; *) stage=$(jq -r .stage <<<"$entry") reason='' ;; esac
+    if [ "$(jq -r .pr.state <<<"$obs")" = merged ] || [ "$reason" = issue-closed ]; then stage=settled; else stage=$(jq -r .stage <<<"$entry"); fi
+    reason=''
   fi
   stall='' stalls=$(jq -r '.stalls // 0' <<<"$entry")
   # no stall is counted for a paused entry, nor for an interactive one (it waits on the owner)

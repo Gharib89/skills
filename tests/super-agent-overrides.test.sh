@@ -141,6 +141,10 @@ R >/dev/null
 check "a paused entry whose issue closed settles with no cleanup owed" "settled null" "$(LG get $repo#22 | jq -r '"\(.stage) \(.cleanup_owed | tostring)"')"
 check "unpause of a paused entry that ended exits 1, its baseline kept" "1 false" \
   "$(LG unpause $repo#22 >/dev/null 2>&1; echo $?) $(LG get $repo#22 | jq -r '.observed == null')"
+LG add --repo $repo --number 25 --kind triage --thread th-25 --worktree /wt/25 --branch triage/x-25 --machine home >/dev/null
+sa_thread th-25 idle 1 0 /wt/25 triage/x-25; sa_pr $repo triage/x-25 none; sa_issue $repo 25 open needs-triage
+R >/dev/null; LG pause $repo#25 >/dev/null; sa_issue $repo 25 open ready-for-agent; R >/dev/null
+check "a paused triage entry whose labels drop while its issue stays open keeps its stage" at-rest "$(LG get $repo#25 | jq -r .stage)"
 LG add --repo $repo --number 23 --kind triage --thread th-23 --worktree /wt/23 --branch triage/x-23 --machine home >/dev/null
 sa_thread th-23 idle 1 0 /wt/23 triage/x-23; sa_pr $repo triage/x-23 none; sa_issue $repo 23 open needs-triage
 R >/dev/null; LG pause $repo#23 >/dev/null; sa_issue $repo 23 closed; R >/dev/null
