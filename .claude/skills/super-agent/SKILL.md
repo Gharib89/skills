@@ -308,40 +308,9 @@ step.`
 ## Daily handover
 
 The morning report starts a fresh super-agent thread, so compactions and stale
-context never pile up in one. It is the one exception to The loop's watcher
-rule and to the Hard rules: the successor is launched without a claim and is
-never recorded or watched, this thread settles itself, and its pin request is
-the one push that is not a need. The old thread, in this order:
-
-1. `scripts/handover.sh --ledger <ledger> --from $T3CODE_THREAD_ID --out
-   <bearings file>`, `<bearings file>` being `bearings.md` beside the ledger.
-   It refreshes the global super-agent copy when the loaded one is stale and
-   writes the bearings file from the ledger. Exit 1 (the refresh failed)
-   still hands over; say so in chat.
-2. Stop the watcher: TaskStop its background task, found with TaskList (none
-   running is fine), so two super agents never run on one ledger.
-3. `list_scheduled_tasks`, note the morning report's time, and
-   `delete_scheduled_task` each schedule bound to this thread (the morning
-   report and the backstop); retro-runs are bound to repo projects and stay.
-4. Launch the successor with `t3_thread_launch` in this thread's project, no
-   worktree, on this thread's provider instance and model (`t3 thread show
-   $T3CODE_THREAD_ID --json`), its message two lines: `/super-agent`, then
-   `Handover: read <bearings file>. Morning report at <HH:MM>.` If the launch
-   fails, recreate the deleted schedules (the backstop only while an entry is
-   open), start the watcher, post the `status.sh --digest` block and say in
-   one chat line that the handover failed: the next morning retries.
-5. Settle this thread: `t3_thread_organize` action `settle` on it.
-6. Push one notification (PushNotification), and post the same line in chat:
-   `Pin the new super agent: <link>`, the successor's `link`. No T3 tool pins
-   a thread.
-
-**When your first message carries a `Handover:` line, you are the
-successor.** Read the bearings file it names, run After a restart or
-compaction, then recreate the schedules bound to this thread with no question
-asked (the owner's yes to the morning report covers them): the morning report
-from `scripts/schedules.sh --fleet <fleet> --morning <HH:MM>`, `<HH:MM>` from
-the `Handover:` line, and the backstop as The loop's step 3 says. Then post
-the `status.sh --digest` block.
+context never pile up in one: follow
+[reference/handover.md](reference/handover.md), both as the old thread and as
+the successor (your first message carries a `Handover:` line).
 
 ## Hard rules
 
@@ -349,12 +318,15 @@ the `status.sh --digest` block.
   kind**: record it before your turn ends (The loop). The exceptions are a
   probe or scratch thread you read and settle within the same turn, and a
   thread a supervised thread started, which you settle once at rest and do
-  nothing else with.
-- Touch only threads the ledger holds, your probe threads and the helper
-  threads the first rule settles.
+  nothing else with, and the [daily handover](#daily-handover)'s successor,
+  launched unclaimed and never recorded.
+- Touch only threads the ledger holds, your probe threads, the helper
+  threads the first rule settles, and this thread itself at the daily
+  handover.
 - Route and verify; the supervised thread implements, and its owner skill
   merges.
 - Settle a finished thread; never archive one. Remove a worktree only through
   `worktree.sh`, which takes only a settled or closed entry's clean one.
-- Launch only on a claim of your own and the owner's go: a claim is never
-  taken over, and the daily offer never launches.
+- Launch only on a claim of your own and the owner's go, the daily
+  handover's successor aside: a claim is never taken over, and the daily
+  offer never launches.
