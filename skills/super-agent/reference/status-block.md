@@ -25,10 +25,10 @@ runs on.
 ## Every wake
 
 Reconcile (or pulse) with `--quota <file> --instance <id>`, `<file>` the
-latest saved quota read (Routing: `quota.sh --fleet <fleet> --save <file>`) and
-`<id>` this thread's provider instance. `launch.sh record` answers a `status` of
-its own, from its baseline reconcile: post and push it the same way. Every
-`status` answer:
+latest saved quota read (Routing: `quota.sh --fleet <fleet> --save <file> --wake
+<wake-id>`) and `<id>` this thread's provider instance. `launch.sh record`
+answers a `status` of its own, from its baseline reconcile: post and push it
+the same way. Every `status` answer:
 
 - `block` holds only the rows that changed since the last posted block, a row
   that emptied reading `<row>: none`, and `Merged` lists only the merges since
