@@ -21,7 +21,8 @@
 # file (`floors.five_hour`, default 0.1; `floors.weekly_reserve`, default 0.05).
 # --owner-go is the owner's go past both, taken only when no instance passes them:
 # then a floor or the reserve skips none, and only a failed auth, a weekly bucket at 0
-# or no model for the tier still skips one (`owner_go` true says the go was used).
+# or no model for the tier still skips one (`owner_go` true: the pick is an instance
+# the go let through).
 # Of the rest the one with the most weekly headroom wins, its weekly remaining
 # times its `weekly_weight` (default 1, the quota read carries it from the fleet
 # entry: 40% of a seat three times the size is more work than 60% of one), an
@@ -137,7 +138,7 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
                     else null end)}] as $all
   | ($go and ([$all[] | select(.skip == null and (.lr | not))] | length) == 0) as $past
   | [$all[] | if $past and (.skip // "" | test("floor|reserve")) and (.driver != "pi" or ([$models[] as $m | (.value.models[$m] // null)] | all(. != null)))
-      then .skip = null else . end] as $cands
+      then .skip = null | .went = true else . end] as $cands
   | ([$cands[] | select(.skip == null)] as $ok
       | (if ($ok | any(.lr | not)) then [$ok[] | select(.lr | not)] else $ok end)
       | sort_by([(if .bucket == null then 1 else 0 end), -((.bucket.remaining // 0) * (.value.weekly_weight // 1)), (if .driver == "claude" then 0 else 1 end), .key]) | first) as $pick
@@ -166,4 +167,4 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
      options: options($tier),
      wanted_model: model($ladder[$w]),
      wanted_options: options($ladder[$w]),
-     owner_go: ($past and $pick != null)}' "$quota" || sa_tooling "$quota: cannot be read"
+     owner_go: ($pick.went == true)}' "$quota" || sa_tooling "$quota: cannot be read"

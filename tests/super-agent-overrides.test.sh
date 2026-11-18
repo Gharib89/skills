@@ -49,6 +49,9 @@ check "with an instance inside the floors, --owner-go is not used and routes as 
 jq '.providers.cur = {driver: "cursor", auth: "ok", route: true, buckets: []}' "$quota" > "$tmp/q5.json"
 check "a last-resort instance does not stand in for the go" "claudeAgent true" \
   "$(bash "$s/route.sh" --size S --quota "$tmp/q5.json" --owner-go | jq -r '"\(.instance_id) \(.owner_go)"')"
+jq '.providers.claudeAgent.auth = "failed"' "$tmp/q5.json" > "$tmp/q6.json"
+check "a go that lets no instance through is not reported as used" "cur false" \
+  "$(bash "$s/route.sh" --size S --quota "$tmp/q6.json" --owner-go | jq -r '"\(.instance_id) \(.owner_go)"')"
 
 # --- --skill launches a named skill; an interactive entry gets no stall -----------------
 reset; issue 9 "widgets: settle the design" enhancement
