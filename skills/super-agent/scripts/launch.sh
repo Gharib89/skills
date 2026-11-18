@@ -102,8 +102,8 @@ rec_fields() {
     --model "$(jq -r .model <<<"$1")" --effort "$(jq -r .effort <<<"$1")" ${env:+--environment "$env"})
   while IFS= read -r a; do fields+=(--area "$a"); done < <(jq -r '.areas[]' <<<"$1")
 }
-# rec_add <record> <flag>...: `ledger add` its entry, a --skill task keyed by the
-# skill and the ticket (its repo kept) or the ticket, with the flags given.
+# rec_add <record> <flag>...: `ledger add` its entry to $ledger, a --skill task keyed
+# by the skill and the ticket (its repo kept) or the ticket, with the flags given.
 rec_add() {
   local r=$1 k; k=$(jq -r .key <<<"$r"); shift; rec_fields "$r"
   fields+=(--machine "$(jq -r .machine <<<"$r")" "$@")

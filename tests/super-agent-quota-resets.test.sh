@@ -23,6 +23,9 @@ out=$(SA_NOW="$(date -u -d 2028-11-06T12:00:00Z +%s)" Q)
 check "claude: a printed day with no year takes the pinned clock's year, not the real one" \
   "$(TZ=Africa/Cairo date -d 'Nov 11 2028 12pm' +%s)" \
   "$(jq -r '.providers.claude.buckets[] | select(.id == "week") | .resets_at' <<<"$out")"
+sa_provider claude 0 "$(jq -cn '{result: "Current session: 1% used · resets 4:40pm (Africa/Cairo)\nCurrent week (all models): 9% used · resets x"}')"
+check "claude: a time with no day has resets_at null" null \
+  "$(SA_NOW=1794000000 Q | jq -r '.providers.claude.buckets[] | select(.id == "session") | .resets_at')"
 sa_provider claude 0 "$(jq -cn '{result: "Current session: 1% used · resets x\nCurrent week (all models): 9% used · resets Nov 11, 12pm (../zoneinfo/UTC)"}')"
 check "claude: a zone that climbs out of zoneinfo has resets_at null" null \
   "$(SA_NOW=1794000000 Q | jq -r '.providers.claude.buckets[] | select(.id == "week") | .resets_at')"

@@ -1,9 +1,8 @@
 # The `launch record` form, sourced by `launch.sh` after its `record` word: it binds
 # the thread to the entry a launch answer (--launch) names, or writes one for a task
-# (--task), reads it
-# back and runs the baseline reconcile; a launch answer carrying `owner_go` also gets
-# its ruling, once the entry is written. It reads the caller's $usage, `sub`,
-# `rec_fields` and `rec_add`, and
+# (--task), reads it back and runs the baseline reconcile; a launch answer carrying
+# `owner_go` also gets its ruling, once the entry is written. It reads the caller's
+# $usage, `sub`, `rec_fields` and `rec_add`, and
 # exits.
 
 # shellcheck disable=SC2154  # usage, out, rc and fields come from launch.sh and its sub

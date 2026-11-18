@@ -41,7 +41,8 @@
 #         or `weekly`, `remaining` a fraction 0 to 1 (agy's buckets add `group`),
 #         `resets` the provider's own reset time as text, `resets_at` it as an
 #         epoch second (`route` reads the weekly one), null when `date` cannot
-#         read it or its zone has no zoneinfo file; a provider also
+#         read it, it is a time with no day, or its zone names no zoneinfo
+#         file; a provider also
 #         holds `weekly_weight`, `models` and `route` where the fleet entry sets them; `floors` is
 #         {five_hour, weekly_reserve}, a key only where the file sets it;
 #         `read_at` the UTC time of the read, `wake` the --wake id or null. Claude's ids are
