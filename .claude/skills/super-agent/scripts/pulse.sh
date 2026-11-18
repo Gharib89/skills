@@ -41,11 +41,9 @@ done
 summary=$(bash "$(dirname "${BASH_SOURCE[0]}")/reconcile.sh" "${pass[@]}"); rc=$?
 if [ "$rc" -ne 0 ]; then printf '%s\n' "$summary"; exit "$rc"; fi
 
-pid=$(cat "$ledger.watch" 2>/dev/null) args=''
-# /bin/ps by its full path, as `watch` reads the same lock, past the tests' fake.
-[ -z "$pid" ] || args=$(/bin/ps -p "$pid" -o args= 2>/dev/null)
+pid=$(cat "$ledger.watch" 2>/dev/null)
 alive=false
-[[ $args == *watch.sh* ]] && alive=true
+[ -n "$pid" ] && sa_pid_runs "$pid" '*watch.sh*' && alive=true
 
 held=$(jq -c '(.entries // {}) | keys' "$ledger" 2>/dev/null) || held='[]'
 jq -cn --argjson s "$summary" --argjson a "$alive" --argjson held "$held" "$sa_jq_norm"'
