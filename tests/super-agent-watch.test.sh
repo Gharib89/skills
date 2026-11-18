@@ -310,6 +310,16 @@ bash "$s/ledger.sh" --ledger "$led" set "$repo#5" stalls 3 >/dev/null
 sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$wl" $old
 check "an entry at 3 stalls stays quiet past the window too" "null timeout" "$(event "$(W --timeout 2 --stall-window 60)")"
 
+# --- a rest on a usage-limit line is running until its reset plus the window ----
+# The 2020 rest is 02:00 in Cairo (UTC+2), so "resets 6:10pm" is 16:10Z that day.
+limit="You've hit your 5-hour limit · resets 6:10pm (Africa/Cairo)"
+reset=$(date -u -d 2020-01-01T16:10:00Z +%s) # a fixed stamp converted, no clock read
+fixture
+sa_thread t-5 idle 1 0 /wt/5 feat/x-5 "$limit" $old
+check "a limit rest is no run-finished before its reset" "null timeout" "$(event "$(SA_NOW=$((reset - 3600)) W --timeout 2 --stall-window 60)")"
+check "and no stall-window one second inside reset plus the window" "null timeout" "$(event "$(SA_NOW=$((reset + 59)) W --timeout 2 --stall-window 60)")"
+check "at reset plus the window it is a stall-window" "$repo#5 stall-window" "$(event "$(SA_NOW=$((reset + 60)) W --timeout 5 --stall-window 60)")"
+
 # --- a PR merging while its thread runs raises one event ------------------------
 fixture
 sa_pr_merged_at $repo feat/x-5 $soon

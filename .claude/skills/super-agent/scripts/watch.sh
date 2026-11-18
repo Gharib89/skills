@@ -22,7 +22,8 @@
 # again within about a minute (measured 2026-11-06). `stall-window` is an entry
 # at rest with no change for `--stall-window` seconds (default 900) since
 # `reconcile` stamped its `rest_since` (the later of that and `rest_at`, for a
-# thread waiting on the waiting line); an entry already at 3 stalls is
+# thread waiting on the waiting line, or `limit_reset`, the reset a usage-limit stop names, for
+# a thread stopped on one: T3 resumes it then, so it raises no `run-finished` either); an entry already at 3 stalls is
 # escalated, so its window stays quiet, and so does a paused or interactive entry's.
 # A paused entry (`ledger pause`) is read from GitHub alone and wakes only on its PR
 # merging; a paused task is not read at all.
@@ -146,7 +147,7 @@ change_of() {
     elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "none" then "pr-opened"
     elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "open" and $n.pr.checks == "done" and ($o.pr.checks != "done" or $o.pr.head != $n.pr.head) then "checks-finished"
     elif $n.pending > $o.pending then "pending-approval"
-    elif ($n.waiting | not) and $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
+    elif ($n.waiting | not) and ($n.limit_reset == null) and $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
     else empty end'
 }
 
@@ -157,7 +158,8 @@ change_of() {
 stall_window_of() {
   jq -rn --argjson e "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(sa_now_s)" '
     ($e.rest_since | if . == null then null else fromdateiso8601 end) as $rs
-    | (if $n.waiting then ([$rs, $n.rest_at] | map(select(. != null)) | max) else $rs end) as $since
+    | (if $n.waiting then ([$rs, $n.rest_at] | map(select(. != null)) | max)
+       elif $n.limit_reset != null then ([$rs, $n.limit_reset] | map(select(. != null)) | max) else $rs end) as $since
     | if $since != null and ($e.paused != true) and ($e.interactive != true) and ($n.pr.state != "merged" or $n.waiting) and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
        and $now - $since >= $w then "stall-window" else empty end'
 }
