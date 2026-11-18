@@ -45,14 +45,14 @@ ones:
 3. **A gate hold** the run stopped on
    ([wake-actions](wake-actions.md#merge-gate-holds)): the one standing waiver
    from the fleet file's `waivers`, or the one ruling scoped to the repo (the
-   `briefed` rows of `ledger.sh --ledger <ledger> briefed` whose `repo` is the
-   run's), whose condition matches the hold, quoted word for word, telling
-   the run to merge through `merge.sh` and name that waiver in its PR body. A
-   hold none matches goes to whoever `merge_gate_ruler` names, and the step-in
-   carries that ruling once it exists. A triage run that reports a PR it opened
-   to ship a small proven fix inline is at a gate too: tell it the PR gets a
-   review round and green CI, then stops for you to merge, without `merge.sh`,
-   which has no gate record for it.
+   `scoped` rows of `ledger.sh --ledger <ledger> scoped --repo <owner/name>`
+   for the run's repo), whose condition matches the hold, quoted word for
+   word, telling the run to merge through `merge.sh` and name that waiver in
+   its PR body. A hold none matches goes to whoever `merge_gate_ruler` names,
+   and the step-in carries that ruling once it exists. A triage run that
+   reports a PR it opened to ship a small proven fix inline is at a gate too:
+   tell it the PR gets a review round and green CI, then stops for you to
+   merge, without `merge.sh`, which has no gate record for it.
 4. **The owner's answer to a need the thread raised**: the answer, as the owner
    gave it, into the thread whose need it settles.
 5. **A hard finding from verification**: the verified acceptance-criterion gap

@@ -56,6 +56,22 @@ sa_notify_read() {
   notify_cmd=$(jq -r '.notify.command // ""' "$1") notify_delay=$(jq -r '.notify.delay // 600' "$1")
 }
 
+# sa_brief_where: where a rule that was a brief line or a brief-bound ruling
+# belongs now, the tail of every refusal that names one.
+sa_brief_where() {
+  printf '%s' "a rule for how ship runs belongs in the repo's ship profile, one for the super agent's own behaviour or a gate-hold ruling in the ledger as a plain ruling, one for machine-wide behaviour in global rules"
+}
+
+# sa_fleet_no_brief <fleet>: refuse a fleet file that still carries a `brief`
+# line under a repo or a machine, naming its path. No launch message carries one
+# any more, so a line left in the file would be read by nothing.
+sa_fleet_no_brief() {
+  local found
+  found=$(jq -r '[(.repos // {} | objects | to_entries[] | select(.value | objects | has("brief")) | "repos.\(.key).brief"),
+    (.machines // {} | objects | to_entries[] | select(.value | objects | has("brief")) | "machines.\(.key).brief")] | first // empty' "$1")
+  [ -z "$found" ] || sa_tooling "$1: $found is retired: delete it. $(sa_brief_where)"
+}
+
 # sa_flag_value <usage> <value>: a flag's value may be neither empty nor dash-led,
 # or the next flag is read as the value.
 sa_flag_value() { case $2 in -*|'') sa_tooling "$1" ;; esac; }

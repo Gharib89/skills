@@ -67,15 +67,15 @@ check "with --note a triage message is the invocation plus one Note: line" "$(pr
   "$(L 11 --note "Look at the logs first." | jq -r .args.message)"
 reset; issue 12 "Another one" ready-for-agent
 check "without --note a ship message is the invocation alone" "/ship 12" "$(L 12 | jq -r .args.message)"
-# The fleet's waivers, the ledger's allowed and brief-bound rulings and the fleet's
-# brief lines all exist here, and none of them reaches the launch message.
-bash "$s/ledger.sh" --ledger "$led" ruling "Brief-bound ruling text." --brief >/dev/null
+# The fleet's waivers and the ledger's rulings both exist here, and none of them
+# reaches the launch message.
+bash "$s/ledger.sh" --ledger "$led" ruling "Scoped ruling text." --repo "$repo" >/dev/null
 bash "$s/ledger.sh" --ledger "$led" ruling "deny nothing" --allow "git push to the branch" >/dev/null
 for t in "12 ready-for-agent" "11 needs-triage"; do
   set -- $t; issue "$1" "Another one" "$2"
   msg=$(L "$1" --note "Only this." | jq -r .args.message)
   check "a $2 message carries no waiver, ruling, shared-machine, merge allowance, waiting, branch or last-message line" 0 \
-    "$(grep -ciE 'waiver|Codex answers|ruling|Brief-bound|git push|Repo line|Machine line|share this machine|pkill|flock|Merge allowance|Waiting on my own|worktree you start in|branch it holds|last message|merge\.sh' <<<"$msg")"
+    "$(grep -ciE 'waiver|Codex answers|ruling|Scoped ruling|git push|share this machine|pkill|flock|Merge allowance|Waiting on my own|worktree you start in|branch it holds|last message|merge\.sh' <<<"$msg")"
 done
 
 # --- the flags place and route take pass through -------------------------------------

@@ -17,9 +17,9 @@ fleet=$tmp/fleet.json led=$tmp/ledger.json quota=$tmp/quota.json readings=$tmp/r
 repo=acme/widgets
 cat > "$fleet" <<'JSON'
 {"thread_ram_floor_gb": 4,
- "machines": {"home": {"cores": 8, "slots": 4, "reserve": 1, "max_load": 8, "gpu": null, "gh_logins": ["alice"], "brief": ["Machine line: the home box has one GPU shared by all runs."]},
+ "machines": {"home": {"cores": 8, "slots": 4, "reserve": 1, "max_load": 8, "gpu": null, "gh_logins": ["alice"]},
               "box": {"environment_id": "env-box", "cores": 8, "slots": 4, "max_load": 8, "gpu": null, "gh_logins": ["alice"]}},
- "repos": {"acme/widgets": {"max_ships": 2, "brief": ["Repo line: run the widget suite with `make test`."]}},
+ "repos": {"acme/widgets": {"max_ships": 2}},
  "waivers": [{"id": "w", "condition": "Codex answers with a usage-limit notice: record it as not landed."}]}
 JSON
 quota_with() { # <weekly remaining> [<auth>]
