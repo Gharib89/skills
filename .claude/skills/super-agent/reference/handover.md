@@ -28,8 +28,9 @@ the one push that is not a need. The old thread, in this order:
    $T3CODE_THREAD_ID --json`), its message two lines: `/super-agent`, then
    `Handover: read <bearings file>. Morning report at <HH:MM>.` If the launch
    fails, recreate the deleted schedules (the backstop only while an entry is
-   open), start the watcher, post the `status.sh --digest` block and say in
-   one chat line that the handover failed: the next morning retries.
+   open), start the watcher, post the `status.sh --ledger <file> --digest`
+   block and say in one chat line that the handover failed: the next morning
+   retries.
 5. Settle this thread: `t3_thread_organize` action `settle` on it.
 6. Push one notification (PushNotification), and post the same line in chat:
    `Pin the new super agent: <link>`, the successor's `link`. No T3 tool pins
@@ -41,5 +42,4 @@ compaction, then recreate the schedules bound to this thread with no question
 asked (the owner's yes to the morning report covers them): the morning report
 from `scripts/schedules.sh --fleet <fleet> --morning <HH:MM>`, `<HH:MM>` from
 the `Handover:` line, and the backstop as SKILL.md's The loop step 3 says.
-Then post
-the `status.sh --digest` block.
+Then post the `status.sh --ledger <file> --digest` block.
