@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Propose the recurring schedules the owner may say yes to, one JSON answer: a
-# morning ledger report, the hourly backstop and a weekly retro-run per active repo. It only
-# proposes, creates nothing and reads nothing off GitHub or T3; the super agent
-# makes each with `schedule_task` after the owner's yes.
+# Propose the recurring schedules, one JSON answer: a morning ledger report, the
+# hourly backstop and a weekly retro-run per active repo. It only proposes,
+# creates nothing and reads nothing off GitHub or T3; the super agent makes the
+# morning report and each retro-run with `schedule_task` after the owner's yes,
+# and the backstop without asking.
 #
 #   schedules --fleet <file> [--morning <HH:MM>] [--retro-day <0-6>]
 #
@@ -15,7 +16,8 @@
 # carry no path or host: the thread already knows its ledger.
 #
 # The backstop is the wake that runs `pulse.sh` while a watcher lives; hourly,
-# since a faster one found nothing to do and cost context on each wake.
+# since a faster one found nothing to do and cost context on each wake. It
+# belongs to the loop, not the owner's choices, so no yes is asked for it.
 #
 # stdout: {morning: {...}, backstop: {...same fields}, retro: [{repo, title,
 #         bind, schedule, prompt}]}: `bind` `this-thread` or `repo-project`,

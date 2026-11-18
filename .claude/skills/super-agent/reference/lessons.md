@@ -12,7 +12,8 @@ SKILL.md's `## Setup`.
 ## Schedules
 
 Offer these once setup has written the fleet file, and create one only after
-the owner's yes: a schedule runs unattended, so the owner chooses each one.
+the owner's yes: a schedule runs unattended, so the owner chooses each one
+(the backstop aside, below).
 
 1. Run `scripts/schedules.sh --fleet <fleet>` (`--morning HH:MM` and
    `--retro-day 0-6` when the owner named a time). It proposes `morning`, the
