@@ -140,6 +140,11 @@ sa_remote_flag() {
 # stall. Defined once here, where the observation matches it.
 sa_waiting_line='Waiting on my own background work.'
 
+# The skills that wait on the owner by design (a grill): `launch --skill` records an entry
+# for one as interactive, which never counts as stalled and never settles on its rest.
+# shellcheck disable=SC2034  # read by launch.sh, which sources this file
+sa_interactive_skills=' grilling grill-me grill-with-artifact grill-with-docs '
+
 # The lowest installed ship a ship launch accepts: `launch.sh` answers `stale_ship` below
 # it, so the repo is refreshed first. 0.67.0 is the first ship whose SKILL.md asks for
 # `sa_waiting_line`; an older copy waits without it, and its waits read as stalls.

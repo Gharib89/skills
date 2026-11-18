@@ -232,6 +232,26 @@ The other lists report:
 - `errors` of an entry: its `escalate` row covers them; say others in one chat
   line.
 
+## The owner's overrides
+
+Each override the owner gives has a flag; never edit the ledger, fleet or quota
+file by hand to stand in for one.
+
+- "Go past the quota": `launch.sh ... --owner-go`. Route reads the 5 hour floor
+  and the weekly reserve as 0, and the launch records a dated ruling naming it.
+- "Run <skill> on <ticket>": `launch.sh ... --skill <name>`, any skill the repo
+  or this machine installs, in place of the one the labels pick (`no_skill`
+  when none does). A skill other than ship or triage records a `task` entry; a
+  grill's is **interactive**: no stall, and it leaves only on `drop`.
+- "Take <slug>": `ledger.sh --ledger <ledger> pause <key>`. The entry is
+  **paused**: it keeps its slot, gets no nudge, no step-in and no gate ruling,
+  and is read from GitHub alone; a ticket's settles when its PR merges or its
+  issue closes, with no cleanup (the thread and worktree are the owner's).
+- "Give back <slug>": `unpause <key>`, then reconcile: watching restarts from
+  the thread's state now. "Drop <slug>": `drop <key>`, the only way a paused or
+  interactive task leaves.
+- "Reset its stalls": `reset-stalls <key>`, which records a ruling.
+
 ## Escalation
 
 The owner decides these, and you decide everything else:

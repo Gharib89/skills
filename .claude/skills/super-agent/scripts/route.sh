@@ -3,7 +3,7 @@
 # issue's Size label, or the driver for a bounded text job, from `quota`'s
 # answer.
 #
-#   route --size <XS|S|M|L|XL> [--raise <n>] [--instance <id>] --quota <file>
+#   route --size <XS|S|M|L|XL> [--raise <n>] [--instance <id>] [--owner-go] --quota <file>
 #   route --job text [--claude] --quota <file>
 #
 # --quota is a file holding `quota`'s output. The tier ladder is Sonnet medium,
@@ -19,6 +19,8 @@
 # (a `claude` instance) whose 5 hour bucket is under the 5 hour floor, is skipped.
 # The floor and the reserve are fractions the quota read carries from the fleet
 # file (`floors.five_hour`, default 0.1; `floors.weekly_reserve`, default 0.05).
+# --owner-go is the owner's go past both: they read as 0, so only a failed auth
+# or a weekly bucket at 0 still skips an instance.
 # Of the rest the one with the most weekly headroom wins, its weekly remaining
 # times its `weekly_weight` (default 1, the quota read carries it from the fleet
 # entry: 40% of a seat three times the size is more work than 60% of one), an
@@ -64,9 +66,9 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: route --size <XS|S|M|L|XL> [--raise <n>] [--instance <id>] --quota <file> | --job text [--claude] --quota <file>'
+usage='usage: route --size <XS|S|M|L|XL> [--raise <n>] [--instance <id>] [--owner-go] --quota <file> | --job text [--claude] --quota <file>'
 sa_help "$usage" "$@"
-size='' raise=0 job='' claude=false quota='' named=''
+size='' raise=0 job='' claude=false quota='' named='' go=false
 while [ $# -gt 0 ]; do
   case $1 in
     --size) sa_flag_value "$usage" "${2:-}"; size=$2; shift 2 ;;
@@ -74,13 +76,14 @@ while [ $# -gt 0 ]; do
     --instance) sa_flag_value "$usage" "${2:-}"; named=$2; shift 2 ;;
     --job) sa_flag_value "$usage" "${2:-}"; job=$2; shift 2 ;;
     --claude) claude=true; shift ;;
+    --owner-go) go=true; shift ;;
     --quota) sa_flag_value "$usage" "${2:-}"; quota=$2; shift 2 ;;
     *) sa_tooling "$usage" ;;
   esac
 done
 [ -n "$quota" ] || sa_tooling "$usage"
 if [ -n "$job" ]; then
-  [ "$job" = text ] && [ -z "$size" ] && [ "$raise" = 0 ] && [ -z "$named" ] || sa_tooling "$usage"
+  [ "$job" = text ] && [ -z "$size" ] && [ "$raise" = 0 ] && [ -z "$named" ] && ! $go || sa_tooling "$usage"
 else
   case $size in XS|S|M|L|XL) ;; *) sa_tooling "$usage" ;; esac
   ! $claude || sa_tooling "$usage"
@@ -111,12 +114,12 @@ if [ -n "$job" ]; then
       else {job: "text", driver: "claude", group: null, model: null, reason: "stays on Claude Code"} end' "$quota" || sa_tooling "$quota: cannot be read"
   exit 0
 fi
-jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg named "$named" '
+jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg named "$named" --argjson go "$go" '
   [{model: "sonnet", effort: "medium"}, {model: "opus", effort: "medium"}, {model: "opus", effort: "high"}] as $ladder
   | ({XS: 0, S: 0, M: 1, L: 2, XL: 2}[$size]) as $d
   | ([$d + $raise, 2] | min) as $w
-  | (.floors.five_hour // 0.1) as $f5
-  | (.floors.weekly_reserve // 0.05) as $res
+  | (if $go then 0 else .floors.five_hour // 0.1 end) as $f5
+  | (if $go then 0 else .floors.weekly_reserve // 0.05 end) as $res
   | ([$ladder[$d].model, $ladder[$w].model] | unique) as $models
   | def weekly($e): [$e.value.buckets[]? | select(.window == "weekly"
       and (if $e.driver == "pi" then ((.group // "") | startswith("Claude")) else .id == "week" end))] | first;

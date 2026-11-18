@@ -23,7 +23,9 @@
 # at rest with no change for `--stall-window` seconds (default 900) since
 # `reconcile` stamped its `rest_since` (the later of that and `rest_at`, for a
 # thread waiting on the waiting line); an entry already at 3 stalls is
-# escalated, so its window stays quiet.
+# escalated, so its window stays quiet, and so does a paused or interactive entry's.
+# A paused entry (`ledger pause`) is read from GitHub alone and wakes only on its PR
+# merging; a paused task is not read at all.
 # A thread that answers with another id or worktree path than the entry holds
 # is `thread-mismatch`; a thread or PR it cannot read is `thread-unreadable` or
 # `pr-unreadable`: a watcher that went quiet on those would be a silent stall.
@@ -156,7 +158,7 @@ stall_window_of() {
   jq -rn --argjson e "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(sa_now_s)" '
     ($e.rest_since | if . == null then null else fromdateiso8601 end) as $rs
     | (if $n.waiting then ([$rs, $n.rest_at] | map(select(. != null)) | max) else $rs end) as $since
-    | if $since != null and ($n.pr.state != "merged" or $n.waiting) and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
+    | if $since != null and ($e.paused != true) and ($e.interactive != true) and ($n.pr.state != "merged" or $n.waiting) and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
        and $now - $since >= $w then "stall-window" else empty end'
 }
 
@@ -173,7 +175,14 @@ while :; do
   while IFS= read -r entry; do
     key=$(jq -r .key <<<"$entry") thread=$(jq -r .thread <<<"$entry")
     read_ok=false event=''
-    if [ -n "$(jq -r '.environment_id // empty' <<<"$entry")" ]; then
+    if [ "$(jq -r '.paused == true' <<<"$entry")" = true ]; then
+      # paused: the thread is the owner's, so only the PR merging wakes, and a paused task nothing
+      [ "$(jq -r '.kind // "ship"' <<<"$entry")" != task ] || continue
+      if sa_pr_of "$entry"; then
+        read_ok=true obs=$(jq -c --argjson pr "$pr_obs" '.observed + {pr: $pr}' <<<"$entry")
+        event=$(jq -rn --argjson e "$entry" --argjson n "$obs" 'if $n.pr.state == "merged" and $e.observed.pr.state != "merged" then "pr-merged" else empty end')
+      fi
+    elif [ -n "$(jq -r '.environment_id // empty' <<<"$entry")" ]; then
       # remote: GitHub only, over the thread fields of the last reconcile
       if sa_pr_of "$entry"; then
         read_ok=true obs=$(jq -c --argjson pr "$pr_obs" '.observed + {pr: $pr}' <<<"$entry")
