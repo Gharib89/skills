@@ -69,6 +69,23 @@ check "codex: the 5 hour and weekly windows, remaining = 1 - used" \
   "$(jq -c '[.providers.codex.buckets[] | [.id, .window, .remaining]]' <<<"$out")"
 check "codex: the reset epoch is an ISO time" "$(date -u -d @1794383419 +%Y-%m-%dT%H:%M:%SZ)" \
   "$(jq -r '.providers.codex.buckets[] | select(.id == "week") | .resets' <<<"$out")"
+# resets_at: the reset as an epoch, the clock pinned to the fixture's day (2026-11-06)
+out=$(SA_NOW=1794000000 Q)
+check "claude: resets_at reads the printed time in its zone" "$(TZ=Africa/Cairo date -d 'Nov 11 2026 12pm' +%s)" \
+  "$(jq -r '.providers.claude.buckets[] | select(.id == "week") | .resets_at' <<<"$out")"
+check "codex: resets_at is the epoch it printed" 1794383419 \
+  "$(jq -r '.providers.codex.buckets[] | select(.id == "week") | .resets_at' <<<"$out")"
+check "agy: resets_at reads the ISO time" "$(date -u -d 2026-11-13T10:38:55Z +%s)" \
+  "$(jq -r '.providers.agy.buckets[] | select(.id == "3p-weekly") | .resets_at' <<<"$out")"
+out=$(SA_NOW="$(date -u -d 2026-12-30T12:00:00Z +%s)" Q)
+check "claude: a printed day with no year past the read's turns into next year's" "$(TZ=Africa/Cairo date -d 'Nov 11 2027 12pm' +%s)" \
+  "$(jq -r '.providers.claude.buckets[] | select(.id == "week") | .resets_at' <<<"$out")"
+sa_provider claude 0 "$(jq -cn '{result: "Current session: 1% used · resets x\nCurrent week (all models): 9% used · resets Nov 11, 12pm (Mars/Base)"}')"
+out=$(SA_NOW=1794000000 Q)
+check "claude: a reset in an unknown zone, or not a time, has resets_at null" "null null" \
+  "$(jq -r '[.providers.claude.buckets[].resets_at] | map(tostring) | join(" ")' <<<"$out")"
+reset
+out=$(Q)
 check "agy: each group's buckets, with the group named" \
   '[["gemini-weekly","weekly",0.9628,"Gemini Models"],["gemini-5h","5h",1,"Gemini Models"],["3p-weekly","weekly",0.4,"Claude and GPT models"],["3p-5h","5h",1,"Claude and GPT models"]]' \
   "$(jq -c '[.providers.agy.buckets[] | [.id, .window, .remaining, .group]]' <<<"$out")"
