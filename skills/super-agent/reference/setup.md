@@ -3,6 +3,7 @@
 ## Contents
 
 - [Steps](#steps)
+- [The guard hook](#the-guard-hook)
 - [Cursor and Grok](#cursor-and-grok)
 - [Fleet repo entries](#fleet-repo-entries)
 - [Fleet keys the owner sets](#fleet-keys-the-owner-sets)
@@ -66,6 +67,20 @@ skill's base directory.
    owner's adjustments by editing the written file.
 5. Tell the owner to keep the fleet file in their dotfiles, so every machine a
    super agent may start on has it.
+6. Install the [guard hook](#the-guard-hook) on this machine.
+
+## The guard hook
+
+Setup's last step: run `scripts/guard.sh --install`, which adds one PreToolUse
+entry to `~/.claude/settings.json` (`--settings <file>` names another). It is
+what refuses a hand write to the ledger, fleet or quota file (an Edit, a Write,
+a redirection or an `mv`) and names the script to use. A refusal means an
+override has no flag yet: report it to the owner, never work around it. To see
+that it is installed, run `scripts/guard.sh --status`: `installed` is `true`
+when the file holds the entry for this copy of the script, and `/hooks` in
+Claude Code lists it too. A settings file kept in dotfiles takes the `entry`
+that `--status` prints, added there by hand. A re-run adds nothing when it is
+already there.
 
 ## Cursor and Grok
 

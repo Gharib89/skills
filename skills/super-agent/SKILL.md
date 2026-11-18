@@ -4,7 +4,7 @@ description: >-
   Launch, record and watch T3 threads for the owner's tickets until their PRs
   merge. Use when running as the owner's pinned super agent thread in T3 Code.
 metadata:
-  version: 0.34.0
+  version: 0.35.0
 ---
 
 # super-agent
@@ -50,7 +50,8 @@ follow [reference/setup.md](reference/setup.md).
 Every launch, a rethread included, runs on the instance and tier `route.sh`
 picks, which `launch.sh` runs for you:
 
-1. Run `scripts/quota.sh --fleet <fleet> --save <file> --wake <id>` here, `<id>`
+1. Run `scripts/quota.sh --fleet <fleet> --save <file> --wake <id>` here,
+   `<file>` `super-agent/quota.json` under `$XDG_STATE_HOME` and `<id>`
    made once per wake (the epoch). Every launch of the wake reuses the saved
    read (`launch.sh --quota <file>`); the next wake's id reads again. Quota is
    per provider instance; a remote machine is never extra quota.
@@ -238,7 +239,7 @@ The other lists report:
 ## The owner's overrides
 
 Each override the owner gives has a flag; never edit the ledger, fleet or quota
-file by hand to stand in for one.
+file by hand to stand in for one (a hook refuses it).
 
 Each `<thread>` below is the entry's ledger key.
 
