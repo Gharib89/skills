@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.30.0 (2026-11-18)
+
+### Features
+
+- **super-agent**: A daily handover starts a fresh super-agent thread
+  ([#1294](https://github.com/Gharib89/skills/pull/1294),
+  [`d6ec1bd`](https://github.com/Gharib89/skills/commit/d6ec1bd4c1257dc227ca6f32f8bc53cae0ccc679))
+
+
 ## v0.29.0 (2026-11-18)
 
 ### Features

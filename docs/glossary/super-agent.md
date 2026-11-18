@@ -103,3 +103,11 @@ _Avoid_: health check, ping
 **Recurring find**:
 One class of mistake or gap seen in two or more tickets. It is filed once as an issue in the repo it hits and ordered before the work it would hit, never fixed per ticket; a find that holds across repos is proposed to the owner as a global rule instead.
 _Avoid_: pattern, trend, retro item
+
+**Daily handover**:
+The morning report's hand-off from the running super agent thread to a fresh one it launches with a bearings file, refreshing a stale super-agent copy first; the old thread then settles and the owner pins the new one. Only one super agent runs on a ledger at a time.
+_Avoid_: rollover, rotation
+
+**Bearings file**:
+The Markdown file `handover.sh` writes from the ledger for the successor: the predecessor thread, the ledger, the skill versions, and the open entries, needs and waiting rows. It is a starting summary; the ledger stays the record.
+_Avoid_: handoff notes, state dump
