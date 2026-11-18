@@ -47,7 +47,8 @@ if [ $# -gt 0 ]; then
     || sa_tooling "cannot read the hooks in $settings"
   changed=false
   if [ "$mode" = install ] && [ "$has" = false ]; then
-    mkdir -p "$(dirname "$settings")" \
+    # cp -p first, so the replacement keeps the file's mode (settings can hold secrets).
+    mkdir -p "$(dirname "$settings")" && { [ ! -e "$settings" ] || cp -p "$settings" "$settings.tmp.$$"; } \
       && jq --argjson e "$entry" '.hooks.PreToolUse = ((.hooks.PreToolUse // []) + [$e])' <<<"$cur" > "$settings.tmp.$$" \
       && mv "$settings.tmp.$$" "$settings" || sa_tooling "cannot write $settings"
     has=true changed=true
@@ -81,7 +82,8 @@ case $tool in
     [[ $path =~ (^|/)$state$ ]] && refuse "$path" ;;
   Bash)
     cmd=$(jq -r '.tool_input.command // empty' <<<"$input")
-    [[ $cmd =~ \>[\|\>]?[[:space:]]*[^[:space:]\;\&\|]*($state) ]] && refuse "${BASH_REMATCH[1]}"
+    # A quoted target may hold spaces: `> '/home/a b/.../ledger.json'`.
+    [[ $cmd =~ \>[\|\>]?[[:space:]]*([\"\'][^\"\']*|[^[:space:]\;\&\|]*)($state) ]] && refuse "${BASH_REMATCH[2]}"
     # Split into simple commands in bash: a sed `\n` replacement is unspecified in POSIX.
     split=${cmd//&&/$'\n'}; split=${split//||/$'\n'}; split=${split//;/$'\n'}; split=${split//|/$'\n'}
     while IFS= read -r seg; do

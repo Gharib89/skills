@@ -32,6 +32,8 @@ refused "a Write of the ledger" "$(tool Write "$st/ledger.json")" 'ledger.sh'
 refused "an Edit of the fleet file" "$(tool Edit ~/.config/super-agent/fleet.json)" 'fleet.sh'
 refused "a Write of the quota file" "$(tool Write "$st/quota.json")" 'quota.sh --fleet'
 refused "a redirection into the ledger" "$(bash_call "jq .x $st/ledger.json > $st/ledger.json")" 'ledger.sh'
+refused "a redirection to a quoted path with spaces" "$(bash_call "cat /tmp/new.json > '/home/a b/.local/state/super-agent/ledger.json'")" 'ledger.sh'
+passes "a comparison in a jq filter over the ledger" "$(bash_call "jq '.a > 1' $st/ledger.json")"
 refused "an appended redirection" "$(bash_call "echo '{}' >> $st/ledger.json")" 'ledger.sh'
 refused "a mv over the ledger" "$(bash_call "mv /tmp/new.json $st/ledger.json")" 'ledger.sh'
 refused "a tee into the fleet file" "$(bash_call "echo '{}' | tee ~/.config/super-agent/fleet.json")" 'fleet.sh'
@@ -80,5 +82,8 @@ for m in --install --status; do
   check_rc "$m on a settings path that cannot be read exits 2" 2 "$(bash "$s/guard.sh" "$m" --settings "$tmp/dir.json" >/dev/null 2>&1; echo $?)"
 done
 check "and the path is left a directory" yes "$([ -d "$tmp/dir.json" ] && echo yes || echo no)"
+printf '{}\n' > "$cfg"; chmod 600 "$cfg"
+(umask 022; bash "$s/guard.sh" --install --settings "$cfg" >/dev/null)
+check "--install keeps the settings file's mode" 600 "$(stat -c %a "$cfg")"
 check_rc "a settings file that is no JSON exits 2" 2 "$(printf 'x' > "$cfg"; bash "$s/guard.sh" --install --settings "$cfg" >/dev/null 2>&1; echo $?)"
 finish
