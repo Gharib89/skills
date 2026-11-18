@@ -35,8 +35,8 @@
 # stdout: {block, changed, unpushed: [{key, action, since}]}: `block` the text to
 #         post ("" when nothing changed and no digest was asked, or when a
 #         digest finds nothing open), `changed` true when a row differs from
-#         the last printed block, `unpushed` the open needs whose push has not gone out, each of
-#         which `ledger pushed` marks once sent
+#         the last printed block, `unpushed` the open needs whose push has
+#         not gone out, each of which `ledger pushed` marks once sent
 # exit: 0 a block or none · 2 usage, an unreadable or wrong-shaped ledger or
 #       --quota file, or a write that failed
 set -uo pipefail
@@ -59,7 +59,7 @@ done
 sa_read "$ledger"
 qdoc=null
 if [ -n "$quota" ]; then
-  [ -f "$quota" ] && jq -e '(.providers | type) == "object"' "$quota" >/dev/null 2>&1 || sa_tooling "$quota: not a quota read"
+  sa_quota_file "$quota"
   qdoc=$(cat "$quota")
 fi
 

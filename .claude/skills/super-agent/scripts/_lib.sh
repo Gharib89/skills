@@ -75,6 +75,8 @@ sa_fleet_no_brief() {
 # sa_flag_value <usage> <value>: a flag's value may be neither empty nor dash-led,
 # or the next flag is read as the value.
 sa_flag_value() { case $2 in -*|'') sa_tooling "$1" ;; esac; }
+# sa_quota_file <file>: refuse a --quota file that is not a `quota` read.
+sa_quota_file() { [ -f "$1" ] && jq -e '(.providers | type) == "object"' "$1" >/dev/null 2>&1 || sa_tooling "$1: not a quota read"; }
 
 command -v jq >/dev/null || { printf '{"error":"jq not installed"}\n'; exit 2; }
 

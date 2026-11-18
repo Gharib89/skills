@@ -126,7 +126,7 @@ done
   || sa_tooling "$fleet: every repos.<owner/name>.max_ships must be a whole number of 1 or more"
 
 # A --quota file status cannot read is refused before any write, not after.
-[ -z "$quota" ] || jq -e '(.providers | type) == "object"' "$quota" >/dev/null 2>&1 || sa_tooling "$quota: not a quota read"
+[ -z "$quota" ] || sa_quota_file "$quota"
 
 sa_read "$ledger"
 read_doc=$doc
