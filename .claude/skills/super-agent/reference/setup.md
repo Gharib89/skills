@@ -92,7 +92,8 @@ each repo by `<owner/name>`, and an entry may hold, beside a machine pin
   value that is not a whole number at least 1 is a tooling error.
 
 No line in the fleet file reaches a supervised thread: its launch message is the
-invocation and an optional note ([step-ins](step-ins.md#the-launch-message)).
+invocation, a `/triage` thread's contract line and an optional note
+([step-ins](step-ins.md#the-launch-message)).
 
 ## Fleet keys the owner sets
 

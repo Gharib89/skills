@@ -53,7 +53,7 @@ A merge-gate hold the owner waives in advance, with its condition written out, s
 _Avoid_: auto-merge, merge allowance (that is the permission to merge at all), exception
 
 **Launch message**:
-The first message of a supervised thread: its owner-skill invocation (`/ship <n>`, `/triage <n>`), plus one `Note:` line only when the owner gave one for that ticket. Nothing else rides on it: rules the run must follow live in the skill, the repo's profile or the global rules it loads.
+The first message of a supervised thread: its owner-skill invocation (`/ship <n>`, `/triage <n>`), plus one `Note:` line only when the owner gave one for that ticket. A `/triage` message also carries one contract line after the invocation, since the triage skill is upstream and cannot ask for the waiting line itself. Nothing else rides on it: rules the run must follow live in the skill, the repo's profile or the global rules it loads.
 _Avoid_: launch brief, preamble, system prompt
 
 **Step-in**:
