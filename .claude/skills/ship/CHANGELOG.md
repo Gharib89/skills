@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.69.0 (2026-11-19)
+
+### Features
+
+- **ship**: Preflight stays silent about a personal skill copy identical to the project copy
+  ([#1305](https://github.com/Gharib89/skills/pull/1305),
+  [`9bad43e`](https://github.com/Gharib89/skills/commit/9bad43e431e692898252a8597c2d857533c1e6c1))
+
+
 ## v0.68.0 (2026-11-18)
 
 ### Features
