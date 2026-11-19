@@ -122,8 +122,8 @@ check "a key the frontmatter lacks"   ''      "$(ship_frontmatter "$fm" missing-
 
 # ship_shadowed_skills: a personal copy under <home>/.claude/skills wins over the
 # project copy, so the run reports it. A warning: the exit code stays 0 whether
-# or not a copy exists, an identical copy prints nothing, and a line carries `~/.claude/skills/<name>`, never the
-# home path.
+# or not a copy exists, an identical copy prints nothing, and a line carries
+# `~/.claude/skills/<name>`, never the home path.
 home=$(mktemp -d) || exit 2
 trap 'rm -rf "$root" "$home"; rm -f "$fm"' EXIT
 install tdd; install find-docs; install ship
@@ -151,8 +151,10 @@ check "an identical personal copy of ship prints nothing beside a differing one"
 # diff cannot read a project copy that is absent: the personal copy still wins,
 # so the line stays and says the comparison failed rather than guessing.
 rm -rf "$root/.claude/skills/ship"
+out=$(shadow); rc=$?
 check "a failed comparison is reported as unavailable, not dropped" \
   'personal skill copy shadows ship (~/.claude/skills/ship): comparison unavailable with the project copy
-personal skill copy shadows tdd (~/.claude/skills/tdd): different from the project copy' "$(shadow)"
+personal skill copy shadows tdd (~/.claude/skills/tdd): different from the project copy' "$out"
+check_rc "an unavailable comparison exits 0" 0 "$rc"
 
 finish

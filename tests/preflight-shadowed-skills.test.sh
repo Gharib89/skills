@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # preflight's warnings[]: a personal copy under $HOME/.claude/skills that shadows
 # ship or a skill it composes is reported when it differs from the project copy
-# (an identical copy is not), and never changes `ok` or `reasons`. A cloud sandbox reports none.
+# or cannot be compared with it (an identical copy is not), and never changes
+# `ok` or `reasons`. A cloud sandbox reports none.
 #
 # Driven over the Host fake in a throwaway GitHub-origin checkout with a stub HOME.
 set -uo pipefail
