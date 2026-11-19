@@ -44,12 +44,12 @@ these rules bind as hard as the shell ones.
 - **A change to state a skill writes says what happens to the state its
   previous version made.** That state is a file `setup-skills` or
   `setup-harness` lands in a consumer repo, a ledger or fleet file the super
-  agent keeps, or a schedule or report a skill creates. A change to its shape,
-  or to the prompt that made it, names whether existing state is migrated, kept
-  on the old behaviour, or reported for the owner: in the PR body, and in the
-  skill's own prose where the owner would look. A test or probe covers state
-  made before the change. Otherwise existing state stays on the old behaviour
-  with nothing telling the owner so.
+  agent keeps, or a schedule or morning report a skill creates. A change to its
+  shape, or to the prompt that made it, names whether existing state is
+  migrated, kept on the old behaviour, or reported for the owner: in the PR
+  body, and in the skill's own prose where the owner would look. A test or probe
+  covers state made before the change. Otherwise existing state stays on the old
+  behaviour with nothing telling the owner so.
 
 ## Words and claims
 
