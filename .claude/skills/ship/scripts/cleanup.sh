@@ -4,8 +4,9 @@
 # branch). The worktree is found by the branch it has checked out, held to
 # isolate's `<type>/<slug>-<issue>` shape, whatever its folder is named: a host
 # that made the worktree (T3 names the folder `<slug>-<hex>`) and isolate
-# adopted it is removed too. Carried files stay in the worktree this removes.
-# The record is the
+# adopted it is removed too. A worktree on a branch without that shape (isolate
+# adopts any branch ending `-<issue>`) is not found and stays. Carried files
+# stay in the worktree this removes. The record is the
 # `ship-<issue>` Run file and `scratch-<issue>` Scratch directory under
 # `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>` that `run-file init`
 # made; it goes first, so a worktree that will not come off still leaves the

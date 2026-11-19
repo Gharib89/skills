@@ -53,8 +53,9 @@ profile's `## Worktree` runs once, after `isolate`.
 
 A host's worktree the session started in, on a branch ending `-<issue>`, is
 adopted, fast-forwarded to `origin/HEAD`, `reused: true`. A dirty or ahead
-one is refused, the main checkout never adopted. Already there, the session
-skips `EnterWorktree` and `ExitWorktree`. `cleanup` removes it.
+one is refused, the main checkout never adopted. The session
+skips `EnterWorktree` and `ExitWorktree`. `cleanup` removes it if
+`<type>/`-shaped.
 
 ## Entering the worktree
 
