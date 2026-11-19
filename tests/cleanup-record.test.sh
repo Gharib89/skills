@@ -132,4 +132,21 @@ out=$(cd "$repo" && bash "$c" 1343 2>/dev/null); rc=$?
 check "no worktree found is not reported removed" null "$(jq -r '.worktree_removed' <<<"$out")"
 check_rc "and exits ok" 0 "$rc"
 
+# A registered worktree whose folder is already gone is pruned first: no removal
+# is claimed and its branch goes as a bare branch.
+g worktree add -q "$tmp/gone" -b feat/x-1344
+rm -rf "$tmp/gone"
+out=$(cd "$repo" && bash "$c" 1344 2>/dev/null); rc=$?
+check_rc "a worktree whose folder is gone exits ok" 0 "$rc"
+check "no removal is claimed and the branch is deleted" "null feat/x-1344 true" \
+  "$(jq -r '[.worktree_removed, .branch, .branch_deleted] | map(tostring) | join(" ")' <<<"$out")"
+check "and the branch is gone" "" "$(g branch --list feat/x-1344)"
+# A failed worktree list is a tooling error, never "no worktree".
+badgit=$tmp/badgit; mkdir -p "$badgit"
+printf '#!/bin/sh\n[ "$3" = worktree ] && [ "$4" = list ] && exit 1\nexec /usr/bin/git "$@"\n' > "$badgit/git"; chmod +x "$badgit/git"
+g worktree add -q "$tmp/t3-keep" -b feat/x-1345
+PATH=$badgit:$PATH bash -c 'cd "$1" && bash "$2" 1345' _ "$repo" "$c" >/dev/null 2>&1; rc=$?
+check_rc "a failed worktree list exits 2" 2 "$rc"
+check "and nothing is removed" yes "$([ -d "$tmp/t3-keep" ] && echo yes || echo no)"
+
 finish

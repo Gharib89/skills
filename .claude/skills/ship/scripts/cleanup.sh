@@ -47,23 +47,30 @@ if [ "$n" != none ]; then
 fi
 
 wt=null; branch=null; wt_removed=null; br_deleted=true
+# isolate's branch shape, the key for both lookups below: a worktree and, for an
+# in-place run, a bare branch. It is held to this shape because `branch -D`
+# would also take a hand-made branch that merely ends in `-<n>`.
+shape="^[^/]+/.+-$n\$"
+# Prune first: a registered worktree whose folder is already gone would fail
+# `worktree remove`, and the branch it held is then found as a bare branch.
+git -C "$root" worktree prune >/dev/null 2>&1
+list=$(git -C "$root" worktree list --porcelain) || ship_tooling "git worktree list failed"
 # The main checkout is never a candidate. Matched with awk on the porcelain
 # list, since the folder name is the host's and says nothing about the run.
-found=$(git -C "$root" worktree list --porcelain 2>/dev/null | awk -v r="$root" -v pat="^[^/]+/.+-$n\$" '
+found=$(awk -v r="$root" -v pat="$shape" '
   /^worktree / { p = substr($0, 10) }
-  /^branch refs\/heads\// { b = substr($0, 19); if (p != r && b ~ pat) { print p "\t" b; exit } }')
+  /^branch refs\/heads\// { b = substr($0, 19); if (p != r && b ~ pat) { print p "\t" b; exit } }' <<<"$list")
 if [ -n "$found" ]; then
   wt=${found%%$'\t'*}; branch=${found#*$'\t'}
   git -C "$root" worktree remove --force "$wt" >/dev/null 2>&1 && wt_removed=true || wt_removed=false
 fi
 # An in-place run has no worktree; its branch still has isolate's
 # `<type>/<slug>-<n>` shape. Matched with grep, since a for-each-ref glob's `*`
-# stops at a `/`, and held to that shape because `branch -D` would also take a
-# hand-made branch that merely ends in `-<n>`. A branch another linked worktree
-# holds is skipped: the lookup above took that worktree, or none held it.
+# stops at a `/`. A branch another linked worktree holds is skipped: the lookup
+# above took that worktree, or none held it.
 if [ "$branch" = null ]; then
   branch=$(git -C "$root" for-each-ref --format='%(refname:short)%09%(worktreepath)' refs/heads/ \
-    | awk -F'\t' -v r="$root" '$2 == "" || $2 == r { print $1 }' | grep -m1 -E "^[^/]+/.+-$n\$")
+    | awk -F'\t' -v r="$root" '$2 == "" || $2 == r { print $1 }' | grep -m1 -E "$shape")
   [ -n "$branch" ] || branch=null
 fi
 if [ "$branch" != null ]; then
@@ -73,7 +80,6 @@ if [ "$branch" != null ]; then
     git -C "$root" branch -D "$branch" >/dev/null 2>&1 || br_deleted=false
   fi
 fi
-git -C "$root" worktree prune >/dev/null 2>&1
 jq -n --arg w "$wt" --arg b "$branch" --argjson wr "$wt_removed" --argjson bd "$br_deleted" --arg rec "$record" \
   '{worktree: (if $w == "null" then null else $w end), branch: (if $b == "null" then null else $b end),
     worktree_removed: $wr, branch_deleted: $bd, record: $rec}'

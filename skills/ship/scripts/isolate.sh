@@ -27,7 +27,7 @@
 # checkout holds no gitignored file (and stays a usage error with --in-place).
 # A dirty one is `launched worktree dirty: <path>`, one with commits of its own
 # `launched branch <branch> has commits beyond <base>`: a run never adopts work
-# it did not make. The folder and branch stay the host's; `cleanup` leaves both.
+# it did not make. `cleanup` removes the worktree and its branch.
 #
 # `--rework` is the Rework run's form, attended only: the branch is the PR's,
 # already on origin, and `base` is origin's tip of it, which the rework's own
