@@ -113,4 +113,40 @@ check_rc "a branch checked out in the main checkout fails cleanup" 1 "$rc"
 check "and is named, not deleted" "fix/y-77 false" "$(jq -r '[.branch, .branch_deleted] | join(" ")' <<<"$out")"
 check "and the refusal says why" "branch fix/y-77 is checked out in the main checkout; switch off it first" "$(cat "$tmp/err")"
 
+# A host names its own worktree folder (T3: `<slug>-<hex>`), so the worktree is
+# found by the branch it holds, not by its folder.
+g worktree add -q "$tmp/t3-feat-x-51889a21" -b feat/x-1341
+out=$(cd "$tmp/t3-feat-x-51889a21" && bash "$c" 1341 2>/dev/null); rc=$?
+check_rc "a host-named worktree is cleaned up, exit ok" 0 "$rc"
+check "the JSON names its folder, branch and both removals" "$tmp/t3-feat-x-51889a21 feat/x-1341 true true"   "$(jq -r '[.worktree, .branch, .worktree_removed, .branch_deleted] | join(" ")' <<<"$out")"
+check "the folder is gone" no "$([ -e "$tmp/t3-feat-x-51889a21" ] && echo yes || echo no)"
+check "the branch is gone" "" "$(g branch --list feat/x-1341)"
+# A branch with no `<type>/`, held by another worktree, is not ship's to remove.
+g worktree add -q "$tmp/hand-made" -b my-notes-1342
+out=$(cd "$repo" && bash "$c" 1342 2>/dev/null)
+check "a hand-made branch held by a worktree is not named" "null null" \
+  "$(jq -r '[.worktree, .branch] | map(. // "null") | join(" ")' <<<"$out")"
+check "and its worktree stays" yes "$([ -d "$tmp/hand-made" ] && echo yes || echo no)"
+# Nothing found for the run: no removal is claimed.
+out=$(cd "$repo" && bash "$c" 1343 2>/dev/null); rc=$?
+check "no worktree found is not reported removed" null "$(jq -r '.worktree_removed' <<<"$out")"
+check_rc "and exits ok" 0 "$rc"
+
+# A registered worktree whose folder is already gone is pruned first: no removal
+# is claimed and its branch goes as a bare branch.
+g worktree add -q "$tmp/gone" -b feat/x-1344
+rm -rf "$tmp/gone"
+out=$(cd "$repo" && bash "$c" 1344 2>/dev/null); rc=$?
+check_rc "a worktree whose folder is gone exits ok" 0 "$rc"
+check "no removal is claimed and the branch is deleted" "null feat/x-1344 true" \
+  "$(jq -r '[.worktree_removed, .branch, .branch_deleted] | map(tostring) | join(" ")' <<<"$out")"
+check "and the branch is gone" "" "$(g branch --list feat/x-1344)"
+# A failed worktree list is a tooling error, never "no worktree".
+realgit=$(command -v git); badgit=$tmp/badgit; mkdir -p "$badgit"
+printf '#!/bin/sh\n[ "$3" = worktree ] && [ "$4" = list ] && exit 1\nexec %s "$@"\n' "$realgit" > "$badgit/git"; chmod +x "$badgit/git"
+g worktree add -q "$tmp/t3-keep" -b feat/x-1345
+PATH=$badgit:$PATH bash -c 'cd "$1" && bash "$2" 1345' _ "$repo" "$c" >/dev/null 2>&1; rc=$?
+check_rc "a failed worktree list exits 2" 2 "$rc"
+check "and nothing is removed" yes "$([ -d "$tmp/t3-keep" ] && echo yes || echo no)"
+
 finish
