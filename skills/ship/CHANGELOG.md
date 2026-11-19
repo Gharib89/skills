@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.69.1 (2026-11-19)
+
+### Bug Fixes
+
+- **ship**: Cleanup finds the run's worktree by its branch, not its folder name
+  ([#1308](https://github.com/Gharib89/skills/pull/1308),
+  [`6e1f273`](https://github.com/Gharib89/skills/commit/6e1f27389ca1cd7e30694aae702e1a5cdbd46d50))
+
+
 ## v0.69.0 (2026-11-19)
 
 ### Features
