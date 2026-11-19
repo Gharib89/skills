@@ -41,11 +41,15 @@ these rules bind as hard as the shell ones.
   keep it, and every token, permission or scope asked for is the least the step
   needs. A recipe that needs a fix before it runs teaches the consumer to edit
   every recipe.
-- **A setup-skill change says what happens to a file its previous version
-  wrote.** `setup-skills` and `setup-harness` land files in consumer repos, so a
-  change to a landed file's shape names, in the skill's own prose, whether a
-  re-run migrates the old shape, keeps it, or reports it for the owner. A
-  consumer otherwise stays on the old shape with nothing telling it so.
+- **A change to state a skill writes says what happens to the state its
+  previous version made.** That state is a file `setup-skills` or
+  `setup-harness` lands in a consumer repo, a ledger or fleet file the super
+  agent keeps, or a schedule or morning report a skill creates. A change to its
+  shape, or to the prompt that made it, names whether existing state is
+  migrated, kept on the old behaviour, or reported for the owner: in the PR
+  body, and in the skill's own prose where the owner would look. A test or probe
+  covers state made before the change. Otherwise existing state stays on the old
+  behaviour with nothing telling the owner so.
 
 ## Words and claims
 

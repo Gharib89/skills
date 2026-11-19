@@ -10,7 +10,10 @@ that bind every change whatever its paths.
   links one area file each under `docs/glossary/`. Use its terms in prose,
   issue titles and commit subjects, and avoid the synonyms each entry lists.
 - [docs/adr/](../../adr/) records decisions. Contradicting one is surfaced, not
-  done silently.
+  done silently. An ADR a change adds or amends states only consequences the
+  diff bears out, and an amended ADR carries a `## Amended by #<n>` section
+  naming the change and what it altered, as ADR 0002 and 0008 do. Existing ADRs
+  keep the marker form they have.
 
 ## Grading a change
 
