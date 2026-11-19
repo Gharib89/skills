@@ -11,6 +11,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source tests/super-agent-fake.sh
 source tests/super-agent-launch-lib.sh
+unlaunch=1 # each case reads one launch's answer; the launching entry is super-agent-launch-prerecord's
 
 # --- the contract every script keeps ------------------------------------------
 out=$(bash "$s/launch.sh" --help 2>"$tmp/err"); rc=$?

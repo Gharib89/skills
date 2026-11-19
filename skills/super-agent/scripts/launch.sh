@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # One call for a launch, one for its record. The launch form reads the ticket's
 # labels (owner skill, Size), claims it, routes it, places it and writes its launch
-# message, then prints the whole `t3_thread_launch` argument object, or why it did not
-# launch. The record form takes that answer and the launched thread and writes the
-# ledger entry, then runs the baseline reconcile. Neither calls `t3_thread_launch`:
-# the super agent makes that call.
+# message, records the ticket in the ledger at stage `launching` (no thread yet), then
+# prints the whole `t3_thread_launch` argument object, or why it did not launch. The
+# record form takes that answer and the launched thread, binds the thread id to that
+# entry, then runs the baseline reconcile. Neither calls `t3_thread_launch`: the super
+# agent makes that call.
 #
 #   launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file>
 #          --machine <key> --thread <id> [--area <path>]... [--gpu]
@@ -52,14 +53,14 @@
 # `task` entry (`ledger`), --interactive when it waits on the owner by design; `--worktree` is read from `t3 thread show` when omitted
 # and the thread is on this machine. `record` reads the entry back from the ledger
 # before it answers, and fails with `unrecorded launch` (exit 1) when neither
-# `--launch` nor `--task` names the entry to write or the ledger does not hold it.
+# `--launch` nor `--task` names the entry to bind or the ledger does not hold it.
 #
 # stdout: launch: {key, launch, ...}. `launch` true: {kind, size, size_source,
 #         claim (`taken` or `own`), args, needs, record}: `args` the
 #         `t3_thread_launch` arguments (environmentId on a remote machine only,
 #         title, workspaceStrategy, modelSelection, message), `needs` the
 #         arguments only an MCP read can fill (`projectId`, from `t3_project_list`
-#         on the placed machine), `record` what `record` writes (a --skill
+#         on the placed machine), `record` the entry `launch` wrote at `launching` and `record` binds (a --skill
 #         task's also its `repo` and `interactive`, an --owner-go launch's
 #         `owner_go`). `launch` false:
 #         {reason, detail}, `reason` one of `no_owner_skill` (detail the labels),
@@ -78,7 +79,8 @@
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
 #       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a claim, issue or placement the host or a script refused, an installed ship version
-#       that cannot be read as X.Y.Z, or a record
+#       that cannot be read as X.Y.Z, a launch the ledger would not record at
+#       `launching` before it answers, or a record
 #       whose reconcile failed after the entry was written (do not record again)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -92,6 +94,25 @@ sub() {
   local s=$1; shift
   out=$(bash "$here/$s.sh" "$@" 2>/dev/null </dev/null); rc=$?
   [ "$rc" != 2 ] || sa_tooling "$s: $(jq -r '.error // "failed"' <<<"$out" 2>/dev/null)"
+}
+# rec_fields <record>: a launch answer's `record` as the ledger flags in $fields.
+rec_fields() {
+  local a env; env=$(jq -r '.environment_id // empty' <<<"$1")
+  fields=(--branch "$(jq -r .branch <<<"$1")" --instance "$(jq -r .instance_id <<<"$1")"
+    --model "$(jq -r .model <<<"$1")" --effort "$(jq -r .effort <<<"$1")" ${env:+--environment "$env"})
+  while IFS= read -r a; do fields+=(--area "$a"); done < <(jq -r '.areas[]' <<<"$1")
+}
+# rec_add <record> <flag>...: `ledger add` its entry to $ledger, a --skill task keyed
+# by the skill and the ticket (its repo kept) or the ticket, with the flags given.
+rec_add() {
+  local r=$1 k; k=$(jq -r .key <<<"$r"); shift; rec_fields "$r"
+  fields+=(--machine "$(jq -r .machine <<<"$r")" "$@")
+  if [ "$(jq -r .kind <<<"$r")" = task ]; then
+    [ "$(jq -r .interactive <<<"$r")" != true ] || fields+=(--interactive)
+    sub ledger --ledger "$ledger" add --task "${k#task:}" --repo "$(jq -r .repo <<<"$r")" "${fields[@]}"
+  else
+    sub ledger --ledger "$ledger" add --repo "${k%#*}" --number "${k##*#}" --kind "$(jq -r .kind <<<"$r")" "${fields[@]}"
+  fi
 }
 
 if [ "${1:-}" = record ]; then
@@ -221,5 +242,13 @@ answer_json=$(jq -cn --arg k "$key" --arg kind "$kind" --arg size "$size" --arg 
               + (if $kind == "task" then {repo: ($k | sub("#.*$"; "")), interactive: $ia} else {} end)
               + (if $route.owner_go == true then {owner_go: true} else {} end))}') \
   || sa_tooling "cannot build the launch answer"
+
+# 6. Record before launch: the entry goes in at stage `launching` before the arguments
+# come out, so a turn cut between `t3_thread_launch` and `record` loses no launch. An
+# open entry for the ticket (a rethread) already records it, and `add` refuses that one.
+rec_add "$(jq -c .record <<<"$answer_json")" --launching
+[ "$rc" = 0 ] || jq -e '.error | endswith("is already in the ledger")' <<<"$out" >/dev/null 2>&1 \
+  || sa_tooling "cannot record $key before its launch"
+
 [ -z "$outf" ] || printf '%s\n' "$answer_json" > "$outf" || sa_tooling "cannot write $outf"
 printf '%s\n' "$answer_json"

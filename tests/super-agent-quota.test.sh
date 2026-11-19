@@ -8,31 +8,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source tests/super-agent-fake.sh
 
-s=skills/super-agent/scripts
-tmp=$(mktemp -d) || exit 2
-trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/bin" "$tmp/tools" "$tmp/fake"
-for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut wc chmod diff; do
-  ln -s "$(command -v $t)" "$tmp/tools/$t" 2>/dev/null || true
-done
-export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake
-sa_fake_install "$tmp/bin"
-fleet=$tmp/fleet.json
-Q() { bash "$s/quota.sh" --fleet "$fleet"; }
-
-claude_out=$(jq -cn --arg r $'You are currently using your subscription to power your Claude Code usage\n\nCurrent session: 4% used · resets Nov 6, 4:40pm (Africa/Cairo)\nCurrent week (all models): 55% used · resets Nov 11, 12pm (Africa/Cairo)\nCurrent week (Fable): 0% used · resets Nov 11, 12pm (Africa/Cairo)\n\nWhat is contributing to your usage?' '{type:"result", is_error:false, result:$r}')
-codex_out=$'{"id":1,"result":{"codexHome":"/x"}}\n{"method":"configWarning","params":{}}\n{"id":2,"result":{"rateLimits":{"limitId":"codex","primary":{"usedPercent":0,"windowDurationMins":300,"resetsAt":1793979541},"secondary":{"usedPercent":54,"windowDurationMins":10080,"resetsAt":1794383419},"planType":"plus"}}}'
-agy_out='{"status":"SUCCESS","response":"x","command":{"name":"usage","data":{"groups":[{"name":"Gemini Models","buckets":[{"id":"gemini-weekly","window":"weekly","remaining_fraction":0.9628,"reset_time":"2026-11-08T16:51:35Z"},{"id":"gemini-5h","window":"5h","remaining_fraction":1,"reset_time":"2026-11-06T15:37:03Z"}]},{"name":"Claude and GPT models","buckets":[{"id":"3p-weekly","window":"weekly","remaining_fraction":0.4,"reset_time":"2026-11-13T10:38:55Z"},{"id":"3p-5h","window":"5h","remaining_fraction":1,"reset_time":"2026-11-06T15:38:55Z"}]}]}}}'
-cat > "$fleet" <<'JSON'
-{"providers": {
-  "claude": {"driver": "claude", "quota_command": "claude -p \"/usage\" --output-format json"},
-  "codex": {"driver": "codex", "quota_command": "codex app-server"},
-  "agy": {"driver": "agy", "quota_command": "agy -p /usage --output-format json"}}}
-JSON
-reset() {
-  rm -f "$SA_FAKE/calls"
-  sa_provider claude 0 "$claude_out"; sa_provider codex 0 "$codex_out"; sa_provider agy 0 "$agy_out"
-}
+source tests/super-agent-quota-lib.sh
 
 # --- the contract every script keeps -----------------------------------------------
 out=$(bash "$s/quota.sh" --help 2>"$tmp/err"); rc=$?
@@ -69,6 +45,8 @@ check "codex: the 5 hour and weekly windows, remaining = 1 - used" \
   "$(jq -c '[.providers.codex.buckets[] | [.id, .window, .remaining]]' <<<"$out")"
 check "codex: the reset epoch is an ISO time" "$(date -u -d @1794383419 +%Y-%m-%dT%H:%M:%SZ)" \
   "$(jq -r '.providers.codex.buckets[] | select(.id == "week") | .resets' <<<"$out")"
+reset
+out=$(Q)
 check "agy: each group's buckets, with the group named" \
   '[["gemini-weekly","weekly",0.9628,"Gemini Models"],["gemini-5h","5h",1,"Gemini Models"],["3p-weekly","weekly",0.4,"Claude and GPT models"],["3p-5h","5h",1,"Claude and GPT models"]]' \
   "$(jq -c '[.providers.agy.buckets[] | [.id, .window, .remaining, .group]]' <<<"$out")"

@@ -58,8 +58,9 @@ PR (an entry settled before these fields existed has neither, so no row). Its
 agent clears the field or, for `escalate`, records a need:
 [wake-actions](wake-actions.md) holds each row's steps. `pulse.sh` runs
 reconcile and reads the watcher's lock. `ledger set` refuses `stage`: reconcile
-moves it, and `add` and `rethread` start it at `launched`; `rethread` clears
-both owed fields.
+moves it, and `add` and `rethread` start it at `launched` (`launch` writes
+`add --launching`, stage `launching`, before its thread exists); `rethread`
+clears both owed fields.
 
 ## Settling a triage entry
 

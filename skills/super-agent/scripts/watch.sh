@@ -124,7 +124,8 @@ trap '[ "$(cat "$lock" 2>/dev/null)" = "$$" ] && rm -f "$lock"' EXIT
 # observed in $unobserved, read afresh each poll.
 load() {
   sa_read "$ledger"
-  open=$(jq -c "$sa_jq_open"'[.entries[] | select(is_open)]' <<<"$doc")
+  # a `launching` entry has no thread to read yet: reconcile lists it
+  open=$(jq -c "$sa_jq_open"'[.entries[] | select(is_open and .stage != "launching")]' <<<"$doc")
   unobserved=$(jq -c '[.[] | select(.observed == null) | .key]' <<<"$open")
   open=$(jq -c '[.[] | select(.observed != null)]' <<<"$open")
 }

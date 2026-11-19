@@ -61,6 +61,9 @@ out=$(LC --machine box --load 9 --free-gb 1)
 check "every threshold that fails is named" '["slots","load","ram"]' "$(jq -c .refused <<<"$out")"
 sa_stage "$led" Gharib89/skills#1 settled
 check "a settled entry holds no slot" 0 "$(LC --machine box --load 1 --free-gb 8 >/dev/null; echo $?)"
+bash "$s/ledger.sh" --ledger "$led" add --launching --repo Gharib89/skills --number 3 --branch b-3 --machine box >/dev/null
+check "a launching entry, with no thread yet, holds its slot" '{"used":2,"ceiling":2}' "$(LC --machine box --load 1 --free-gb 8 | jq -c .slots)"
+bash "$s/ledger.sh" --ledger "$led" drop Gharib89/skills#3 >/dev/null
 
 # --- the slot kept for the owner's messages ------------------------------------------
 check "this machine's ceiling is its slots less its reserve" 2 "$(LC --machine home --load 1 --free-gb 8 | jq .slots.ceiling)"

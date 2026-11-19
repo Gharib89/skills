@@ -19,6 +19,11 @@
 # (a `claude` instance) whose 5 hour bucket is under the 5 hour floor, is skipped.
 # The floor and the reserve are fractions the quota read carries from the fleet
 # file (`floors.five_hour`, default 0.1; `floors.weekly_reserve`, default 0.05).
+# In the last hour of a weekly window the reserve is 0: an instance whose weekly
+# bucket's `resets_at` (epoch, from `quota`; null keeps the reserve) is at most
+# 3600 s ahead of now (`SA_NOW` pins it for tests) has a reserve of 0, so queued
+# work spends the last of that week; its 5 hour floor and a weekly bucket at 0
+# still skip it.
 # --owner-go is the owner's go past both, taken only when no instance passes them:
 # then a floor or the reserve skips none, and only a failed auth, a weekly bucket at 0
 # or no model for the tier still skips one (`owner_go` true: the pick is an instance
@@ -116,7 +121,7 @@ if [ -n "$job" ]; then
       else {job: "text", driver: "claude", group: null, model: null, reason: "stays on Claude Code"} end' "$quota" || sa_tooling "$quota: cannot be read"
   exit 0
 fi
-jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg named "$named" --argjson go "$go" '
+jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg named "$named" --argjson go "$go" --argjson now "$(sa_now_s)" '
   [{model: "sonnet", effort: "medium"}, {model: "opus", effort: "medium"}, {model: "opus", effort: "high"}] as $ladder
   | ({XS: 0, S: 0, M: 1, L: 2, XL: 2}[$size]) as $d
   | ([$d + $raise, 2] | min) as $w
@@ -130,6 +135,7 @@ jq -c --arg size "$size" --argjson raise "$raise" --argjson low "$low" --arg nam
       | select(if $named != "" then .key == $named and ($drv == "claude" or $drv == "pi" or $lr)
                else $drv == "claude" or (($drv == "pi" or $lr) and .value.route == true) end)
       | . + {lr: $lr, bucket: weekly(.), fivehour: ([.value.buckets[]? | select(.window == "5h")] | first)}
+      | (if (.bucket.resets_at | type) == "number" and .bucket.resets_at >= $now and .bucket.resets_at - $now <= 3600 then 0 else $res end) as $res
       | . + {skip: (if .value.auth == "failed" then "auth failed"
                     elif .bucket != null and .bucket.remaining == 0 then "weekly at 0"
                     elif .bucket != null and .bucket.remaining < $res then "weekly under the weekly reserve \($res)"

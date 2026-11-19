@@ -38,7 +38,8 @@
 # (`... limit · resets 6:10pm (Africa/Cairo)`), until its reset plus the window: T3 resumes it
 # at the reset by itself. An entry whose thread, PR or issue cannot be read is reported in
 # `errors`, its `error` set to the kind (cleared by the next good read), and
-# left in its stage. The ledger is written once, after the last entry, by
+# left in its stage. An entry at `launching` (`launch` wrote it, `record` has not bound
+# a thread to it) has no thread to read: it is listed in `launching`, not checked. The ledger is written once, after the last entry, by
 # applying what this run changed to the ledger as it stands then
 # (reconcile.d/write.sh), so a write made meanwhile is kept. An entry with an `environment_id` lives on a linked machine,
 # where `t3 thread show` cannot reach: it is read from `<dir>/<thread id>.json`
@@ -80,7 +81,7 @@
 # Each run stamps `<ledger>.reconciled` with its epoch second, which `notify` reads
 # to tell a super agent that answered a wake from one that did not.
 #
-# stdout: {ledger, checked, entries, stalled, settled, closed, at_rest, woke, ready,
+# stdout: {ledger, checked, entries, launching, stalled, settled, closed, at_rest, woke, ready,
 #         dropped, unqueued, parents_done, cleanup, verify, escalate, errors, skill, status}:
 #         `status` is `status`'s answer {block, changed, unpushed}, or {error}
 #         when status failed after the write (the rest of the answer stands);
@@ -88,7 +89,8 @@
 #         against the one on `sa_skill_source`'s default branch, `stale` true when
 #         the running one is older, null when either version cannot be read;
 #         `entries` one {key, from, stage, stalls, observed} per open entry that
-#         was read; `stalled` one {key, thread, stalls, reason} per stall counted
+#         was read; `launching` one {key, since} per entry still at `launching`, `since`
+#         when `launch` wrote it: a launch whose thread was never recorded; `stalled` one {key, thread, stalls, reason} per stall counted
 #         now, `reason` `run-completed` or `stall-window`;
 #         `settled` one {key, thread, worktree, kind} per entry that ended; `closed` one
 #         {key, thread, worktree, reason} (`pr-closed` or `issue-closed`);
@@ -231,7 +233,7 @@ while IFS= read -r entry; do
   fi
   entries=$(jq -c --argjson e "$entry" --arg s "$stage" --arg r "$reason" --argjson o "$obs" --argjson n "$stalls" \
     '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, kind: ($e.kind // "ship"), from: $e.stage, stage: $s, reason: $r, stalls: $n, observed: $o, paused: ($e.paused == true)}]' <<<"$entries")
-done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open)' <<<"$doc")
+done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open and .stage != "launching")' <<<"$doc")
 # A triage entry settled within the last sa_settled_days is read again (reconcile.d/woke.sh).
 woke='[]'
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/woke.sh" || sa_tooling "cannot source reconcile.d/woke.sh"
