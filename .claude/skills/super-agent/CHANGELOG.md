@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.37.0 (2026-11-19)
+
+### Features
+
+- **super-agent**: Queued work launches in the last hour of the weekly window, and every launch is
+  recorded first ([#1301](https://github.com/Gharib89/skills/pull/1301),
+  [`63fb856`](https://github.com/Gharib89/skills/commit/63fb856adcbf13c4a8cbcad1a6e761ccbb03eccb))
+
+
 ## v0.36.0 (2026-11-18)
 
 ### Features
