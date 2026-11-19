@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # preflight's warnings[]: a personal copy under $HOME/.claude/skills that shadows
-# ship or a skill it composes is reported, as identical to or different from the
-# project copy, and never changes `ok` or `reasons`. A cloud sandbox reports none.
+# ship or a skill it composes is reported when it differs from the project copy
+# or cannot be compared with it (an identical copy is not), and never changes
+# `ok` or `reasons`. A cloud sandbox reports none.
 #
 # Driven over the Host fake in a throwaway GitHub-origin checkout with a stub HOME.
 set -uo pipefail
@@ -32,8 +33,7 @@ check "no personal copy: no warnings" '[]' "$(warnings)"
 
 mkdir -p "$home/.claude/skills/tdd"; echo project > "$home/.claude/skills/tdd/SKILL.md"
 out=$(preflight)
-check "an identical copy is reported as identical" \
-  '["personal skill copy shadows tdd (~/.claude/skills/tdd): identical to the project copy"]' "$(warnings)"
+check "an identical copy is not reported" '[]' "$(warnings)"
 check "and ok and reasons are unchanged" "$base" "$(verdict)"
 check "and the exit code is unchanged" "$base_rc" "$(tail -n1 <<<"$out")"
 
