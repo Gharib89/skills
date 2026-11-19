@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # After the merge: remove the issue's run record, its worktree and force-delete
 # its local branch (a squash-merged branch is not an ancestor of the default
-# branch), except a branch another linked worktree holds, which isolate adopted
-# from the host and is left to it (`branch: null`). Carried files stay in the
-# worktree this removes. The record is the
+# branch). The worktree is found by the branch it has checked out, held to
+# isolate's `<type>/<slug>-<issue>` shape, whatever its folder is named: a host
+# that made the worktree (T3 names the folder `<slug>-<hex>`) and isolate
+# adopted it is removed too. Carried files stay in the worktree this removes.
+# The record is the
 # `ship-<issue>` Run file and `scratch-<issue>` Scratch directory under
 # `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>` that `run-file init`
 # made; it goes first, so a worktree that will not come off still leaves the
@@ -16,6 +18,9 @@
 # record is removed for it: nothing says which run a `none` record belongs to.
 #
 # stdout: {worktree, branch, worktree_removed, branch_deleted, record}
+#   worktree_removed: true when a worktree was found and removed, false when it
+#     would not come off, null when the run had no worktree to remove (an
+#     in-place run, or one already gone): never true for a worktree not touched
 #   record: "removed" when the run's record and scratch directory came off,
 #     "none" when there was nothing to remove (the issue is `none`, or no record
 #     existed), "failed" when an rm failed or the record root could not be
@@ -29,7 +34,6 @@ ship_args "$usage" "issue|none" "$@"
 n=$1
 [ $# -eq 1 ] || ship_tooling "unknown flag: $2"
 root=$(ship_main_checkout) || ship_tooling "not inside a git checkout"
-container=$(ship_worktree_container)
 
 record=none
 if [ "$n" != none ]; then
@@ -42,19 +46,21 @@ if [ "$n" != none ]; then
   fi
 fi
 
-wt=null; branch=null; wt_removed=true; br_deleted=true
-for d in "$container"/*-"$n"/; do
-  [ -d "$d" ] || continue
-  d=${d%/}; wt=$d
-  branch=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null) || branch=null
-  git -C "$root" worktree remove --force "$d" >/dev/null 2>&1 || wt_removed=false
-  break
-done
+wt=null; branch=null; wt_removed=null; br_deleted=true
+# The main checkout is never a candidate. Matched with awk on the porcelain
+# list, since the folder name is the host's and says nothing about the run.
+found=$(git -C "$root" worktree list --porcelain 2>/dev/null | awk -v r="$root" -v pat="^[^/]+/.+-$n\$" '
+  /^worktree / { p = substr($0, 10) }
+  /^branch refs\/heads\// { b = substr($0, 19); if (p != r && b ~ pat) { print p "\t" b; exit } }')
+if [ -n "$found" ]; then
+  wt=${found%%$'\t'*}; branch=${found#*$'\t'}
+  git -C "$root" worktree remove --force "$wt" >/dev/null 2>&1 && wt_removed=true || wt_removed=false
+fi
 # An in-place run has no worktree; its branch still has isolate's
 # `<type>/<slug>-<n>` shape. Matched with grep, since a for-each-ref glob's `*`
 # stops at a `/`, and held to that shape because `branch -D` would also take a
 # hand-made branch that merely ends in `-<n>`. A branch another linked worktree
-# holds is skipped: isolate adopted that worktree, and the host removes it.
+# holds is skipped: the lookup above took that worktree, or none held it.
 if [ "$branch" = null ]; then
   branch=$(git -C "$root" for-each-ref --format='%(refname:short)%09%(worktreepath)' refs/heads/ \
     | awk -F'\t' -v r="$root" '$2 == "" || $2 == r { print $1 }' | grep -m1 -E "^[^/]+/.+-$n\$")
@@ -71,4 +77,4 @@ git -C "$root" worktree prune >/dev/null 2>&1
 jq -n --arg w "$wt" --arg b "$branch" --argjson wr "$wt_removed" --argjson bd "$br_deleted" --arg rec "$record" \
   '{worktree: (if $w == "null" then null else $w end), branch: (if $b == "null" then null else $b end),
     worktree_removed: $wr, branch_deleted: $bd, record: $rec}'
-[ "$wt_removed" = true ] && [ "$br_deleted" = true ] && [ "$record" != failed ]
+[ "$wt_removed" != false ] && [ "$br_deleted" = true ] && [ "$record" != failed ]

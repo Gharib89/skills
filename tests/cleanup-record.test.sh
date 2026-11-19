@@ -113,4 +113,23 @@ check_rc "a branch checked out in the main checkout fails cleanup" 1 "$rc"
 check "and is named, not deleted" "fix/y-77 false" "$(jq -r '[.branch, .branch_deleted] | join(" ")' <<<"$out")"
 check "and the refusal says why" "branch fix/y-77 is checked out in the main checkout; switch off it first" "$(cat "$tmp/err")"
 
+# A host names its own worktree folder (T3: `<slug>-<hex>`), so the worktree is
+# found by the branch it holds, not by its folder.
+g worktree add -q "$tmp/t3-feat-x-51889a21" -b feat/x-1341
+out=$(cd "$tmp/t3-feat-x-51889a21" && bash "$c" 1341 2>/dev/null); rc=$?
+check_rc "a host-named worktree is cleaned up, exit ok" 0 "$rc"
+check "the JSON names its folder, branch and both removals" "$tmp/t3-feat-x-51889a21 feat/x-1341 true true"   "$(jq -r '[.worktree, .branch, .worktree_removed, .branch_deleted] | join(" ")' <<<"$out")"
+check "the folder is gone" no "$([ -e "$tmp/t3-feat-x-51889a21" ] && echo yes || echo no)"
+check "the branch is gone" "" "$(g branch --list feat/x-1341)"
+# A branch with no `<type>/`, held by another worktree, is not ship's to remove.
+g worktree add -q "$tmp/hand-made" -b my-notes-1342
+out=$(cd "$repo" && bash "$c" 1342 2>/dev/null)
+check "a hand-made branch held by a worktree is not named" "null null" \
+  "$(jq -r '[.worktree, .branch] | map(. // "null") | join(" ")' <<<"$out")"
+check "and its worktree stays" yes "$([ -d "$tmp/hand-made" ] && echo yes || echo no)"
+# Nothing found for the run: no removal is claimed.
+out=$(cd "$repo" && bash "$c" 1343 2>/dev/null); rc=$?
+check "no worktree found is not reported removed" null "$(jq -r '.worktree_removed' <<<"$out")"
+check_rc "and exits ok" 0 "$rc"
+
 finish

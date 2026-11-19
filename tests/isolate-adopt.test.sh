@@ -4,7 +4,7 @@
 # clean and with no commits beyond origin/HEAD, it is fast-forwarded there and
 # printed with `reused: true`. A dirty one, one carrying its own commits and the
 # main checkout are refused; a branch not ending `-<n>` is not adopted.
-# `cleanup` then leaves the host's folder and branch alone. Driven over a clone
+# `cleanup` then removes the host's folder and branch. Driven over a clone
 # of a local bare origin; neither mechanic loads a host adapter.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
@@ -47,12 +47,6 @@ out=$(cd "$host" && bash "$m" 7 feat x --in-place 2>/dev/null); rc=$?
 check_rc "--in-place adopts it under another slug too" 0 "$rc"
 check "with in_place true" "$host true true" "$(jq -r '"\(.worktree) \(.in_place) \(.reused)"' <<<"$out")"
 
-out=$(cd "$host" && bash "$c" 7 2>/dev/null); rc=$?
-check_rc "cleanup after an adopted run exits ok" 0 "$rc"
-check "it removes neither the host's worktree nor its branch" "null null" \
-  "$(jq -r '"\(.worktree) \(.branch)"' <<<"$out")"
-check "the host's worktree is still there" "feat/launch-name-7" "$(git -C "$host" rev-parse --abbrev-ref HEAD)"
-
 echo s > "$repo/secret.env"
 out=$(cd "$host" && bash "$m" 7 feat x --carry secret.env 2>/dev/null); rc=$?
 check_rc "--carry into an adopted worktree exits ok" 0 "$rc"
@@ -90,5 +84,13 @@ check "it is refused as before" "existing branch: feat/x-9" "$(jq -r .error <<<"
 out=$(cd "$repo" && bash "$m" 9 feat x 2>/dev/null); rc=$?
 check_rc "nor attended" 1 "$rc"
 check "the attended refusal is the same" "existing branch: feat/x-9" "$(jq -r .error <<<"$out")"
+# `cleanup` removes the adopted worktree and its branch, finding it by branch
+# since the host named the folder.
+g -C "$host" reset -q --hard "$tip"
+out=$(cd "$host" && bash "$c" 7 2>/dev/null); rc=$?
+check_rc "cleanup after an adopted run exits ok" 0 "$rc"
+check "it removes the host's worktree and its branch" "$host feat/launch-name-7 true true" \
+  "$(jq -r '"\(.worktree) \(.branch) \(.worktree_removed) \(.branch_deleted)"' <<<"$out")"
+check "the host's folder is gone" no "$([ -e "$host" ] && echo yes || echo no)"
 
 finish
