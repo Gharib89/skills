@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.69.2 (2026-11-21)
+
+### Bug Fixes
+
+- **ship**: Isolate adopts only the branch shape cleanup removes
+  ([#1326](https://github.com/Gharib89/skills/pull/1326),
+  [`6c89713`](https://github.com/Gharib89/skills/commit/6c89713712764472b53cdc4885f64ebede76c42f))
+
+
 ## v0.69.1 (2026-11-19)
 
 ### Bug Fixes
