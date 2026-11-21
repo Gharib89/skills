@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # `isolate <n> ...` run from a linked worktree a host launched the session in,
-# on a branch ending `-<n>`, adopts it rather than refusing `existing branch`:
+# on a `<type>/<slug>-<n>` branch, adopts it rather than refusing `existing branch`:
 # clean and with no commits beyond origin/HEAD, it is fast-forwarded there and
 # printed with `reused: true`. A dirty one, one carrying its own commits and the
-# main checkout are refused; a branch not ending `-<n>` is not adopted.
+# main checkout are refused; a branch not of that shape is not adopted.
 # `cleanup` then removes the host's folder and branch. Driven over a clone
 # of a local bare origin; neither mechanic loads a host adapter.
 set -uo pipefail
@@ -42,7 +42,7 @@ check "it is printed as reused, on its own branch, based on origin/HEAD" \
 check "it is fast-forwarded to origin/HEAD" "$tip" "$(git -C "$host" rev-parse HEAD)"
 check "no worktree is made under .claude/worktrees/" "" "$(ls "$repo/.claude/worktrees" 2>/dev/null)"
 
-# The run's slug need not be the launcher's: any `-<n>` branch is adopted.
+# The run's slug need not be the launcher's: any `<type>/<slug>-<n>` branch is adopted.
 out=$(cd "$host" && bash "$m" 7 feat x --in-place 2>/dev/null); rc=$?
 check_rc "--in-place adopts it under another slug too" 0 "$rc"
 check "with in_place true" "$host true true" "$(jq -r '"\(.worktree) \(.in_place) \(.reused)"' <<<"$out")"
@@ -71,6 +71,15 @@ launch "$other" feat/other-80
 out=$(cd "$other" && bash "$m" 8 feat x 2>/dev/null); rc=$?
 check_rc "a launched branch not ending -<n> isolates as before" 0 "$rc"
 check "it is not adopted: a fresh worktree is made" "$repo/.claude/worktrees/x-8 false" \
+  "$(jq -r '"\(.worktree) \(.reused)"' <<<"$out")"
+
+# A slashless `-<n>` branch is not isolate's shape, so cleanup would leave it:
+# it is not adopted either, and the run gets a worktree cleanup removes.
+slashless=$tmp/host/t3-c
+launch "$slashless" launch-name-6
+out=$(cd "$slashless" && bash "$m" 6 feat x 2>/dev/null); rc=$?
+check_rc "a launched slashless -<n> branch isolates as before" 0 "$rc"
+check "it is not adopted: a fresh worktree is made" "$repo/.claude/worktrees/x-6 false" \
   "$(jq -r '"\(.worktree) \(.reused)"' <<<"$out")"
 
 out=$(cd "$repo/.claude/worktrees/x-8" && bash "$m" 8 feat x 2>/dev/null); rc=$?

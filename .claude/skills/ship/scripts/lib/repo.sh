@@ -4,6 +4,9 @@
 
 # preflight greps for on the remote and open-pr checks the branch ends in.
 ship_branch() { printf '%s/%s-%s' "$1" "$2" "$3"; }
+# ERE for any branch of that shape for issue $1: the one shape isolate adopts a
+# host's worktree on and cleanup removes, so a run never adopts what it leaves.
+ship_branch_shape() { printf '^[^/]+/.+-%s$' "$1"; }
 
 # The main checkout, even when run from inside a worktree: --git-common-dir
 # points at the primary .git, so a run started in a worktree lands the new one
