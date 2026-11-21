@@ -4,8 +4,8 @@
 # branch). The worktree is found by the branch it has checked out, held to
 # isolate's `<type>/<slug>-<issue>` shape, whatever its folder is named: a host
 # that made the worktree (T3 names the folder `<slug>-<hex>`) and isolate
-# adopted it is removed too. A worktree on a branch without that shape (isolate
-# adopts any branch ending `-<issue>`) is not found and stays. Carried files
+# adopted it is removed too. A worktree on a branch without that shape is not
+# found and stays; isolate adopts none. Carried files
 # stay in the worktree this removes. The record is the
 # `ship-<issue>` Run file and `scratch-<issue>` Scratch directory under
 # `${XDG_STATE_HOME:-~/.local/state}/ship/<repo key>` that `run-file init`
@@ -51,7 +51,7 @@ wt=null; branch=null; wt_removed=null; br_deleted=true
 # isolate's branch shape, the key for both lookups below: a worktree and, for an
 # in-place run, a bare branch. It is held to this shape because `branch -D`
 # would also take a hand-made branch that merely ends in `-<n>`.
-shape="^[^/]+/.+-$n\$"
+shape=$(ship_branch_shape "$n")
 # Prune first: a registered worktree whose folder is already gone would fail
 # `worktree remove`, and the branch it held is then found as a bare branch.
 git -C "$root" worktree prune >/dev/null 2>&1
