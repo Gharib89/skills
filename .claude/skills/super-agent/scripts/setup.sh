@@ -11,7 +11,8 @@
 #
 # --fleet defaults to `super-agent/fleet.json` under $XDG_CONFIG_HOME
 # (`~/.config` when unset), the user-scope path the owner keeps in their
-# dotfiles. --name is this machine's key, `hostname` by default. A re-run
+# dotfiles. --name is this machine's key, `hostname` by default; its entry records
+# `hostname`, which `launch` holds its --machine to. A re-run
 # merges: what a probe measured (cores, RAM, GPU, reachability, each provider's
 # status, the GitHub accounts) is refreshed, and everything else (slots,
 # thresholds, quota commands, active repos, waivers, any key the owner added)
@@ -122,7 +123,8 @@ if [ -n "$instances_file" ]; then
   # enabled: T3 reports a disabled instance in `constraints`, there is no flag
   rows=$(jq -c '[.[] | select([.constraints[]? | strings | test("disabled"; "i")] | any | not)]' <<<"$rows")
 fi
-[ -n "$name" ] || name=$(hostname 2>/dev/null) || sa_tooling "cannot read this machine's name: pass --name"
+host=$(hostname 2>/dev/null) || sa_tooling "cannot read this machine's name"
+[ -n "$name" ] || name=$host
 existing='{}'
 if [ -f "$fleet_file" ]; then
   jq -e . "$fleet_file" >/dev/null 2>&1 || sa_tooling "$fleet_file: not JSON"
@@ -170,7 +172,7 @@ probe_out=$(bash "$(dirname "${BASH_SOURCE[0]}")/probe.sh" --json 2>/dev/null </
   || sa_tooling "$(jq -r '.error // "probe.sh failed"' <<<"$probe_out" 2>/dev/null || echo "probe.sh failed")"
 local_m=$(jq -c "$machine_jq"' machine(.; $f; {reserve: 1})' --argjson f "$floor_gb" <<<"$probe_out")
 ! jq -e .gpu_failed >/dev/null <<<"$probe_out" || warn "nvidia-smi failed: gpu left as the file has it"
-facts=$(jq -cn --arg n "$name" --argjson m "$local_m" '{machines: {($n): $m.facts}}')
+facts=$(jq -cn --arg n "$name" --arg h "$host" --argjson m "$local_m" '{machines: {($n): ($m.facts + {hostname: $h})}}')
 proposed=$(jq -cn --arg n "$name" --argjson m "$local_m" --argjson f "$floor_gb" --arg last_fix "$last_fix_new" \
   '{machines: {($n): $m.proposal}, thread_ram_floor_gb: $f, active_repos: [], work_week: [1,2,3,4,5], five_hour_floor: 0.1, weekly_reserve: 0.05,
     waivers: [

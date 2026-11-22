@@ -66,7 +66,10 @@ skill's base directory.
    run it again with `--write` and the same `--probe` flags, then apply the
    owner's adjustments by editing the written file.
 5. Tell the owner to keep the fleet file in their dotfiles, so every machine a
-   super agent may start on has it.
+   super agent may start on has it. Setup records this machine's `hostname` in
+   its entry, and `launch` takes as `--machine` only the key whose entry holds
+   the hostname of the machine it runs on (the key itself where an entry
+   records none): any other key is a tooling error and launches nothing.
 6. Install the [guard hook](#the-guard-hook) on this machine.
 
 ## The guard hook

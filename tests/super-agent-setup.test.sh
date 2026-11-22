@@ -157,6 +157,11 @@ check "a machine no longer linked is kept, not dropped" present \
   "$(jq -r 'if .machines.down then "present" else "absent" end' <<<"$g")"
 check "a second run changes nothing" "$g" "$(S --name laptop --write >/dev/null; jq -c . "$fleet")"
 
+# --- this machine's entry records its hostname, which `launch` checks (#1332) ------
+reset
+check "a --name that is not the hostname records the hostname beside it" laptop "$(P --name desk | jq -r .fleet.machines.desk.hostname)"
+check "a linked machine's entry records none" null "$(P --name desk | jq .fleet.machines.box.hostname)"
+
 # --- the last-fix waiver never covered the local review (#1248) --------------------
 # A file holding the old default text gets the new one; an owner's own text stays,
 # with a warning, since the merge keeps the file's value over the proposal.
