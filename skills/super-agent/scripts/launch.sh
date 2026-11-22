@@ -20,7 +20,8 @@
 #
 # --machine is this machine's fleet key (the key whose entry's `hostname`, or the
 # key itself when it records none, is what `hostname` prints here: any other key
-# is a tooling error) and --thread the super agent's own thread, which `claim` records; --quota is the saved `quota` read of this wake. --area,
+# is a tooling error) and --thread the super agent's own thread, which `claim`
+# records; --quota is the saved `quota` read of this wake. --area,
 # --gpu, --account, --blocked-by, --readings and --exclude go to `place`,
 # --instance and --raise to `route`. --wanted answers a route's `ask`: `yes`
 # launches the wanted tier, `no` the default one. --owner-go is the owner's go past
@@ -79,7 +80,10 @@
 #         launch: ..."}
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
-#       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a claim, issue or placement the host or a script refused, an installed ship version
+#       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a
+#       --machine that is not this machine's own fleet key (or a `hostname` that
+#       cannot be read), a claim, issue or placement the host or a script
+#       refused, an installed ship version
 #       that cannot be read as X.Y.Z, a launch the ledger would not record at
 #       `launching` before it answers, or a record
 #       whose reconcile failed after the entry was written (do not record again)
