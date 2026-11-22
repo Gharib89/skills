@@ -30,6 +30,25 @@ reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
 rm -rf "$tmp/stub"; cp -r "$s" "$tmp/stub"; printf 'exit 0\n' > "$tmp/stub/route.sh"
 out=$(bash "$tmp/stub/launch.sh" "$repo#7" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>&1); rc=$?
 check "a route that prints nothing exits 2 with a named error, never launching" "2 false route gave no answer" "$rc $(jq -r 'has("args")' <<<"$out") $(jq -r .error <<<"$out")"
+
+# --- --machine must be this machine's own fleet key (#1332) ----------------------
+# `hostname` answers `home` here. A key from stale notes used to reach claim and place.
+for m in box nosuch; do
+  reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+  out=$(bash "$s/launch.sh" "$repo#7" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine "$m" --thread th-super --area x 2>/dev/null); rc=$?
+  check "--machine $m on the machine named home exits 2 naming both, never launching" "2 false 1" \
+    "$rc $(jq -r 'has("args")' <<<"$out") $(jq -r .error <<<"$out" | grep -c -- "--machine $m is not this machine (home)")"
+  check "and it posts no claim and records nothing" "0 absent" \
+    "$(cat "$SA_FAKE/calls" 2>/dev/null | grep -c POST) $([ -e "$led" ] && echo present || echo absent)"
+done
+reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+jq '.machines.desk = (.machines.home + {hostname: "home"}) | del(.machines.home)' "$fleet" > "$tmp/named.json"
+check "a key that is not the hostname launches when its entry records the hostname" "true desk" \
+  "$(bash "$s/launch.sh" "$repo#7" --fleet "$tmp/named.json" --ledger "$led" --quota "$quota" --machine desk --thread th-super --area x | jq -r '"\(.launch) \(.record.machine)"')"
+reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+jq '.machines.home.hostname = "elsewhere"' "$fleet" > "$tmp/named.json"
+out=$(bash "$s/launch.sh" "$repo#7" --fleet "$tmp/named.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --area x 2>/dev/null); rc=$?
+check_rc "a key whose entry records another hostname exits 2, even when the key is this hostname" 2 "$rc"
 reset
 
 finish

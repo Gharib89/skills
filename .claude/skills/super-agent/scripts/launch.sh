@@ -18,8 +18,10 @@
 #          [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>]
 #          [--remote <environment id>=<dir>]... [--interactive]
 #
-# --machine is this machine's fleet key and --thread the super agent's own thread,
-# which `claim` records; --quota is the saved `quota` read of this wake. --area,
+# --machine is this machine's fleet key (the key whose entry's `hostname`, or the
+# key itself when it records none, is what `hostname` prints here: any other key
+# is a tooling error) and --thread the super agent's own thread, which `claim`
+# records; --quota is the saved `quota` read of this wake. --area,
 # --gpu, --account, --blocked-by, --readings and --exclude go to `place`,
 # --instance and --raise to `route`. --wanted answers a route's `ask`: `yes`
 # launches the wanted tier, `no` the default one. --owner-go is the owner's go past
@@ -78,7 +80,10 @@
 #         launch: ..."}
 # exit: 0 a launch, or a record · 1 no launch, or a record the ledger refused (the
 #       key is already open) · 2 usage, an unreadable fleet file, ledger or quota
-#       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a claim, issue or placement the host or a script refused, an installed ship version
+#       file, a `merge_gate_ruler` other than `owner` or `super-agent`, a
+#       --machine that is not this machine's own fleet key (or a `hostname` that
+#       cannot be read), a claim, issue or placement the host or a script
+#       refused, an installed ship version
 #       that cannot be read as X.Y.Z, a launch the ledger would not record at
 #       `launching` before it answers, or a record
 #       whose reconcile failed after the entry was written (do not record again)
@@ -148,6 +153,11 @@ done
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file, run setup"
 jq -e '(.merge_gate_ruler // "owner") | IN("owner", "super-agent")' "$fleet" >/dev/null 2>&1 \
   || sa_tooling "$fleet: merge_gate_ruler must be \"owner\" or \"super-agent\""
+# --machine must be this machine: a key carried in the agent's notes would otherwise
+# pick where the thread runs and what the claim and the ledger say (#1332).
+host=$(hostname 2>/dev/null) || sa_tooling "cannot read this machine's name"
+jq -e --arg m "$machine" --arg h "$host" '.machines[$m] | type == "object" and (.hostname // $m) == $h' "$fleet" >/dev/null 2>&1 \
+  || sa_tooling "--machine $machine is not this machine ($host) in $fleet: pass this machine's own fleet key, or run setup here"
 # An answer that does not launch leaves no file, so a stale one is never recorded.
 [ -z "$outf" ] || rm -f "$outf"
 
