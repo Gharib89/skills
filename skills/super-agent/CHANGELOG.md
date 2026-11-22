@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.38.0 (2026-11-22)
+
+### Features
+
+- **super-agent**: Launch refuses a --machine that is not this machine's own fleet key
+  ([#1333](https://github.com/Gharib89/skills/pull/1333),
+  [`71ba77c`](https://github.com/Gharib89/skills/commit/71ba77c0dbd447e163710e57cd3e858dbe114298))
+
+
 ## v0.37.0 (2026-11-19)
 
 ### Features
