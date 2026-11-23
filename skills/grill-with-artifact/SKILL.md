@@ -59,7 +59,12 @@ chat format runs.
    there is no live subscription, or a session with `T3CODE_THREAD_ID` set
    (T3 Code's messages carry no human origin, so nothing arms), is unarmed from
    the first publish. When the line leaves it in doubt, check with
-   `ArtifactComments` `watch` and no `url`.
+   `ArtifactComments` `watch` and no `url`. Unarmed, the page must not send:
+   a Submit comment with no watch wakes a separate cloud session, which replies
+   without this session's context and resolves the thread. So an unarmed
+   session writes `wake: false` on every round (step 3.4), and the page then
+   saves the answers and sends no comment. A watch found stopped later is
+   unarmed from the next round on.
 5. Print the page link, and whether the wake is armed. Unarmed, say in the same
    reply that the human types `submitted` in this chat after each Submit.
 
@@ -80,7 +85,7 @@ the session.
    `docsWritten` with every glossary term and ADR written from its answers:
    both are empty arrays in round 1.
 4. Write the round with `ArtifactData` `set`, collection `rounds`, doc id the
-   round number.
+   round number, carrying `wake: false` when the session is unarmed.
 5. Resolve the Submit thread that started this turn, if one did, so an open
    thread always means still working. Then print one status line,
    `Round <n> posted. Questions: <k>.`, and end the turn. The questions and

@@ -4,7 +4,7 @@
 // a live build, a sixth frame playing a seam, and each grammar field listed
 // with its mark; then saved to a store or used once.
 //
-//   node card.mjs <run-folder> <draft> build [--local] [--project]
+//   node card.mjs <run-folder> <draft> build [--local] [--project] [--unarmed]
 //   node card.mjs <run-folder> <draft> page [<url>]
 //   node card.mjs <run-folder> <draft> asset <path>=<url>...
 //   node card.mjs <run-folder> <draft> apply <answers-file> [--project]
@@ -64,7 +64,7 @@ stage("card");
 const [run, draftName, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
   console.error(
-    "usage: node card.mjs <run-folder> <draft> build [--local] [--project] | page [<url>] | asset <path>=<url>... | apply <answers-file> [--project]",
+    "usage: node card.mjs <run-folder> <draft> build [--local] [--project] [--unarmed] | page [<url>] | asset <path>=<url>... | apply <answers-file> [--project]",
   );
   process.exit(2);
 };
@@ -74,7 +74,7 @@ if (
   !["build", "page", "asset", "apply"].includes(cmd) ||
   (cmd === "build" &&
     (new Set(args).size < args.length ||
-      !args.every((a) => ["--local", "--project"].includes(a)))) ||
+      !args.every((a) => ["--local", "--project", "--unarmed"].includes(a)))) ||
   (cmd === "page" && args.length > 1) ||
   (cmd === "asset" && !args.length) ||
   (cmd === "apply" &&
@@ -503,7 +503,7 @@ const media = [
   LIVE,
 ];
 const page = maybe(at("page.json"));
-const published = !!page && args[0] !== "--local";
+const published = !!page && !args.includes("--local");
 const assets = maybe(at("assets.json")) ?? {};
 if (published && media.some((f) => !assets[f])) {
   for (const f of media.filter((f) => !assets[f]))
@@ -560,6 +560,8 @@ const doc = {
         .filter((f) => f.endsWith(".json"))
         .map((f) => f.slice(0, -5))
     : [],
+  // An unarmed session's card: the page saves a Submit and sends no comment.
+  ...(args.includes("--unarmed") && { wake: false }),
 };
 write(at(`${doc.version}.json`), doc);
 // The local copy declares its encoding: no publish wraps it in a skeleton.

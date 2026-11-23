@@ -2,7 +2,7 @@
 // the gates and the render (reference/storyboard.md; the documents are in
 // board/board-data.md).
 //
-//   node board.mjs <run-folder> build
+//   node board.mjs <run-folder> build [--unarmed]
 //   node board.mjs <run-folder> apply <answers-file>
 //
 // build reads <run>/timeline.json, voice.json, script.json, storyboard.json,
@@ -37,7 +37,7 @@
 //           redo <scene>: <note>               one per noted scene
 //           next: re-author <the whole chapter | only <ids>>, then build the board again
 // writes: build, board/<n>.json (the board document), board/storyboard.html,
-//         page.css, brand.js, page.js, stills/<hash>.png, brand/<hash>.<ext> (the
+//         page.css, brand.js, doorbell.js, page.js, stills/<hash>.png, brand/<hash>.<ext> (the
 //         brand's logo), files.json (the Artifact publish's `files` map),
 //         .cache/board/ (the frames taken), the run folder's .gitignore and
 //         the root again (render/root.mjs); apply, board/answers-<n>.json and
@@ -77,13 +77,16 @@ import { approvedBrand, brandStrip, copyLogo, wearBrand } from "./brand.mjs";
 
 stage("board");
 const [run, command, file, ...rest] = process.argv.slice(2);
+// `build --unarmed` writes `wake: false` on the board: the session has no
+// watch, so the page saves a Submit and sends no comment.
+const unarmed = command === "build" && file === "--unarmed";
 if (
   !run ||
   rest.length ||
-  (command === "apply" ? !file : command !== "build" || file)
+  (command === "apply" ? !file : command !== "build" || (file && !unarmed))
 ) {
   console.error(
-    "usage: node board.mjs <run-folder> build | apply <answers-file>",
+    "usage: node board.mjs <run-folder> build [--unarmed] | apply <answers-file>",
   );
   process.exit(2);
 }
@@ -351,6 +354,7 @@ async function build() {
     over,
     assets,
     scenes,
+    ...(unarmed && { wake: false }),
   };
   fs.writeFileSync(
     path.join(out, `${n}.json`),
@@ -358,7 +362,7 @@ async function build() {
   );
 
   const board = path.join(skill, "board");
-  for (const f of ["page.css", "brand.js", "page.js"])
+  for (const f of ["page.css", "brand.js", "doorbell.js", "page.js"])
     fs.copyFileSync(path.join(board, f), path.join(out, f));
   const embedded = JSON.stringify(doc).replaceAll("<", "\\u003c");
   fs.writeFileSync(
@@ -375,10 +379,14 @@ async function build() {
     path.join(out, "files.json"),
     JSON.stringify(
       Object.fromEntries(
-        ["page.css", "brand.js", "page.js", ...stills, ...logo].map((f) => [
-          f,
-          path.join(out, f),
-        ]),
+        [
+          "page.css",
+          "brand.js",
+          "doorbell.js",
+          "page.js",
+          ...stills,
+          ...logo,
+        ].map((f) => [f, path.join(out, f)]),
       ),
       null,
       2,

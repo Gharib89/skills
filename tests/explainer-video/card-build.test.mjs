@@ -172,3 +172,14 @@ test("a draft under its contrast floor, or naming a font setup does not install,
   assert.equal(o.code, 1);
   assert.match(o.err, /names font comic-sans, which no setup row installs/);
 });
+
+test("build --unarmed writes wake: false on the card, and a plain build leaves it out", () => {
+  const fx = fixture();
+  built(fx, ["build", "--unarmed"]);
+  const c = latestCard(fx);
+  assert.equal(c.wake, false);
+  assert.deepEqual(shapeProblems(c, "card"), []);
+  const plain = fixture();
+  built(plain);
+  assert.equal("wake" in latestCard(plain), false);
+});

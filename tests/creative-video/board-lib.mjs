@@ -122,7 +122,8 @@ export function ready({ bodies, picked = "switch", extra, brand } = {}) {
   return fx;
 }
 
-export const build = (fx) => exec(board, fx, [fx.dir, "build"]);
+export const build = (fx, ...flags) =>
+  exec(board, fx, [fx.dir, "build", ...flags]);
 
 // `board apply` on answers text or a document.
 export function apply(fx, answers) {

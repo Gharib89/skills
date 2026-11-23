@@ -451,3 +451,14 @@ test("a rich component's card is marked rich on the document", () => {
     [false, true, false],
   );
 });
+
+test("build --unarmed writes wake: false on the board, and a plain build leaves it out", () => {
+  const fx = fixture();
+  prep(fx);
+  ok(board(fx, "build", "--unarmed"), "build");
+  assert.equal(doc(fx, 1).wake, false);
+  const plain = fixture();
+  prep(plain);
+  ok(board(plain, "build"), "build");
+  assert.equal("wake" in doc(plain, 1), false);
+});

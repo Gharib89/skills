@@ -77,8 +77,13 @@ delivery it reports Render's last line and the videos-folder path.
    `T3CODE_THREAD_ID` set, is unarmed from this publish; when the line leaves
    it in doubt, check with `ArtifactComments` `watch` and no `url`. Unarmed,
    tell the user in the same reply to type `submitted` in this chat after each
-   Submit.
-4. **Build.** `board build`, or `board build --local` on a local board (a
+   Submit, and add `--unarmed` to every `board build` (step 4): the page must
+   not send, since a Submit comment with no watch wakes a separate cloud
+   session, which replies without this session's context and resolves the
+   thread. The board then carries `wake: false`, and the page only saves. A
+   watch found stopped later is unarmed from the next build on.
+4. **Build.** `board build` (adding `--unarmed` when step 3 found the session
+   unarmed), or `board build --local` on a local board (a
    page recorded earlier would otherwise ask for uploads). For each card that
    carries a finding (a red the sampling pass left, or one a gate stop reopened)
    add `--fix <scene>=<text>`: the fix you propose, which the card shows beside

@@ -87,15 +87,20 @@ module.exports = [
         : []),
     ];
   }),
-  // creative-video's storyboard page: brand.js loads before page.js, and each
-  // calls what the other declares.
+  // creative-video's storyboard page: brand.js and doorbell.js load before
+  // page.js; page.js and brand.js each call what the other declares, and
+  // page.js calls what doorbell.js declares.
   ...[
     ["page", "brand"],
     ["brand", "page"],
   ].map(([file, other]) => ({
     files: [`skills/creative-video/board/${file}.js`],
     languageOptions: {
-      globals: declaredNames(`skills/creative-video/board/${other}.js`),
+      globals: {
+        ...declaredNames(`skills/creative-video/board/${other}.js`),
+        ...(file === "page" &&
+          declaredNames("skills/creative-video/board/doorbell.js")),
+      },
     },
   })),
 ];
