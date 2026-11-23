@@ -33,7 +33,8 @@ const approving = (S) => S.intent === "approve" && canApprove(S);
 // A database page takes one answer per board version; a local page copies as often as it likes.
 const answered = (S) => S.answers.some((a) => a.version === S.board.version);
 const locked = (S) =>
-  !S.local && (["sending", "sent", "saved"].includes(S.status) || answered(S));
+  !S.local &&
+  (["sending", "sent", "saved", "unarmed"].includes(S.status) || answered(S));
 function setAnswers(S, docs) {
   S.answers = docs;
 }
@@ -109,9 +110,6 @@ function capped(text, n) {
   while (enc.encode(s + tail).length > MAX_COMMENT) s = s.slice(0, -64);
   return s + tail;
 }
-// A failed save leaves the comment as the only copy, so it counts as sent only when it held the whole answers.
-const outcome = (saved, woke, whole) =>
-  woke && (saved || whole) ? "sent" : saved ? "saved" : "neither";
 
 const esc = (s) =>
   String(s == null ? "" : s).replace(
@@ -220,6 +218,8 @@ function status(S, b) {
     case "saved":
       return `<div class="st st-warn" role="alert"><span><b>Saved, but Claude was not woken:</b> type <code>submitted</code> in the chat and the session reads your saved answers.</span>
       <div class="st-row"><button class="btn btn-sm" data-act="wake">Try waking it again</button></div></div>`;
+    case "unarmed":
+      return `<div class="st st-ok" role="status"><span><b>Saved.</b> Type <code>submitted</code> in the chat and the session reads your answers.</span></div>`;
     case "neither":
       return `<div class="st st-bad" role="alert"><span><b>Not saved.</b> Copy the answers and paste them into the chat.</span>
       <pre id="fallback-text">${esc(answersText(answersDoc(S)))}</pre>
@@ -267,6 +267,7 @@ function storeDraft(getStore, S) {
 
 globalThis.Board = {
   newState,
+  ring,
   ACT,
   canApprove,
   canSend,
@@ -404,21 +405,13 @@ async function boot() {
   render();
 
   // The comment is the doorbell: the one page action that starts a turn in the watching session.
-  async function wake(anchor) {
-    if (!comments || !anchor) return false;
-    try {
-      // `available` means this viewer may send, not that a session is watching: a send with no watch
-      // lands and wakes nothing, so the sent receipt still names the typed fallback.
-      if ((await comments.canSendToClaude()) !== "available") return false;
-      await comments.sendToClaude({
-        anchor,
-        text: capped(answersText(answersDoc(S)), S.board.version),
-      });
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+  const wake = (anchor) =>
+    ring(
+      S,
+      comments,
+      anchor,
+      capped(answersText(answersDoc(S)), S.board.version),
+    );
   const anchorOf = (id) =>
     comments && document.getElementById(id)
       ? comments.anchorFor(document.getElementById(id)).catch(() => null)
@@ -428,7 +421,7 @@ async function boot() {
     const doc = answersDoc(S);
     S.status = "sending";
     render();
-    const anchor = await anchorOf(id);
+    const anchor = armed(S) ? await anchorOf(id) : null;
     const saved = await db
       .doc("answers/board-" + doc.version)
       .set(doc)

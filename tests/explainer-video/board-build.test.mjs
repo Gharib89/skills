@@ -408,7 +408,7 @@ test("a custom scene's card shows its intent line, is marked rich, and no other 
   assert.match(read(fx.dir, "storyboard.html"), /three steps land in turn/);
 });
 
-test("build copies the page's five files into the run root, and the run folder's ignore block covers each", () => {
+test("build copies the page's six files into the run root, and the run folder's ignore block covers each", () => {
   const fx = fixture();
   prep(fx);
   ok(board(fx, "build"), "build");
@@ -416,6 +416,7 @@ test("build copies the page's five files into the run root, and the run folder's
   for (const f of [
     "page.css",
     "page-core.js",
+    "doorbell.js",
     "page-sections.js",
     "page-summary.js",
     "page-boot.js",
@@ -450,4 +451,15 @@ test("a rich component's card is marked rich on the document", () => {
     doc(fx, 1).scenes.map((c) => c.rich),
     [false, true, false],
   );
+});
+
+test("build --unarmed writes wake: false on the board, and a plain build leaves it out", () => {
+  const fx = fixture();
+  prep(fx);
+  ok(board(fx, "build", "--unarmed"), "build");
+  assert.equal(doc(fx, 1).wake, false);
+  const plain = fixture();
+  prep(plain);
+  ok(board(plain, "build"), "build");
+  assert.equal("wake" in doc(plain, 1), false);
 });

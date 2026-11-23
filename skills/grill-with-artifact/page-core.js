@@ -60,8 +60,33 @@ function restoreDraft(S, saved) {
 
 const locked = (S) =>
   !S.canEdit ||
-  ["sending", "sent", "saved"].includes(S.status) ||
+  ["sending", "sent", "saved", "unarmed"].includes(S.status) ||
   !!S.submitted[S.draft.round];
+// The Submit's doorbell. An unarmed session writes `wake: false` on its round: with no watch, a send
+// wakes a cloud session that replies without this session's context and resolves the thread, so the
+// page only saves and the human types `submitted` in the chat.
+const armed = (S) => openRound(S).wake !== false;
+async function ring(S, comments, anchor, text) {
+  if (!armed(S)) return "unarmed";
+  if (!comments || !anchor) return false;
+  try {
+    if ((await comments.canSendToClaude()) !== "available") return false;
+    await comments.sendToClaude({ anchor, text });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+const outcome = (saved, woke) =>
+  woke === "unarmed"
+    ? saved
+      ? "unarmed"
+      : "neither"
+    : woke
+      ? "sent"
+      : saved
+        ? "saved"
+        : "neither";
 const ans = (S, id) => S.draft.answers[id];
 function qstate(S, q) {
   const a = ans(S, q.id);
@@ -322,6 +347,8 @@ function status(S) {
     case "saved":
       return `<div class="st st-warn" role="alert"><span><b>Saved, but Claude was not woken.</b> Type <code>submitted</code> in the chat and the session reads your saved answers.</span>
       <div class="st-row"><button class="btn btn-sm" data-act="wake">Try waking it again</button></div></div>`;
+    case "unarmed":
+      return `<div class="st st-ok" role="status"><span><b>Saved.</b> Type <code>submitted</code> in the chat and the session reads your answers.</span></div>`;
     case "neither":
       return `<div class="st st-bad" role="alert"><span><b>Not saved and not sent.</b> Copy your answers and paste them into the chat.</span>
       <pre id="fallback-text">${esc(answersText(S))}</pre>

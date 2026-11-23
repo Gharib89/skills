@@ -25,7 +25,7 @@ const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
 const ctx = vm.createContext({ console });
 vm.runInContext(
   scripts[0] +
-    "\n;globalThis.__page = { newState, setCards, setAnswers, view, ACT, answersDoc, answersText, frameDoc, failing, mediaUrl, buildUrl };",
+    "\n;globalThis.__page = { newState, setCards, setAnswers, view, ACT, answersDoc, answersText, frameDoc, failing, mediaUrl, buildUrl, outcome, ring };",
   ctx,
 );
 const P = ctx.__page;
@@ -229,6 +229,50 @@ test("a name the store holds needs Replace before Save; findings block Save and 
   P.ACT.font(R, { role: "title", font: "inter" });
   assert.ok(!submitOff(P.view(R)));
   assert.deepEqual(clone(P.answersDoc(R).type), { title: "inter" });
+});
+
+// A comments capability that records its calls and lets every viewer send.
+const fakeComments = () => {
+  const calls = [];
+  return {
+    calls,
+    canSendToClaude: async () => (calls.push("can"), "available"),
+    sendToClaude: async () => {
+      calls.push("send");
+    },
+  };
+};
+
+test("an unarmed card saves a Submit and sends no comment; an armed one rings as before", async () => {
+  const fx = fixture();
+  built(fx);
+  const card = latestCard(fx);
+  for (const [wake, want] of [
+    [undefined, true],
+    [true, true],
+    [false, "unarmed"],
+  ]) {
+    const d = clone(card);
+    if (wake !== undefined) d.wake = wake;
+    const c = fakeComments();
+    assert.equal(await P.ring(session([d]), c, "anchor", "text"), want);
+    assert.equal(
+      c.calls.includes("send"),
+      want === true,
+      JSON.stringify(c.calls),
+    );
+  }
+  assert.equal(P.outcome(true, "unarmed", false), "unarmed");
+  assert.equal(P.outcome(false, "unarmed", true), "neither");
+  const S = session([card]);
+  S.status = "unarmed";
+  const v = P.view(S);
+  assert.match(
+    v,
+    /<div class="st st-ok" role="status"><span><b>Saved\.<\/b> Type <code>submitted<\/code> in the chat/,
+  );
+  assert.doesNotMatch(v, /st-warn|data-act="wake"/);
+  assert.ok(submitOff(v));
 });
 
 test("an answered version locks the page; a viewer who cannot edit sees no Submit", () => {
