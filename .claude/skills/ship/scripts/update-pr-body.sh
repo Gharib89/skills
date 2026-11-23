@@ -61,7 +61,8 @@
 # touch is refused too: it would fail the repo's CI as it stands.
 #
 # A write whose new body equals the body the host holds makes no host write: it
-# would change nothing, and the answer below is unchanged.
+# would change nothing, and the answer below is unchanged. The comparison
+# ignores trailing newlines, which a host may add or strip on its own.
 #
 # stdout: {pr, section, replaced, created, sections[]}
 #         {pr, section: null, preamble: true, replaced, created, sections[]}
@@ -114,7 +115,6 @@ else
   replaced=false; created=true
 fi
 ship_require_body_check "$new"
-# A body the host already holds is not written again; the answer is the same.
 if [ "$(cat "$new")" != "$body" ]; then
   answer=$(host_pr_set_body "$pr" "$new") || ship_fail "PR body update failed" "$answer"
 fi

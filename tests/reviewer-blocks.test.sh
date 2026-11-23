@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The pure reviewer-block parser and the profile-invalid reasons it feeds
-# preflight. Every case is a profile body in, a string out; no host is reached.
+# The profile-invalid reasons the reviewer-block parser feeds preflight (the
+# parser and row cases are in tests/reviewer-blocks-rows.test.sh). Every case is a profile body in, a string out; no host is reached.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
