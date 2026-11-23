@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.7.1 (2026-11-23)
+
+### Bug Fixes
+
+- **grill-with-artifact**: An unarmed page saves a Submit and sends no comment
+  ([#1352](https://github.com/Gharib89/skills/pull/1352),
+  [`cd60dab`](https://github.com/Gharib89/skills/commit/cd60dab09ba22669a417624f3dbcb8a92bd10b25))
+
+
 ## v0.7.0 (2026-11-13)
 
 ### Features

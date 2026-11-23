@@ -20,6 +20,7 @@ const REBUILDABLE = [
   "storyboard.html",
   "page.css",
   "page-core.js",
+  "doorbell.js",
   "page-sections.js",
   "page-summary.js",
   "page-boot.js",

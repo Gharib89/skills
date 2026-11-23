@@ -3,7 +3,7 @@ name: grill-with-artifact
 description: "Grill a plan or design on a private artifact page. Use when the human names grill-with-artifact, asks to grill on a page or an artifact, or a wayfinder ticket's Notes call for it."
 argument-hint: "[topic]"
 metadata:
-  version: 0.7.0
+  version: 0.7.1
 ---
 
 # grill-with-artifact
@@ -54,12 +54,17 @@ chat format runs.
    `capabilities` `{"db": {}, "user": {}, "comments": {}}`, `icon` `question`,
    and a one sentence `description` naming what is being grilled. Each session
    gets its own artifact. Refused: print step 1's line and fall back.
-4. Read the publish result's subscription line. The Submit wake reaches you
-   only while the artifact's watch shows auto-replies armed. A line saying
-   there is no live subscription, or a session with `T3CODE_THREAD_ID` set
-   (T3 Code's messages carry no human origin, so nothing arms), is unarmed from
-   the first publish. When the line leaves it in doubt, check with
-   `ArtifactComments` `watch` and no `url`.
+4. Read the publish result's subscription line. The Submit wake reaches you only
+   while the artifact's watch shows auto-replies armed. A line saying there is
+   no live subscription, or a session with `T3CODE_THREAD_ID` set (T3 Code's
+   messages carry no human origin, so nothing arms), is unarmed from the first
+   publish. When the line leaves it in doubt, check with `ArtifactComments`
+   `watch` and no `url`. Unarmed, the page only saves (`wake: false` on every
+   round, step 3.4), because a comment with no watch wakes a separate cloud
+   session that replies without this session's context and resolves the thread.
+   The page is published once, so an armed session checks again with
+   `ArtifactComments` `watch` and no `url` before writing each later round: once
+   it shows no armed watch, the session is unarmed from that round on.
 5. Print the page link, and whether the wake is armed. Unarmed, say in the same
    reply that the human types `submitted` in this chat after each Submit.
 
@@ -80,7 +85,7 @@ the session.
    `docsWritten` with every glossary term and ADR written from its answers:
    both are empty arrays in round 1.
 4. Write the round with `ArtifactData` `set`, collection `rounds`, doc id the
-   round number.
+   round number, carrying `wake: false` when the session is unarmed.
 5. Resolve the Submit thread that started this turn, if one did, so an open
    thread always means still working. Then print one status line,
    `Round <n> posted. Questions: <k>.`, and end the turn. The questions and

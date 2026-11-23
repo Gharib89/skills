@@ -14,3 +14,7 @@ The comment is a doorbell. A comment sent to Claude is the only thing a page can
 - The page's live room: it cannot start a turn by itself, and the room's agent peer is off by default.
 - The comment alone, with no database write: the 4 KiB cap truncates a round with long comments.
 - The database write plus the comment (chosen). First run end to end on 2026-09-30, across rounds 2 to 4 of the design session that produced this skill.
+
+## Amended by #1336
+
+An unarmed send is not inert. With no armed watch in the publishing session (a T3 Code thread, measured 2026-11-23: three Submits, three threads), the Submit comment still reaches Claude: a separate cloud session receives it, replies in the thread without the grilling session's context, and resolves the thread. The page cannot tell this apart from an armed send, since `canSendToClaude()` answers `available` whenever some Claude session would answer. So an unarmed session tells the page: it writes `wake: false` on each document the page shows as open (a round here; a board or a card in `explainer-video` and `creative-video`, whose pages ring the same doorbell). On such a document a Submit saves the answers and sends no comment, and the page's receipt tells the human to type `submitted`, which is then the only bell. The armed path is unchanged.
