@@ -71,7 +71,7 @@ check "run-file probe, --body-file after --: not the usage line" "" \
   "$(jq -r --arg u "$usage" '.error // empty | select(. == $u)' <<<"$out")"
 
 # `none` is the task-spec run's issue wherever a mechanic names it.
-out=$(cd "$repo" && bash "$dir/cleanup.sh" none 2>/dev/null)
+out=$(cd "$repo" && bash "$dir/cleanup.sh" none fix/x-none 2>/dev/null)
 check "cleanup accepts none" "" "$(jq -r '.error // empty' <<<"$out")"
 
 finish

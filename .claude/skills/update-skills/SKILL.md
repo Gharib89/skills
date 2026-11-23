@@ -3,7 +3,7 @@ name: update-skills
 description: "Refresh this repo's skills in one PR: Gharib89/skills skills, their composed skills at pinned refs, and other repo-scoped skills the owner picks; report upstream drift to the source repo and summarise the changes. In the source repo, move drifted pins instead. Attended only."
 disable-model-invocation: true
 metadata:
-  version: 0.12.0
+  version: 0.13.0
 ---
 
 # update-skills
@@ -73,7 +73,8 @@ fields drive every later step; the header comment in `plan.sh` defines each one.
 Nothing moved (every `source_skills` entry at its old version, every
 `composed` entry's `old_ref` equal to its `pin`, `drift`, `others`, `rehash` and
 `sections` empty, and no `unreachable` row): tell the owner the repo is
-current, run `$S/cleanup.sh none` from the main checkout, and stop.
+current, run `$S/cleanup.sh none <branch>` (the branch step 1 noted) from the
+main checkout, and stop.
 
 ### 4. Composed skills at their pins
 

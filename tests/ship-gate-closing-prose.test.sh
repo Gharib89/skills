@@ -16,7 +16,7 @@ isolate=$(flat < skills/ship/reference/isolate.md)
 
 # <case>¦<text read>¦<clause it must hold>¦<the clause with its meaning negated>
 rules=(
-  "the merge gate leaves the worktree before cleanup removes it¦gate¦then \`ExitWorktree\` with \`action: \"keep\"\` (skip it if [adopted](isolate.md#adopting-the-launched-worktree); \`cleanup\` owns the removal), and last \`cleanup <issue|none>\`¦then \`cleanup <issue|none>\`, and last \`ExitWorktree\` with \`action: \"keep\"\` (skip it if [adopted](isolate.md#adopting-the-launched-worktree); \`cleanup\` owns the removal)"
+  "the merge gate leaves the worktree before cleanup removes it¦gate¦then \`ExitWorktree\` with \`action: \"keep\"\` (skip it if [adopted](isolate.md#adopting-the-launched-worktree); \`cleanup\` owns the removal), and last \`cleanup <issue>\`, or \`cleanup none <head_ref>\`¦then \`cleanup <issue>\`, or \`cleanup none <head_ref>\`, and last \`ExitWorktree\` with \`action: \"keep\"\` (skip it if [adopted](isolate.md#adopting-the-launched-worktree); \`cleanup\` owns the removal)"
   "the stop table names the issue-not-found reason¦skill¦\`issue #<n> not found or unreadable\`¦\`issue #<n> found and readable\`"
   "a branch ending in the issue number is existing branch¦isolate¦a head branch on origin ending in \`-<issue>\` is \`existing branch\`¦a head branch on origin ending in \`-<issue>\` is \`existing PR\`"
 )
