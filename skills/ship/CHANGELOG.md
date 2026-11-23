@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.71.0 (2026-11-23)
+
+### Features
+
+- **ship**: Cleanup removes only the run's own worktree and branch
+  ([#1349](https://github.com/Gharib89/skills/pull/1349),
+  [`8d88edc`](https://github.com/Gharib89/skills/commit/8d88edc7965af758e3c168add14e8693eebea212))
+
+
 ## v0.70.2 (2026-11-23)
 
 ### Bug Fixes

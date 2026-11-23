@@ -196,11 +196,11 @@ clean` is clean), or `run-file gate admit human --head <head> --issue
 <issue|slug>` on the human's word "merge" over a held gate; it covers unmet
 criteria, not a red leg (`checks-unsettled`). `<slug>` is `--run`'s. Then `merge
 <pr> <issue|none> <head> [--worktree <path>] [--run <slug>]`, so the merge lands
-only the head the summary describes, `<head>` being this gate's `read-pr`
+only the head the summary describes, `<head>`, this gate's `read-pr`
 `head_sha`. Invoke it from the worktree root as
 `.claude/skills/ship/scripts/merge.sh` where Ship is installed at project scope,
 since auto mode has refused the absolute form on a clean gate; the absolute
-base-directory path is for an install with no project copy (a global install). A
+base-directory path is for an install with no project copy. A
 `none` run names its Run file's slug with `--run`. `merge.sh`'s header carries
 what it does and what each refusal protects against; a refusal merges nothing
 and stops at this gate, including after a clean-gate decision; on one, read
@@ -215,9 +215,9 @@ waits on it. Then `run-file close 9` and set the task to the returned `mirror`,
 then `ExitWorktree` with `action: "keep"` (skip it if
 [adopted](isolate.md#adopting-the-launched-worktree); `cleanup` owns the
 removal), and last
-`cleanup <issue|none>`. A nonzero exit, or a `false` in `merge`'s or
-`cleanup`'s JSON, re-runs the mechanic that owns the step; a step no mechanic
-re-does is a Ship defect for the summary.
+`cleanup <issue>`, or `cleanup none <head_ref>` (`read-pr`'s) for a
+free-text run. A nonzero exit, or a `false` in `merge`'s or `cleanup`'s JSON,
+re-runs that mechanic; a step nothing re-does is a Ship defect for the summary.
 
 **If the human says no or wants changes**, or says "file defects", read
 [merge-gate-branches.md](merge-gate-branches.md) before acting on it.
