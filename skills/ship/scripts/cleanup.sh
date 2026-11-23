@@ -18,7 +18,7 @@
 # `none` is the task-spec run, which has no issue and whose branch need not carry
 # its slug (two such runs can coexist, and an adopted host worktree keeps the
 # host's branch name). It takes the exact branch the PR was opened from, the
-# `head_ref` the `merge` mechanic read, and a missing branch is a usage error.
+# `head_ref` that `read-pr` returns, and a missing branch is a usage error.
 # No record is removed for it: nothing says which run a `none` record belongs to.
 #
 # Carried files stay in the worktree this removes. The record is the
@@ -35,6 +35,7 @@
 #     "none" when there was nothing to remove (the issue is `none`, or no record
 #     existed), "failed" when an rm failed or the record root could not be
 #     named (cksum failed)
+#   an ambiguous match answers {error} naming each match, on exit 1, removing nothing
 # exit: 0 clean · 1 a step failed or the match was ambiguous (JSON says which) · 2 usage or tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
