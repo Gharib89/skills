@@ -4,7 +4,8 @@
 # .sh selects every tests/*.test.sh whose text names its basename, and ship's
 # _lib.sh and each piece in its lib/ directory select the tests naming
 # `_lib.sh`, and a piece in a `<script>.d/` directory the tests naming
-# `<script>.sh`, since a piece is sourced, not named. A file no test names selects
+# `<script>.sh`, since a piece is sourced, not named. A deleted test selects
+# nothing: there is no file left to run. A file no test names selects
 # nothing and is no failure. The selection runs through tests/run.sh, not the
 # files directly, because the runner is what puts the host stub in front of PATH.
 #
@@ -22,7 +23,7 @@ list=''
 selected=''
 for f; do
   case $f in
-    tests/*.test.sh) selected="$selected$f"$'\n'; continue ;;
+    tests/*.test.sh) [ -f "$f" ] && selected="$selected$f"$'\n'; continue ;;
     skills/ship/scripts/lib/*.sh) name=_lib.sh ;;
     *.d/*.sh) d=${f%/*}; name=${d##*/}; name=${name%.d}.sh ;;
     *) name=${f##*/} ;;

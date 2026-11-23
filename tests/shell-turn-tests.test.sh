@@ -16,6 +16,7 @@ check "a test starts without the hook's CHECK_DEADLINE" "unset" \
 
 check "an edited test selects itself only" \
   "tests/token-limit.test.sh" "$(sel tests/token-limit.test.sh)"
+check "a deleted test selects nothing" "" "$(sel tests/no-such-file.test.sh)"
 check "a script selects the tests naming its basename" \
   "$(naming token-limit-check.sh)" "$(sel scripts/token-limit-check.sh)"
 check "an edited test beside a script is not widened by the script's name" \
