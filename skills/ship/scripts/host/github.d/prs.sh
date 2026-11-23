@@ -63,9 +63,13 @@ host_pr_for_branch() { # <branch>
       head_sha: .head.sha} end | tojson'
 }
 
-# Check runs plus classic commit statuses, one row per name, latest wins. Within
-# a name, the latest check run is the latest created, by id: a cancellation can
-# complete after its successor started, so a time rule prefers the cancelled row.
+# Check runs plus classic commit statuses, each source kept apart: GitHub's
+# required checks grade the two separately, so a name in both answers two rows
+# and needs both green; collapsing them let a newer green status hide a red
+# check run (#1343). Within a name, the latest check run is the latest created,
+# by id: a cancellation can complete after its successor started, so a time rule
+# prefers the cancelled row. The combined-status read already answers one row per
+# context, and pages like any list.
 # A `cancelled` check run whose workflow has a newer workflow run on this head was
 # superseded by its concurrency group, and its successor can have no check run
 # yet (#394): it reads `pending` until the successor's own row outranks it by id.
@@ -77,21 +81,19 @@ host_pr_checks() { # <pr> <head_sha>
       suite: .check_suite.id, cancelled: (.conclusion == "cancelled"),
       status: (if .status != "completed" then "pending"
                elif (.conclusion | IN("success","neutral","skipped")) then "success"
-               else "failure" end), at: (.completed_at // .started_at // "")}' | jq -s .) || return 1
+               else "failure" end)}' | jq -s .) || return 1
   if jq -e 'any(.[]; .cancelled)' <<<"$runs" >/dev/null; then
     wruns=$(api "$R/actions/runs?head_sha=$sha&per_page=100" --paginate \
       --jq '.workflow_runs[] | {id, workflow_id, suite: .check_suite_id, done: (.status == "completed")}' | jq -s .) || return 1
   fi
-  statuses=$(api "$R/commits/$sha/status" --jq '.statuses[] | {name: .context,
-      status: (if .state == "success" then "success" elif .state == "pending" then "pending" else "failure" end),
-      at: .updated_at}' | jq -s .) || return 1
+  statuses=$(api "$R/commits/$sha/status?per_page=100" --paginate --jq '.statuses[] | {name: .context,
+      status: (if .state == "success" then "success" elif .state == "pending" then "pending" else "failure" end)}' | jq -s .) || return 1
   jq -n --argjson a "$runs" --argjson b "$statuses" --argjson wruns "$wruns" '
     def superseded: . as $r | ($wruns | map(select(.suite == $r.suite)) | first) as $w
       | $w != null and any($wruns[]; .workflow_id == $w.workflow_id and .id > $w.id
           and ((.done | not) or (.suite as $s | any($a[]; .suite == $s and .name == $r.name))));
     ($a | map(if .cancelled and superseded then .status = "pending" else . end)
-        | group_by(.name) | map(max_by(.id))) + $b
-    | group_by(.name) | map(max_by(.at) | {name, status})'
+        | group_by(.name) | map(max_by(.id) | {name, status})) + $b'
 }
 
 # The re-runnable job behind a check: an Actions job's id is its check run's id,

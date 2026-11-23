@@ -21,6 +21,15 @@ ship_poll_read() {
   return 3
 }
 
+# ship_checks_valid <checks-json>: true when a `host_pr_checks` answer holds the
+# contract's rows, each a string name and a status of pending, success or
+# failure. A row outside it is no verdict, and a grade that counts only the
+# `failure` and `pending` rows would read it as green (#1343).
+ship_checks_valid() {
+  jq -e 'type == "array" and all(.[]; type == "object" and (.name | type) == "string"
+    and (.status | IN("pending", "success", "failure")))' <<<"$1" >/dev/null 2>&1
+}
+
 # A wait's cursor: the window's state, opaque to the caller, which hands it back
 # with `--cursor` to resume the same window. No call holds the tool past
 # SHIP_CALL_CAP seconds (540, under the harness's 600 s limit on one tool call),

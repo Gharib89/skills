@@ -70,6 +70,8 @@
 #   host_pr_for_branch <branch>          -> {number,state,head_sha} of the newest PR whose head branch is <branch>, or null
 #   host_pr_checks <pr> <head_sha>       -> [{name,status}]
 #                                           status: pending | success | failure.
+#                                           A name can answer more than one row (on GitHub a
+#                                           check run and a commit status), and each row grades.
 #   host_check_job <pr> <head_sha> <name>-> {job_id,attempt,log_tail} the latest check of that
 #                                           name on the head, as the host's re-runnable job.
 #                                           attempt: how many times the job has run on this head,
