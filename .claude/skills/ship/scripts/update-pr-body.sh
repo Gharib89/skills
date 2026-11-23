@@ -60,6 +60,9 @@
 # unchecked. A body already failing the checker for a part this write does not
 # touch is refused too: it would fail the repo's CI as it stands.
 #
+# A write whose new body equals the body the host holds makes no host write: it
+# would change nothing, and the answer below is unchanged.
+#
 # stdout: {pr, section, replaced, created, sections[]}
 #         {pr, section: null, preamble: true, replaced, created, sections[]}
 #   sections[]: the `## ` headings of the body AFTER the write, so a swallowed
@@ -111,7 +114,10 @@ else
   replaced=false; created=true
 fi
 ship_require_body_check "$new"
-answer=$(host_pr_set_body "$pr" "$new") || ship_fail "PR body update failed" "$answer"
+# A body the host already holds is not written again; the answer is the same.
+if [ "$(cat "$new")" != "$body" ]; then
+  answer=$(host_pr_set_body "$pr" "$new") || ship_fail "PR body update failed" "$answer"
+fi
 sections=$(ship_body_headings "$(cat "$new")")
 jq -n --argjson pr "$pr" --arg s "$section" --argjson p "$preamble" \
   --argjson r "$replaced" --argjson c "$created" --arg h "$sections" \

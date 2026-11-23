@@ -96,7 +96,6 @@ ship_reviewers() {
     def norm($k; $v):
       if $v == "None." or $v == "" then null
       elif $k == "cap" then ($v | tonumber? // $v)
-      elif $k == "gating" then $v == "yes"
       else $v end;
     reduce (splits("\n") | select(. != "") | split("\t")) as $p ([];
       if $p[0] == "n"
