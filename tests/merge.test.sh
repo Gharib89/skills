@@ -267,8 +267,8 @@ no_merge2 "a behind release target"
 git -C "$r2" remote set-url origin "$work/github.com/owner/nowhere.git"
 reset; prb 1 open "$L" fix/s main
 out=$(run2 7 none "$L" 2>/dev/null); rc=$?
-check_rc "a failed fetch of the target refuses the merge" 1 "$rc"
-check "the refusal names the fetch" "stale-base: cannot fetch" "$(jq -r .error <<<"$out" | cut -c1-24)"
+check_rc "a failed fetch of the target refuses the merge as a tooling error" 2 "$rc"
+check "the refusal names the fetch" "cannot fetch origin/main" "$(jq -r .error <<<"$out" | cut -c1-24)"
 no_merge2 "a failed fetch"
 git -C "$r2" remote set-url origin "$origin"
 

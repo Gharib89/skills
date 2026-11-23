@@ -32,8 +32,8 @@
 # `base-fresh` and merge authorization, and the squash would land a branch blind
 # to those commits, which leaves the summary they approved written against a
 # different tree than the one that would land. The gated SHA is compared with
-# the PR's own base ref after a fetch of that ref; a failed fetch refuses too,
-# since a cached ref is no answer. Refused as exit 1 `stale-base`.
+# the PR's own base ref after a fetch of that ref; a failed fetch is a tooling
+# error (exit 2), since a cached ref is no answer. Refused as exit 1 `stale-base`.
 #
 # Then three more, each from the merge call's own reading, since a host's merge
 # endpoint admits a token that bypasses the repo's required checks and a body edit
@@ -66,7 +66,7 @@
 #       (`{"error": "stale-base: behind <n> on <base>"}`), or a #1204 refusal
 #       (`cloud-sandbox: ...`, `no-gate-record: ...`, `checks-unsettled: ...`);
 #       none merges anything
-#       · 2 usage or tooling
+#       · 2 usage or tooling, a failed fetch of the PR's base included
 set -uo pipefail
 # No `set -e`: the steps below use explicit `|| flag=false`, and
 # `git ls-remote --exit-code` returning non-zero is a SUCCESS signal.
@@ -130,7 +130,7 @@ else
   # the published head lacks, and a failed fetch leaves only a cached ref, which
   # is no answer (#1342).
   git -C "${wt:-.}" fetch -q origin "+refs/heads/$base:refs/remotes/origin/$base" >/dev/null 2>&1 \
-    || ship_fail "stale-base: cannot fetch origin/$base, so freshness is unknown"
+    || ship_tooling "cannot fetch origin/$base, so freshness is unknown: restore access to origin and re-run"
   behind=$(git -C "${wt:-.}" rev-list --count "$gated..refs/remotes/origin/$base" 2>/dev/null) \
     || ship_tooling "cannot compare $gated with origin/$base"
   fresh=$(jq -n --argjson n "$behind" --arg b "origin/$base" '{fresh: ($n == 0), behind: $n, base: $b}')
