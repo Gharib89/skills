@@ -11,15 +11,16 @@ SHIP_OWNER=o SHIP_REPO=r
 source skills/ship/scripts/host/github.sh
 
 reqs=$(mktemp); trap 'rm -f "$reqs"' EXIT
-APP=github-actions LOGFAIL='' RUN='' LOGBODY=''
+APP=github-actions LOGFAIL='' RUN='' LOGBODY='' FAILED=1
 # The check-runs read answers what its own `--jq` would print: the latest run's
-# id and whether Actions wrote it, or nothing where no run carries the name.
+# id, whether Actions wrote it and whether it failed, or nothing where no run
+# carries the name.
 api() {
   local a p
   printf '%s\n' "$*" >> "$reqs"
   for a; do case $a in repos/*) p=$a ;; esac; done
   case $p in
-    repos/o/r/commits/abc/check-runs) [ -z "$RUN" ] || jq -cn --arg a "$APP" '{id: 55, actions: ($a == "github-actions")}' ;;
+    repos/o/r/commits/abc/check-runs) [ -z "$RUN" ] || jq -cn --arg a "$APP" --arg f "$FAILED" '{id: 55, actions: ($a == "github-actions"), failed: ($f == "1")}' ;;
     repos/o/r/actions/jobs/55) echo 2 ;;
     repos/o/r/actions/jobs/55/logs)
       [ -z "$LOGFAIL" ] || return 1
@@ -50,6 +51,13 @@ LOGBODY=''
 LOGFAIL=1
 check "a log that cannot be read is a null tail, not a failed call" '55 null' \
   "$(host_check_job 7 abc test | jq -r '[.job_id, .log_tail] | map(tostring) | join(" ")')"
+
+# A name can fail on its commit status while its check run passed (#1343): the
+# passing job is nothing to re-run.
+FAILED=''; : > "$reqs"
+check "a check run that did not fail answers nulls" '{"job_id":null,"attempt":null,"log_tail":null}' "$(host_check_job 7 abc test | jq -c .)"
+check "and reads no job" 1 "$(wc -l < "$reqs")"
+FAILED=1
 
 APP=some-ci; : > "$reqs"
 check "a check no Actions job wrote answers nulls" '{"job_id":null,"attempt":null,"log_tail":null}' "$(host_check_job 7 abc test | jq -c .)"
