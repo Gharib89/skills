@@ -65,23 +65,24 @@ delivery it reports Render's last line and the videos-folder path.
    `explainers/<slug>/storyboard.html`, opened in a browser, and that the user
    pastes its answers text back here.
 3. **Publish, once per run.** `board page` writes `board/page.html`, the page
-   with the video's title, and `page.css`, `page-core.js`, `page-sections.js`,
-   `page-summary.js` and `page-boot.js` beside it. Publish `page.html` as a new
-   artifact with those five in `files`: `capabilities`
+   with the video's title, and `page.css`, `page-core.js`, `doorbell.js`,
+   `page-sections.js`, `page-summary.js` and `page-boot.js` beside it. Publish
+   `page.html` as a new artifact with those six in `files`: `capabilities`
    `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon` `video`, a
-   one-sentence `description`. Refused: the board is local (step 2).
-   Never publish it again: every later change is a board version. Record its
-   URL with `board page <url>`, which keeps it in `manifest.json`. A Submit
-   wakes this session only while the artifact's watch shows auto-replies armed.
-   A subscription line saying there is no live subscription, or a session with
-   `T3CODE_THREAD_ID` set, is unarmed from this publish; when the line leaves
-   it in doubt, check with `ArtifactComments` `watch` and no `url`. Unarmed,
-   tell the user in the same reply to type `submitted` in this chat after each
-   Submit, and add `--unarmed` to every `board build` (step 4): the page must
-   not send, since a Submit comment with no watch wakes a separate cloud
-   session, which replies without this session's context and resolves the
-   thread. The board then carries `wake: false`, and the page only saves. A
-   watch found stopped later is unarmed from the next build on.
+   one-sentence `description`. Refused: the board is local (step 2). Never
+   publish it again: every later change is a board version. Record its URL with
+   `board page <url>`, which keeps it in `manifest.json`. A Submit wakes this
+   session only while the artifact's watch shows auto-replies armed. A
+   subscription line saying there is no live subscription, or a session with
+   `T3CODE_THREAD_ID` set, is unarmed from this publish; when the line leaves it
+   in doubt, check with `ArtifactComments` `watch` and no `url`. Unarmed, tell
+   the user in the same reply to type `submitted` in this chat after each
+   Submit, and add `--unarmed` to every `board build` (step 4). The board then
+   carries `wake: false` and the page only saves, because a comment with no
+   watch wakes a separate cloud session that replies without this session's
+   context and resolves the thread. When a later publish result's subscription
+   line shows no live subscription, the session is unarmed from the next build
+   on.
 4. **Build.** `board build` (adding `--unarmed` when step 3 found the session
    unarmed), or `board build --local` on a local board (a
    page recorded earlier would otherwise ask for uploads). For each card that

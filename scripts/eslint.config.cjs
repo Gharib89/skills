@@ -19,6 +19,15 @@ const pages = [
 const parts = {
   "skills/explainer-video/storyboard/page": ["sections", "summary"],
 };
+// A script two pages of one folder load after their core files, read the same way.
+const shared = {
+  "skills/explainer-video/storyboard/card": [
+    "skills/explainer-video/storyboard/doorbell.js",
+  ],
+  "skills/explainer-video/storyboard/page": [
+    "skills/explainer-video/storyboard/doorbell.js",
+  ],
+};
 
 // The names a classic script declares at top level, read from the file itself
 // so a function removed from a core file leaves its boot file's call undefined.
@@ -70,6 +79,7 @@ module.exports = [
     const scripts = [
       `${page}-core.js`,
       ...(parts[page] ?? []).map((part) => `${page}-${part}.js`),
+      ...(shared[page] ?? []),
     ];
     const names = (files) => Object.assign({}, ...files.map(declaredNames));
     return [

@@ -63,7 +63,7 @@ of that kind, `no` never. The page reads and writes nothing outside this table.
 | `board.sources[].summary` | string | yes | Its reader's summary. |
 | `board.sources[].excerpts` | number | yes | How many excerpts the pack holds from it. |
 | `board.kept` | array | no | An Arabic run's kept terms, in order of first use in the scenes, then any the title alone uses: the English words it says, shows and captions as written. Shown editable with the brief. |
-| `board.wake` | boolean | no | `false` when the session is unarmed (`board build --unarmed`): Submit saves the answers, sends no comment, and tells the human to type `submitted` in the chat. Absent, Submit also sends the doorbell comment. |
+| `board.wake` | boolean | no | `false` when the session is unarmed (`board build --unarmed`): Submit saves the answers, sends no comment, and tells the human to type `submitted` in the chat. Absent or `true`, Submit also sends the doorbell comment. |
 | `board.banner` | object | no | Present on the version a gate stop posted. |
 | `board.banner.text` | string | yes | Why the run stopped, then a sentence asking to revise the reopened cards when any reopened. |
 | `board.banner.gates` | array | yes | Each red gate's line as `gates.mjs` printed it. |

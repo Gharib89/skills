@@ -408,7 +408,7 @@ test("a custom scene's card shows its intent line, is marked rich, and no other 
   assert.match(read(fx.dir, "storyboard.html"), /three steps land in turn/);
 });
 
-test("build copies the page's five files into the run root, and the run folder's ignore block covers each", () => {
+test("build copies the page's six files into the run root, and the run folder's ignore block covers each", () => {
   const fx = fixture();
   prep(fx);
   ok(board(fx, "build"), "build");
@@ -416,6 +416,7 @@ test("build copies the page's five files into the run root, and the run folder's
   for (const f of [
     "page.css",
     "page-core.js",
+    "doorbell.js",
     "page-sections.js",
     "page-summary.js",
     "page-boot.js",

@@ -76,7 +76,7 @@ every board.
 | `board.kit` | string | The hash of the project's kit files; the guard compares it with the latest answered board's. |
 | `board.over` | string or null | The hash of `compositions/over.html`, null without one; the guard compares it with the latest answered board's. |
 | `board.assets` | object | Each file under `assets/` but `narration.wav` and `gsap.min.js`, by its path there, to its hash; the guard refuses one of the latest answered board's that changed or went. |
-| `board.wake` | boolean | `false` when the session is unarmed (`build --unarmed`): Submit saves the answers, sends no comment, and tells the human to type `submitted` in the chat. Absent, Submit also sends the doorbell comment. |
+| `board.wake` | boolean | `false` when the session is unarmed (`build --unarmed`): Submit saves the answers, sends no comment, and tells the human to type `submitted` in the chat. Absent or `true`, Submit also sends the doorbell comment. |
 | `board.scenes` | array | Every scene whose composition file exists, in timeline order: all of chapter 1's, and a later chapter's as it is authored. |
 | `board.scenes[].id` | string | The scene's id. |
 | `board.scenes[].chapter` | number | The chapter it belongs to, `board.chapters[].n`. |

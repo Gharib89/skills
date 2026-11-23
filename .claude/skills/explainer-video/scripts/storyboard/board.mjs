@@ -136,6 +136,7 @@ const filled = (title) => template().replace("{{TITLE}}", () => esc(title));
 const siblings = [
   "page.css",
   "page-core.js",
+  "doorbell.js",
   "page-sections.js",
   "page-summary.js",
   "page-boot.js",

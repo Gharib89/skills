@@ -149,32 +149,31 @@ is `node <skill>/scripts/style/card.mjs explainers/<slug> <name>`.
    `explainers/<slug>/style-draft/card/stylecard.html`, opened in a browser,
    and that they paste its answers text back here.
 2. **Publish, once per card.** `card page` writes `style-draft/card/page.html`
-   and `card.css`, `card-core.js` and `card-boot.js` beside it. Publish
-   `page.html` as a new artifact with those three in `files`: `capabilities`
-   `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon` `palette`, a
-   one-sentence `description`. Refused: the card is local (step 1). Never
-   publish it again: every later change is a card version. Record its URL
+   and `card.css`, `card-core.js`, `doorbell.js` and `card-boot.js` beside it.
+   Publish `page.html` as a new artifact with those four in `files`:
+   `capabilities` `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon`
+   `palette`, a one-sentence `description`. Refused: the card is local (step 1).
+   Never publish it again: every later change is a card version. Record its URL
    with `card page <url>`. Arm the watch as the storyboard's step 3 says;
    unarmed, every `card build` takes `--unarmed`, for the same reason.
-3. **Build.** `card build`, adding `--local` on a local card, and `--project`
-   when the user asked for a project profile, so the card names the store Save
-   writes (by default the user store when this copy of the skill sits under
-   `~/.claude/skills` or `~/.agents/skills`, else the project's
-   `explainers/.styles/`). Exit 1 with `card: ... is not installed` means run
-   `/explainer-video setup`; `fails contrast` or `names font` names what to fix
-   in the draft; relay any other `card:` line. On a published page it first
-   lists `card: upload <path> (<size>)` per font file, and for
-   `style-draft/card/live.js`, the page does not hold:
-   upload them as the storyboard's step 4 uploads, record each with `card
-   asset <path>=<url> ...`, and build again. A build that changes `live.js`
-   (an edit to the draft) lists it again: upload and record it again. On
-   exit 0 it prints `card <n>: 6 frame(s), <k> finding(s) ->
+3. **Build.** `card build`, adding `--local` on a local card, `--unarmed` when
+   step 2 found the session unarmed, and `--project` when the user asked for a
+   project profile, so the card names the store Save writes (by default the user
+   store when this copy of the skill sits under `~/.claude/skills` or
+   `~/.agents/skills`, else the project's `explainers/.styles/`). Exit 1 with
+   `card: ... is not installed` means run `/explainer-video setup`; `fails
+   contrast` or `names font` names what to fix in the draft; relay any other
+   `card:` line. On a published page it first lists `card: upload <path>
+   (<size>)` per font file, and for `style-draft/card/live.js`, the page does
+   not hold: upload them as the storyboard's step 4 uploads, record each with
+   `card asset <path>=<url> ...`, and build again. A build that changes
+   `live.js` (an edit to the draft) lists it again: upload and record it again.
+   On exit 0 it prints `card <n>: 6 frame(s), <k> finding(s) ->
    style-draft/card/<n>.json` and a `card <gate> <frame>: <what>` line per
-   finding; a finding blocks Save and Use once on the
-   page, so say which frame broke which rule. Published: write that file with
-   `ArtifactData` `set`, collection `cards`, doc id `<n>`, `file_path` the
-   file. Then print the page link or the local path and `Style card <n>
-   posted.`, and end the turn.
+   finding; a finding blocks Save and Use once on the page, so say which frame
+   broke which rule. Published: write that file with `ArtifactData` `set`,
+   collection `cards`, doc id `<n>`, `file_path` the file. Then print the page
+   link or the local path and `Style card <n> posted.`, and end the turn.
 4. **Read a Submit.** As the storyboard's step 5: published, `ArtifactData`
    `get` collection `answers`, doc id `card-<n>`, with `out_dir`
    `explainers/<slug>/style-draft/card/inbox`; with no such document, or

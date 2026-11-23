@@ -113,7 +113,7 @@ const template = () =>
   fs.readFileSync(path.join(skill, "storyboard", "card.html"), "utf8");
 // The page links its style and scripts by relative path: a publish carries them
 // in `files`, and a local copy needs them beside it.
-const siblings = ["card.css", "card-core.js", "card-boot.js"];
+const siblings = ["card.css", "card-core.js", "doorbell.js", "card-boot.js"];
 const copySiblings = (dir) => {
   for (const f of siblings)
     fs.copyFileSync(path.join(skill, "storyboard", f), path.join(dir, f));

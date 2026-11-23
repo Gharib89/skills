@@ -23,7 +23,7 @@
     "creative-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "252dbcd27f5c3b2fc4cf17d931b6b5a5240d2fd6c59f3e62ed2a4d2a554b5f7c"
+      "computedHash": "0281f85653ae973596fa83b16750d78722823d43cb4820d2f26d9b9b1fbad94d"
     },
     "domain-modeling": {
       "source": "mattpocock/skills",
@@ -40,7 +40,7 @@
     "explainer-video": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "63c5b6de4dc694b72945e2b60048124e0c4c095e0cc7b0eb6f4855f2acffecce"
+      "computedHash": "b0e84f0b9e5cf69eebe049a17a71b6ce55153c7e30df26f75734d76727e0b836"
     },
     "find-docs": {
       "source": "upstash/context7",
@@ -52,7 +52,7 @@
     "grill-with-artifact": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "371a514a6479b447f7a53dd53c6d2c2f8b71458bb4bbe6d4157bfb9e8c57fb52"
+      "computedHash": "beb9d0957969a09960bb5218a574218ad034cef79ecd08bc1ba541cf4b594f8e"
     },
     "grill-with-docs": {
       "source": "mattpocock/skills",

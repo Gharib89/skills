@@ -54,17 +54,16 @@ chat format runs.
    `capabilities` `{"db": {}, "user": {}, "comments": {}}`, `icon` `question`,
    and a one sentence `description` naming what is being grilled. Each session
    gets its own artifact. Refused: print step 1's line and fall back.
-4. Read the publish result's subscription line. The Submit wake reaches you
-   only while the artifact's watch shows auto-replies armed. A line saying
-   there is no live subscription, or a session with `T3CODE_THREAD_ID` set
-   (T3 Code's messages carry no human origin, so nothing arms), is unarmed from
-   the first publish. When the line leaves it in doubt, check with
-   `ArtifactComments` `watch` and no `url`. Unarmed, the page must not send:
-   a Submit comment with no watch wakes a separate cloud session, which replies
-   without this session's context and resolves the thread. So an unarmed
-   session writes `wake: false` on every round (step 3.4), and the page then
-   saves the answers and sends no comment. A watch found stopped later is
-   unarmed from the next round on.
+4. Read the publish result's subscription line. The Submit wake reaches you only
+   while the artifact's watch shows auto-replies armed. A line saying there is
+   no live subscription, or a session with `T3CODE_THREAD_ID` set (T3 Code's
+   messages carry no human origin, so nothing arms), is unarmed from the first
+   publish. When the line leaves it in doubt, check with `ArtifactComments`
+   `watch` and no `url`. Unarmed, the page only saves (`wake: false` on every
+   round, step 3.4), because a comment with no watch wakes a separate cloud
+   session that replies without this session's context and resolves the thread.
+   When a later publish result's subscription line shows no live subscription,
+   the session is unarmed from the next round on.
 5. Print the page link, and whether the wake is armed. Unarmed, say in the same
    reply that the human types `submitted` in this chat after each Submit.
 
