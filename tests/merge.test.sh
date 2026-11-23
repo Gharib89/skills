@@ -43,8 +43,8 @@ profile() { mkdir -p "$repo/docs/agents"; printf '%s\n' "$1" > "$repo/docs/agent
 no_profile() { rm -rf "$repo/docs"; }
 no_merge() { check "$1: no merge call reaches the host" 0 "$(cat "$SHIP_FAKE/calls" 2>/dev/null | grep -c '^host_pr_merge')"; check "$1: the branch stays on origin" "$A" "$(at)"; }
 reset()  { rm -rf "$SHIP_FAKE"; mkdir -p "$SHIP_FAKE"; }
-pr()     { jq -n --arg s "$2" --arg h "$3" '{number: 7, title: "fix: x", head_sha: $h,
-             head_ref: "fix/x", base_ref: "main", state: $s}' > "$SHIP_FAKE/host_pr_get.$1.json"; }
+pr()     { jq -n --arg s "$2" --arg h "$3" --arg b "${4:-main}" '{number: 7, title: "fix: x", head_sha: $h,
+             head_ref: "fix/x", base_ref: $b, state: $s}' > "$SHIP_FAKE/host_pr_get.$1.json"; }
 at()     { git -C "$origin" rev-parse -q --verify refs/heads/fix/x; }
 push_at() { g push -q -f origin "$1:refs/heads/fix/x"; }
 
@@ -165,6 +165,24 @@ out=$(runas u 7 none "$A" 2>/dev/null); rc=$?
 check_rc "a Run file with no admission record is refused" 1 "$rc"
 check "the refusal names the head and the missing record" true "$(err=$(jq -r .error <<<"$out"); grep -qF "no-gate-record: no clean gate verdict or merge word recorded for $A in " <<<"$err" && echo true)"
 no_merge "no record"
+
+# A clean admission compared the ship profile against the default branch
+# (#1338), so it admits only a PR still based there.
+mkdir -p "$rr/ship-k"; printf '## Merge admission\n- 10:00 %s clean\n' "$A" > "$rr/ship-k/run.md"
+reset; push_at "$A"; pr 1 open "$A" release
+printf '[{"name":"build","status":"success"}]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
+out=$(runas k 7 none "$A" 2>/dev/null); rc=$?
+check_rc "a clean admission on a PR retargeted off the default branch is refused" 1 "$rc"
+check "the refusal names both bases" "base-retargeted: PR 7 targets release, but the clean gate compared the ship profile against main" "$(jq -r .error <<<"$out")"
+no_merge "a retargeted base"
+reset; push_at "$A"; pr 1 open "$A"; pr 2 merged "$A"
+printf '[{"name":"build","status":"success"}]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
+runas k 7 none "$A" >/dev/null 2>&1; rc=$?
+check_rc "a clean admission on a PR based on the default branch merges" 0 "$rc"
+reset; push_at "$A"; pr 1 open "$A" release; pr 2 merged "$A" release
+printf '[{"name":"build","status":"success"}]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
+run 7 none "$A" >/dev/null 2>&1; rc=$?
+check_rc "the human's word admits a PR on another base" 0 "$rc"
 
 reset; push_at "$A"; pr 1 open "$A"
 mkdir -p "$rr/ship-w"; printf '## Merge admission\n```\n- 10:00 %s human\n```\n' "$A" > "$rr/ship-w/run.md"

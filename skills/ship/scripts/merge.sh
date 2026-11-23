@@ -42,7 +42,10 @@
 # in the Run file (`run-file gate admit`: `clean` when the clean gate read that
 # head, `human` when the human said "merge") is `no-gate-record`. The record
 # is read under the default record root only: a run started with `--scratchpad`
-# keeps its record elsewhere and a human merges it. A head whose
+# keeps its record elsewhere and a human merges it. A `clean` record on a PR
+# whose base is not the default branch is `base-retargeted`: the clean gate
+# compared the ship profile against the default branch, the base `open-pr` gives
+# every PR (#1338), so a PR retargeted since is one that gate never judged. A head whose
 # checks, read just now through the host seam, are not all settled and passing
 # within the profile's `Legs:` and `No-checks legal:` is `checks-unsettled`.
 # Each is exit 1 with nothing merged, closed or deleted. An already-merged PR
@@ -62,7 +65,8 @@
 #       head moved (`{"error": "head-moved: <current> != <gated>"}`), the base
 #       moved
 #       (`{"error": "stale-base: behind <n> on <base>"}`), or a #1204 refusal
-#       (`cloud-sandbox: ...`, `no-gate-record: ...`, `checks-unsettled: ...`);
+#       (`cloud-sandbox: ...`, `no-gate-record: ...`, `base-retargeted: ...`,
+#       `checks-unsettled: ...`);
 #       none merges anything
 #       · 2 usage or tooling
 set -uo pipefail
@@ -142,6 +146,10 @@ else
     f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ (clean|human)[ \t\r]*$/ { s = $3; if (index(s, h) == 1 || index(h, s) == 1) hit = $4 }
     END { print hit }')
   [ -n "$record" ] || ship_fail "no-gate-record: no clean gate verdict or merge word recorded for $gated in $root/ship-$run_id/run.md"
+  if [ "$record" = clean ]; then
+    dflt=$(cd "${wt:-.}" && ship_base_ref) || ship_tooling "cannot resolve origin/HEAD"
+    [ "$base" = "${dflt#origin/}" ] || ship_fail "base-retargeted: PR $pr targets $base, but the clean gate compared the ship profile against ${dflt#origin/}"
+  fi
   # A PR body or title edit re-fires `edited` workflows, and GitHub registered the new
   # run about 3.5s after the edit returned (measured, #1204), so a read straight after
   # an edit sees only the old success. The grace puts the read past that window.

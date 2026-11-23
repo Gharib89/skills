@@ -9,10 +9,13 @@
 # caller's own question, because the two that ask it answer differently: for
 # preflight an absent profile is a stop, and for `ci-wait` it is the default
 # grace standing.
+# The profile's path from the checkout root, which the clean gate also reads
+# at a commit.
+SHIP_PROFILE_REL=docs/agents/ship.md
 ship_profile_path() {
   local here
   here=$(git rev-parse --show-toplevel 2>/dev/null) || return 1
-  printf '%s/docs/agents/ship.md' "$here"
+  printf '%s/%s' "$here" "$SHIP_PROFILE_REL"
 }
 
 # ship_body_check_path: the repo's own body checker, the path from the checkout
