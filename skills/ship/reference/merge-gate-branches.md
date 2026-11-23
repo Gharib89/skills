@@ -31,6 +31,9 @@ Each refusal merges nothing and comes back to the gate:
   check is the fix loop's, not a waiver's.
 - `cloud-sandbox`: `CLAUDE_CODE_REMOTE=true`, no `Sandbox merge: yes` in the
   profile. Post the summary and stop: a human merges.
+- `base-retargeted`: a clean admission on a PR whose base is no longer the
+  default branch, which the clean gate compared the ship profile against. Post
+  the summary with the reply line and wait for "merge".
 - `stale-base`: merge the base in, re-run the local gate, save the new head's
   settled `ci-wait` answer and come back to the merge gate for `gate summary`. A
   merge with no conflict to resolve leaves the reviewer stops and Verification

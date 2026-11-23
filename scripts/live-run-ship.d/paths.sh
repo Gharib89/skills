@@ -87,16 +87,14 @@ stub_head_moved() { # <attempt>
 # outage that no fallback covers holds the merge for a human; a fallback that
 # reviewed releases it. One failed check per line on stdout.
 stub_reviewer_outage() { # <attempt>
-  local w=$tmp/outage-$1 repo head run out rc g
+  local w=$tmp/outage-$1 repo head run out rc
   repo=$w/repo run=$w/records/ship-x/run.md
-  g=(git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false)
-  mkdir -p "$repo/docs/agents" "${run%/*}" && git init -q -b main "$repo" && git init -q --bare -b main "$w/origin.git" \
+  mkdir -p "$repo/docs/agents" "${run%/*}" && git init -q -b main "$repo" \
     || unavailable "cannot build the reviewer-outage stub"
   printf '## CI\nLegs:\n  test: prove the change\n\n## Reviewers\n### primary\nTrigger: on-request\nFallback-for: None.\n### fallback\nTrigger: on-request\nFallback-for: primary\n' \
     > "$repo/docs/agents/ship.md"
   # The clean gate grades the profile committed at the head against the fetched base (#1338).
-  "${g[@]}" add -A && "${g[@]}" commit -q -m profile && "${g[@]}" remote add origin "$w/origin.git" \
-    && "${g[@]}" push -q origin main 2>/dev/null && "${g[@]}" remote set-head origin main && head=$("${g[@]}" rev-parse HEAD) \
+  head=$(source "$here/../tests/run-file-lib.sh" && run_file_commit_profile "$repo" "$w/origin.git" 2>/dev/null) \
     || unavailable "cannot build the reviewer-outage stub"
   printf '{"status":"green","head_sha":"%s","checks":[{"name":"test","status":"success"}],"legs":["test"],"missing_legs":[],"failing":[],"non_leg_failing":[],"unlisted":[],"waited_s":0}\n' "$head" > "$w/ci.json"
   gate() { # <fallback lines...>: the primary was not reviewed
