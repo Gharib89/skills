@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.70.0 (2026-11-23)
+
+### Features
+
+- **ship**: Preflight stops pruning worktrees
+  ([#1348](https://github.com/Gharib89/skills/pull/1348),
+  [`38f015d`](https://github.com/Gharib89/skills/commit/38f015de7a8b91e61d56118061eed3fc739bd110))
+
+
 ## v0.69.2 (2026-11-21)
 
 ### Bug Fixes
