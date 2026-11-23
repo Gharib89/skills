@@ -45,7 +45,7 @@ The assignee on a tracker issue, set by Ship before any work. An assigned issue 
 _Avoid_: lock, agent-working, in-progress label
 
 **Hand-back**:
-Releasing the claim after a blocked stop and marking the issue for a human: to the human queue, never the agent queue, which loops forever.
+Releasing the claim after a blocked stop and marking the issue for a human: to the human queue, never the agent queue, which loops forever. The agent label comes off and is read back gone before the claim is released, so the issue never sits unassigned and still agent-ready; a removal that fails or goes unconfirmed keeps the claim.
 _Avoid_: requeue, unclaim, release (release alone is the claim coming off; hand-back adds the human marker)
 
 **Attended run**:
