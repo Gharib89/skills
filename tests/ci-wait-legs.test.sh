@@ -234,4 +234,16 @@ out=$(ci "$two" --timeout 5 --rerun-failed); rc=$?
 check "a host that cannot read the job answers unavailable" '"unavailable" 1' "$(jq -c .rerun <<<"$out") $rc"
 check "and writes nothing then" 0 "$(count host_check_rerun)"
 
+# --- a malformed row is no verdict (#1343) -------------------------------------
+
+# A row whose status is missing or outside pending|success|failure, or whose
+# name is no string, is a tooling error at the read, never a leg graded green.
+for bad in '{"name":"test"}' '{"name":"test","status":"neutral"}' '{"status":"success"}'; do
+  reset; ans 1 "$(rows "$(row lint success)" "$bad")"
+  out=$(ci "$two" --timeout 5 --rerun-failed); rc=$?
+  check_rc "a malformed row $bad is a tooling error" 2 "$rc"
+  check "and answers an error, not a status" 'true null' "$(jq -c '[has("error"), .status] | map(tojson) | join(" ")' -r <<<"$out")"
+  check "and re-runs nothing" 0 "$(count host_check_rerun)"
+done
+
 finish
