@@ -1,8 +1,9 @@
 # Phase 9: the merge gate's branches
 
 Read this file only on the branch you hit at the merge gate: a `merge`
-refusal, a human asking for changes, a human saying "file defects", or an unmet
-criterion. The gate itself is [merge-gate.md](merge-gate.md).
+refusal, a human asking for changes, a human saying "file defects", an unmet
+criterion, or a `ship profile:` hold. The gate itself is
+[merge-gate.md](merge-gate.md).
 
 ## Contents
 
@@ -10,6 +11,7 @@ criterion. The gate itself is [merge-gate.md](merge-gate.md).
 - [Changes asked at the gate](#changes-asked-at-the-gate)
 - [Filing a Ship defect](#filing-a-ship-defect)
 - [Unmet criteria](#unmet-criteria)
+- [A profile change](#a-profile-change)
 
 ## Merge refusals
 
@@ -80,3 +82,13 @@ and waits. A run whose Run file has no `## Criteria` section (a free-text run,
 an `init` given no `--criteria`, or criteria text yielding none) gives
 `gate clean` only its `Criterion <n>:` lines to read: with an unmet criterion
 listed, wait the same way, whatever it answers.
+
+## A profile change
+
+A PR that changes the ship profile never merges on a clean gate, since it
+changes what the gate requires. The gate grades the profile committed at the
+head, and holds, naming `ship profile:`, when that copy differs from the base
+branch's (fetched by the gate itself), when the base has none, when the
+checkout's copy differs from the head's, or when any of those reads fails.
+`Merge: on-clean-gate` then posts the summary with the reply line and waits
+for the human's "merge", who reads the profile diff first.

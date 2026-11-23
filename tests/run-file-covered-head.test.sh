@@ -16,57 +16,74 @@ repo=$tmp/repo
 f=$tmp/records/ship-9/run.md
 ci=$tmp/ci.json
 mkdir -p "$tmp/records/ship-9"
-git init -q -b main "$repo"
+origin=$tmp/origin.git
 g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$@"; }
 put() { mkdir -p "$(dirname "$repo/$1")" && printf '%s\n' "$2" > "$repo/$1" && g add "$1"; }
 
 # main: c0. PR branch: the stamped commit. main moves on a file the PR never
 # touches, then on the PR's own file, so one merge is clean and one conflicts.
-put docs/agents/ship.md placeholder; put skills/ship/SKILL.md one; put skills/index.md index; put skills/ship/reference/verify.md v; put feat.txt base
-g commit -q -m c0
-g checkout -q -b pr
-put feat.txt pr; g commit -q -m 'pr work'
-stamp=$(g rev-parse HEAD)
-g checkout -q main
-put other.txt main; g commit -q -m 'base moves'
-g update-ref refs/remotes/origin/main HEAD
-g symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
-g checkout -q pr
-g merge -q --no-edit main
-clean_merge=$(g rev-parse HEAD)
-g checkout -q main
-put feat.txt main-side; g commit -q -m 'base edits the pr file'
-g update-ref refs/remotes/origin/main HEAD
-g checkout -q pr
-g merge -q --no-edit main >/dev/null 2>&1
-put feat.txt resolved; g commit -q --no-edit
-conflict_merge=$(g rev-parse HEAD)
-# Own commits after the stamp: one outside the Verification's Paths, one inside.
-g checkout -q -b own "$stamp"
-put notes.txt fix; g commit -q -m 'post-loop fix'
-outside=$(g rev-parse HEAD)
-put skills/ship/SKILL.md two; g commit -q -m 'skill prose'
-inside=$(g rev-parse HEAD)
-# A file its glob matches only at the head (added), or only at the stamp (deleted).
-g checkout -q -b added "$stamp"
-put skills/added.md new; g commit -q -m 'add a file'
-added=$(g rev-parse HEAD)
-g checkout -q -b removed "$stamp"
-g rm -q skills/index.md; g commit -q -m 'remove a file'
-removed=$(g rev-parse HEAD)
-# A clean merge of a branch that is not the base is no base merge.
-g checkout -q -b side "$stamp"
-put side.txt side; g commit -q -m 'side work'
-g checkout -q -b offbase "$stamp"
-g merge -q --no-edit side
-offbase=$(g rev-parse HEAD)
+# The gate grades the profile committed at the head against the fetched base
+# and the checkout (#1338), so a profile change rebuilds the whole history with
+# that profile in c0 and pushes main to a bare origin; each commit name below is
+# then reassigned, and `history` re-stamps the case in flight (<f>, <ci>) to the new ones.
+shas=(stamp clean_merge conflict_merge outside inside added removed offbase)
+history() { # history: <$tmp/ship.md> in c0
+  local v i old=()
+  for v in "${shas[@]}"; do old+=("${!v:-}"); done
+  rm -rf "$repo" "$origin"
+  git init -q -b main "$repo"
+  git init -q --bare -b main "$origin"
+  g remote add origin "$origin"
+  mkdir -p "$repo/docs/agents"; cp "$tmp/ship.md" "$repo/docs/agents/ship.md"; g add docs/agents/ship.md
+  put skills/ship/SKILL.md one; put skills/index.md index; put skills/ship/reference/verify.md v; put feat.txt base
+  g commit -q -m c0
+  g checkout -q -b pr
+  put feat.txt pr; g commit -q -m 'pr work'
+  stamp=$(g rev-parse HEAD)
+  g checkout -q main
+  put other.txt main; g commit -q -m 'base moves'
+  g checkout -q pr
+  g merge -q --no-edit main
+  clean_merge=$(g rev-parse HEAD)
+  g checkout -q main
+  put feat.txt main-side; g commit -q -m 'base edits the pr file'
+  g checkout -q pr
+  g merge -q --no-edit main >/dev/null 2>&1
+  put feat.txt resolved; g commit -q --no-edit
+  conflict_merge=$(g rev-parse HEAD)
+  # Own commits after the stamp: one outside the Verification's Paths, one inside.
+  g checkout -q -b own "$stamp"
+  put notes.txt fix; g commit -q -m 'post-loop fix'
+  outside=$(g rev-parse HEAD)
+  put skills/ship/SKILL.md two; g commit -q -m 'skill prose'
+  inside=$(g rev-parse HEAD)
+  # A file its glob matches only at the head (added), or only at the stamp (deleted).
+  g checkout -q -b added "$stamp"
+  put skills/added.md new; g commit -q -m 'add a file'
+  added=$(g rev-parse HEAD)
+  g checkout -q -b removed "$stamp"
+  g rm -q skills/index.md; g commit -q -m 'remove a file'
+  removed=$(g rev-parse HEAD)
+  # A clean merge of a branch that is not the base is no base merge.
+  g checkout -q -b side "$stamp"
+  put side.txt side; g commit -q -m 'side work'
+  g checkout -q -b offbase "$stamp"
+  g merge -q --no-edit side
+  offbase=$(g rev-parse HEAD)
+  g push -q origin main
+  g remote set-head origin main
+  for i in "${!shas[@]}"; do
+    [ -z "${old[i]}" ] || [ ! -f "$f" ] || sed -i "s/${old[i]}/${!shas[i]}/g" "$f" "$ci"
+  done
+}
 
 profile() { # profile [<Paths: line>]
   {
     printf '## CI\nLegs:\n  test: prove the change\n\n## Reviewers\n### primary\nTrigger: on-request\nFallback-for: None.\n\n## Verification\n### live\n'
     [ -z "${1:-}" ] || printf '%s\n' "$1"
     printf 'Also proven by CI: None.\n'
-  } > "$repo/docs/agents/ship.md"
+  } > "$tmp/ship.md"
+  history
 }
 run() { # run <head> <reviewer stop> <verification result>
   printf '# ship run\n## Verification results\n- live: %s\n## Local gate\n- 10:00 %s pass {"tests":"pass","secrets":"pass"}\n## Review evidence\nRound: primary 1: dispositioned\nStop: primary: %s\n' \
@@ -109,7 +126,7 @@ pastcap_run() { # pastcap_run <head> <past-cap stamp>
   run "$1" "cap" "pass at $1"
   printf 'Round: primary 2: fixes pushed\nPast-cap: primary: tree unchanged at %s: local review %s: no findings\n' "$2" "$tmp/local-report.md" >> "$f"
 }
-sed 's/^Fallback-for: None.$/Cap: 2\n&/' "$repo/docs/agents/ship.md" > "$tmp/capped.md" && cp "$tmp/capped.md" "$repo/docs/agents/ship.md"
+sed -i 's/^Fallback-for: None.$/Cap: 2\n&/' "$tmp/ship.md"; history
 pastcap_run "$conflict_merge" "$stamp"
 holds 'a capped reviewer after a conflict merge names the range to read' "$conflict_merge" "reviewer primary: past cap 2, local review read $stamp, head moved: read $stamp..$conflict_merge"
 pastcap_run "$clean_merge" "$stamp"
@@ -196,6 +213,7 @@ g branch origin/main "$stamp" 2>/dev/null
 passes 'a walk beside a local branch named origin/main' "$clean_merge"
 # A walk that cannot read the base is no verdict.
 g symbolic-ref --delete refs/remotes/origin/HEAD
+git -C "$origin" symbolic-ref HEAD refs/heads/gone # so the gate's own `set-head -a` finds none either
 check_rc 'a walk with no origin/HEAD is unreadable' 2 "$(gate "$clean_merge" >/dev/null; echo $?)"
 check 'the unreadable walk names what it needs' 1 "$(grep -cF "cannot read whether $stamp covers head $clean_merge: a read the walk needs failed (origin/HEAD, a commit's parents, the ancestry check, git merge-tree --write-tree)" "$tmp/err")"
 finish

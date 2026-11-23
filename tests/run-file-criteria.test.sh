@@ -7,12 +7,16 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-m=${RUN_FILE_MECHANIC:-$PWD/skills/ship/scripts/run-file.sh}
+source tests/run-file-lib.sh
+# The gate cases name a label head no commit has: m runs the real mechanic at a real one.
+export RUN_FILE_REAL=${RUN_FILE_MECHANIC:-$PWD/skills/ship/scripts/run-file.sh}
+m=$PWD/tests/run-file-at-head.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 repo="$tmp/repo"
 mkdir -p "$repo/docs/agents" "$tmp/records/ship-crit"
 git init -q "$repo"
+export RUN_FILE_HEAD_REPO=$repo RUN_FILE_HEAD_ORIGIN=$tmp/origin.git
 head=abcdef0123456789
 f="$tmp/records/ship-crit/run.md"
 ci="$tmp/ci.json"

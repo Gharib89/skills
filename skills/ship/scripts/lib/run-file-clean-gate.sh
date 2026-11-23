@@ -25,9 +25,16 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     >/dev/null 2>&1 <<<"$ci" || ship_tooling "CI answer is not a valid ci-wait object"
   profile_path=$(ship_profile_path) || ship_tooling "cannot locate ship profile"
   [ -f "$profile_path" ] && [ -r "$profile_path" ] || ship_tooling "cannot read ship profile at $profile_path"
+  # A PR that changes the profile changes what this gate requires, so the gate
+  # grades the copy committed at the head and holds on any difference from the
+  # freshly fetched base or the checkout, or on a read that fails (#1338).
+  local profile_text profile_held
+  profile_held=$(profile_change "$profile_path") || ship_tooling "cannot compare the ship profile"
+  profile_text=$(git show "$head:docs/agents/ship.md" 2>/dev/null) || profile_text=$(cat "$profile_path") \
+    || ship_tooling "cannot read ship profile at $profile_path"
   profile=$(awk "$SHIP_AWK_FENCE"'
     { if (!ship_fence($0)) print }
-    END { if (_fenced) exit 1 }' "$profile_path") || ship_tooling "cannot read profile evidence at $profile_path"
+    END { if (_fenced) exit 1 }' <<<"$profile_text") || ship_tooling "cannot read profile evidence at $profile_path"
   # A legal empty list also admits a path-filtered leg with no check on head (#589).
   local names legs no_checks=false
   ship_no_checks_legal "$profile"
@@ -97,7 +104,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   answer=$(jq -n --arg text "$lines" --arg head "$head" --arg rhead "$rhead" --arg verdict "$rverdict" \
     --argjson gates "$rgates" --argjson ci "$ci" --argjson legs "$legs" --argjson reviewers "$reviewers" \
     --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" --argjson cover "$cover" --argjson scope "$scope" --argjson descends "$descends" \
-    --arg round_re "$round_re" --arg words "$result_re" '
+    --argjson profile_held "$profile_held" --arg round_re "$round_re" --arg words "$result_re" '
     def samehead($a; $b): $a != "" and $b != "" and (($a | startswith($b)) or ($b | startswith($a)));
     def named($leg): .name == $leg or (.name | startswith($leg + " ("));
     ($text | split("\n")) as $lines
@@ -162,7 +169,8 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
             and ($line | ltrimstr("- " + $name + ": ") | test("^(pending|" + $words + ")(: |$)"))
           then .rows += [$line | ltrimstr("- " + $name + ": ")]
           else . end) | .rows | last // "missing") | split(": ")[0];
-      [if $rhead == "" then "local gate: no record"
+      [$profile_held[],
+       if $rhead == "" then "local gate: no record"
        elif samehead($rhead; $head) | not then "local gate: recorded head differs" else empty end,
        if $verdict != "" and $verdict != "pass" then "local gate: " + $verdict else empty end,
        if $gates == null or $gates == {} then "local gate: missing gate results"
