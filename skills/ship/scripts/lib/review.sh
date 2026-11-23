@@ -93,12 +93,12 @@ ship_copilot_trigger_reason() { # <name> <trigger> <review_on_push>
   esac
 }
 
-# ship_stale_base_reason <base-fresh-json>: the refusal `merge` answers with when
-# the branch has not seen every commit on its base, or nothing when it has. The
-# base can move between phase 5's `base-fresh` and the human's "merge" (PR #131
-# merged 46 seconds after its base moved, landing a body that no longer matched
-# the template), so the merge asks the same question again and reads the answer
-# here.
+# ship_stale_base_reason <freshness-json>: the refusal `merge` answers with when
+# the gated head has not seen every commit on its PR's base, or nothing when it
+# has. The base can move between phase 5's `base-fresh` and the human's "merge"
+# (PR #131 merged 46 seconds after its base moved, landing a body that no longer
+# matched the template), so the merge asks again, comparing the gated SHA with
+# the freshly fetched base, and builds `{fresh, behind, base}` for this to read.
 #
 # Anything that is not a `fresh: true` verdict refuses, an unparseable one
 # included: a check that could not ask its question must not answer "fresh".
