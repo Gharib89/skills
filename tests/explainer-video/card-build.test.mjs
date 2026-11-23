@@ -87,6 +87,16 @@ test("build gates five sample frames with check and the probe, each mid-way thro
     )[1],
   );
   assert.deepEqual(embedded, c);
+  // Every script and stylesheet the page links by relative path sits beside it.
+  const linked = [
+    ...local.matchAll(/<(?:script src|link rel="stylesheet" href)="([^":]+)"/g),
+  ].map((m) => m[1]);
+  assert.ok(linked.includes("doorbell.js"), "the page loads doorbell.js");
+  for (const f of linked)
+    assert.ok(
+      fs.existsSync(path.join(fx.dir, "style-draft", "card", f)),
+      `${f} is copied beside the page`,
+    );
   for (const f of c.fonts)
     assert.ok(
       fs.existsSync(path.join(fx.dir, "style-draft", "card", f.url)),
