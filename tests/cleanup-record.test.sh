@@ -57,7 +57,7 @@ check_rc "and exits ok" 0 "$rc"
 # `none` is the task-spec run's suffix, not an issue: its record is left to the
 # run that names it.
 ( cd "$repo" && bash "$r" init none >/dev/null )
-out=$(cd "$repo" && bash "$c" none 2>/dev/null)
+out=$(cd "$repo" && bash "$c" none fix/absent-none 2>/dev/null)
 check "none answers none" none "$(jq -r .record <<<"$out")"
 check "none leaves its record" yes "$([ -f "$root/ship-none/run.md" ] && echo yes || echo no)"
 
@@ -99,10 +99,10 @@ g branch my-notes-43
 out=$(cd "$repo" && bash "$c" 43 2>/dev/null)
 check "a hand-made branch with no <type>/ is not named" "null" "$(jq -r .branch <<<"$out")"
 check "and stays" "  my-notes-43" "$(g branch --list my-notes-43)"
-# `none` keeps its record, but its branch is torn down like any other.
+# `none` keeps its record, but the branch it is given is torn down like any other.
 g branch fix/task-none
-out=$(cd "$repo" && bash "$c" none 2>/dev/null)
-check "the task-spec run's branch is found the same way" "fix/task-none true" \
+out=$(cd "$repo" && bash "$c" none fix/task-none 2>/dev/null)
+check "the task-spec run's branch is found by name" "fix/task-none true" \
   "$(jq -r '[.branch, .branch_deleted] | join(" ")' <<<"$out")"
 check "and is gone" "" "$(g branch --list fix/task-none)"
 # The branch it finds is still refused while the main checkout has it out.

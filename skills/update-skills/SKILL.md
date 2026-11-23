@@ -73,7 +73,8 @@ fields drive every later step; the header comment in `plan.sh` defines each one.
 Nothing moved (every `source_skills` entry at its old version, every
 `composed` entry's `old_ref` equal to its `pin`, `drift`, `others`, `rehash` and
 `sections` empty, and no `unreachable` row): tell the owner the repo is
-current, run `$S/cleanup.sh none` from the main checkout, and stop.
+current, run `$S/cleanup.sh none <branch>` (the branch step 1 noted) from the
+main checkout, and stop.
 
 ### 4. Composed skills at their pins
 

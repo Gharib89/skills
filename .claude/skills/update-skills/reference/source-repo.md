@@ -37,7 +37,8 @@ refresh and run `full` again. In step 8
 the PR body opens with `Closes #<n>`, the drift issue step 7 filed or found, or
 `Refs #<n>` with a row held back, and `## Needs attention` lists each `held
 back` line. With every row held back, open no PR: hand the owner those lines and
-run `$S/cleanup.sh none` from the main checkout.
+run `$S/cleanup.sh none <branch>` (the branch step 1 noted) from the main
+checkout.
 
 The title is scoped to the composing skill, so the release run records the move
 in its CHANGELOG, or for `others` rows alone to the skill whose printed line
