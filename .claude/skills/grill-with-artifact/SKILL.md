@@ -62,8 +62,9 @@ chat format runs.
    `watch` and no `url`. Unarmed, the page only saves (`wake: false` on every
    round, step 3.4), because a comment with no watch wakes a separate cloud
    session that replies without this session's context and resolves the thread.
-   When a later publish result's subscription line shows no live subscription,
-   the session is unarmed from the next round on.
+   The page is published once, so an armed session checks again with
+   `ArtifactComments` `watch` and no `url` before writing each later round: once
+   it shows no armed watch, the session is unarmed from that round on.
 5. Print the page link, and whether the wake is armed. Unarmed, say in the same
    reply that the human types `submitted` in this chat after each Submit.
 

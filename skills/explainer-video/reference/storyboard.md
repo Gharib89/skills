@@ -80,9 +80,10 @@ delivery it reports Render's last line and the videos-folder path.
    Submit, and add `--unarmed` to every `board build` (step 4). The board then
    carries `wake: false` and the page only saves, because a comment with no
    watch wakes a separate cloud session that replies without this session's
-   context and resolves the thread. When a later publish result's subscription
-   line shows no live subscription, the session is unarmed from the next build
-   on.
+   context and resolves the thread. The page is published once, so an armed
+   session checks again with `ArtifactComments` `watch` and no `url` before each
+   later `board build`: once it shows no armed watch, the session is unarmed
+   from that build on.
 4. **Build.** `board build` (adding `--unarmed` when step 3 found the session
    unarmed), or `board build --local` on a local board (a
    page recorded earlier would otherwise ask for uploads). For each card that

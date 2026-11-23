@@ -154,8 +154,9 @@ is `node <skill>/scripts/style/card.mjs explainers/<slug> <name>`.
    `capabilities` `{"db": {}, "user": {}, "comments": {}, "assets": {}}`, `icon`
    `palette`, a one-sentence `description`. Refused: the card is local (step 1).
    Never publish it again: every later change is a card version. Record its URL
-   with `card page <url>`. Arm the watch as the storyboard's step 3 says;
-   unarmed, every `card build` takes `--unarmed`, for the same reason.
+   with `card page <url>`. Arm the watch as the storyboard's step 3 says,
+   checking it again before each later `card build`; unarmed, every `card build`
+   takes `--unarmed`, for the same reason.
 3. **Build.** `card build`, adding `--local` on a local card, `--unarmed` when
    step 2 found the session unarmed, and `--project` when the user asked for a
    project profile, so the card names the store Save writes (by default the user
