@@ -31,7 +31,9 @@
 # proven fresh against its base: the base can move between phase 5's
 # `base-fresh` and merge authorization, and the squash would land a branch blind
 # to those commits, which leaves the summary they approved written against a
-# different tree than the one that would land. Refused as exit 1 `stale-base`.
+# different tree than the one that would land. The gated SHA is compared with
+# the PR's own base ref after a fetch of that ref; a failed fetch refuses too,
+# since a cached ref is no answer. Refused as exit 1 `stale-base`.
 #
 # Then three more, each from the merge call's own reading, since a host's merge
 # endpoint admits a token that bypasses the repo's required checks and a body edit
@@ -123,8 +125,15 @@ else
   # come back to the merge gate; unattended, hand back. A PR that is already
   # merged stops short of it: its branch is behind a base its own squash
   # advanced, and the run still owes the cleanup steps below.
-  fresh=$(cd "${wt:-.}" && "$SHIP_SCRIPTS/base-fresh.sh" 2>/dev/null); rc=$?
-  [ "$rc" -lt 2 ] || ship_tooling "cannot read base freshness: base-fresh exited $rc"
+  # The gated SHA is what lands, so it is the one compared, against the PR's own
+  # target freshly fetched here: the checkout's HEAD may carry unpushed commits
+  # the published head lacks, and a failed fetch leaves only a cached ref, which
+  # is no answer (#1342).
+  git -C "${wt:-.}" fetch -q origin "+refs/heads/$base:refs/remotes/origin/$base" >/dev/null 2>&1 \
+    || ship_fail "stale-base: cannot fetch origin/$base, so freshness is unknown"
+  behind=$(git -C "${wt:-.}" rev-list --count "$gated..refs/remotes/origin/$base" 2>/dev/null) \
+    || ship_tooling "cannot compare $gated with origin/$base"
+  fresh=$(jq -n --argjson n "$behind" --arg b "origin/$base" '{fresh: ($n == 0), behind: $n, base: $b}')
   stale=$(ship_stale_base_reason "$fresh")
   [ -z "$stale" ] || ship_fail "$stale"
   # The #1204 refusals, after every cheaper one and just before the host call.
