@@ -267,16 +267,7 @@ async function boot() {
     while (enc.encode(s + tail).length > 4096) s = s.slice(0, -64);
     return s + tail;
   }
-  async function wake(anchor) {
-    if (!comments || !anchor) return false;
-    try {
-      if ((await comments.canSendToClaude()) !== "available") return false;
-      await comments.sendToClaude({ anchor, text: capped(answersText(S)) });
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+  const wake = (anchor) => ring(S, comments, anchor, capped(answersText(S)));
   const anchorOf = (el) =>
     comments ? comments.anchorFor(el).catch(() => null) : Promise.resolve(null);
   async function submit(btn) {
@@ -285,7 +276,9 @@ async function boot() {
     const doc = answersDoc(S);
     S.status = "sending";
     render();
-    const anchor = await anchorOf(document.getElementById(btn.id) || btn);
+    const anchor = armed(S)
+      ? await anchorOf(document.getElementById(btn.id) || btn)
+      : null;
     const saved = await db
       .doc("answers/card-" + doc.version)
       .set(doc)

@@ -49,7 +49,9 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
    `ArtifactComments` tools. With any of them missing, or when the person says
    the page cannot reach its database, the board is **local** for the rest of
    the run.
-3. **Build.** `board build`. It renders the stills and the direction frames,
+3. **Build.** `board build`, adding `--unarmed` once step 4 has found the
+   session unarmed (from the first build when `T3CODE_THREAD_ID` is set). It
+   renders the stills and the direction frames,
    then prints `board: <n> -> board/storyboard.html (...)` and `board: files
    board/files.json`. Exit 1 names what to fix first. `board: <ids> changed,
    but board <k>'s comments named only <ids>: re-author only those scenes`
@@ -66,13 +68,21 @@ documents. Each version of the storyboard is a **board**, numbered from 1.
    new files), and no `capabilities` or `icon`, which keeps the URL. A Submit
    wakes this session only while the artifact's watch shows auto-replies armed.
    A subscription line saying there is no live subscription, or a session with
-   `T3CODE_THREAD_ID` set, is unarmed from the first board; when the line
-   leaves it in doubt, check with `ArtifactComments` `watch` and no `url`.
-   Unarmed, tell the person with the first board's link to type `submitted` in
-   this chat after each Submit. A refused publish makes the
-   board local. Local: say the board is `<run>/board/storyboard.html`, opened
-   in a browser, and that its Submit shows an answers text to paste back here.
-   Then print the link or the path and `Board <n> posted.`, and end the turn.
+   `T3CODE_THREAD_ID` set, is unarmed from the first board; when the line leaves
+   it in doubt, check with `ArtifactComments` `watch` and no `url`. Unarmed, the
+   page only saves (`wake: false`, written by `board build --unarmed`), because
+   a comment with no watch wakes a separate cloud session that replies without
+   this session's context and resolves the thread. So every board built unarmed
+   takes `--unarmed`. If this publish shows the session unarmed and this board
+   was built without the flag, run `board build --unarmed` now (it writes the
+   next board) and publish that one the same way before giving any link. Then,
+   with the link, tell the person to type `submitted` in this chat after each
+   Submit. When a later publish result's subscription line shows no live
+   subscription, the session is unarmed from the next build on. A refused
+   publish makes the board local. Local: say the board is
+   `<run>/board/storyboard.html`, opened in a browser, and that its Submit shows
+   an answers text to paste back here. Then print the link or the path and
+   `Board <n> posted.`, and end the turn.
 5. **Read a Submit.** The Submit comment, a typed `submitted` or a pasted
    answers text starts the next turn. Published: `ArtifactData` `get` with
    the `url` the first publish returned, collection `answers`, doc id

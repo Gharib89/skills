@@ -70,6 +70,7 @@ token or type role. The page reads and writes nothing outside this table.
 | `card.findings` | array | yes | Each layout or contrast finding as `<gate> <frame>: <what>`; empty when every frame passed. |
 | `card.scope` | `"user"` or `"project"` | yes | The store Save writes to. |
 | `card.taken` | array | yes | The profile names that store holds already. |
+| `card.wake` | boolean | no | `false` when the session is unarmed (`card build --unarmed`): Submit saves the answers, sends no comment, and tells the human to type `submitted` in the chat. Absent or `true`, Submit also sends the doorbell comment. |
 | `answers.version` | number | yes | The version answered. |
 | `answers.submittedAt` | string | yes | ISO 8601 time of the Submit. |
 | `answers.choice` | `"save"`, `"once"` or `"revise"` | yes | Save to the store, use for this video only, or revise the draft. |

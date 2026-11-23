@@ -87,6 +87,16 @@ test("build gates five sample frames with check and the probe, each mid-way thro
     )[1],
   );
   assert.deepEqual(embedded, c);
+  // Every script and stylesheet the page links by relative path sits beside it.
+  const linked = [
+    ...local.matchAll(/<(?:script src|link rel="stylesheet" href)="([^":]+)"/g),
+  ].map((m) => m[1]);
+  assert.ok(linked.includes("doorbell.js"), "the page loads doorbell.js");
+  for (const f of linked)
+    assert.ok(
+      fs.existsSync(path.join(fx.dir, "style-draft", "card", f)),
+      `${f} is copied beside the page`,
+    );
   for (const f of c.fonts)
     assert.ok(
       fs.existsSync(path.join(fx.dir, "style-draft", "card", f.url)),
@@ -171,4 +181,15 @@ test("a draft under its contrast floor, or naming a font setup does not install,
   const o = card(odd, ["build"]);
   assert.equal(o.code, 1);
   assert.match(o.err, /names font comic-sans, which no setup row installs/);
+});
+
+test("build --unarmed writes wake: false on the card, and a plain build leaves it out", () => {
+  const fx = fixture();
+  built(fx, ["build", "--unarmed"]);
+  const c = latestCard(fx);
+  assert.equal(c.wake, false);
+  assert.deepEqual(shapeProblems(c, "card"), []);
+  const plain = fixture();
+  built(plain);
+  assert.equal("wake" in latestCard(plain), false);
 });
