@@ -54,6 +54,18 @@ its test, validation and error handling kept, and a fix lands once in the shared
 code, not per caller. Grep the changed symbol across the tree before the first
 edit, because a caller left unchecked breaks where the diff does not show it.
 
+**Existing logic is searched for before it is written, and a second copy is
+consolidated in the same diff.** Before writing a predicate, a pattern, a guard,
+a parser or a helper, search the tree for one that does the same job, by what it
+does and not only by its name. Where one exists, the change uses it, or moves it
+to the place both callers read, and the PR body names the consolidation under
+`## Special things to note`. A second copy left in the diff is a finding,
+because agents wrote most of this codebase and its existing structure is not a
+design to preserve. On #1290 a converter script re-typed a shape predicate and a
+slash guard its skill's shared library already held, and on #1308 a script wrote
+a second worktree branch-shape regex beside its own, though the issue said to
+reuse it; each surfaced a round late, in the host review.
+
 **A dependency the change adds says why the standard library and the repo's
 installed dependencies do not serve.** Prefer what the language ships or the
 repo already installs; a new dependency names, under the PR body's
