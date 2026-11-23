@@ -77,8 +77,9 @@ g worktree add -q "$tmp/wt-c" -b feat/c-78
 g branch fix/bare-78
 out=$(cd "$repo" && bash "$c" 78 2>/dev/null); rc=$?
 check_rc "a worktree and a bare branch exit 1" 1 "$rc"
-check "the refusal names the worktree's branch" yes "$(jq -r .error <<<"$out" | grep -q feat/c-78 && echo yes || echo no)"
-check "and the bare branch" yes "$(jq -r .error <<<"$out" | grep -q fix/bare-78 && echo yes || echo no)"
+err=$(jq -r .error <<<"$out")
+check "the refusal names the worktree's branch" yes "$(grep -q feat/c-78 <<<"$err" && echo yes || echo no)"
+check "and the bare branch" yes "$(grep -q fix/bare-78 <<<"$err" && echo yes || echo no)"
 check "the worktree stays" yes "$(exists "$tmp/wt-c")"
 check "the bare branch stays" "  fix/bare-78" "$(g branch --list fix/bare-78)"
 
