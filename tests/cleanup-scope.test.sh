@@ -47,7 +47,7 @@ check "the other free-text worktree still stays" yes "$(exists "$tmp/wt-two")"
 # No branch for a free-text run is a usage error that removes nothing.
 out=$(cd "$repo" && bash "$c" none 2>/dev/null); rc=$?
 check_rc "free-text cleanup without a branch exits 2" 2 "$rc"
-check "and answers the usage line" yes "$(jq -r '.error | startswith("usage: cleanup")' <<<"$out" 2>/dev/null)"
+check "and answers the usage line" true "$(jq -r '.error | startswith("usage: cleanup")' <<<"$out" 2>/dev/null)"
 check "and removes nothing" yes "$(exists "$tmp/wt-two")"
 check "and keeps the branch" "+ fix/two-none" "$(g branch --list fix/two-none | sed 's/^ *//')"
 

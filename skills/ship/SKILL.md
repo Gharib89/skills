@@ -154,7 +154,7 @@ line recorded where one applies), `close 7` took each reviewer's
 [merge-gate.md](reference/merge-gate.md).
 **Done when:** attended, `merge` and every `update-issue-body` exited 0 with no
 `false`, then `close 9`, then `ExitWorktree` unless adopted, then `cleanup
-<issue|none>` exited 0 with no `false`; unattended, `comment-pr` posted.
+<issue>` (`none <branch>` for a free-text run) exited 0 with no `false`; unattended, `comment-pr` posted.
 
 ## The stops
 
