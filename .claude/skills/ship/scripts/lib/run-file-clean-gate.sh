@@ -28,10 +28,11 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   # A PR that changes the profile changes what this gate requires, so the gate
   # grades the copy committed at the head and holds on any difference from the
   # freshly fetched base or the checkout, or on a read that fails (#1338).
-  local profile_text profile_held
-  profile_held=$(profile_change "$profile_path") || ship_tooling "cannot compare the ship profile"
-  profile_text=$(git show "$head:docs/agents/ship.md" 2>/dev/null) || profile_text=$(cat "$profile_path") \
-    || ship_tooling "cannot read ship profile at $profile_path"
+  # An unreadable head is already a hold, so the checkout's copy grades it.
+  local profile_text profile_held profile_blob
+  profile_change "$profile_path" || ship_tooling "cannot compare the ship profile"
+  if [ -n "$profile_blob" ]; then profile_text=$(git cat-file blob "$profile_blob")
+  else profile_text=$(cat "$profile_path"); fi || ship_tooling "cannot read ship profile at $profile_path"
   profile=$(awk "$SHIP_AWK_FENCE"'
     { if (!ship_fence($0)) print }
     END { if (_fenced) exit 1 }' <<<"$profile_text") || ship_tooling "cannot read profile evidence at $profile_path"

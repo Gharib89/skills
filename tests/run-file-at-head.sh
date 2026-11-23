@@ -11,10 +11,11 @@ set -uo pipefail
 # shellcheck source=run-file-lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/run-file-lib.sh"
 label=abcdef0123456789
-real=$(run_file_commit_profile "$RUN_FILE_HEAD_REPO" "$RUN_FILE_HEAD_ORIGIN" 2>/dev/null)
-if [ "${1:-}" != gate ] || [ "$PWD" != "$RUN_FILE_HEAD_REPO" ] || [ -z "$real" ]; then
+if [ "${1:-}" != gate ] || [ "$PWD" != "$RUN_FILE_HEAD_REPO" ]; then
   exec bash "$RUN_FILE_REAL" "$@"
 fi
+real=$(run_file_commit_profile "$RUN_FILE_HEAD_REPO" "$RUN_FILE_HEAD_ORIGIN") && [ -n "$real" ] \
+  || { echo "run-file-at-head: cannot commit the fixture profile in $RUN_FILE_HEAD_REPO" >&2; exit 2; }
 files=() stdin=no prev=
 for a; do
   [ -f "$a" ] && files+=("$a")

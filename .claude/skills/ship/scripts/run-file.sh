@@ -227,12 +227,12 @@
 #     defect draft does not hold it: a defect that breaks a gating step fails
 #     that step's evidence. The profile it grades is the one committed at
 #     <sha>, and a `ship profile:` entry holds it when that copy differs from
-#     the base branch's (fetched first) or the checkout's, the base has none,
-#     or a read either comparison needs fails. This read is independent of Merge.
+#     the base branch's (fetched first) or from the checkout's, when the base
+#     has none, or when a read fails. This read is independent of Merge.
 #     A stamp covers <sha> when it is <sha>, or when every later commit on
 #     <sha>'s first-parent line is a clean base merge: two parents, the second
-#     an ancestor of the local origin/HEAD (fetch first, or an unfetched base
-#     breaks coverage), its tree the one `git merge-tree --write-tree` gives;
+#     an ancestor of origin/HEAD (its branch fetched by the gate first), its
+#     tree the one `git merge-tree --write-tree` gives;
 #     a walk that cannot read origin/HEAD, a commit's parents, the ancestry
 #     check or merge-tree exits 2.
 #     A pass also covers <sha> when its Verification's `Paths:` globs,

@@ -85,10 +85,8 @@ listed, wait the same way, whatever it answers.
 
 ## A profile change
 
-A PR that changes the ship profile never merges on a clean gate, since it
-changes what the gate requires. The gate grades the profile committed at the
-head, and holds, naming `ship profile:`, when that copy differs from the base
-branch's (fetched by the gate itself), when the base has none, when the
-checkout's copy differs from the head's, or when any of those reads fails.
-`Merge: on-clean-gate` then posts the summary with the reply line and waits
-for the human's "merge", who reads the profile diff first.
+A PR that changes the ship profile always holds the clean gate, since it
+changes what the gate requires; `run-file --help` lists each `ship profile:`
+hold. `Merge: on-clean-gate` then posts the summary with the reply line,
+names the profile diff (`git diff <base>...<head> -- docs/agents/ship.md`)
+for the human to read, and waits for "merge".

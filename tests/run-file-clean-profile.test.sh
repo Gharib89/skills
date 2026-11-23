@@ -115,8 +115,11 @@ held "a PR that adds the first profile" "ship profile: absent from base origin/m
 
 fixture "$two_reviewers" =
 printf '%s\n' "$one_reviewer" > "$profile"
+# With no evidence for the reviewer the checkout's copy drops, only the
+# committed profile still owes it.
+sed -i '/: second\| second 1:/d' "$rf"
 held "a checkout edit with no committed profile change" "ship profile: the checkout's copy differs from the one committed at head $head"
-check "a checkout edit: grades the committed profile, so the second reviewer is still owed" false "$(jq '.held_by | any(startswith("reviewer second"))' <<<"$out")"
+check "a checkout edit: grades the committed profile, so the second reviewer is still owed" true "$(jq '.held_by | index("reviewer second: missing stop") != null' <<<"$out")"
 
 fixture "$two_reviewers" =
 g remote set-url origin "$tmp/no-such-origin.git"
