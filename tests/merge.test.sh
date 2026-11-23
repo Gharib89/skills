@@ -224,4 +224,59 @@ check_rc "a Sandbox merge: yes inside a fence is an example, not the line" 1 "$r
 no_merge "a fenced sandbox line"
 no_profile
 
+# --- #1342: freshness is the gated head against the freshly fetched PR target ----
+# A checkout with unpushed commits must not vouch for a published head that is
+# behind, a PR is judged against its own target, and a failed fetch refuses.
+r2=$work/repo2; git clone -q "$origin" "$r2"
+g2() { git -C "$r2" -c user.name=t -c user.email=t@t "$@"; }
+sd() { git -C "$work/seed" -c user.name=t -c user.email=t@t "$@"; }
+prb() { jq -n --arg s "$2" --arg h "$3" --arg r "$4" --arg b "$5" '{number: 7, title: "fix: x", head_sha: $h,
+          head_ref: $r, base_ref: $b, state: $s}' > "$SHIP_FAKE/host_pr_get.$1.json"; }
+run2() { ( cd "$r2" && bash "$mech" "$@" --run s2 ); }
+no_merge2() { check "$1: no merge call reaches the host" 0 "$(cat "$SHIP_FAKE/calls" 2>/dev/null | grep -c '^host_pr_merge')"; }
+
+g2 switch -q -c fix/s origin/main
+g2 commit -q --allow-empty -m "published head"; H1=$(g2 rev-parse HEAD)
+g2 push -q origin fix/s
+sd commit -q --allow-empty -m "the target moves"; sd push -q "$origin" main
+g2 fetch -q origin; g2 merge -q --no-edit origin/main; L=$(g2 rev-parse HEAD)
+rr2=$(cd "$r2" && bash -c 'source "$1"; ship_record_root' _ "$(dirname "$mech")/_lib.sh") || exit 2
+admit2() { mkdir -p "$rr2/ship-s2"; : >> "$rr2/ship-s2/run.md"; ( cd "$r2" && bash "$runfm" gate admit human --head "$1" --issue s2 >/dev/null 2>&1 ); }
+admit2 "$H1"; admit2 "$L"
+
+reset; prb 1 open "$H1" fix/s main
+out=$(run2 7 none "$H1" 2>/dev/null); rc=$?
+check_rc "a published head behind its target is refused although the checkout caught up by an unpushed commit" 1 "$rc"
+check "the refusal names the commits behind" "stale-base: behind 1 on origin/main" "$(jq -r .error <<<"$out")"
+no_merge2 "a behind published head"
+check "and the branch stays on origin" "$H1" "$(git -C "$origin" rev-parse refs/heads/fix/s)"
+
+# A PR targeting a branch other than the default is judged against that target.
+g2 switch -q -c fix/t origin/main
+g2 commit -q --allow-empty -m "head on main"; H2=$(g2 rev-parse HEAD); g2 push -q origin fix/t
+sd switch -q -c release main; sd pull -q "$origin" main 2>/dev/null
+sd commit -q --allow-empty -m "release only"; sd push -q "$origin" release; sd switch -q main
+g2 fetch -q origin; admit2 "$H2"
+reset; prb 1 open "$H2" fix/t release
+out=$(run2 7 none "$H2" 2>/dev/null); rc=$?
+check_rc "a PR targeting release is judged against release, not the default" 1 "$rc"
+check "the refusal names release" "stale-base: behind 1 on origin/release" "$(jq -r .error <<<"$out")"
+no_merge2 "a behind release target"
+
+# A failed fetch of the target refuses: the cached ref is not an answer.
+git -C "$r2" remote set-url origin "$work/github.com/owner/nowhere.git"
+reset; prb 1 open "$L" fix/s main
+out=$(run2 7 none "$L" 2>/dev/null); rc=$?
+check_rc "a failed fetch of the target refuses the merge" 1 "$rc"
+check "the refusal names the fetch" "stale-base: cannot fetch" "$(jq -r .error <<<"$out" | cut -c1-24)"
+no_merge2 "a failed fetch"
+git -C "$r2" remote set-url origin "$origin"
+
+# A gated head that has seen every commit on its freshly fetched target merges.
+g2 push -q -f origin "$L:refs/heads/fix/s"
+reset; prb 1 open "$L" fix/s main; prb 2 merged "$L" fix/s main
+out=$(run2 7 none "$L" 2>/dev/null); rc=$?
+check_rc "a gated head that has seen the fetched target merges" 0 "$rc"
+check "and the gated head reaches the host's merge call" "host_pr_merge${T}7${T}fix: x (#7)${T}$L" "$(grep '^host_pr_merge' "$SHIP_FAKE/calls")"
+
 finish
