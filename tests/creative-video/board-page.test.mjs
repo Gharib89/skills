@@ -11,11 +11,13 @@ import { readAnswers } from "../../skills/creative-video/scripts/board/answers.m
 import { BRAND, boardDir, built, build, ok, ready } from "./board-lib.mjs";
 
 const read = (f) => fs.readFileSync(f, "utf8");
-// brand.js loads before page.js, as page.html has them.
+// brand.js and doorbell.js load before page.js, as page.html has them.
 const brandSource = read(path.join(boardDir, "brand.js"));
+const doorbellSource = read(path.join(boardDir, "doorbell.js"));
 const source = read(path.join(boardDir, "page.js"));
 const ctx = vm.createContext({ console, TextEncoder });
 vm.runInContext(brandSource, ctx);
+vm.runInContext(doorbellSource, ctx);
 vm.runInContext(source, ctx);
 const B = ctx.Board;
 const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -48,6 +50,7 @@ test("page.js is one script that boots only where a document exists, and exposes
     "answersText",
     "capped",
     "outcome",
+    "ring",
     "statusOf",
     "setAnswers",
     "view",
@@ -196,6 +199,46 @@ test("a send is sent, saved or neither by whether the save and the wake landed, 
   assert.equal(B.outcome(false, true, true), "sent");
   assert.equal(B.outcome(false, true, false), "neither");
   assert.equal(B.outcome(false, false, true), "neither");
+});
+
+// A comments capability that records its calls and lets every viewer send.
+const fakeComments = () => {
+  const calls = [];
+  return {
+    calls,
+    canSendToClaude: async () => (calls.push("can"), "available"),
+    sendToClaude: async () => {
+      calls.push("send");
+    },
+  };
+};
+
+test("an unarmed board saves a Submit and sends no comment; an armed one rings as before", async () => {
+  for (const [wake, want] of [
+    [undefined, true],
+    [true, true],
+    [false, "unarmed"],
+  ]) {
+    const d = clone(doc);
+    if (wake !== undefined) d.wake = wake;
+    const c = fakeComments();
+    assert.equal(await B.ring(B.newState(d), c, "anchor", "text"), want);
+    assert.equal(
+      c.calls.includes("send"),
+      want === true,
+      JSON.stringify(c.calls),
+    );
+  }
+  assert.equal(B.outcome(true, "unarmed", false), "unarmed");
+  assert.equal(B.outcome(false, "unarmed", true), "neither");
+  const S = B.newState(clone(doc));
+  S.status = "unarmed";
+  const v = B.view(S);
+  assert.match(
+    v,
+    /<div class="st st-ok" role="status"><span><b>Saved\.<\/b> Type <code>submitted<\/code> in the chat/,
+  );
+  assert.doesNotMatch(v, /st-warn|data-act="wake"/);
 });
 
 test("the view shows the tab and plan, the directions, the scene cards and the submit bar", () => {
@@ -424,7 +467,15 @@ const documented = new Set(
 
 test("board-data.md documents exactly the fields a built board holds", () => {
   assert.ok(documented.size > 25, "no field table in board-data.md");
-  assert.deepEqual([...paths(doc, "board")].sort(), [...documented].sort());
+  // `board.wake` is in an unarmed board alone.
+  const unarmed = ready();
+  ok(build(unarmed, "--unarmed"));
+  assert.equal(built(unarmed).wake, false);
+  assert.equal("wake" in doc, false);
+  assert.deepEqual(
+    [...paths(doc, "board"), "board.wake"].sort(),
+    [...documented].sort(),
+  );
 });
 
 test("the page reads no field board-data.md does not define", () => {

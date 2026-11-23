@@ -1,7 +1,7 @@
 // The storyboard stage: one board version per review, from the run's
 // compiled, voiced and stilled script, and the human's answers back into it.
 //
-//   node board.mjs <run-folder> build [--local] [--fix <scene>=<text>]...
+//   node board.mjs <run-folder> build [--local] [--unarmed] [--fix <scene>=<text>]...
 //   node board.mjs <run-folder> page [<url>]
 //   node board.mjs <run-folder> asset <path>=<url>...
 //   node board.mjs <run-folder> apply <answers-file>
@@ -17,7 +17,9 @@
 // run (its MP4 at least as new as stills.json) gets one clip per scene, cut
 // into .cache/clips/. With a published page
 // (`page <url>`) every media file needs an uploaded URL, recorded by `asset`;
-// `--local` builds for storyboard.html alone, the page out of reach.
+// `--local` builds for storyboard.html alone, the page out of reach. `--unarmed`
+// writes `wake: false` on the board: the session has no watch, so the page saves
+// a Submit and sends no comment.
 // `page` with no url writes board/page.html, the file a session publishes
 // once; with a url it records the published page in manifest.json. `apply`
 // reads the answers (the answers document, or the text the page copies) into
@@ -53,12 +55,12 @@ stage("board");
 const [run, cmd, ...args] = process.argv.slice(2);
 const usage = () => {
   console.error(
-    "usage: node board.mjs <run-folder> build [--local] [--fix <scene>=<text>]... | page [<url>] | asset <path>=<url>... | apply <answers-file>",
+    "usage: node board.mjs <run-folder> build [--local] [--unarmed] [--fix <scene>=<text>]... | page [<url>] | asset <path>=<url>... | apply <answers-file>",
   );
   process.exit(2);
 };
-// build's flags: `--local` once, `--fix <scene>=<text>` any number of times.
-const opts = { local: false, fixes: {} };
+// build's flags: `--local` and `--unarmed` once, `--fix <scene>=<text>` any number of times.
+const opts = { local: false, unarmed: false, fixes: {} };
 if (cmd === "build")
   for (let i = 0; i < args.length; i++) {
     const m = args[i] === "--fix" && args[i + 1]?.match(/^([^=]+)=(.+)$/s);
@@ -66,6 +68,7 @@ if (cmd === "build")
       opts.fixes[m[1]] = m[2];
       i++;
     } else if (args[i] === "--local" && !opts.local) opts.local = true;
+    else if (args[i] === "--unarmed" && !opts.unarmed) opts.unarmed = true;
     else usage();
   }
 if (
@@ -133,6 +136,7 @@ const filled = (title) => template().replace("{{TITLE}}", () => esc(title));
 const siblings = [
   "page.css",
   "page-core.js",
+  "doorbell.js",
   "page-sections.js",
   "page-summary.js",
   "page-boot.js",
@@ -469,6 +473,7 @@ const doc = {
   })),
   ...(script.kept && { kept: script.kept }),
   ...(banner && { banner }),
+  ...(opts.unarmed && { wake: false }),
   scenes: cards,
 };
 

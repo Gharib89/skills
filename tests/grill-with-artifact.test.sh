@@ -82,7 +82,7 @@ for (const c of contract) if (!styles(html.split('<script>')[0], c)) say('page s
 
 // Run the page headless: no document, so it boots nothing and exposes its core.
 const ctx = vm.createContext({ console });
-vm.runInContext(src + '\n;globalThis.__page = { newState, setRounds, setAnswers, view, ACT, answersDoc, answersText };', ctx);
+vm.runInContext(src + '\n;globalThis.__page = { newState, setRounds, setAnswers, view, ACT, answersDoc, answersText, ring, outcome };', ctx);
 const P = ctx.__page;
 const seen = new Set();
 function watch(v, p) {
@@ -172,10 +172,33 @@ S = session([rounds.questions]);
 S.status = 'saved';
 if (!hidden(P.view(S))) say('view G: the jump button shows on a locked round');
 
+// H: the doorbell. An open round with `wake: false` (an unarmed session) saves and sends nothing:
+// there a send wakes a cloud session that answers without the grilling session's context.
+const H = (async () => {
+  const fake = () => { const calls = []; return { calls, canSendToClaude: async () => (calls.push('can'), 'available'), sendToClaude: async () => { calls.push('send'); } }; };
+  for (const [wake, want] of [[undefined, true], [true, true], [false, 'unarmed']]) {
+    const d = clone(rounds.questions); if (wake !== undefined) d.wake = wake;
+    const c = fake(), got = await P.ring(session([d]), c, 'anchor', 'text');
+    if (got !== want) say('ring H: wake', wake, 'answered', got, 'want', want);
+    if (c.calls.includes('send') !== (want === true)) say('ring H: wake', wake, 'calls', JSON.stringify(c.calls));
+  }
+  if (P.outcome(true, 'unarmed') !== 'unarmed' || P.outcome(false, 'unarmed') !== 'neither') say('outcome H: unarmed misread');
+  if (P.outcome(true, true) !== 'sent' || P.outcome(true, false) !== 'saved' || P.outcome(false, false) !== 'neither') say('outcome H: armed outcomes changed');
+  S = session([rounds.questions]);
+  S.status = 'unarmed';
+  const v = P.view(S), st = (v.match(/<div class="st[\s\S]*$/) ?? [''])[0];
+  if (!/<code>submitted<\/code>/.test(st)) say('view H: the unarmed receipt does not name the typed submitted');
+  if (/st-warn|st-bad|data-act="wake"/.test(st)) say('view H: the unarmed receipt is styled as a warning or offers a wake');
+  P.ACT.pick(S, { q: 'Q1', o: 'a' });
+  if (P.answersDoc(S).answers[0].choice !== null) say('view H: an unarmed-saved round took an edit');
+})();
+
 // Every read the page made is a documented field, and it read the fields it renders.
+H.then(() => {
 for (const p of seen) if (!shape.has(p)) say('page reads an undocumented field', p);
-for (const p of ['round.treeSvg', 'round.questions[].options[].detail', 'round.questions[].carriedFrom.earlier', 'round.settled[].how', 'round.docsWritten[].summary', 'round.summary[].text', 'answers.round'])
+for (const p of ['round.treeSvg', 'round.questions[].options[].detail', 'round.questions[].carriedFrom.earlier', 'round.settled[].how', 'round.docsWritten[].summary', 'round.summary[].text', 'answers.round', 'round.wake'])
   if (!seen.has(p)) say('page never reads', p);
+}, e => say('H threw:', e.message));
 JS
 )
 check "the page and the samples hold to the round-data shape" "" "$out"
