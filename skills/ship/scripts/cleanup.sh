@@ -42,11 +42,11 @@ usage='usage: cleanup <issue> | cleanup none <branch>'
 ship_help "$usage" "$@"
 if [ "${1:-}" = none ]; then
   ship_args "$usage" "issue|none arg" "$@"
-  [ $# -eq 2 ] || ship_tooling "unknown flag: $3"
+  [ $# -eq 2 ] || ship_tooling "$usage"
   want=$2
 else
   ship_args "$usage" "issue" "$@"
-  [ $# -eq 1 ] || ship_tooling "unknown flag: $2"
+  [ $# -eq 1 ] || ship_tooling "$usage"
   want=
 fi
 n=$1
