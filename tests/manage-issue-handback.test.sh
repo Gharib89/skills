@@ -61,6 +61,15 @@ reset
 out=$(run 7 handback "a reason"); rc=$?
 kept "a removal read-back that failed"
 
+# An issue this run no longer holds has no claim to keep: the answer must not say one was.
+reset
+printf '{"number":7,"state":"open","assignees":[],"labels":["ready-for-agent"]}\n' > "$SHIP_FAKE/host_issue_get.1.json"
+: > "$SHIP_FAKE/host_issue_remove_label.1.fail"
+out=$(run 7 handback "a reason"); rc=$?
+check_rc "a removal that failed on an unassigned issue exits 1" 1 "$rc"
+check "a removal that failed on an unassigned issue claims no kept claim" \
+  'released false' "$(jq -r '"\(.claim) \(.error | test("claim was kept"))"' <<<"$out")"
+
 reset
 printf '{"number":7,"state":"open","assignees":["me"],"labels":["ready-for-agent"]}\n' > "$SHIP_FAKE/host_issue_get.2.json"
 out=$(run 7 handback "a reason"); rc=$?

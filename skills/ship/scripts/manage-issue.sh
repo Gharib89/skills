@@ -107,8 +107,9 @@ case $op in
     if [ "$op" = handback ]; then
       rfa=$(ship_triage_label ready-for-agent); rfh=$(ship_triage_label ready-for-human)
       if ! { host_issue_remove_label "$n" "$rfa" && ship_issue_lacks_label "$n" "$rfa"; }; then
-        e="could not remove $rfa and confirm it is gone: the claim was kept, so no selection can take the issue"
-        jq -n --argjson n "$n" --arg m "$me" --arg e "$e" '{issue: $n, identity: $m, claim: "held", error: $e}'
+        c=released; e="could not remove $rfa and confirm it is gone: nothing was unassigned"
+        if assigned; then c=held; e="could not remove $rfa and confirm it is gone: the claim was kept"; fi
+        jq -n --argjson n "$n" --arg m "$me" --arg c "$c" --arg e "$e" '{issue: $n, identity: $m, claim: $c, error: $e}'
         echo "$e; re-read the issue before reporting it" >&2; exit 1
       fi
     fi
