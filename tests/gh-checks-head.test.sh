@@ -28,11 +28,12 @@ cat > "$bin/gh" <<'GH'
 #!/usr/bin/env bash
 # `gh api [-i] <path> ... [--jq <expr>]`: log the path, answer from a fixture per
 # endpoint, and apply the call's own --jq the way gh does.
-jqx="." prev="" include="" path=""
+jqx="." prev="" include="" path="" paginate=""
 for a in "$@"; do
   case $prev in --jq) jqx=$a ;; esac
   case $a in
     -i) include=1 ;;
+    --paginate) paginate=1 ;;
     graphql) path=graphql ;;
     repos/*) [ -z "$path" ] && path=$a ;;
   esac
@@ -56,7 +57,12 @@ case $path in
     sha=${path#*/commits/}; sha=${sha%%/*}
     f=$FAKE/check-runs-$sha.json; [ -f "$f" ] || f=$FAKE/check-runs.json
     answer "$(cat "$f")" ;;
-  */commits/*/status*) answer '{"statuses":[]}' ;;
+  # One JSON document per page; without --paginate only the first page answers.
+  */commits/*/status*)
+    f=$FAKE/status.json; [ -f "$f" ] || { answer '{"statuses":[]}'; }
+    [ -n "$include" ] && printf 'HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n'
+    if [ -n "$paginate" ]; then jq -rc "$jqx" "$f"; else jq -n 'input' "$f" | jq -rc "$jqx"; fi
+    exit 0 ;;
   */actions/runs*) answer "$(cat "$FAKE/runs.json")" ;;
   graphql) answer '{"data":{"repository":{"pullRequest":{"reviewThreads":{"pageInfo":{"hasNextPage":false,"endCursor":null},"nodes":[]}}}}}' ;;
 esac
@@ -136,6 +142,32 @@ actions_reads() { grep -c '/actions/runs' "$FAKE/calls" 2>/dev/null; }
   workflows '{"workflow_runs":[{"id":11,"workflow_id":7,"check_suite_id":502},{"id":12,"workflow_id":8,"check_suite_id":503}]}'
   check "another workflow's newer run does not supersede" \
     '[{"name":"bump-guard","status":"failure"}]' "$(checks)"
+
+  # Check runs and commit statuses are two sources that GitHub's required checks
+  # grade apart (#1343): a name present in both needs both green, so a newer
+  # green status does not hide a red check run of its name.
+  sorted() { host_pr_checks 1 abc | jq -c 'sort_by(.name, .status)'; }
+  status() { # <context> <state> <updated_at>: one status row
+    jq -cn --arg c "$1" --arg s "$2" --arg u "$3" '{context: $c, state: $s, updated_at: $u}'
+  }
+  page() { jq -sc '{statuses: .}'; } # the status rows on stdin, as one page
+  workflows '{"workflow_runs":[]}'
+  run 1 ci completed '"failure"' 2026-09-29T02:15:28Z '"2026-09-29T02:15:33Z"' 501 | runs_of
+  status ci success 2026-09-29T02:20:00Z | page > "$FAKE/status.json"
+  check "a red check run and a newer green status of its name both report" \
+    '[{"name":"ci","status":"failure"},{"name":"ci","status":"success"}]' "$(sorted)"
+
+  # The combined-status read pages like every list: a context on page two counts.
+  runs_of </dev/null
+  { status a success 2026-09-29T02:20:00Z | page
+    status b failure 2026-09-29T02:21:00Z | page
+  } > "$FAKE/status.json"
+  check "a status on the second page is read" \
+    '[{"name":"a","status":"success"},{"name":"b","status":"failure"}]' "$(sorted)"
+
+  status s success 2026-09-29T02:20:00Z | page > "$FAKE/status.json"
+  check "a head with only green statuses reads green" '[{"name":"s","status":"success"}]' "$(sorted)"
+  rm -f "$FAKE/status.json"
 
   # The Actions read is paid only where a cancelled row needs it.
   : > "$FAKE/calls"

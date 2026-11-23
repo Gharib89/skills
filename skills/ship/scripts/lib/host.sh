@@ -70,14 +70,17 @@
 #   host_pr_for_branch <branch>          -> {number,state,head_sha} of the newest PR whose head branch is <branch>, or null
 #   host_pr_checks <pr> <head_sha>       -> [{name,status}]
 #                                           status: pending | success | failure.
+#                                           A name can answer more than one row (on GitHub a
+#                                           check run and a commit status): it is green only
+#                                           when every row of it is success.
 #   host_check_job <pr> <head_sha> <name>-> {job_id,attempt,log_tail} the latest check of that
 #                                           name on the head, as the host's re-runnable job.
 #                                           attempt: how many times the job has run on this head,
 #                                           so 1 is not yet re-run. log_tail: the job log's last 40
 #                                           lines as one string, null where the log could not be
 #                                           read. A check that is no job (a commit status, a
-#                                           third-party app) answers job_id, attempt and log_tail
-#                                           all null. Non-zero where the host could not answer or
+#                                           third-party app) or whose latest run did not fail
+#                                           answers job_id, attempt and log_tail all null. Non-zero where the host could not answer or
 #                                           has no job to re-run; always non-zero on Azure DevOps,
 #                                           which has no re-run of a policy evaluation here.
 #                                           ci-wait --rerun-failed reports that as "unavailable".

@@ -110,5 +110,6 @@ ship_unsettled_checks() { # <checks-json> <profile-body>
     | ($graded[] | select(.status != "success") | .name + ": " + .status),
       (if $legs == null then (if ($c | length) == 0 and ($legal | not) then "no checks: missing" else empty end)
        elif $legal then empty
-       else $legs[] | . as $l | select(any($c[]; named($l)) | not) | . + ": missing" end)' <<<"$1"
+       else $legs[] | . as $l | select(any($c[]; named($l)) | not) | . + ": missing" end)' <<<"$1" \
+    | awk '!seen[$0]++' # a name failing in two rows (a check run and a status) is one line
 }
