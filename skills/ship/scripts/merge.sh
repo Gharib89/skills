@@ -163,7 +163,6 @@ else
   # run about 3.5s after the edit returned (measured, #1204), so a read straight after
   # an edit sees only the old success. The grace puts the read past that window.
   sleep "${SHIP_MERGE_CHECKS_GRACE:-6}"
-  # A partial row is no verdict.
   cks=$(host_pr_checks "$pr" "$gated" 2>/dev/null) && ship_checks_valid "$cks" \
     || ship_tooling "cannot read the checks on $gated"
   unsettled=$(ship_unsettled_checks "$cks" "$profile") || ship_tooling "cannot grade the checks on $gated"

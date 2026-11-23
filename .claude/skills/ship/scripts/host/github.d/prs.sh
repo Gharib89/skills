@@ -64,12 +64,11 @@ host_pr_for_branch() { # <branch>
 }
 
 # Check runs plus classic commit statuses, each source kept apart: GitHub's
-# required checks grade the two separately, so a name in both answers two rows
-# and needs both green; collapsing them let a newer green status hide a red
-# check run (#1343). Within a name, the latest check run is the latest created,
-# by id: a cancellation can complete after its successor started, so a time rule
-# prefers the cancelled row. The combined-status read already answers one row per
-# context, and pages like any list.
+# required checks grade the two separately, so a name in both answers one row
+# from each and needs both green (#1343). Among check runs of one name, the
+# latest is the latest created, by id: a cancellation can complete after its
+# successor started, so a time rule prefers the cancelled row. The combined-status
+# endpoint answers one row per context itself, across pages.
 # A `cancelled` check run whose workflow has a newer workflow run on this head was
 # superseded by its concurrency group, and its successor can have no check run
 # yet (#394): it reads `pending` until the successor's own row outranks it by id.
@@ -101,7 +100,8 @@ host_pr_checks() { # <pr> <head_sha>
 # says how many times it has run (run_attempt, 1 until a re-run). A check run
 # some other app wrote is no Actions job, and its id would 404 on the jobs
 # routes, so it answers nulls rather than failing: there is nothing to re-run,
-# which is not the host being down. The log is a courtesy for the run reading
+# which is not the host being down. Nor is one that did not fail: its name can
+# fail on a commit status alone, which no job re-run turns green. The log is a courtesy for the run reading
 # why the check failed, so a log that cannot be read (expired, still running)
 # leaves log_tail null and does not fail the call.
 host_check_job() { # <pr> <head_sha> <name>
@@ -109,9 +109,9 @@ host_check_job() { # <pr> <head_sha> <name>
   esc=$(printf '\033') bel=$(printf '\007')
   # paged: the check_name filter leaves that one check's reruns, and max_by(.id) wants the newest
   cr=$(api "$R/commits/$2/check-runs" -X GET -f "check_name=$3" -f per_page=100 \
-    --jq '.check_runs | max_by(.id) // empty | {id, actions: (.app.slug == "github-actions")}') || return 1
+    --jq '.check_runs | max_by(.id) // empty | {id, actions: (.app.slug == "github-actions"), failed: (.conclusion | IN(null, "success", "neutral", "skipped") | not)}') || return 1
   [ -n "$cr" ] || return 1
-  if ! jq -e .actions <<<"$cr" >/dev/null; then
+  if ! jq -e '.actions and .failed' <<<"$cr" >/dev/null; then
     printf '{"job_id":null,"attempt":null,"log_tail":null}\n'; return 0
   fi
   id=$(jq -r .id <<<"$cr")

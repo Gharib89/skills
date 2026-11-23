@@ -22,8 +22,8 @@ ship_poll_read() {
 }
 
 # ship_checks_valid <checks-json>: true when a `host_pr_checks` answer holds the
-# contract's rows, each a string name and a status of pending, success or
-# failure. A row outside it is no verdict, and a grade that counts only the
+# rows its contract in lib/host.sh names, each a string name and a status of
+# pending, success or failure. A row outside it is no verdict, and a grade that counts only the
 # `failure` and `pending` rows would read it as green (#1343).
 ship_checks_valid() {
   jq -e 'type == "array" and all(.[]; type == "object" and (.name | type) == "string"
