@@ -328,3 +328,21 @@ Two cheaper checks that spend nothing:
   needs-the-owner message, not a reason to retry.
 - The reader needs one correction for an idle bucket: a 5 hour reset equal to
   the read time plus 5 hours means "not started", not "resets then".
+
+## 10. Measured on 2026-11-23 (the probe of section 8)
+
+The probe ran once, from an idle bucket, on a pull request of 372 changed
+lines. The readings and times are in the resolution of issue #1325.
+
+- Same bucket: **measured**. The 5 hour reset stopped moving 54 seconds after
+  the request and the used percent rose from 0 to 6 as the review ran. The
+  verdict of section 1 no longer rests on timing.
+- Cost: 6 points of the 5 hour window and about 0.8 weekly points for that one
+  review. This replaces the working numbers of section 6 and the "about 8
+  reviews per window" of section 9: about 16 fit an idle window. One sample.
+- A refusal was seen with the 5 hour window at 100 percent and the weekly one
+  at 52 percent, which confirms the prediction rule of section 7 for the
+  5 hour window. A weekly refusal is still unobserved.
+- An accepted request shows as an eyes reaction and then a pull request review
+  whose body starts `<!-- codex-review-receipt:v1 -->`. No summary comment with
+  `"status":"completed"` appeared, so step 4 of section 8 waits on the review.
