@@ -33,7 +33,7 @@ help_case() { # <mechanic> <usage>
 help_case base-fresh     'usage: base-fresh'
 help_case carry-check   'usage: carry-check [<file>...]'
 help_case ci-wait        'usage: ci-wait <pr> [--sha <sha>, the head to wait for, default the local HEAD when on the PR head branch, else none; a window closing first is timeout] [--timeout <s>, at least the no-checks grace (120s, 0 where the profile has Legs: None. and No-checks legal: yes)] [--interval <s>] [--rerun-failed, re-run each failing leg check once] [--cursor <c>, the cursor a pending answer carried, to resume that window; not with --timeout]'
-help_case cleanup        'usage: cleanup <issue> | cleanup none <branch>'
+help_case cleanup        'usage: cleanup <issue|none> [<branch>, required for none: the exact branch its PR was opened from]'
 help_case comment-issue  'usage: comment-issue <issue> --body-file <path>'
 help_case comment-pr     'usage: comment-pr <pr> --body-file <path>'
 help_case dropped-lines  'usage: dropped-lines [--base <ref>]'

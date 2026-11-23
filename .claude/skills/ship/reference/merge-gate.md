@@ -215,9 +215,9 @@ waits on it. Then `run-file close 9` and set the task to the returned `mirror`,
 then `ExitWorktree` with `action: "keep"` (skip it if
 [adopted](isolate.md#adopting-the-launched-worktree); `cleanup` owns the
 removal), and last
-`cleanup <issue>`, or `cleanup none <head_ref>` (`read-pr`'s) for a free-text run.
-A nonzero exit, or a `false` in `merge`'s or `cleanup`'s JSON, re-runs that
-mechanic; a step nothing re-does is a Ship defect for the summary.
+`cleanup <issue>`, or `cleanup none <head_ref>` (`read-pr`'s) for a
+free-text run. A nonzero exit, or a `false` in `merge`'s or `cleanup`'s JSON,
+re-runs that mechanic; a step nothing re-does is a Ship defect for the summary.
 
 **If the human says no or wants changes**, or says "file defects", read
 [merge-gate-branches.md](merge-gate-branches.md) before acting on it.
