@@ -112,6 +112,21 @@ The owner chose removal for slice 2, since the scan cannot see worktrees outside
 
 ## Evidence and verification
 
-The measurements came from 13 offline probe scripts, one each for policy, prune, cleanup, merge, GitHub checks, claim, deferral, criteria, wait cap, identical body, and the Azure DevOps checks, reviews and merge payload. They were scratch fixtures and are not kept. Each ticket's regression test reproduces its result at `1f8dedf9` before changing the mechanic.
+The fixture measurements come from 21 offline probe scripts, kept in [`ship-audit-2026-11-23-probes/`](ship-audit-2026-11-23-probes/). Run one from the repo root at `1f8dedf9` with `bash docs/research/ship-audit-2026-11-23-probes/<name>.sh`. Each builds scratch Git repos under a temporary directory and reaches no host.
+
+| Finding | Probes |
+| --- | --- |
+| 1 | `policy`, `dirty-profile`, `profile-compare` |
+| 2 | `prune`, `prune-locked`, `worktree-ignored` |
+| 3 | `cleanup`, `isolate-adopt` |
+| 4 | `merge`, `base-fresh-offline` |
+| 5 | `gh`, `ci-wait-partial-row` |
+| 6 | `claim` |
+| 7 | `deferral`, `criteria` |
+| 8 | `reviewer-fields`, `wait-cap` |
+| Azure DevOps list | `ado`, `ado-review`, `ado-merge` |
+| Identical PR body rewrite | `noop-body` |
+
+Three measurements have no script, because each read live data once: the scan of 1,500 issue comments for claim pairs, the consumer checkout's worktree listing, and the line comparison of the two reviewer parser suites. Each ticket's regression test reproduces its probe's result before changing the mechanic.
 
 All 14 focused Ship test files passed, as did the prose budget, derived-copy comparison and document edit checks. The full suite passed 245 of 254 files initially. Seven of the nine failures passed on retry with a writable pre-commit cache. In the two video suites, follow-up probes reproduced sandbox `EPERM` on nested Node launches, including launching `brief.mjs` in the explainer malformed-input test. No failure on main was established outside the sandbox. The Ship probes used local scratch Git repos, the Host fake and stubbed host transport.
