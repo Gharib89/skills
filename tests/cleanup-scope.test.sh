@@ -82,6 +82,11 @@ check "and the bare branch" yes "$(jq -r .error <<<"$out" | grep -q fix/bare-78 
 check "the worktree stays" yes "$(exists "$tmp/wt-c")"
 check "the bare branch stays" "  fix/bare-78" "$(g branch --list fix/bare-78)"
 
+# A tracked issue takes no branch: the usage line has no such form.
+out=$(cd "$repo" && bash "$c" 79 feat/d-79 2>/dev/null); rc=$?
+check_rc "a branch given with an issue exits 2" 2 "$rc"
+check "and answers the usage line" true "$(jq -r '.error | startswith("usage: cleanup")' <<<"$out")"
+
 # One match behaves as before.
 g worktree add -q "$tmp/wt-d" -b feat/d-79
 out=$(cd "$repo" && bash "$c" 79 2>/dev/null); rc=$?

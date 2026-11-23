@@ -6,7 +6,7 @@
 # worktree (T3 names the folder `<slug>-<hex>`) and isolate adopted it is
 # removed too.
 #
-#   cleanup <issue|none> [<branch>, required for none: the exact branch its PR was opened from]
+#   cleanup <issue> | cleanup none <branch>
 #
 # A tracked issue's branch is held to isolate's `<type>/<slug>-<issue>` shape
 # (a hand-made branch that merely ends in `-<n>` is never ship's). More than one
@@ -38,7 +38,7 @@
 # exit: 0 clean · 1 a step failed or the match was ambiguous (JSON says which) · 2 usage or tooling
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
-usage='usage: cleanup <issue|none> [<branch>, required for none: the exact branch its PR was opened from]'
+usage='usage: cleanup <issue> | cleanup none <branch>'
 ship_help "$usage" "$@"
 if [ "${1:-}" = none ]; then
   ship_args "$usage" "issue|none arg" "$@"
