@@ -5,14 +5,34 @@
 # from its caller, so it cannot be sourced from here). A function assigns
 # the globals the test body reads; its trap and any `exit` act on the test.
 
+# The clean gate grades the ship profile committed at the head and holds unless
+# the freshly fetched base and the checkout carry the same copy (#1338). Commit
+# <repo>'s current profile on main, push it as <origin>'s main (a bare repo made
+# on first use), and print that commit: head and base are then one commit.
+run_file_commit_profile() { # run_file_commit_profile <repo> <origin>
+  local g=(git -C "$1" -c user.email=t@t -c user.name=t -c commit.gpgsign=false)
+  if [ ! -d "$2" ]; then
+    git init -q --bare -b main "$2" && "${g[@]}" remote add origin "$2" \
+      && "${g[@]}" symbolic-ref HEAD refs/heads/main || return 1
+  fi
+  "${g[@]}" add docs/agents/ship.md && { "${g[@]}" diff --cached --quiet || "${g[@]}" commit -q -m profile; } \
+    && "${g[@]}" push -q origin HEAD:refs/heads/main && "${g[@]}" remote set-head origin main \
+    && "${g[@]}" rev-parse HEAD
+}
+
 # The clean gate's fixture: tests/run-file-clean.test.sh and run-file-clean-cap.test.sh.
+# Its Run files and CI answers name the label head `abcdef0123456789`, which no
+# commit has, so `m` is tests/run-file-at-head.sh: it runs the real mechanic
+# against a real head and shows the fixture the label back.
 run_file_clean_setup() {
-m=${RUN_FILE_MECHANIC:-$PWD/skills/ship/scripts/run-file.sh}
+export RUN_FILE_REAL=${RUN_FILE_MECHANIC:-$PWD/skills/ship/scripts/run-file.sh}
+m=$PWD/tests/run-file-at-head.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 repo="$tmp/repo with spaces"
 mkdir -p "$repo/docs/agents" "$tmp/records/ship-clean"
 git init -q "$repo"
+export RUN_FILE_HEAD_REPO=$repo RUN_FILE_HEAD_ORIGIN=$tmp/origin.git
 head=abcdef0123456789
 f="$tmp/records/ship-clean/run.md"
 ci="$tmp/ci.json"
