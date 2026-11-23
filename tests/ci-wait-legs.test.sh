@@ -234,4 +234,30 @@ out=$(ci "$two" --timeout 5 --rerun-failed); rc=$?
 check "a host that cannot read the job answers unavailable" '"unavailable" 1' "$(jq -c .rerun <<<"$out") $rc"
 check "and writes nothing then" 0 "$(count host_check_rerun)"
 
+# --- a name the host answers twice (#1343) -------------------------------------
+
+# GitHub answers a check run and a commit status of one name as two rows: a red
+# one fails the leg whatever the other says, and a name both rows fail is listed
+# once, so it is re-run once.
+reset; ans 1 "$(rows "$(row test failure)" "$(row test success)" "$(row lint success)")"
+out=$(ci "$two" --timeout 5); rc=$?
+check_rc "a red row beside a green row of its name fails the leg" 1 "$rc"
+check "checks-failed on that name" 'checks-failed ["test"]' "$(jq -r '[.status, (.failing | tojson)] | join(" ")' <<<"$out")"
+reset; ans 1 "$(rows "$(row test failure)" "$(row test failure)" "$(row lint success)")"
+echo '{"job_id":9,"attempt":1,"log_tail":"boom"}' > "$SHIP_FAKE/host_check_job.1.json"
+out=$(ci "$two" --timeout 5 --rerun-failed)
+check "a name failing in both rows is listed and re-run once" '["test"] 1' "$(jq -c .failing <<<"$out") $(count host_check_rerun)"
+
+# --- a malformed row is no verdict (#1343) -------------------------------------
+
+# A row whose status is missing or outside pending|success|failure, or whose
+# name is no string, is a tooling error at the read, never a leg graded green.
+for bad in '{"name":"test"}' '{"name":"test","status":"neutral"}' '{"status":"success"}'; do
+  reset; ans 1 "$(rows "$(row lint success)" "$bad")"
+  out=$(ci "$two" --timeout 5 --rerun-failed); rc=$?
+  check_rc "a malformed row $bad is a tooling error" 2 "$rc"
+  check "and answers an error, not a status" 'true null' "$(jq -c '[has("error"), .status] | map(tojson) | join(" ")' -r <<<"$out")"
+  check "and re-runs nothing" 0 "$(count host_check_rerun)"
+done
+
 finish

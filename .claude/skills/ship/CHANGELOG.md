@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.71.1 (2026-11-23)
+
+### Bug Fixes
+
+- **ship**: The GitHub CI read keeps every check and refuses a malformed row
+  ([#1362](https://github.com/Gharib89/skills/pull/1362),
+  [`6e1c063`](https://github.com/Gharib89/skills/commit/6e1c06396e8fb7f0d9a36b4f37e5b70b451015e2))
+
+
 ## v0.71.0 (2026-11-23)
 
 ### Features

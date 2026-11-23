@@ -112,9 +112,9 @@ view() {
     | {checks: $c, legs: $legs,
        missing_legs: (if $legs == null then []
          else [$legs[] | . as $l | select(any($c[]; named($l)) | not)] end),
-       failing: [$lc[] | select(.status == "failure") | .name],
-       non_leg_failing: [$nl[] | select(.status == "failure") | .name],
-       unlisted: [$nl[].name],
+       failing: ([$lc[] | select(.status == "failure") | .name] | unique),
+       non_leg_failing: ([$nl[] | select(.status == "failure") | .name] | unique),
+       unlisted: ([$nl[].name] | unique),
        leg_n: ($lc | length), leg_pending: ([$lc[] | select(.status == "pending")] | length)}')
 }
 emit() { # <status> [<cursor>]
@@ -186,7 +186,7 @@ while :; do
   ship_poll_read "$ckf" host_pr_checks "$pr" "$sha"; rc=$?
   [ "$rc" -ne 1 ] || ship_tooling "cannot read checks"
   [ "$rc" -ne 3 ] || { unread checks; continue; }
-  checks=$(jq -c . "$ckf") || ship_tooling "cannot read checks"
+  checks=$(jq -c . "$ckf") && ship_checks_valid "$checks" || ship_tooling "malformed check rows on $sha: $(head -c 400 "$ckf")"
   fails=0
   view
   read -r ln lp nf nm <<<"$(jq -r '[.leg_n, .leg_pending, (.failing | length), (.missing_legs | length)] | @tsv' <<<"$view")"

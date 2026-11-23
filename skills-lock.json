@@ -140,7 +140,7 @@
     "ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "91a4b825c083ecb6a670a8cba469917a981258a854f5028aea35f76cf09c5159"
+      "computedHash": "cd955a0f8ffc3567cf0b76c83bf324a29c72ca24970bbdaf6e617f6c023553bd"
     },
     "show-me": {
       "source": "humanlayer/skills",

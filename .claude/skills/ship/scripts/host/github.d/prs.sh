@@ -63,9 +63,12 @@ host_pr_for_branch() { # <branch>
       head_sha: .head.sha} end | tojson'
 }
 
-# Check runs plus classic commit statuses, one row per name, latest wins. Within
-# a name, the latest check run is the latest created, by id: a cancellation can
-# complete after its successor started, so a time rule prefers the cancelled row.
+# Check runs plus classic commit statuses, each source kept apart: GitHub's
+# required checks grade the two separately, so a name in both answers one row
+# from each and needs both green (#1343). Among check runs of one name, the
+# latest is the latest created, by id: a cancellation can complete after its
+# successor started, so a time rule prefers the cancelled row. The combined-status
+# endpoint answers one row per context itself, across pages.
 # A `cancelled` check run whose workflow has a newer workflow run on this head was
 # superseded by its concurrency group, and its successor can have no check run
 # yet (#394): it reads `pending` until the successor's own row outranks it by id.
@@ -77,21 +80,19 @@ host_pr_checks() { # <pr> <head_sha>
       suite: .check_suite.id, cancelled: (.conclusion == "cancelled"),
       status: (if .status != "completed" then "pending"
                elif (.conclusion | IN("success","neutral","skipped")) then "success"
-               else "failure" end), at: (.completed_at // .started_at // "")}' | jq -s .) || return 1
+               else "failure" end)}' | jq -s .) || return 1
   if jq -e 'any(.[]; .cancelled)' <<<"$runs" >/dev/null; then
     wruns=$(api "$R/actions/runs?head_sha=$sha&per_page=100" --paginate \
       --jq '.workflow_runs[] | {id, workflow_id, suite: .check_suite_id, done: (.status == "completed")}' | jq -s .) || return 1
   fi
-  statuses=$(api "$R/commits/$sha/status" --jq '.statuses[] | {name: .context,
-      status: (if .state == "success" then "success" elif .state == "pending" then "pending" else "failure" end),
-      at: .updated_at}' | jq -s .) || return 1
+  statuses=$(api "$R/commits/$sha/status?per_page=100" --paginate --jq '.statuses[] | {name: .context,
+      status: (if .state == "success" then "success" elif .state == "pending" then "pending" else "failure" end)}' | jq -s .) || return 1
   jq -n --argjson a "$runs" --argjson b "$statuses" --argjson wruns "$wruns" '
     def superseded: . as $r | ($wruns | map(select(.suite == $r.suite)) | first) as $w
       | $w != null and any($wruns[]; .workflow_id == $w.workflow_id and .id > $w.id
           and ((.done | not) or (.suite as $s | any($a[]; .suite == $s and .name == $r.name))));
     ($a | map(if .cancelled and superseded then .status = "pending" else . end)
-        | group_by(.name) | map(max_by(.id))) + $b
-    | group_by(.name) | map(max_by(.at) | {name, status})'
+        | group_by(.name) | map(max_by(.id) | {name, status})) + $b'
 }
 
 # The re-runnable job behind a check: an Actions job's id is its check run's id,
@@ -99,7 +100,8 @@ host_pr_checks() { # <pr> <head_sha>
 # says how many times it has run (run_attempt, 1 until a re-run). A check run
 # some other app wrote is no Actions job, and its id would 404 on the jobs
 # routes, so it answers nulls rather than failing: there is nothing to re-run,
-# which is not the host being down. The log is a courtesy for the run reading
+# which is not the host being down. Nor is one that did not fail: its name can
+# fail on a commit status alone, which no job re-run turns green. The log is a courtesy for the run reading
 # why the check failed, so a log that cannot be read (expired, still running)
 # leaves log_tail null and does not fail the call.
 host_check_job() { # <pr> <head_sha> <name>
@@ -107,9 +109,9 @@ host_check_job() { # <pr> <head_sha> <name>
   esc=$(printf '\033') bel=$(printf '\007')
   # paged: the check_name filter leaves that one check's reruns, and max_by(.id) wants the newest
   cr=$(api "$R/commits/$2/check-runs" -X GET -f "check_name=$3" -f per_page=100 \
-    --jq '.check_runs | max_by(.id) // empty | {id, actions: (.app.slug == "github-actions")}') || return 1
+    --jq '.check_runs | max_by(.id) // empty | {id, actions: (.app.slug == "github-actions"), failed: (.conclusion | IN(null, "success", "neutral", "skipped") | not)}') || return 1
   [ -n "$cr" ] || return 1
-  if ! jq -e .actions <<<"$cr" >/dev/null; then
+  if ! jq -e '.actions and .failed' <<<"$cr" >/dev/null; then
     printf '{"job_id":null,"attempt":null,"log_tail":null}\n'; return 0
   fi
   id=$(jq -r .id <<<"$cr")

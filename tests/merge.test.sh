@@ -124,6 +124,18 @@ check_rc "a head whose newest run of a check failed or was cancelled is refused"
 check "the refusal reads checks-unsettled: build: failure" "checks-unsettled: build: failure" "$(jq -r .error <<<"$out")"
 no_merge "a failed check"
 
+# A check run and a commit status of one name answer two rows (#1343): a green
+# row does not hide a red one, and two red rows of a name read as one.
+reset; push_at "$A"; pr 1 open "$A"
+printf '[{"name":"build","status":"failure"},{"name":"build","status":"success"}]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
+out=$(run 7 none "$A" 2>/dev/null); rc=$?
+check "a red row beside a green row of its name is refused" "1 checks-unsettled: build: failure" "$rc $(jq -r .error <<<"$out")"
+no_merge "a red row beside a green one"
+reset; push_at "$A"; pr 1 open "$A"
+printf '[{"name":"build","status":"failure"},{"name":"build","status":"failure"}]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
+out=$(run 7 none "$A" 2>/dev/null)
+check "a name red in two rows is named once" "checks-unsettled: build: failure" "$(jq -r .error <<<"$out")"
+
 # A body edit after a green ci-wait re-fires a workflow: the merge call's own read sees it.
 reset; push_at "$A"; pr 1 open "$A"; pr 2 merged "$A"
 printf '[{"name":"build","status":"pending"}]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
