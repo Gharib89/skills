@@ -46,10 +46,10 @@ g -C "$repo" worktree add -q -b fix/old-9 "$wt" >/dev/null 2>&1
 printf 'work\n' > "$wt/untracked.txt"
 printf 'build\n' > "$wt/scratch.log"
 
-# The PR record the removed prune keyed on: kept so this test goes red again if
-# the prune returns.
 printf 'me\n'   > "$SHIP_FAKE/host_identity.1.json"
 printf 'true\n' > "$SHIP_FAKE/host_can_push.1.json"
+# The PR record the removed prune keyed on: kept so this test goes red again if
+# the prune returns.
 jq -n --arg h "$(g -C "$wt" rev-parse HEAD)" '{number: 7, state: "merged", head_sha: $h}' \
   > "$SHIP_FAKE/host_pr_for_branch.1.json"
 issue() { # <state>
