@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# host_pr_for_branch() carries the PR's head sha on both real adapters (#321):
-# preflight prunes a worktree only at that sha, so an adapter dropping it stops
-# every prune with no test failing over the Host fake. Each adapter runs with
+# host_pr_for_branch() carries the PR's head sha on both real adapters (#321),
+# the shape lib/host.sh documents: an adapter dropping it breaks that contract
+# with no test failing over the Host fake. Each adapter runs with
 # its transport (`api`, `azx`) redefined to answer a raw host fixture shaped as
 # the live probes of GitHub PR 285 and lab PR 1 answered, so no call here
 # reaches a host.

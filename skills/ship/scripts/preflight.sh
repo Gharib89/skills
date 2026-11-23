@@ -40,7 +40,7 @@
 # free-text runs are not the same run, so a `*-none` branch is no reason.
 #
 # stdout: {host, repo, identity, profile, ok, reasons[], mentions[], mentioned_by[],
-#          pruned[], reviewers[], self_review_cap, rework, warnings[]}
+#          reviewers[], self_review_cap, rework, warnings[]}
 #   reasons use the stop names verbatim, detail after a colon:
 #   issue #<n> not found or unreadable · closed · is a pull request · already claimed · existing PR · existing branch
 #   · worktree exists · not triaged: run /triage first · ready-for-human:
@@ -56,9 +56,8 @@
 #   {number, kind: issue|pr, state}, so a run learns whether a mention is an
 #   open issue or a merged PR without reaching for the host CLI; both lists
 #   carry live cross-references only, open issues and open or merged PRs.
-#   pruned[] lists worktrees under .claude/worktrees/ removed because their HEAD is exactly the
-#   head of the merged or closed PR their branch names; a worktree at any other
-#   commit is kept. reviewers[] is one {name, review_on_push} row per reviewer block:
+#   Preflight removes nothing: a run's own `cleanup` is the only teardown.
+#   reviewers[] is one {name, review_on_push} row per reviewer block:
 #   the copilot_code_review ruleset's true or false for the block posting under
 #   the Copilot login, null for every other block and where the host could not
 #   answer. It is the ruleset read the Trigger check rests on, reported for
@@ -102,7 +101,7 @@ identity=null
 unreachable() { # <detail>
   jq -n --arg h "$SHIP_HOST" --arg r "$SHIP_REPO_SLUG" --argjson id "$identity" --arg d "$1" \
     '{host: $h, repo: $r, identity: $id, ok: false, reasons: ["host-unreachable: " + $d],
-      mentions: [], mentioned_by: [], pruned: [], reviewers: []}'
+      mentions: [], mentioned_by: [], reviewers: []}'
   printf 'host-unreachable: %s\n' "$1" >&2
   exit 2
 }
@@ -231,27 +230,6 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != true ]; then
   done < <(ship_shadowed_skills "$here" "$(ship_frontmatter "$ship_skill" composes)" "${HOME:-/nonexistent}")
 fi
 
-# Prune rule in the header. The sha, not the branch name, decides: names get
-# reused, so a name match alone would delete a fresh worktree's unfinished work.
-pruned='[]'
-container=$(ship_worktree_container)
-if [ -d "$container" ]; then
-  for wt in "$container"/*/; do
-    [ -d "$wt" ] || continue
-    wt=${wt%/}
-    br=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null) || continue
-    head=$(git -C "$wt" rev-parse HEAD 2>/dev/null) || continue
-    pr=$(host_pr_for_branch "$br") || continue
-    case $(jq -r --arg h "$head" 'if .head_sha == $h then .state else "keep" end' <<<"$pr") in
-      merged|closed)
-        git -C "$root" worktree remove --force "$wt" >/dev/null 2>&1 \
-          && git -C "$root" branch -D "$br" >/dev/null 2>&1
-        pruned=$(jq --arg w "$wt" '. + [$w]' <<<"$pruned") ;;
-    esac
-  done
-  git -C "$root" worktree prune >/dev/null 2>&1
-fi
-
 # The issue itself, unless this is a task-spec run.
 mentions='[]'; mentioned_by='[]'
 if [ "$n" = none ]; then :
@@ -345,6 +323,7 @@ if $rework && [ -n "${open_prs:-}" ]; then
   esac
 fi
 
+container=$(ship_worktree_container)
 for wt in "$container"/*-"$n"/; do
   [ -d "$wt" ] || continue
   wt=${wt%/}
@@ -358,11 +337,11 @@ done
 ok=true; [ "${#reasons[@]}" -eq 0 ] || ok=false
 printf '%s\n' "${reasons[@]+"${reasons[@]}"}" | jq -Rs --arg h "$SHIP_HOST" --arg r "$SHIP_REPO_SLUG" \
   --argjson id "$identity" --arg p "$profile" --argjson ok "$ok" --argjson m "$mentions" \
-  --argjson mb "$mentioned_by" --argjson pr "$pruned" --argjson rv "$reviewers" \
+  --argjson mb "$mentioned_by" --argjson rv "$reviewers" \
   --argjson sc "$self_review_cap" --argjson rw "$rework_json" \
   --arg w "$(printf '%s\n' "${warnings[@]+"${warnings[@]}"}")" \
   '{host: $h, repo: $r, identity: $id, profile: $p, ok: $ok,
-    reasons: (split("\n") | map(select(. != ""))), mentions: $m, mentioned_by: $mb, pruned: $pr,
+    reasons: (split("\n") | map(select(. != ""))), mentions: $m, mentioned_by: $mb,
     reviewers: $rv, self_review_cap: $sc, rework: $rw,
     warnings: ($w | split("\n") | map(select(. != "")))}'
 $ok
