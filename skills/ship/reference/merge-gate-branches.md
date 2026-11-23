@@ -1,8 +1,9 @@
 # Phase 9: the merge gate's branches
 
 Read this file only on the branch you hit at the merge gate: a `merge`
-refusal, a human asking for changes, a human saying "file defects", or an unmet
-criterion. The gate itself is [merge-gate.md](merge-gate.md).
+refusal, a human asking for changes, a human saying "file defects", an unmet
+criterion, or a `ship profile:` hold. The gate itself is
+[merge-gate.md](merge-gate.md).
 
 ## Contents
 
@@ -10,6 +11,7 @@ criterion. The gate itself is [merge-gate.md](merge-gate.md).
 - [Changes asked at the gate](#changes-asked-at-the-gate)
 - [Filing a Ship defect](#filing-a-ship-defect)
 - [Unmet criteria](#unmet-criteria)
+- [A profile change](#a-profile-change)
 
 ## Merge refusals
 
@@ -29,6 +31,9 @@ Each refusal merges nothing and comes back to the gate:
   check is the fix loop's, not a waiver's.
 - `cloud-sandbox`: `CLAUDE_CODE_REMOTE=true`, no `Sandbox merge: yes` in the
   profile. Post the summary and stop: a human merges.
+- `base-retargeted`: a clean admission on a PR whose base is no longer the
+  default branch, which the clean gate compared the ship profile against. Post
+  the summary with the reply line and wait for "merge".
 - `stale-base`: merge the base in, re-run the local gate, save the new head's
   settled `ci-wait` answer and come back to the merge gate for `gate summary`. A
   merge with no conflict to resolve leaves the reviewer stops and Verification
@@ -80,3 +85,11 @@ and waits. A run whose Run file has no `## Criteria` section (a free-text run,
 an `init` given no `--criteria`, or criteria text yielding none) gives
 `gate clean` only its `Criterion <n>:` lines to read: with an unmet criterion
 listed, wait the same way, whatever it answers.
+
+## A profile change
+
+A PR that changes the ship profile always holds the clean gate, since it
+changes what the gate requires; `run-file --help` lists each `ship profile:`
+hold. `Merge: on-clean-gate` then posts the summary with the reply line,
+names the profile diff (`git diff <base>...<head> -- docs/agents/ship.md`)
+for the human to read, and waits for "merge".

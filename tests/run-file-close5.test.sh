@@ -7,13 +7,13 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
+source tests/run-file-lib.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 bin=$tmp/bin repo=$tmp/repo
 mkdir -p "$bin" "$repo/docs/agents"
 cp -r skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh skills/ship/scripts/lib "$bin/"
 git init -q "$repo"
-head=abcdef0123456789
 # read-pr's stub answers the head the test sets, or fails when the file is absent.
 cat > "$bin/read-pr.sh" <<STUB
 #!/usr/bin/env bash
@@ -21,7 +21,6 @@ cat > "$bin/read-pr.sh" <<STUB
 printf '{"head_sha":"%s"}\n' "\$(cat "$tmp/pr-head")"
 STUB
 chmod +x "$bin/read-pr.sh"
-printf '%s\n' "$head" > "$tmp/pr-head"
 cat > "$repo/docs/agents/ship.md" <<'PROFILE'
 ## CI
 Legs:
@@ -32,6 +31,9 @@ Legs:
 Trigger: on-request
 Fallback-for: None.
 PROFILE
+# The clean gate grades the profile committed at the head, so the head is a real commit (#1338).
+head=$(run_file_commit_profile "$repo" "$tmp/origin.git") || exit 2
+printf '%s\n' "$head" > "$tmp/pr-head"
 
 n=0
 rf=""
