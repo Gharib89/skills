@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.70.2 (2026-11-23)
+
+### Bug Fixes
+
+- **ship**: Merge checks the gated head against the freshly fetched PR target
+  ([#1350](https://github.com/Gharib89/skills/pull/1350),
+  [`45b779a`](https://github.com/Gharib89/skills/commit/45b779addd4691c5f06133e8e52d6b82bbd026d1))
+
+
 ## v0.70.1 (2026-11-23)
 
 ### Bug Fixes
