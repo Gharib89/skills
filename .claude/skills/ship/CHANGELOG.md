@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.70.1 (2026-11-23)
+
+### Bug Fixes
+
+- **ship**: The clean gate holds a PR that changes the ship profile
+  ([#1351](https://github.com/Gharib89/skills/pull/1351),
+  [`8bd1ec1`](https://github.com/Gharib89/skills/commit/8bd1ec1656f3bd990785b703f19522451debb0bc))
+
+
 ## v0.70.0 (2026-11-23)
 
 ### Features
