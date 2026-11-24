@@ -8,6 +8,11 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source tests/super-agent-fake.sh
 source tests/super-agent-launch-lib.sh
+# The scorecard row each handover counts looks for transcripts under HOME.
+export HOME=$tmp/home CLAUDE_CONFIG_DIR=''
+mkdir -p "$HOME/.claude/projects/p"
+jq -cn '{type: "user", timestamp: "2026-11-17T09:00:00Z", message: {role: "user",
+  content: "Base directory for this skill: /x/.claude/skills/super-agent\nthread th-old"}}' > "$HOME/.claude/projects/p/s.jsonl"
 
 loaded=$(sed -n 's/^  version: //p' "$s/../SKILL.md")
 src=skills/super-agent/SKILL.md
@@ -76,5 +81,39 @@ check "an unreadable source runs no refresh" "null false " "$(H | jq -r '"\(.ski
 sa_skill_file Gharib89/skills "$src" 99.0.0
 out=$(NPX_RC=1 H); rc=$?
 check "a failed refresh exits 1, the bearings still written" "1 false true" "$rc $(jq -r .refreshed <<<"$out") $([ -s "$bear" ] && echo true)"
+
+# --- the scorecard: a row each handover, the weekly review once a week ------------
+seed; rm -f "$(dirname "$led")/scorecard-reviewed"
+for d in 09 10 11 12 13 14 15; do printf '{"day":"2026-11-%s"}\n' "$d"; done > "$(dirname "$led")/scorecard.jsonl"
+now=$(jq -n '"2026-11-18T08:00:00Z" | fromdateiso8601')
+out=$(SA_NOW=$now H); rc=$?
+check "a handover counts the previous day's scorecard row for the old thread" "0 2026-11-17 th-old" \
+  "$rc $(jq -r .scorecard.row <<<"$out") $(jq -r 'select(.day == "2026-11-17") | .thread' "$(dirname "$led")/scorecard.jsonl")"
+check "the first handover of a week runs the weekly review over the last full week" "[] 2026-11-09" \
+  "$(jq -c .scorecard.review <<<"$out") $(cat "$(dirname "$led")/scorecard-reviewed")"
+check "a later handover that week runs no review" null "$(SA_NOW=$((now + 86400)) H | jq -c .scorecard.review)"
+for d in 10-19 10-26 11-02 11-09; do printf '{"day":"2026-%s","guards":{"watch":{"blocks":0,"passes":0}}}\n' "$d"; done >> "$(dirname "$led")/scorecard.jsonl"
+rm -f "$(dirname "$led")/scorecard-reviewed"
+SA_NOW=$now H >/dev/null
+check "a review row joins the bearings' Needs you list" 1 "$(grep -c '^- Scorecard: the watch guard blocked nothing' "$bear")"
+rm -f "$(dirname "$led")/scorecard-reviewed"
+printf 'not json\n' >> "$(dirname "$led")/scorecard.jsonl"
+err=$(SA_NOW=$now H 2>&1 >/dev/null); rc=$?
+check "a review that fails is reported, holds nothing and marks no week" "0 1 absent" \
+  "$rc $(grep -c 'the scorecard review failed' <<<"$err") $([ -f "$(dirname "$led")/scorecard-reviewed" ] && echo present || echo absent)"
+for d in 09 10 11 12 13 14; do printf '{"day":"2026-11-%s"}\n' "$d"; done > "$(dirname "$led")/scorecard.jsonl"
+out=$(SA_NOW=$now H 2>/dev/null)
+check "a week missing a row: the review error is in the JSON and a Needs you line" "true 1" \
+  "$(jq -r '.scorecard.review_error | contains("no row for 2026-11-15")' <<<"$out") $(grep -c '^- Scorecard: the weekly review failed: .*no row for 2026-11-15' "$bear")"
+cp -r "$s/.." "$tmp/sa" && printf '#!/usr/bin/env bash\n[ "$1" = review ] && exit 1\nexec bash %q "$@"\n' "$s/scorecard.sh" > "$tmp/sa/scripts/scorecard.sh"
+out=$(SA_NOW=$now bash "$tmp/sa/scripts/handover.sh" --ledger "$led" --from th-old --out "$bear" 2>/dev/null); rc=$?
+check "a review that dies with no output is still reported and holds nothing" '0 "the review failed" null absent' \
+  "$rc $(jq -c .scorecard.review_error <<<"$out") $(jq -c .scorecard.review <<<"$out") $([ -f "$(dirname "$led")/scorecard-reviewed" ] && echo present || echo absent)"
+rm -f "$(dirname "$led")/scorecard.jsonl"
+printf 'not json\n' > "$led.archive.jsonl"
+out=$(SA_NOW=$now H 2>/dev/null); rc=$?
+check "a scorecard that fails is reported and holds nothing" "0 null true" \
+  "$rc $(jq -r .scorecard.row <<<"$out") $(jq -r '.scorecard.error | contains("archive")' <<<"$out")"
+rm -f "$led.archive.jsonl"
 
 finish

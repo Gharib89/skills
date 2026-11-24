@@ -13,8 +13,10 @@ the one push that is not a need. The old thread, in this order:
 1. `scripts/handover.sh --ledger <ledger> --from $T3CODE_THREAD_ID --out
    <bearings file>`, `<bearings file>` being `bearings.md` beside the ledger.
    It refreshes the global super-agent copy when the loaded one is stale and
-   writes the bearings file from the ledger. Exit 1 (the refresh failed)
-   still hands over; say so in chat.
+   writes the bearings file from the ledger. First it counts the previous
+   day's scorecard row and, once a week, the weekly review
+   (`scorecard/README.md`); a failed row is printed, never a hold. Exit 1
+   (the refresh failed) still hands over; say so in chat.
 2. Stop the watcher, so two super agents never run on one ledger: TaskStop
    its background shell when its id is in hand, else `kill` the pid held in
    `<ledger>.watch`, the watcher's lock, once `ps -o args= -p <pid>` shows
