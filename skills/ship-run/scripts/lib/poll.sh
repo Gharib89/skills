@@ -20,17 +20,19 @@
 # functions are shell functions `timeout` cannot run. The watchdog marks the read
 # cut before it signals anything, because ending the children first lets a read
 # that carries on after its child dies write an answer and exit 0 before its own
-# TERM lands (#1409): the mark, not the exit status, says the read was cut.
+# TERM lands (#1409): the mark, not the exit status, says the read was cut. The
+# mark is `<out-file>.cut`, removed before the function returns.
 ship_poll_read() {
-  local out=$1 pid dog rc exit_trap cut=$1.cut; shift
+  local out=$1 pid dog rc cut=$1.cut saved=$1.trap; shift
   rm -f "$cut"
   : > "$SHIP_HTTP_STATUS_FILE"
   if [ -n "${SHIP_READ_LIMIT:-}" ]; then
     # A forked subshell keeps the caller's EXIT trap until it resets its traps, and
     # a TERM landing in that window runs it: a loaded host saw the caller's temp
     # files, this read's out-file among them, deleted under it. So the trap is
-    # lifted across both forks.
-    exit_trap=$(trap -p EXIT); trap - EXIT
+    # lifted across both forks, saved through a file since a `$( )` shows no traps
+    # before bash 4.4.
+    trap -p EXIT > "$saved"; trap - EXIT
     "$@" > "$out" & pid=$!
     # The watchdog traps TERM to end its own sleep, so `kill "$dog"` alone stops
     # both once the read has returned: left running, the sleep would hold a
@@ -39,7 +41,8 @@ ship_poll_read() {
     ( trap 'kill "$s" 2>/dev/null; exit 0' TERM
       sleep "$SHIP_READ_LIMIT" & s=$!; wait "$s"
       : > "$cut"; pkill -TERM -P "$pid" 2>/dev/null; kill -TERM "$pid" 2>/dev/null ) >/dev/null 2>&1 </dev/null & dog=$!
-    eval "$exit_trap"
+    # shellcheck source=/dev/null
+    . "$saved"; rm -f "$saved"
     wait "$pid"; rc=$?
     kill "$dog" 2>/dev/null; wait "$dog" 2>/dev/null
     if [ -e "$cut" ]; then rm -f "$cut"; : > "$out"; return 4; fi

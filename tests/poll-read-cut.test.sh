@@ -29,4 +29,10 @@ SHIP_READ_LIMIT=5 ship_poll_read "$out" quick; rc=$?
 check_rc "a read inside its limit is answered" 0 "$rc"
 check "and its answer is kept" answered "$(cat "$out")"
 
+# The caller's EXIT trap is lifted while the read forks, and is back after.
+SHIP_READ_LIMIT=5
+( trap 'echo cleanup' EXIT; ship_poll_read "$out" quick; trap -p EXIT ) > "$work/trap.out"
+check "the caller's EXIT trap survives the call" "trap -- 'echo cleanup' EXIT" "$(head -1 "$work/trap.out")"
+check "and the call leaves no mark or saved trap beside the out-file" "" "$(compgen -G "$work/*.cut"; compgen -G "$work/*.trap")"
+
 finish
