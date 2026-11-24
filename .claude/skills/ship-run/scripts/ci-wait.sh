@@ -7,7 +7,11 @@
 # pass the cap answers `pending` with a cursor, and `--cursor` resumes it. The
 # cursor carries the window's deadline, the expected head only where --sha fixed
 # it, and the no-checks grace's clock with the head it started for: a resumed
-# call, like any pass, that finds another head starts that clock over.
+# call, like any pass, that finds another head starts that clock over. Each host
+# read is cut off at the time left in the window and in the call, so a slow host
+# cannot carry a call past either: a read cut at the window's deadline is
+# `timeout`, one cut at the call cap is `pending`, and a cursor whose window has
+# closed is `timeout` with no read.
 #
 #   ci-wait <pr> [--sha <sha>] [--timeout <s>, at least the no-checks grace the
 #           profile leaves standing] [--interval <s>] [--rerun-failed]
