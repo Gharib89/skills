@@ -138,8 +138,9 @@ ship_reviewers() {
 # Fallbacks that name each other in a cycle leave no primary to withhold them
 # for, and a `Cap:` below zero or with a fraction bounds no loop, so each is
 # refused, as is a `Gating:` that is not yes or no; the cycle is reported once,
-# from its first block in profile order. Blocks sharing a name are skipped: the
-# name keys the walk, and the repeat is its own fault.
+# from its first block in profile order. A name more than one block carries keys
+# no walk, so those blocks neither start one nor continue one; the rest are still
+# checked.
 #
 # A fallback that is not on-request cannot be withheld, and withholding it until
 # its primary degrades is the whole point of a fallback; one naming a reviewer
@@ -200,7 +201,9 @@ ship_reviewer_reasons() {
     | if ($rows | type) != "array"
       then "profile invalid: the ## Reviewers blocks could not be parsed"
       else ([$rows[].name]) as $names
-        | ([$rows[] | select(.fallback_for != null) | {key: .name, value: .fallback_for}] | from_entries) as $fallback
+        | ([$names[] | . as $n | select(([$names[] | select(. == $n)] | length) > 1)] | unique) as $dups
+        | ([$rows[] | . as $r | select($r.fallback_for != null and ($dups | index($r.name)) == null)
+            | {key: $r.name, value: $r.fallback_for}] | from_entries) as $fallback
         | $rows[]
         | . as $x
         | (if $x.name == "self-review" or ($x.name | startswith("self-review "))
@@ -221,7 +224,7 @@ ship_reviewer_reasons() {
           (if ($x.gating | type) == "string"
            then "profile invalid: \($x.name) has Gating: \($x.gating), which is neither yes nor no"
            else empty end),
-          (if ($names | unique | length) != ($names | length) then empty
+          (if ($dups | index($x.name)) != null then empty
            else (([$x.name | limit(($names | length) + 1; recurse($fallback[.]; . != null))]) as $walk
                  | ($walk[1:] | index($x.name)) as $back
                  | if $back != null

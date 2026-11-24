@@ -47,6 +47,10 @@ run "$(block a 1 no c)" "$(block b 1 no a)" "$(block c 1 no b)"
 check "a three-block cycle is named in profile order" \
   'profile invalid: reviewers name each other as fallbacks in a cycle: a -> c -> b -> a' "$(reasons)"
 
+run "$(block a 1 no b)" "$(block b 1 no a)" "$(block c 1 no None.)" "$(block c 1 no None.)"
+check "a cycle is still refused beside two blocks sharing an unrelated name" \
+  'profile invalid: reviewers name each other as fallbacks in a cycle: a -> b -> a' "$(reasons)"
+
 run "$(block primary 2 no None.)" "$(block spare 1 no primary)"
 check "a fallback with a primary is admitted" '' "$(reasons)"
 

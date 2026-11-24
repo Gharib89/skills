@@ -160,9 +160,15 @@ bounded_read() { # <out-file> <fn> <args...>
   local now lim rc
   now=$(date +%s)
   lim=$((deadline < call_end ? deadline : call_end)); lim=$((lim - now))
-  [ "$lim" -gt 0 ] || cut_off
+  # A window already closed ends here with no read. A call cap spent before its
+  # first read still gets that read, one second at most, so the answer carries
+  # the head it saw.
+  [ "$lim" -gt 0 ] || { window_closed; lim=1; }
   SHIP_READ_LIMIT=$lim ship_poll_read "$@"; rc=$?
   [ "$rc" -ne 4 ] || cut_off
+  # The bound is whole seconds from a clock read earlier in the second, so a
+  # read can finish a fraction past the deadline: it is graded `timeout`.
+  window_closed
   return "$rc"
 }
 # A read with no answer: three in a row, or the window closing on one, is the

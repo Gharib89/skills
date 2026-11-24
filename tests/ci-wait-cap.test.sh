@@ -40,6 +40,12 @@ check "a read outlasting the window is timeout, not green" timeout "$(jq -r .sta
 check_rc "and exits 1" 1 "$rc"
 check "and the wait ended near the window, not after the read" true "$([ "$took" -lt 3 ] && echo true || echo false)"
 
+# A read that finishes just past the window is no green either: its bound is whole
+# seconds, from a clock read earlier in the second.
+reset; echo 1 > "$SHIP_FAKE/host_pr_get.1.delay"
+ci --timeout 1
+check "a read finishing past the deadline is timeout" timeout "$(jq -r .status <<<"$out")"
+
 # A read slower than one call's cap, inside a longer window, is pending.
 reset; echo 3 > "$SHIP_FAKE/host_pr_get.1.delay"
 SHIP_CALL_CAP=1 ci --timeout 60
