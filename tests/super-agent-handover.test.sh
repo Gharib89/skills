@@ -134,6 +134,12 @@ jq -n '{projects: [{id: "p-other", workspaceRoot: "/repo"}]}' > "$tmp/noproj.jso
 out=$(bash "$s/handover.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/noproj.json"); rc=$?
 check "a missing T3 project for the folder is one Needs you line saying what the owner creates" "0 null 1" \
   "$rc $(jq -r .home.project_id <<<"$out") $(grep -c "^- Super agent folder: no T3 project has $folder as its workspace" "$bear")"
+jq -n --arg f "$folder/" '{projects: [{id: "p-slash", workspaceRoot: $f, archivedAt: null, deletedAt: null}]}' > "$tmp/slash.json"
+check "a project root written with a trailing slash is still the folder's" p-slash \
+  "$(bash "$s/handover.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/slash.json" | jq -r .home.project_id)"
+jq -n --arg f "$folder" '[{id: "p-gone", workspaceRoot: $f, archivedAt: "2026-11-01T00:00:00Z"}]' > "$tmp/archived.json"
+check "an archived project is not the folder's, and the rows may be a bare array" "null 1" \
+  "$(bash "$s/handover.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/archived.json" | jq -r .home.project_id) $(grep -c '^- Super agent folder: no T3 project' "$bear")"
 rm -rf "$folder"; mkdir -p "$folder"; printf 'x' > "$folder/.claude"
 out=$(H); rc=$?
 check "a guard entry the handover could not write is one Needs you line" "0 false 1" \

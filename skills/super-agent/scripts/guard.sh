@@ -24,7 +24,7 @@
 #
 # contract: bare-run
 # stdout: hook mode prints nothing; `--install` {settings, installed, changed, entry};
-#         `--status` {settings, installed, entry, stale: {settings, entries} or null}
+#         `--status` {settings, installed, entry, stale: {settings, entries, unreadable} or null}
 # exit: 0 allowed, installed or status read · 2 a call refused (the message on stderr),
 #       a usage error or a settings file that is not JSON
 set -uo pipefail
@@ -45,7 +45,7 @@ if [ $# -gt 0 ]; then
   jq -e 'type == "object"' <<<"$cur" >/dev/null 2>&1 || sa_tooling "$settings is not a JSON object"
   jq -e '(.hooks // {}) | type == "object"' <<<"$cur" >/dev/null || sa_tooling "$settings: .hooks must be an object"
   jq -e '(.hooks.PreToolUse // []) | type == "array"' <<<"$cur" >/dev/null || sa_tooling "$settings: .hooks.PreToolUse must be an array"
-  has=$(jq --argjson e "$entry" '[(.hooks.PreToolUse // [])[] | select(.hooks[]?.command == $e.hooks[0].command)] | length > 0' <<<"$cur") \
+  has=$(jq --argjson e "$entry" "$sa_jq_guard_has"'guard_has($e)' <<<"$cur") \
     || sa_tooling "cannot read the hooks in $settings"
   changed=false
   if [ "$mode" = install ] && [ "$has" = false ]; then

@@ -51,7 +51,7 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$ledger" ] && [ -n "$from" ] && [ -n "$out" ] && [ -n "$projects" ] || sa_tooling "$usage"
 sa_read "$ledger"
-jq -e '(.projects // .) | type == "array"' "$projects" >/dev/null 2>&1 || sa_tooling "$projects: not a t3_project_list answer"
+jq -e "$sa_jq_projects"'project_rows | type == "array"' "$projects" >/dev/null 2>&1 || sa_tooling "$projects: not a t3_project_list answer"
 # Writable before the refresh, so a refresh never runs for a handover that cannot finish.
 { : >> "$out"; } 2>/dev/null || sa_tooling "cannot write $out"
 

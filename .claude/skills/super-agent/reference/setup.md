@@ -71,15 +71,17 @@ skill's base directory.
    the hostname of the machine it runs on (the key itself where an entry
    records none): any other key is a tooling error and launches nothing.
 6. Read `home` in the `--write` answer ([the guard hook](#the-guard-hook)):
-   tell the owner each of its `needs` lines, and to create a T3 project whose
-   workspace is its `folder`, once, in full access. The next daily handover
+   tell the owner each of its `needs` lines and, unless `t3_project_list`
+   already shows a project whose workspace is its `folder`, to create one
+   there once, in full access. The next daily handover
    launches the super agent there.
 
 ## The guard hook
 
 `setup.sh --write` and every daily handover rewrite the **super agent
 folder**'s generated `.claude/settings.local.json` (`super-agent/home` under
-`$XDG_STATE_HOME`): its one PreToolUse entry is the state guard, which refuses
+`$XDG_STATE_HOME`, `~/.local/state` when unset): its one PreToolUse entry is
+the state guard, `scripts/guard.sh`, which refuses
 a hand write to the ledger, fleet or quota file (an Edit, a Write, a
 redirection or an `mv`) and names the script to use. The file is generated
 whole, so a hand edit there is lost on the next rewrite. A refusal means an
@@ -90,8 +92,8 @@ the pinned thread runs in that folder, so the hook reaches no other session.
 holds the entry for this copy of the script, and `stale` lists each guard
 entry an older install left in `~/.claude/settings.json`, the line the owner
 removes there (it would fire in every session). Both are also `needs` lines in
-`home`. `--install` adds the entry to the folder's file, or to the file
-`--settings` names.
+`home`. Run `--install` only when a `needs` line names the missing hook: it
+adds the entry to the folder's file, or to the file `--settings` names.
 
 ## Cursor and Grok
 

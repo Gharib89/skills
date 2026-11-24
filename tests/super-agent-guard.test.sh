@@ -104,4 +104,16 @@ out=$(bash "$s/guard.sh" --status)
 check "a stale entry left in user settings is reported with the line to remove" "$HOME/.claude/settings.json $old" \
   "$(jq -r '.stale.settings' <<<"$out") $(jq -c '.stale.entries[]' <<<"$out")"
 
+stale_of() { # <command>: the stale entries --status finds for a user-settings entry running it
+  jq -n --arg c "$1" '{hooks: {PreToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $c}]}]}}' > "$HOME/.claude/settings.json"
+  bash "$s/guard.sh" --status | jq -c '.stale.entries // [] | length'
+}
+check "a double-quoted guard command is stale too" 1 "$(stale_of 'bash "/x/super-agent/scripts/guard.sh"')"
+check "a trailing space still reads as the guard" 1 "$(stale_of "bash '/x/super-agent/scripts/guard.sh' ")"
+check "a bare path is the guard" 1 "$(stale_of /x/super-agent/scripts/guard.sh)"
+check "another skill's guard.sh is not" 0 "$(stale_of "bash '/x/my-super-agent/scripts/guard.sh'")"
+check "a script beside it is not" 0 "$(stale_of "bash '/x/super-agent/scripts/guard.sh.bak'")"
+printf 'not json' > "$HOME/.claude/settings.json"
+check "user settings that are no JSON are unreadable, never no entry" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
+
 finish
