@@ -48,7 +48,10 @@ host_pr_checks() { # <pr> <head_sha>
          status: (if .state == "succeeded" then "success" elif .state == "notApplicable" then "skip"
                   elif (.state == null) or (.state | IN("pending","notSet")) then "pending" else "failure" end)}]
          | group_by(.name) | map(sort_by(.created) | last | del(.created)) | map(select(.status != "skip"))') || st='[]'
-  jq -n --argjson a "$pol" --argjson b "$st" '$a + $b | group_by(.name) | map(last)'
+  # No collapse across rows by name: a policy and a status (or two policies that
+  # fall back to one type name) can share a name, and the contract grades a name
+  # green only when every row of it is success.
+  jq -n --argjson a "$pol" --argjson b "$st" '$a + $b'
 }
 _threads_raw() { invoke GET git pullRequestThreads 7.1 --route-parameters project="$SHIP_PROJECT" repositoryId="$SHIP_REPO" pullRequestId="$1"; }
 # One thread, for the reply path: phase 7 replies per thread, so listing every
