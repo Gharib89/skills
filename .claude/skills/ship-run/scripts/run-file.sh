@@ -68,8 +68,8 @@
 # line and on any `<n>`, entry or not, whose last line is not met. No criteria
 # writes no section and warns naming `run-file note Criteria`. An init
 # on an issue number with `--from-profile` and no `--criteria` reads the issue
-# and, where it holds criteria, warns on stderr naming the flag; `gate summary`
-# holds the same run
+# and, where it holds criteria, warns on stderr naming the flag; `gate clean`
+# (so `gate summary` and `gate admit clean`) holds the same run
 # (`criteria: the Run file has no ## Criteria but issue #<n> has <k> criteria`).
 # Below the checklist it writes sections the run fills: `Verification results`
 # where `--from-profile` took the names from the profile's headings, or
@@ -215,13 +215,14 @@
 #     fallback that stopped so, and a fallback is owed its own stop only after
 #     such a primary. Other cap,
 #     small lane and auto-once stops, a deferred gate beside a non-green check
-#     outside Legs:, nonblank Override evidence, tracker drafts beside the
+#     outside Legs: or beside no check at all, nonblank Override evidence, tracker drafts beside the
 #     Run file (excluding .base.md), and a last `Stop: self-review: cap`
 #     where no reviewer stopped on tree unchanged at a covered head with a
 #     dispositioned Round hold the gate; a last `cap at <S>` is also lifted by
 #     a reviewer whose last stop is stamped at <S> or a descendant. So does
 #     each `## Criteria` entry that is not met or has no `Criterion <n>:`
-#     line, and a reviewer with a Round whose text opens `re-raised declined: `
+#     line, a numbered issue's criteria where the Run file has no `## Criteria`
+#     (an issue it cannot read exits 2), and a reviewer with a Round whose text opens `re-raised declined: `
 #     stopping on tree unchanged: it stops on cap, which that round also keeps
 #     from owing a fallback. An ordinary deviation, a Ship-defect line or a
 #     defect draft does not hold it: a defect that breaks a gating step fails

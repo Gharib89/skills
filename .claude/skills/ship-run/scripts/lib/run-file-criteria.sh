@@ -41,7 +41,7 @@ issue_criteria() { # issue_criteria <n>
 # The clean gate's hold for criteria an issue states and the Run file never
 # recorded, criteria nobody judged (#933), as a JSON array of at most one reason.
 # A recorded `## Criteria`, even an empty one, is the run's own judgment, and a
-# slug run has no issue to read. Reads the issue only when it must.
+# slug run has no issue to read.
 criteria_unrecorded() { # criteria_unrecorded <unfenced Run file text>, with file already parsed
   local id count
   id=$(basename "$(dirname "$file")"); id=${id#ship-}

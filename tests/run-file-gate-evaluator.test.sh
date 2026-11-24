@@ -83,6 +83,18 @@ check 'and the Run file is left as it was' "$before" "$(cat "$rf")"
 run_file pass pass ''
 same 'an intentionally empty recorded Criteria section' '[true,[]]'
 
+# An issue the gate cannot read is no verdict: exit 2, and no admission.
+touch "$SHIP_FAKE/host_issue_get.1.fail"
+run_file pass pass
+for e in clean admit; do
+  case $e in clean) a=(gate clean "$work/ci.json") ;; admit) a=(gate admit clean "$work/ci.json") ;; esac
+  out=$(cd "$repo" && bash "$m" "${a[@]}" --head "$head" --file "$rf" 2>/dev/null); rc=$?
+  check_rc "an unreadable issue: gate $e exits 2" 2 "$rc"
+  check "and gate $e names the read" yes "$(jq -r '.error' <<<"$out" | grep -q 'cannot read issue 9' && echo yes)"
+done
+check 'and admit clean writes no admission' 0 "$(admitted)"
+rm "$SHIP_FAKE/host_issue_get.1.fail"
+
 issue 'no criteria here'
 run_file pass pass
 same 'an issue with no criteria and no Criteria section' '[true,[]]'

@@ -95,7 +95,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     jq -e ' . == null or (type == "object" and all(.[]; type == "string"))' \
       >/dev/null 2>&1 <<<"$rgates" || ship_tooling "cannot read recorded local gate results"
   fi
-  # In the evaluator, not the summary, so every entrypoint holds on it (#1341).
+  # Here so clean, summary and admit all hold on it (#1341).
   local criteria_held
   criteria_held=$(criteria_unrecorded "$lines") || { printf '%s\n' "$criteria_held"; exit 2; }
   record_dir=$(dirname "$file") || ship_tooling "cannot locate Run file drafts"
@@ -184,7 +184,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
        ((($gates // {}) | to_entries[] | select(.value == "deferred-to-ci")) as $g
          | ($ci.checks[] | . as $c | select(any($legs[]; . as $l | $c | named($l)) | not) | select(.status != "success"))
          | "local gate " + $g.key + ": deferred-to-ci while CI " + .name + ": " + .status),
-       # With no check row, nothing could have run the deferred check, legal no-checks or not.
+       # With no check row, nothing ran the deferred check, even where the profile allows no checks.
        if $ci.checks == [] then ($gates // {}) | to_entries[] | select(.value == "deferred-to-ci")
          | "local gate " + .key + ": deferred-to-ci but CI reported no check to cover it" else empty end,
        if samehead($ci.head_sha; $head) | not then "CI: head differs" else empty end,
