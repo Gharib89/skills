@@ -53,11 +53,13 @@ check "$x refuses an unwritable --out by name, exit 2, before any refresh" "2 ca
 check_rc "$x without --out exits 2" 2 "$(bash "$s/$x.sh" --ledger "$led" --from th-old --projects "$proj" >/dev/null 2>&1; echo $?)"
 check_rc "$x without --projects exits 2" 2 "$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" >/dev/null 2>&1; echo $?)"
 printf 'not json\n' > "$tmp/bad.json"
-check_rc "$x with a --projects file that is no project list exits 2" 2 \
-  "$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/bad.json" >/dev/null 2>&1; echo $?)"
+out=$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/bad.json" 2>/dev/null); rc=$?
+check_rc "$x with a --projects file that is no project list exits 2" 2 "$rc"
+check "$x says the file is no project list" "$tmp/bad.json: not a t3_project_list answer" "$(jq -r .error <<<"$out")"
 jq -n '{projects: [], nextCursor: "c2"}' > "$tmp/page1.json"
-check_rc "$x with one page of several exits 2" 2 \
-  "$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/page1.json" >/dev/null 2>&1; echo $?)"
+out=$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/page1.json" 2>/dev/null); rc=$?
+check_rc "$x with one page of several exits 2" 2 "$rc"
+check "$x says a nextCursor is set" "$tmp/page1.json: a nextCursor is set: save all pages' rows as one array" "$(jq -r .error <<<"$out")"
 jq -n '{projects: [{id: "p5", workspaceRoot: 5}]}' > "$tmp/badrow.json"
 out=$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/badrow.json" 2>/dev/null); rc=$?
 check_rc "$x with a project row whose workspaceRoot is no string exits 2" 2 "$rc"
