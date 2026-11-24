@@ -1,0 +1,257 @@
+<title>Super Agent Message Look</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* PROTOTYPE, throwaway. Three looks (A, B, C) for the six texts the owner reads.
+   Layout: one row per text, three phone-width columns side by side; one column plus a switcher when narrow. */
+:root {
+  --bg: #f3f5f7; --surface: #ffffff; --sunk: #e8ecf0; --fg: #17202a; --muted: #5b6875;
+  --line: #d3dae1; --accent: #0b6e8a; --accent-soft: #dcedf2; --warn: #a15c00; --phone: #10151b; --phone-fg: #eef2f5; --phone-muted: #9aa7b3;
+  --display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1418; --surface: #182027; --sunk: #121a20; --fg: #e6ecf1; --muted: #93a1ae;
+  --line: #2a363f; --accent: #5cc0db; --accent-soft: #173640; --warn: #e0a34a; --phone: #05080a; --phone-fg: #eef2f5; --phone-muted: #9aa7b3; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1418; --surface: #182027; --sunk: #121a20; --fg: #e6ecf1; --muted: #93a1ae;
+  --line: #2a363f; --accent: #5cc0db; --accent-soft: #173640; --warn: #e0a34a; --phone: #05080a; --phone-fg: #eef2f5; --phone-muted: #9aa7b3; color-scheme: dark }
+
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 28px 120px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font: 600 30px/1.15 var(--display); margin: 0 0 10px; text-wrap: balance; }
+h2 { font: 600 19px/1.25 var(--display); margin: 0; text-wrap: balance; }
+.lede { max-width: 68ch; color: var(--muted); margin: 0 0 8px; }
+.tag { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--warn); margin-bottom: 12px; }
+.fixed { max-width: 68ch; margin: 14px 0 0; padding-left: 20px; color: var(--muted); }
+.fixed li { margin: 2px 0; }
+
+.tablebox { overflow-x: auto; margin: 26px 0 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+thead th { font: 600 14px var(--display); }
+tbody th { font-weight: 500; color: var(--muted); width: 17%; }
+
+section { margin-top: 44px; }
+.note { max-width: 68ch; color: var(--muted); margin: 6px 0 16px; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.vlabel { font: 500 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.msg { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow-wrap: anywhere; }
+.msg p { margin: 0 0 10px; } .msg p:last-child, .msg ol:last-child, .msg ul:last-child { margin-bottom: 0; }
+.msg ol, .msg ul { margin: 0 0 10px; padding-left: 22px; }
+.msg .lnk { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.msg code { font: 500 13px var(--mono); background: var(--sunk); padding: 1px 5px; border-radius: 4px; }
+.stats { font: 400 12px/1.4 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+details { font-size: 12px; color: var(--muted); }
+summary { cursor: pointer; width: fit-content; }
+summary:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+pre { font: 400 12px/1.5 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--sunk); border-radius: 6px; padding: 10px; margin: 6px 0 0; color: var(--fg); }
+
+/* phone mock */
+.phone { background: var(--phone); border-radius: 18px; padding: 14px 10px; display: flex; flex-direction: column; gap: 8px; }
+.clock { color: var(--phone-fg); font: 500 12px var(--mono); padding: 0 6px 2px; }
+.notif { background: #222c35; color: var(--phone-fg); border-radius: 14px; padding: 9px 12px; }
+.notif .app { font-size: 11px; color: var(--phone-muted); display: flex; justify-content: space-between; }
+.notif .t { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notif .b { font-size: 13px; color: var(--phone-muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.chip { display: inline-block; font: 500 11px/1 var(--mono); background: var(--accent-soft); color: var(--accent); padding: 4px 7px; border-radius: 4px; margin-bottom: 8px; }
+.card .q { font-weight: 600; margin: 0 0 8px; }
+.opt { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; margin-top: 6px; }
+.opt b { font-weight: 600; display: block; } .opt span { color: var(--muted); font-size: 13px; }
+
+.bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: none;
+  align-items: center; gap: 4px; background: var(--fg); color: var(--bg); border-radius: 999px; padding: 5px; box-shadow: 0 6px 22px rgba(0,0,0,.3); }
+.bar button { all: unset; cursor: pointer; width: 38px; height: 38px; text-align: center; border-radius: 999px; font-size: 18px; }
+.bar span { font: 500 13px var(--mono); padding: 0 8px; white-space: nowrap; }
+@media (max-width: 1000px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .col { display: none; } .col.on { display: flex; }
+  .bar { display: flex; }
+}
+</style>
+
+<div class="wrap">
+  <div class="tag">Prototype, throwaway · fixtures, not your live ledger</div>
+  <h1>Super Agent Message Look</h1>
+  <p class="lede">Three looks for the six texts the super agent's scripts print: the needs-you message, the no-change line, the away line, the return digest, the need thread's title and its reminder. Pick one look, or name the parts you want from each.</p>
+  <ul class="fixed">
+    <li>Already fixed, the same in every look: the action sits in the first 80 characters, one clause of why, numbered options with the recommended one first, and the digest opens with the open needs.</li>
+    <li>Each message is drawn at phone width. The link colour and list style are a stand-in for the T3 thread view.</li>
+  </ul>
+
+  <div class="tablebox"><table>
+    <thead><tr><th></th><th>A · Ask block</th><th>B · Block row</th><th>C · Recommendation first</th></tr></thead>
+    <tbody>
+      <tr><th>Opens with</th><td>The action as a bold question</td><td>The ticket, inside the <code>Needs you</code> row of the status block</td><td>The action as a bold question, then what the super agent would do</td></tr>
+      <tr><th>Options</th><td>A numbered list, one per line, each with its consequence</td><td>Inline on the need's own line</td><td>Inline on a second line</td></tr>
+      <tr><th>Several needs</th><td>Numbers run on: 1 to 3, then 4 to 6</td><td>Each need restarts at 1</td><td>Each need gets a letter: a1, b2</td></tr>
+      <tr><th>You answer</th><td><code>1</code>, or <code>1 5</code></td><td><code>88 1</code> (a bare <code>1</code> when one need is open)</td><td><code>a1 b2</code> (a bare <code>1</code> when one need is open)</td></tr>
+      <tr><th>The why</th><td>Its own <code>Why:</code> line</td><td>A sentence after the action</td><td>Folded into the recommendation</td></tr>
+      <tr><th>Other changed rows</th><td>Below the needs, as block rows</td><td>The need is one row among them</td><td>One line of counts</td></tr>
+      <tr><th>Away line</th><td>Counts for this wake</td><td>Ticket links for this wake</td><td>Running totals since away began</td></tr>
+      <tr><th>Need thread title</th><td>The whole action</td><td>Ticket first, then the action</td><td>Verb and ticket only</td></tr>
+    </tbody>
+  </table></div>
+
+  <div id="sections"></div>
+</div>
+
+<div class="bar" role="group" aria-label="Look">
+  <button id="prev" aria-label="Previous look">←</button><span id="cur"></span><button id="next" aria-label="Next look">→</button>
+</div>
+
+<script>
+const NAMES = { A: 'Ask block', B: 'Block row', C: 'Recommendation first' };
+const L = k => `[${k}](…)`;
+const low = s => /^I\b/.test(s) ? s : s[0].toLowerCase() + s.slice(1);
+const cap = s => s[0].toUpperCase() + s.slice(1);
+
+// A need's fields: key, class, action (with {key}), short (key-first form), title verb, why, options [label, consequence].
+const N = {
+  gate: { key: 'skills#1362', cls: 'blocking', chip: 'Merge gate', action: 'Merge {key} with 1 review finding open', short: 'merge with 1 review finding open', verb: 'Merge',
+    why: 'the review cap is reached and no standing waiver covers an open P2',
+    options: [['Merge and file the finding', 'the finding becomes a follow-up issue'], ['Run one more round', 'the thread fixes it first, about 20 minutes'], ["I'll take the thread", 'it becomes yours']] },
+  stall: { key: 'crm#88', cls: 'blocking', chip: 'Stall cap', action: 'Restart {key} after 3 stalls', short: 'restart after 3 stalls', verb: 'Restart',
+    why: 'its thread rested 3 times on the same failing migration test',
+    options: [['Relaunch on Opus', 'a fresh thread with the failure quoted'], ['Requeue the ticket', 'drop the thread, keep it on the waiting list'], ["I'll take the thread", 'it becomes yours']] },
+  dup: { key: 'cc-otel#41', cls: 'offer', chip: 'Ask first', action: 'Close {key} as a duplicate of cc-otel#39', short: 'close as a duplicate of cc-otel#39', verb: 'Close',
+    why: 'both describe the same exporter retry loss',
+    options: [['Close it', 'with a comment linking cc-otel#39'], ['Leave it open', '']] },
+  hold: { key: 'ratelimit-otel#17', cls: 'blocking', chip: 'Permission', action: 'Approve the held push in {key}', short: 'approve the held push', verb: 'Approve',
+    why: 'a force push with lease waits on you', options: [] },
+};
+const act = (n, link) => n.action.replace('{key}', link ? L(n.key) : n.key);
+const ROW = {
+  run1: `Running (3): ${L('skills#1362')} at its merge gate on claude-main, ${L('crm#88')} in review on claude-main, task:metrics-check (task) running on codex`,
+  run2: `Running (2): ${L('crm#90')} in review on claude-main, ${L('skills#1371')} running on codex`,
+  run3: `Running (3): ${L('skills#1362')} at its merge gate on claude-main, ${L('crm#90')} in review on claude-main, ${L('skills#1371')} running on codex`,
+  wait: `Waiting (2): ${L('crm#91')}, ${L('ratelimit-otel#18')}`,
+  tail: `Quota claude-main: weekly 62%, 5 hour 81%\nQuota codex: weekly 48%, 5 hour 100%\nSuper agent on claude-main`,
+  merged: `${L('skills#1360')}, ${L('skills#1365')}, ${L('crm#85')}, ${L('cc-otel#40')}`,
+  launched: `${L('crm#90')}, ${L('skills#1371')}`,
+};
+
+const A = {
+  need(n, start = 1) {
+    const head = act(n, true) + '?';
+    const out = [n.cls === 'offer' ? `Offer: ${head}` : `**${head}**`, `Why: ${n.why}.`];
+    if (!n.options.length) out.push(`Answer in [its thread](…).`);
+    n.options.forEach((o, i) => out.push(`${start + i}. ${o[0]}${i ? '' : ' (recommended)'}${o[1] ? ': ' + o[1] : ''}`));
+    return out.join('\n');
+  },
+  needs(list) { let s = 1; return list.map(n => { const t = A.need(n, s); s += n.options.length; return t; }).join('\n\n'); },
+  title: n => `${act(n)}?`,
+};
+const B = {
+  need(n) {
+    const opts = n.options.length ? n.options.map((o, i) => `**${i + 1}** ${low(o[0])}`).join(' · ') : 'Answer in [its thread](…).';
+    return `- ${L(n.key)} ${n.short}?${n.cls === 'offer' ? ' (offer)' : ''} ${cap(n.why)}. ${opts}`;
+  },
+  needs: list => `Needs you (${list.length}):\n` + list.map(B.need).join('\n'),
+  title: n => `${n.key}: ${n.short}?`,
+};
+const C = {
+  need(n, letter = '') {
+    const head = `${letter ? letter + '. ' : ''}${act(n, true)}?`;
+    const rec = n.options.length ? `I'd ${low(n.options[0][0])}: ${n.why}.` : `${cap(n.why)}. Answer in [its thread](…).`;
+    const l1 = (n.cls === 'offer' ? head : `**${head}**`) + ' ' + rec;
+    return n.options.length ? l1 + '\n' + n.options.map((o, i) => `\`${letter}${i + 1}\` ${low(o[0])}`).join(' · ') : l1;
+  },
+  needs: list => list.map((n, i) => C.need(n, list.length > 1 ? 'abcdef'[i] : '')).join('\n\n'),
+  title: n => `${n.verb} ${n.key}?`,
+};
+
+const three = [N.gate, N.stall, N.dup];
+const SECTIONS = [
+  { h: 'Needs-you message: one blocking need, at the desk', kind: 'need',
+    note: 'A thread reached its merge gate and no waiver covers the hold. The same wake moved one Running row.',
+    A: A.needs([N.gate]) + '\n\n' + ROW.run1,
+    B: B.needs([N.gate]) + '\n' + ROW.run1,
+    C: C.needs([N.gate]) + '\n\nAlso: 3 running, 2 waiting.' },
+  { h: 'Needs-you message: two needs in one wake', kind: 'need',
+    note: 'One blocking need and one offer. This is where the numbering has to carry the answer.',
+    A: A.needs([N.stall, N.dup]) + '\n\n' + ROW.run2,
+    B: B.needs([N.stall, N.dup]) + '\n' + ROW.run2,
+    C: C.needs([N.stall, N.dup]) + '\n\nAlso: 2 running, 2 waiting.' },
+  { h: 'Needs-you message: a need with no options', kind: 'need',
+    note: 'A permission hold is approved in the held thread, so the message has nothing to number.',
+    A: A.needs([N.hold]), B: B.needs([N.hold]), C: C.needs([N.hold]) },
+  { h: 'No-change line',
+    note: 'Posted only by an hourly backstop turn that found nothing moved.',
+    A: 'No change: 3 running, 2 waiting, 1 needs you',
+    B: 'No change. Needs you (1) · Running (3) · Waiting (2)',
+    C: 'No change since 14:05: 1 needs you, 3 running' },
+  { h: 'Away line',
+    note: 'One line per wake while you are away or in off hours. This wake merged two tickets, launched one and raised one blocking need; since away began the totals are four, two and two.',
+    A: 'Away: merged 2, launched 1, 1 needs you',
+    B: `Away: merged ${L('skills#1360')}, ${L('skills#1365')}; launched ${L('crm#90')}; needs you ${L('crm#88')} (on your phone)`,
+    C: 'Away since 13:50: 4 merged, 2 launched, 0 failed, 2 need you (both on your phone)' },
+  { h: 'Return digest',
+    note: 'Posted once on "back", after 3 hours 10 minutes away. Three needs are open. In A and C the needs stand in for the block\'s Needs you row; in B they are that row.',
+    A: `**Back after 3 h 10 min: 3 need you, 4 merged, 1 failed.**\n\n${A.needs(three)}\n\nSince 13:50\nMerged (4): ${ROW.merged}\nLaunched (2): ${ROW.launched}\nFailed (1): ${L('crm#88')} stalled 3 times\n\n${ROW.run3}\n${ROW.wait}\n${ROW.tail}`,
+    B: `Back. Away 13:50 to 17:00.\n${B.needs(three)}\nMerged (4): ${ROW.merged}\nLaunched (2): ${ROW.launched}\nFailed (1): ${L('crm#88')} stalled 3 times\n${ROW.run3}\n${ROW.wait}\n${ROW.tail}`,
+    C: `**3 need you.** While you were away (3 h 10 min): 4 merged, 2 launched, 1 failed.\n\n${C.needs(three)}\n\n- Merged: ${ROW.merged}\n- Launched: ${ROW.launched}\n- Failed: ${L('crm#88')} stalled 3 times\n\n${ROW.run3}\n${ROW.wait}\n${ROW.tail}` },
+  { h: 'Need thread on the phone', kind: 'phone',
+    note: 'While you are away each blocking need starts its own thread. The lock screen shows only that thread\'s title and "Input", so the title is the whole alert. The cut here is this page\'s guess; the real one is measured on your phone.' },
+];
+
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const inline = s => esc(s).replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a class="lnk">$1</a>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>');
+function md(src) {
+  let html = '', para = [], list = null;
+  const flushP = () => { if (para.length) html += `<p>${para.join('<br>')}</p>`; para = []; };
+  const flushL = () => { if (list) html += `</${list}>`; list = null; };
+  for (const line of src.split('\n')) {
+    const o = line.match(/^(\d+)\. (.*)/), u = line.match(/^- (.*)/);
+    if (o || u) { flushP(); const t = o ? 'ol' : 'ul'; if (list !== t) { flushL(); html += o ? `<ol start="${o[1]}">` : '<ul>'; list = t; } html += `<li>${inline((o || u)[o ? 2 : 1])}</li>`; }
+    else if (!line.trim()) { flushP(); flushL(); }
+    else { flushL(); para.push(inline(line)); }
+  }
+  flushP(); flushL(); return html;
+}
+const plain = s => s.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\*\*|`/g, '');
+
+function stats(src, kind) {
+  const p = plain(src), lines = src.split('\n').filter(l => l.trim()).length;
+  let s = `${p.length} characters · ${lines} line${lines > 1 ? 's' : ''}`;
+  if (kind === 'need') s += ` · action ends at character ${p.indexOf('?') + 1}`;
+  return s;
+}
+function phone(V, v) {
+  const n = N.gate, t = V.title(n), still = `Still needs you: ${low(t)}`;
+  const notif = (title, body, when) => `<div class="notif"><div class="app"><span>T3 Code</span><span>${when}</span></div><div class="t">${esc(title)}</div><div class="b">${body}</div></div>`;
+  const opts = n.options.map(o => `<div class="opt"><b>${esc(o[0])}</b><span>${esc(o[1])}</span></div>`).join('');
+  const chip = v === 'B' ? n.key : v === 'C' ? 'Needs you' : n.chip;
+  const q = v === 'C' ? `${act(n)}? I'd ${low(n.options[0][0])}: ${n.why}.` : `${act(n)}? ${cap(n.why)}.`;
+  return `<div class="phone"><div class="clock">14:42</div>${notif(t, 'Input: skills', 'now')}${notif(still, 'Input: skills', '4 h later')}${notif('Super agent', 'Done: skills', 'for contrast')}</div>
+    <div class="stats">title ${t.length} characters · reminder ${still.length}</div>
+    <div class="card"><span class="chip">${esc(chip)}</span><p class="q">${esc(q)}</p>${opts}<div class="opt"><b>Other</b><span>the ask tool always adds this</span></div></div>`;
+}
+
+const root = document.getElementById('sections');
+const VAR = { A, B, C };
+root.innerHTML = SECTIONS.map((s, i) => `<section><h2>${i + 1}. ${s.h}</h2><p class="note">${s.note}</p><div class="grid">` +
+  Object.keys(VAR).map(v => `<div class="col" data-v="${v}"><div class="vlabel">${v} · ${NAMES[v]}</div>` +
+    (s.kind === 'phone' ? phone(VAR[v], v)
+      : `<div class="msg">${md(s[v])}</div><div class="stats">${stats(s[v], s.kind)}</div><details><summary>Text as printed</summary><pre>${esc(s[v])}</pre></details>`) +
+    `</div>`).join('') + `</div></section>`).join('');
+
+const keys = Object.keys(VAR);
+function show() {
+  const h = (location.hash.slice(1) || 'a').toUpperCase(), v = keys.includes(h) ? h : 'A';
+  document.querySelectorAll('.col').forEach(c => c.classList.toggle('on', c.dataset.v === v));
+  document.getElementById('cur').textContent = `${v} · ${NAMES[v]}`;
+  return v;
+}
+const step = d => { location.hash = keys[(keys.indexOf(show()) + d + keys.length) % keys.length].toLowerCase(); };
+document.getElementById('prev').onclick = () => step(-1);
+document.getElementById('next').onclick = () => step(1);
+addEventListener('hashchange', show);
+addEventListener('keydown', e => { if (e.target.closest('input, textarea, [contenteditable]')) return; if (e.key === 'ArrowLeft') step(-1); if (e.key === 'ArrowRight') step(1); });
+show();
+</script>
