@@ -54,8 +54,9 @@ refused too, rather than counted as an empty day.
 [targets.json](targets.json) maps a dotted path into the row to its `max`. A
 target still tagged with the `slice` that owns it is inert: that slice drops
 the tag when it lands, so the review never raises a row for work not shipped.
-The weekly review refuses a week missing a day's row, naming the day to count
-with `row --day`. Otherwise it raises one row per live target a day of the
+The weekly review refuses a week missing some day's row, naming the day to
+count with `row --day`; a week with no row at all predates the scorecard and
+raises nothing. Otherwise it raises one row per live target a day of the
 week went over, and one per guard logged in each of the four weeks ending with
 that week and blocking nothing in them. A number with no target never raises
 one.

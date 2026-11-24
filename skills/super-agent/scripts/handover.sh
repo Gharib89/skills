@@ -19,10 +19,11 @@
 # that fails is reported, never a reason to hold the handover.
 #
 # stdout: {bearings, skill: {loaded, source, stale}, refreshed, scorecard: {row,
-#         error, review}}: `bearings` the file written, `refreshed` true when the
-#         refresh ran and exited 0, `scorecard.row` the day counted (null when it
-#         failed, `error` saying why), `review` the weekly review's rows on the
-#         first handover of a week, else null
+#         error, review, review_error}}: `bearings` the file written, `refreshed`
+#         true when the refresh ran and exited 0, `scorecard.row` the day counted
+#         (null when it failed, `error` saying why), `review` the weekly review's
+#         rows on the first handover of a week, else null, `review_error` why the
+#         review failed (also a Needs you line), else null
 # exit: 0 the bearings written · 1 the refresh failed (the bearings still
 #       written, saying so) · 2 usage, an unreadable ledger, or a bearings file
 #       that could not be written
@@ -54,13 +55,16 @@ sa_read "$ledger"
 # holds the first day of the last week reviewed.
 card=$(bash "$(dirname "${BASH_SOURCE[0]}")/scorecard.sh" row --ledger "$ledger" --thread "$from") \
   || printf 'the scorecard row failed: %s\n' "$(jq -r .error <<<"$card" 2>/dev/null)" >&2
+review_error=null
 review=$(bash "$(dirname "${BASH_SOURCE[0]}")/scorecard.sh" review --ledger "$ledger") \
-  || { printf 'the scorecard review failed: %s\n' "$(jq -r .error <<<"$review" 2>/dev/null)" >&2; review=''; }
+  || { review_error=$(jq -c '.error // "the review failed"' <<<"$review" 2>/dev/null || echo '"the review failed"')
+       printf 'the scorecard review failed: %s\n' "$(jq -r . <<<"$review_error")" >&2; review=''; }
 mark="$(dirname "$ledger")/scorecard-reviewed" week=''
 [ -z "$review" ] || week=$(jq -r .week.from <<<"$review")
 [ -n "$week" ] && [ "$(cat "$mark" 2>/dev/null)" != "$week" ] || { review=null week=''; }
-scorecard=$(jq -cn --argjson c "${card:-null}" --argjson r "$review" \
-  '{row: ($c.row.day // null), error: ($c.error // null), review: (if $r == null then null else $r.needs end)}')
+scorecard=$(jq -cn --argjson c "${card:-null}" --argjson r "$review" --argjson re "$review_error" \
+  '{row: ($c.row.day // null), error: ($c.error // null), review: (if $r == null then null else $r.needs end),
+    review_error: $re}')
 skill=$(sa_skill_stale)
 refreshed=false rc=0
 if [ "$(jq -r .stale <<<"$skill")" = true ]; then
@@ -75,7 +79,8 @@ jq -r --arg from "$from" --arg l "$ledger" --argjson sk "$skill" --argjson r "$r
    "Skill: loaded \($sk.loaded // "unread"), source \($sk.source // "unread"), "
      + (if $r then "refreshed to \($sk.source)." elif $sk.stale == true then "stale, the refresh failed." else "no refresh." end), "",
    "## Open entries", ""] + lines([.entries[] | select(is_open) | "- \(.key) thread \(.thread) \(.stage)"])
-  + ["", "## Needs you", ""] + lines([((.needs // [])[] | "- \(.key): \(.action)"), (($sc.review // [])[] | "- \(.)")])
+  + ["", "## Needs you", ""] + lines([((.needs // [])[] | "- \(.key): \(.action)"), (($sc.review // [])[] | "- \(.)"),
+      (if $sc.review_error then "- Scorecard: the weekly review failed: \($sc.review_error)" else empty end)])
   + ["", "## Waiting", ""] + lines([waiting_list[] | "- \(.key): \(.reason)"])
   | join("\n")' <<<"$doc" > "$out" || sa_tooling "cannot write $out"
 # Marked only once the bearings hold the review's rows.

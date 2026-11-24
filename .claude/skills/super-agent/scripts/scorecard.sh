@@ -72,7 +72,8 @@ if [ "$cmd" = review ]; then
     | ($from - 21 * 86400 | strftime("%Y-%m-%d")) as $four
     | (map(select(.day >= $w and .day <= $to)) | unique_by(.day)) as $days
     | ([range(7) | $from + . * 86400 | strftime("%Y-%m-%d")] - [$days[].day]) as $missing
-    | if $missing != [] then error("week \($w): no row for \($missing | join(", ")); count it with row --day") else . end
+    # A week with no row at all predates the scorecard: nothing to review.
+    | if $missing != [] and $days != [] then error("week \($w): no row for \($missing | join(", ")); count it with row --day") else . end
     | {week: {from: $w, to: $to}, days: ($days | length), needs: (
         [$t[0] | to_entries[] | select(.value.slice == null) | .key as $k | .value.max as $max
           | [$days[] | at($k) | select(type == "number" and . > $max)] as $over
@@ -94,13 +95,17 @@ fi
 
 # --- row ---------------------------------------------------------------------
 [ -n "$day" ] || day=$(jq -rn --argjson n "$now" '$n - 86400 | strftime("%Y-%m-%d")')
-[ ${#versions[@]} -gt 0 ] || versions=("$(jq -r .loaded <<<"$(sa_skill_stale)")")
+if [ ${#versions[@]} -eq 0 ]; then
+  v=$(jq -Rsr "$sa_jq_ver"'skill_version' "$(dirname "${BASH_SOURCE[0]}")/../SKILL.md" 2>/dev/null)
+  [ -n "$v" ] || sa_tooling "the running copy's version is unread: pass --version"
+  versions=("$v")
+fi
 if [ ${#files[@]} -eq 0 ]; then
   [ -n "$thread" ] || thread=$(jq -r '.own_thread // empty' <<<"$doc")
   [ -n "$thread" ] || thread=${T3CODE_THREAD_ID:-}
   [ -n "$thread" ] || sa_tooling "no thread id: pass --thread, or run in the super agent's thread"
   roots=()
-  for r in "${CLAUDE_CONFIG_DIR:-}" "$HOME"/.claude*; do [ -d "$r/projects" ] && roots+=("$r/projects"); done
+  for r in "${CLAUDE_CONFIG_DIR:-}" "$HOME"/.claude*; do [ -n "$r" ] && [ -d "$r/projects" ] && roots+=("$r/projects"); done
   if [ ${#roots[@]} -gt 0 ]; then
     while IFS= read -r f; do
       case $f in */subagents/*) continue ;; esac
@@ -151,7 +156,7 @@ slim=$(for i in ${files[@]+"${!files[@]}"}; do
          tools: [$m.content[]? | select(.type == "tool_use")
            | {name, id, cmd: (.input.command? // null), bg: (.input.run_in_background? // false)}]}
     else empty end' "${files[$i]}"
-done | jq -sc .)
+done | jq -sc .) || sa_tooling "cannot read the transcripts"
 
 row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')" \
   --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" \

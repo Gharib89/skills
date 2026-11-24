@@ -101,6 +101,10 @@ printf 'not json\n' >> "$(dirname "$led")/scorecard.jsonl"
 err=$(SA_NOW=$now H 2>&1 >/dev/null); rc=$?
 check "a review that fails is reported, holds nothing and marks no week" "0 1 absent" \
   "$rc $(grep -c 'the scorecard review failed' <<<"$err") $([ -f "$(dirname "$led")/scorecard-reviewed" ] && echo present || echo absent)"
+for d in 09 10 11 12 13 14; do printf '{"day":"2026-11-%s"}\n' "$d"; done > "$(dirname "$led")/scorecard.jsonl"
+out=$(SA_NOW=$now H 2>/dev/null)
+check "a week missing a row: the review error is in the JSON and a Needs you line" "true 1" \
+  "$(jq -r '.scorecard.review_error | contains("no row for 2026-11-15")' <<<"$out") $(grep -c '^- Scorecard: the weekly review failed: .*no row for 2026-11-15' "$bear")"
 rm -f "$(dirname "$led")/scorecard.jsonl"
 printf 'not json\n' > "$led.archive.jsonl"
 out=$(SA_NOW=$now H 2>/dev/null); rc=$?

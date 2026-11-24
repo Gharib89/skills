@@ -158,6 +158,9 @@ check "no thread id at all is refused by name, exit 2" "2 no thread id: pass --t
 out=$(R --day "$day" --thread th-none 2>/dev/null); rc=$?
 check "a thread with no transcript is refused by name, exit 2" \
   "2 no transcript for thread th-none: none under ~/.claude*/projects loaded the super-agent skill" "$rc $(jq -r .error <<<"$out")"
+{ transcript; printf '%s\n' '{"type":"assistant","timestamp":"2026-11-19T12:00:00Z","message":"a string"}'; } > "$tmp/t3.jsonl"
+check "a transcript entry of the wrong shape refuses the row, exit 2" "2 cannot read the transcripts" \
+  "$(out=$(R --day "$day" --transcript "$tmp/t3.jsonl" --version 9.9.9 2>/dev/null); echo "$? $(jq -r .error <<<"$out")")"
 check "the row is stamped with the running copy's version by default" \
   "$(sed -n 's/^  version: //p' "$s/../SKILL.md")" "$(R --day "$day" --thread th-arg | jq -r '.row.versions[0]')"
 
@@ -200,6 +203,8 @@ week 0 | grep -v 2026-11-15 > "$card"
 check "a week missing a day's row is refused by name, exit 2" \
   '2 review failed: week 2026-11-09: no row for 2026-11-15; count it with row --day' \
   "$(out=$(V 2>/dev/null); echo "$? $(jq -r .error <<<"$out")")"
+: > "$card"
+check "a week with no row at all raises nothing" '0 []' "$(out=$(V); echo "$? $(jq -c .needs <<<"$out")")"
 week 0 > "$card"; jq -n '{"needs.alerted_twice": 0}' > "$tmp/bad.json"
 check "a target that is no {max} is refused, exit 2" 2 \
   "$(SA_NOW=$(jq -n '"2026-11-18T08:00:00Z" | fromdateiso8601') bash "$sc" review --ledger "$led" --targets "$tmp/bad.json" >/dev/null 2>&1; echo $?)"
