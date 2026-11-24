@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.42.0 (2026-11-24)
+
+### Features
+
+- **super-agent**: The pinned thread runs in a super agent folder whose generated settings hold the
+  state guard ([#1413](https://github.com/Gharib89/skills/pull/1413),
+  [`3a8e862`](https://github.com/Gharib89/skills/commit/3a8e8625d27b7e343ad5478cb2629eb32ac82736))
+
+
 ## v0.41.0 (2026-11-24)
 
 ### Features
