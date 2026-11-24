@@ -57,7 +57,7 @@ each checkbox line, or a criteria heading's top-level list lines where it holds
 no checkbox, as a `## Criteria` entry, so pass the text with its headings and
 write each criterion a brief or comment adds under the issue's criteria heading,
 in that list's form; init warns, naming the fix, where that yields none or
-`--criteria` was left out, and `gate summary` holds until it is applied. Phase 0
+`--criteria` was left out, and `gate clean` holds until it is applied. Phase 0
 reuses this read. A free-text run has no issue, passes none, and notes criteria
 a later phase can check, each with `run-file note Criteria <text>`. A phase-1
 anchor rewrite that changes a criterion adds each replacement criterion with

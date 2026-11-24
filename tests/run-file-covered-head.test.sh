@@ -13,9 +13,9 @@ tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 echo "No findings." > "$tmp/local-report.md"
 repo=$tmp/repo
-f=$tmp/records/ship-9/run.md
+f=$tmp/records/ship-covered/run.md
 ci=$tmp/ci.json
-mkdir -p "$tmp/records/ship-9"
+mkdir -p "$tmp/records/ship-covered"
 origin=$tmp/origin.git
 g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$@"; }
 put() { mkdir -p "$(dirname "$repo/$1")" && printf '%s\n' "$2" > "$repo/$1" && g add "$1"; }
