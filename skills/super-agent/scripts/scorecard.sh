@@ -12,7 +12,9 @@
 # Claude Code transcript (`*.jsonl` under `$CLAUDE_CONFIG_DIR/projects` and
 # `~/.claude*/projects`, subagents aside) that names the thread id and loaded
 # the super-agent skill: a child's transcript names the id too, in its launch
-# message, but never loads this skill. The thread id is `--thread`, else the
+# message, but never loads this skill. The predecessor that launched the thread
+# names it too and counts, so a row is the super agent's whole UTC day, the
+# morning before its handover included. The thread id is `--thread`, else the
 # ledger's `own_thread`, else `T3CODE_THREAD_ID`; `--transcript` reads the
 # files given instead. The row is stamped with `--version`, else the version of
 # the copy running this script.
@@ -25,8 +27,10 @@
 #
 # stdout: `row` {row, file}: the row and the file it went to · `review` {week:
 #         {from, to}, days, needs: [text]}: the rows read, one line per row to raise
-# exit: 0 answered · 2 usage, an unreadable ledger, no thread id, or a file
-#       that could not be read or written
+# exit: 0 answered · 2 usage, an unreadable ledger, no thread id, no transcript
+#       for it, an unread version, a malformed transcript, log, targets or
+#       pattern file, a week missing some day's row, or a file that could not
+#       be read or written
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -123,6 +127,8 @@ fi
 for f in ${files[@]+"${files[@]}"}; do [ -r "$f" ] || sa_tooling "$f: cannot read"; done
 patterns=$(jq -Rsr 'split("\n") | map(select(length > 0 and (startswith("#") | not))) | join("|")' "$data/nothing-changed.txt") \
   || sa_tooling "$data/nothing-changed.txt: cannot read"
+[ -n "$patterns" ] && jq -n --arg p "$patterns" '"" | test($p)' >/dev/null 2>&1 \
+  || sa_tooling "$data/nothing-changed.txt: no pattern, or one that is no regex"
 [ ! -f "$ledger.archive.jsonl" ] || jq -s . "$ledger.archive.jsonl" >/dev/null 2>&1 || sa_tooling "$ledger.archive.jsonl: not JSON lines"
 
 # A guard log is `<name>-guard.jsonl`; its name is the row's key under `guards`.

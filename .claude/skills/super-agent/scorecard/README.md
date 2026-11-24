@@ -1,13 +1,17 @@
 # Scorecard
 
 `scripts/scorecard.sh` counts one row a day from the ledger and its archive, the
-guard and timer logs, and the super agent's own transcript; its header gives the
+guard and timer logs, and the super agent's transcripts; its header gives the
 usage and output. `scorecard.jsonl`, beside the ledger, holds the rows. The
 daily handover appends the previous day's row and, at the first handover of a
 week, runs the weekly review, whose rows join the bearings file's Needs you.
 
 ## What a row counts
 
+- **Transcripts**: every super-agent session that names the thread id, so
+  the predecessor that launched the thread counts too: a day's row is all the
+  super agent did that UTC day, the morning before a handover included. A
+  child or subagent never loaded this skill and never counts.
 - **Workload**: `open` is every entry (ledger and archive) launched before the
   day ended and not settled before it began; `settled` the entries settled that
   day. The per-open numbers divide by `open`.
@@ -60,5 +64,3 @@ raises nothing. Otherwise it raises one row per live target a day of the
 week went over, and one per guard logged in each of the four weeks ending with
 that week and blocking nothing in them. A number with no target never raises
 one.
-
-[baseline.md](baseline.md) holds the rows recounted for 6 to 19 November 2026.

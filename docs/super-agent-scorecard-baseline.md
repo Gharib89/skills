@@ -2,7 +2,7 @@
 
 The rows `scorecard row` counts for 6 to 19 November 2026 (UTC days), recounted
 from the five researched super-agent sessions' transcripts and the ledger on the
-owner's machine. Definitions: [README.md](README.md). A blank cell is a day with
+owner's machine. Definitions: [the scorecard README](../skills/super-agent/scorecard/README.md). A blank cell is a day with
 no message or no wake.
 
 | Day | Open | Settled | Messages | Nothing changed | Over 1,500 | Median chars | Needs (recorded, alerted, twice) | Questions (asked, with a write) | Wakes | Wakes changing nothing | Tokens | Weighted tokens | Nothing-changed token share |

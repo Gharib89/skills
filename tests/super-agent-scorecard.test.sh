@@ -131,6 +131,14 @@ jq '.entries["acme/widgets#7"].launched_at = "2026-11-18T09:00:00.250Z"' "$led" 
 check "a time with fractional seconds is read, not a failed row" 2 \
   "$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 | jq .row.workload.open)"
 
+cp -R "$s/.." "$tmp/sa"
+for pat in '# only a comment' '(unbalanced'; do
+  printf '%s\n' "$pat" > "$tmp/sa/scorecard/nothing-changed.txt"
+  check "a pattern file holding \"$pat\" is refused by name, exit 2" "2 true" \
+    "$(out=$(bash "$tmp/sa/scripts/scorecard.sh" row --ledger "$led" --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 2>/dev/null)
+       echo "$? $(jq -r '.error | contains("nothing-changed.txt: no pattern")' <<<"$out")")"
+done
+
 # --- the transcript, found by thread id ----------------------------------------
 proj=$HOME/.claude/projects/p
 mkdir -p "$proj/subagents"
