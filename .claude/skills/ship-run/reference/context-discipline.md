@@ -106,9 +106,9 @@ outside every checkout, so the gate never reads it and a session isolated by
 path ([Once isolated](#once-isolated)), can still write it. `--scratchpad <dir>`
 overrides the root. Init also prints `scratch`, `<root>/scratch-<issue>`, the
 run's own scratch root, and opens phase 0. `cleanup` removes both directories
-after the merge; a free-text run (`cleanup none`) leaves its `ship-<slug>/` and
-`scratch-<slug>/` in place, and a run that stops before the merge gate leaves
-its record.
+after the merge; a free-text run (`cleanup none <head_ref>`) leaves its
+`ship-<slug>/` and `scratch-<slug>/` in place, and a run that stops before the
+merge gate leaves its record.
 
 The file is the run's **record**, the source of truth for where the run is and
 the home of the design and plan; it survives a mid-run context summary, so work
