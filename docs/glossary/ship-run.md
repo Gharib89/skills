@@ -65,7 +65,7 @@ The container any cloud session runs in, attended or unattended, reaching hosts 
 _Avoid_: cloud env, default env, container
 
 **Merge gate**:
-The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate`, or an inline-lane run, authorizes a merge when `run-file gate clean` confirms every recorded condition, including that no criterion is unmet, since each needs the human's waiver. An unattended run posts to the PR and returns.
+The end of a Ship run where its full summary records the merge decision. By default an attended run waits for the human's exact "merge"; a profile with `Merge: on-clean-gate`, or an inline-lane run, authorizes a merge when `run-file gate clean` confirms every recorded condition, including that no criterion is unmet, since each needs the human's waiver. A hold waived by the ruler a fleet file names is admitted as a `waiver` quoting that ruling, never as the human's word. An unattended run posts to the PR and returns.
 _Avoid_: approval, sign-off, review
 
 **Clean gate**:

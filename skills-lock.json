@@ -140,7 +140,7 @@
     "ship-run": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "69638d02f2ae0610ed1f6ece03b2ed1ccdcfb11b65b59f7cddf65b0bc6e0e6d3"
+      "computedHash": "f52d4d887cce20019afabb7d1af470dff66954609460f8ee099ca23c5c38c7bc"
     },
     "show-me": {
       "source": "humanlayer/skills",
@@ -152,7 +152,7 @@
     "super-agent": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "2ef18b24711038ce14b63d9b8dc26ccefb9b5b937599a743eb468a1672d3818e"
+      "computedHash": "b625ac9d727959cb274003ebdd20e4024279d8287f8d7a9ebef96bd0ad3a4526"
     },
     "tdd": {
       "source": "mattpocock/skills",

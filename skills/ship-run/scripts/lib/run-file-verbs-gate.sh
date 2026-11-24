@@ -7,13 +7,32 @@ gate)
   # `gate admit` appends `- HH:MM <sha> <word>` under `## Merge admission`, the record
   # `merge` reads (#1204). `clean` runs `gate clean` on the CI answer first and records
   # only on exit 0, printing one object whose `clean` is that answer (a held gate prints
-  # the answer alone, exit 1); `human` records the human's word "merge" on a held gate.
+  # the answer alone, exit 1); `human` records the human's word "merge" on a held gate;
+  # `waiver` records a delegated ruler's waiver or ruling, trimmed, so the record
+  # never claims an approval the human did not give (#1402).
   sub=${1:-}
   case $sub in record | read | clean | summary | admit) shift ;; *) ship_tooling "$usage" ;; esac
-  kind=""
+  kind="" ruling="" has_ruling=false
   if [ "$sub" = admit ]; then
     kind=${1:-}
-    case $kind in clean | human) shift ;; *) ship_tooling "$usage" ;; esac
+    case $kind in clean | human | waiver) shift ;; *) ship_tooling "$usage" ;; esac
+    others=()
+    while [ $# -gt 0 ]; do
+      if [ "$1" = --ruling ]; then
+        ship_flag_value "$usage" "${2:-}" "--ruling needs the ruler's waiver or ruling, quoted word for word"
+        case $2 in *$'\n'* | *$'\r'*) ship_tooling "a waiver's ruling is one line" ;; esac
+        # Trimmed, so the line keeps one space after `waiver`, the form merge reads.
+        ruling=$(printf '%s' "$2" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//') has_ruling=true; shift 2
+      else
+        others+=("$1"); shift
+      fi
+    done
+    set -- ${others[@]+"${others[@]}"}
+    if [ "$kind" = waiver ]; then
+      [[ $ruling =~ [^[:space:]] ]] || ship_tooling "gate admit waiver needs --ruling <text>, the ruler's waiver or ruling quoted word for word"
+    else
+      [ "$has_ruling" = false ] || ship_tooling "--ruling belongs to gate admit waiver only"
+    fi
   fi
   if [ "$sub" = record ] || [ "$sub" = clean ] || [ "$sub" = summary ] || { [ "$sub" = admit ] && [ "$kind" = clean ]; }; then
     # `-` is the verdict on stdin, so it is the one dash-led value a positional may be.
@@ -34,14 +53,16 @@ gate)
     [ -n "$head" ] || ship_tooling "$usage"
     [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"
     # The record `merge` reads: `clean` only when the clean gate holds for this head over
-    # this CI answer (a held gate writes nothing), `human` for the human's word "merge".
+    # this CI answer (a held gate writes nothing), `human` for the human's word "merge",
+    # `waiver` for the ruler's ruling, which rides on the line after the word.
     answer=null
     if [ "$kind" = clean ]; then
       answer=$(gate_clean "$src"); rc=$?
       [ "$rc" -eq 0 ] || { printf '%s\n' "$answer"; exit "$rc"; }
     fi
-    append_to_section "## Merge admission" "- $(date -u +%H:%M) $head $kind"
-    jq -n --arg f "$file" --arg h "$head" --arg k "$kind" --argjson c "$answer" '{run_file: $f, head: $h, admitted: $k, clean: $c}'
+    append_to_section "## Merge admission" "- $(date -u +%H:%M) $head $kind${ruling:+ $ruling}"
+    jq -n --arg f "$file" --arg h "$head" --arg k "$kind" --argjson c "$answer" --arg r "$ruling" \
+      '{run_file: $f, head: $h, admitted: $k, clean: $c} | if $k == "waiver" then .ruling = $r else . end'
   elif [ "$sub" = clean ]; then
     [ -n "$head" ] || ship_tooling "$usage"
     [[ $head =~ ^[0-9a-f]{7,64}$ ]] || ship_tooling "--head takes a full or abbreviated commit sha"

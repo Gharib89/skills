@@ -52,11 +52,16 @@ ones:
    from the fleet file's `waivers`, or the one ruling scoped to the repo (the
    `scoped` rows of `ledger.sh --ledger <ledger> scoped --repo <owner/name>`
    for the run's repo), whose condition matches the hold, quoted word for
-   word, telling the run to merge through `merge.sh` and name that waiver in
-   its PR body. A hold none matches goes to whoever `merge_gate_ruler` names,
-   and the step-in carries that ruling once it exists. A triage run that
-   reports a PR it opened to ship a small proven fix inline is at a gate too,
-   and you never merge it. Assign the issue to the gh login the repo needs
+   word, telling the run to record it with
+   `.claude/skills/ship-run/scripts/run-file.sh gate admit waiver --ruling
+   '<the quote>' --head <head> --issue <issue>`, each `'` in the quote
+   written `'\''`, then merge through
+   `.claude/skills/ship-run/scripts/merge.sh`, each its own command from the
+   worktree root, and name that waiver in its PR body. A hold none matches goes
+   to whoever `merge_gate_ruler` names, and the step-in carries that ruling
+   once it exists. A triage run that reports a PR it opened to ship a small
+   proven fix inline is at a gate too, and you never merge it. Assign the issue
+   to the gh login the repo needs
    (`gh issue edit <n> --repo <owner/name> --add-assignee <login>`), because
    `--rework` admits only an issue its own identity holds, then launch
    `/ship-run

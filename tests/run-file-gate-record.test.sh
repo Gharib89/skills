@@ -125,7 +125,38 @@ ad=$(at "$repo" gate admit human --head "$first" --file "$fa")
 check "gate admit human answers the head and the word" "$first human" "$(jq -r '[.head, .admitted] | join(" ")' <<<"$ad")"
 check "the line is clock, sha, word, in its own section" 1 "$(awk '/^## Merge admission$/{f=1;next} /^## /{f=0} f' "$fa" | grep -cE "^- [0-9]{2}:[0-9]{2} $first human$")"
 check_rc "gate admit needs --head" 2 "$(inrc "$repo" gate admit human --file "$fa")"
-check_rc "gate admit takes clean or human only" 2 "$(inrc "$repo" gate admit maybe --head "$first" --file "$fa")"
+check_rc "gate admit takes clean, human or waiver only" 2 "$(inrc "$repo" gate admit maybe --head "$first" --file "$fa")"
 check_rc "gate admit clean needs the CI answer" 2 "$(inrc "$repo" gate admit clean --head "$first" --file "$fa")"
+
+# waiver: a delegated ruler's ruling, recorded verbatim, so the record never
+# claims an approval the owner did not give (#1402).
+fw=$(at "$repo" init 45 | jq -r .run_file)
+aw=$(at "$repo" gate admit waiver --ruling "waive: a docs-only PR may merge past a codex outage" --head "$first" --file "$fw")
+check "gate admit waiver answers the head, the word and the ruling" \
+  "$first waiver waive: a docs-only PR may merge past a codex outage" \
+  "$(jq -r '[.head, .admitted, .ruling] | join(" ")' <<<"$aw")"
+check "the waiver line is clock, sha, word, ruling" 1 \
+  "$(awk '/^## Merge admission$/{f=1;next} /^## /{f=0} f' "$fw" | grep -cE "^- [0-9]{2}:[0-9]{2} $first waiver waive: a docs-only PR may merge past a codex outage$")"
+ft=$(at "$repo" init 46 | jq -r .run_file)
+at "$repo" gate admit waiver --ruling $'  \tpadded ruling  ' --head "$first" --file "$ft" >/dev/null
+check "a padded ruling is trimmed, one space after the word" 1 \
+  "$(grep -cE "^- [0-9]{2}:[0-9]{2} $first waiver padded ruling$" "$ft")"
+before=$(cksum < "$fw")
+# Each refusal is exit 2 and names its own reason, so a case cannot pass on another refusal.
+refuses() { # refuses <case> <reason substring> <args...>
+  local c=$1 r=$2; shift 2
+  check_rc "$c" 2 "$(inrc "$repo" "$@")"
+  local out; out=$(inerr "$repo" "$@")
+  check "$c: names its reason" true "$(case $out in *"$r"*) echo true ;; esac)"
+}
+refuses "--ruling takes no flag as its text" "usage: run-file" gate admit waiver --head "$first" --ruling --file "$fw"
+refuses "gate admit waiver needs --ruling" "gate admit waiver needs --ruling" gate admit waiver --head "$first" --file "$fw"
+refuses "gate admit waiver refuses an empty ruling" "--ruling needs the ruler's waiver" gate admit waiver --ruling "" --head "$first" --file "$fw"
+refuses "gate admit waiver refuses a blank ruling" "gate admit waiver needs --ruling" gate admit waiver --ruling "   " --head "$first" --file "$fw"
+refuses "gate admit waiver refuses a ruling holding a newline" "a waiver's ruling is one line" gate admit waiver --ruling $'one\ntwo' --head "$first" --file "$fw"
+refuses "gate admit waiver refuses a ruling ending in a newline" "a waiver's ruling is one line" gate admit waiver --ruling $'one\n' --head "$first" --file "$fw"
+refuses "--ruling on human is a usage error" "--ruling belongs to gate admit waiver only" gate admit human --ruling "x" --head "$first" --file "$fw"
+refuses "--ruling on clean is a usage error" "--ruling belongs to gate admit waiver only" gate admit clean ci.json --ruling "x" --head "$first" --file "$fw"
+check "a refused admission leaves the Run file unchanged" "$before" "$(cksum < "$fw")"
 
 finish

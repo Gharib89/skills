@@ -9,46 +9,10 @@
 # with nothing merged, a head whose checks are not settled, a head with no
 # admission record in the Run file, and a cloud sandbox whose profile says that
 # lane does not merge (#1204).
+# Turn check: names merge.sh, run-file.sh and _lib.sh, whose fixture lives in tests/merge-lib.sh.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
-source tests/lib.sh
-T=$'\t'  # the calls log separates arguments with a tab
-
-mech=$PWD/skills/ship-run/scripts/merge.sh
-work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
-origin=$work/github.com/owner/repo.git; repo=$work/repo; export SHIP_FAKE=$work/fake
-export SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh SHIP_MERGE_CHECKS_GRACE=0
-mkdir -p "$SHIP_FAKE"
-git init -q --bare -b main "$origin"
-git init -q -b main "$work/seed"
-git -C "$work/seed" -c user.name=t -c user.email=t@t commit -q --allow-empty -m base
-git -C "$work/seed" push -q "$origin" main
-# A PR may target `release`: merge fetches its base, so that branch exists on origin, level with main.
-git -C "$work/seed" push -q "$origin" main:release
-git clone -q "$origin" "$repo"
-g() { git -C "$repo" -c user.name=t -c user.email=t@t "$@"; }
-g switch -q -c fix/x
-g commit -q --allow-empty -m "the gated head"; A=$(g rev-parse HEAD)
-g commit -q --allow-empty -m "a later commit"; C=$(g rev-parse HEAD)
-
-export XDG_STATE_HOME=$work/state
-rr=$(cd "$repo" && bash -c 'source "$1"; ship_record_root' _ "$(dirname "$mech")/_lib.sh") || exit 2
-runfm=$PWD/skills/ship-run/scripts/run-file.sh
-# admit <slug> <head> [clean]: the record `merge` reads, written by the mechanic that owns it.
-admit() { mkdir -p "$rr/ship-$1"; : >> "$rr/ship-$1/run.md"; ( cd "$repo" && bash "$runfm" gate admit human --head "$2" --issue "$1" >/dev/null 2>&1 ); }
-admit t "$A"; admit t "$C"
-
-# Every case below merges as run `t`, which holds a record for both heads.
-run()    { ( cd "$repo" && bash "$mech" "$@" --run t ); }
-runas()  { local s=$1; shift; ( cd "$repo" && bash "$mech" "$@" --run "$s" ); }
-profile() { mkdir -p "$repo/docs/agents"; printf '%s\n' "$1" > "$repo/docs/agents/ship.md"; }
-no_profile() { rm -rf "$repo/docs"; }
-no_merge() { check "$1: no merge call reaches the host" 0 "$(cat "$SHIP_FAKE/calls" 2>/dev/null | grep -c '^host_pr_merge')"; check "$1: the branch stays on origin" "$A" "$(at)"; }
-reset()  { rm -rf "$SHIP_FAKE"; mkdir -p "$SHIP_FAKE"; }
-pr()     { jq -n --arg s "$2" --arg h "$3" --arg b "${4:-main}" '{number: 7, title: "fix: x", head_sha: $h,
-             head_ref: "fix/x", base_ref: $b, state: $s}' > "$SHIP_FAKE/host_pr_get.$1.json"; }
-at()     { git -C "$origin" rev-parse -q --verify refs/heads/fix/x; }
-push_at() { g push -q -f origin "$1:refs/heads/fix/x"; }
+source tests/merge-lib.sh
 
 out=$(cd "$repo" && bash "$mech" 7 none 2>&1); rc=$?
 check_rc "merge without a head is a usage error" 2 "$rc"
@@ -177,7 +141,7 @@ reset; push_at "$A"; pr 1 open "$A"
 mkdir -p "$rr/ship-u"; : > "$rr/ship-u/run.md"
 out=$(runas u 7 none "$A" 2>/dev/null); rc=$?
 check_rc "a Run file with no admission record is refused" 1 "$rc"
-check "the refusal names the head and the missing record" true "$(err=$(jq -r .error <<<"$out"); grep -qF "no-gate-record: no clean gate verdict or merge word recorded for $A in " <<<"$err" && echo true)"
+check "the refusal names the head and the missing record" true "$(err=$(jq -r .error <<<"$out"); grep -qF "no-gate-record: no clean gate verdict, merge word or waiver recorded for $A in " <<<"$err" && echo true)"
 no_merge "no record"
 
 # A clean admission compared the ship profile against the default branch
