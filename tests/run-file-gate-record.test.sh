@@ -128,4 +128,22 @@ check_rc "gate admit needs --head" 2 "$(inrc "$repo" gate admit human --file "$f
 check_rc "gate admit takes clean or human only" 2 "$(inrc "$repo" gate admit maybe --head "$first" --file "$fa")"
 check_rc "gate admit clean needs the CI answer" 2 "$(inrc "$repo" gate admit clean --head "$first" --file "$fa")"
 
+# waiver: a delegated ruler's ruling, recorded verbatim, so the record never
+# claims an approval the owner did not give (#1402).
+fw=$(at "$repo" init 45 | jq -r .run_file)
+aw=$(at "$repo" gate admit waiver --ruling "waive: a docs-only PR may merge past a codex outage" --head "$first" --file "$fw")
+check "gate admit waiver answers the head, the word and the ruling" \
+  "$first waiver waive: a docs-only PR may merge past a codex outage" \
+  "$(jq -r '[.head, .admitted, .ruling] | join(" ")' <<<"$aw")"
+check "the waiver line is clock, sha, word, ruling" 1 \
+  "$(awk '/^## Merge admission$/{f=1;next} /^## /{f=0} f' "$fw" | grep -cE "^- [0-9]{2}:[0-9]{2} $first waiver waive: a docs-only PR may merge past a codex outage$")"
+before=$(cksum < "$fw")
+check_rc "gate admit waiver needs --ruling" 2 "$(inrc "$repo" gate admit waiver --head "$first" --file "$fw")"
+check_rc "gate admit waiver refuses an empty ruling" 2 "$(inrc "$repo" gate admit waiver --ruling "" --head "$first" --file "$fw")"
+check_rc "gate admit waiver refuses a blank ruling" 2 "$(inrc "$repo" gate admit waiver --ruling "   " --head "$first" --file "$fw")"
+check_rc "gate admit waiver refuses a ruling holding a newline" 2 "$(inrc "$repo" gate admit waiver --ruling $'one\ntwo' --head "$first" --file "$fw")"
+check_rc "--ruling on human is a usage error" 2 "$(inrc "$repo" gate admit human --ruling "x" --head "$first" --file "$fw")"
+check_rc "--ruling on clean is a usage error" 2 "$(printf '{}' | inrc "$repo" gate admit clean - --ruling "x" --head "$first" --file "$fw")"
+check "a refused admission leaves the Run file unchanged" "$before" "$(cksum < "$fw")"
+
 finish

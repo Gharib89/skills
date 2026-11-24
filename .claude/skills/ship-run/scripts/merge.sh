@@ -42,7 +42,8 @@
 # profile's `## Cloud lane` is `cloud-sandbox`; every profile line here is read
 # from the main checkout, not the feature branch under the gate. A head with no admission record
 # in the Run file (`run-file gate admit`: `clean` when the clean gate read that
-# head, `human` when the human said "merge") is `no-gate-record`. The record
+# head, `human` when the human said "merge", `waiver` with the ruling text when
+# the ruler a profile or fleet file names waived the hold) is `no-gate-record`. The record
 # is read under the default record root only: a run started with `--scratchpad`
 # keeps its record elsewhere and a human merges it. A `clean` record on a PR
 # whose base is not the default branch is `base-retargeted`: the clean gate
@@ -152,7 +153,7 @@ else
   root=$(cd "${wt:-.}" && ship_record_root) || ship_tooling "cannot locate the Run file root"
   # A fenced example in the Run file is not a record, so fenced lines come out first.
   record=$(ship_unfenced "$(cat "$root/ship-$run_id/run.md" 2>/dev/null)" | awk -v h="$gated" '/^## /{f = ($0 ~ /^## Merge admission[ \t\r]*$/)}
-    f && /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ (clean|human)[ \t\r]*$/ { s = $3; if (index(s, h) == 1 || index(h, s) == 1) hit = $4 }
+    f && (/^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ (clean|human)[ \t\r]*$/ || /^- [0-9][0-9]:[0-9][0-9] [0-9a-f]+ waiver [^ \t\r]/) { s = $3; if (index(s, h) == 1 || index(h, s) == 1) hit = $4 }
     END { print hit }')
   [ -n "$record" ] || ship_fail "no-gate-record: no clean gate verdict or merge word recorded for $gated in $root/ship-$run_id/run.md"
   if [ "$record" = clean ]; then

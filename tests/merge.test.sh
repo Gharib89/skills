@@ -198,6 +198,25 @@ printf '[{"name":"build","status":"success"}]\n' > "$SHIP_FAKE/host_pr_checks.1.
 run 7 none "$A" >/dev/null 2>&1; rc=$?
 check_rc "the human's word admits a PR on another base" 0 "$rc"
 
+# A waiver records a delegated ruler's ruling (#1402): it admits like the human's
+# word, base-retargeted aside, and every other refusal still holds.
+mkdir -p "$rr/ship-wv"; : > "$rr/ship-wv/run.md"
+( cd "$repo" && bash "$runfm" gate admit waiver --ruling "waive: codex outage on a docs-only PR" --head "$A" --issue wv >/dev/null 2>&1 )
+reset; push_at "$A"; pr 1 open "$A" release; pr 2 merged "$A" release
+printf '[{"name":"build","status":"success"}]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
+runas wv 7 none "$A" >/dev/null 2>&1; rc=$?
+check_rc "a waiver admits the gated head, on another base too" 0 "$rc"
+check "and the gated head reaches the host's merge call" 1 "$(grep -c "^host_pr_merge${T}7${T}.*${T}$A$" "$SHIP_FAKE/calls")"
+reset; push_at "$A"; pr 1 open "$A"
+printf '[{"name":"build","status":"pending"}]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
+out=$(runas wv 7 none "$A" 2>/dev/null); rc=$?
+check "a waiver does not cover an unsettled check" "1 checks-unsettled: build: pending" "$rc $(jq -r .error <<<"$out")"
+no_merge "a waiver over a running check"
+reset; push_at "$C"; pr 1 open "$C"
+out=$(runas wv 7 none "$A" 2>/dev/null); rc=$?
+check "a waiver does not admit a moved head" "1 head-moved: $C != $A" "$rc $(jq -r .error <<<"$out")"
+check "and no merge call reaches the host past a moved head" 0 "$(cat "$SHIP_FAKE/calls" 2>/dev/null | grep -c '^host_pr_merge')"
+
 reset; push_at "$A"; pr 1 open "$A"
 mkdir -p "$rr/ship-w"; printf '## Merge admission\n```\n- 10:00 %s human\n```\n' "$A" > "$rr/ship-w/run.md"
 runas w 7 none "$A" >/dev/null 2>&1; rc=$?

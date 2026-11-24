@@ -192,16 +192,15 @@ triggers on `edited` against the same head, so first re-run `ci-wait <pr> --sha
 <head>` and save its answer. Then record what admits the merge: `run-file gate
 admit clean <ci-file> --head <head> --issue <issue|slug>` on a clean gate
 (`<ci-file>`: the saved `ci-wait.json`'s full path; it records only where `gate
-clean` is clean), or `run-file gate admit human --head <head> --issue
-<issue|slug>` on the human's word "merge" over a held gate; it covers unmet
-criteria, not a red leg (`checks-unsettled`). `<slug>` is `--run`'s. Then `merge
-<pr> <issue|none> <head> [--worktree <path>] [--run <slug>]`, so the merge lands
-only the head the summary describes, `<head>`, this gate's `read-pr`
-`head_sha`. Invoke it from the worktree root as
-`.claude/skills/ship-run/scripts/merge.sh` where Ship is installed at project
-scope, since auto mode has refused the absolute form on a clean gate; the
-absolute base-directory path is for an install with no project copy. A
-`none` run names its Run file's slug with `--run`. `merge.sh`'s header carries
+clean` is clean), `human` on the human's word "merge" over a held gate, or
+`waiver --ruling "<quote>"` on a gate-hold step-in quoting a ruler's waiver,
+never `human`. Both cover unmet criteria, not a red leg (`checks-unsettled`).
+Then `merge <pr> <issue|none> <head> [--worktree <path>] [--run <slug>]`, so the
+merge lands only `<head>`, this gate's `read-pr` `head_sha`. Run `run-file.sh`
+and `merge.sh` from the worktree root as `.claude/skills/ship-run/scripts/...`,
+each its own command with no variable prefix or `&&` chain, so allow rules
+match; the absolute base-directory path is for an install with no project copy.
+A `none` run names its Run file's slug with `--run`. `merge.sh`'s header carries
 what it does and what each refusal protects against; a refusal merges nothing
 and stops at this gate, including after a clean-gate decision; on one, read
 [merge-gate-branches.md](merge-gate-branches.md#merge-refusals) for how it comes
