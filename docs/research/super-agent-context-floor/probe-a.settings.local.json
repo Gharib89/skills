@@ -1,0 +1,3 @@
+{"enabledPlugins": {"eli5@claude-community": false, "gh-pane@claude-mods": false, "html-plan@claude-community": false, "last30days@last30days-skill": false, "playwright@claude-plugins-official": false, "pyright-lsp@claude-plugins-official": false},
+ "permissions": {"deny": ["Artifact", "Workflow", "ShareOnboardingGuide", "ListAgents"]},
+ "claudeMdExcludes": ["<home>/.claude/rules/*.md"]}
