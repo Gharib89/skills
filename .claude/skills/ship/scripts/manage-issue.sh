@@ -4,8 +4,9 @@
 #   manage-issue <issue> take [--fresh]       assign me; no-op if already me,
 #                                             refused under --fresh
 #   manage-issue <issue> release              unassign me
-#   manage-issue <issue> handback "<reason>"  unassign, -ready-for-agent,
-#                                             +ready-for-human, comment the reason
+#   manage-issue <issue> handback "<reason>"  -ready-for-agent (read back gone),
+#                                             then unassign, +ready-for-human,
+#                                             comment the reason
 #   manage-issue <issue> close                close it; no-op if already closed
 #
 # take posts the fixed claim comment once. A false success here would let a
@@ -17,9 +18,12 @@
 # another run of this identity took it since: `held` is then a refusal. A rework
 # or resumed run holds the claim already and calls take bare.
 #
-# A hand-back whose label edit did not land exits 1 even though the claim is
-# gone: the caller is stopping and must say the issue is unlabelled rather than
-# report a clean stop.
+# A hand-back takes the agent label off and reads it back gone before it
+# unassigns: an unassigned issue still labelled ready-for-agent is one an
+# unattended selection can take. A removal that failed or went unconfirmed keeps
+# the claim (`claim: held`, exit 1, `error` saying so). A hand-back whose later
+# label edit did not land exits 1 even though the claim is gone: the caller is
+# stopping and must say the issue is unlabelled rather than report a clean stop.
 #
 # close is the only verb that is not about the claim: it closes any open issue,
 # claimed or not, which is how a verification disposes of the scratch issue it
@@ -27,7 +31,10 @@
 #
 # stdout: {issue, identity, claim: taken|held|contested|released, others?,
 #          error?, handed_back?, labels?}; `held` exits 0 bare and 1 with
-#          `error` under --fresh, `contested` exits 1 with `others` and `error`.
+#          `error` under --fresh or from a handback whose ready-for-agent removal
+#          went unconfirmed (`released` with `error` there when it held no claim;
+#          neither carries `handed_back` or `labels`), `contested` exits 1 with
+#          `others` and `error`.
 #         {issue, identity, closed: true, already} for close
 # exit: 0 done · 1 not done (JSON says which step) · 2 usage or tooling
 set -uo pipefail
@@ -100,6 +107,15 @@ case $op in
     jq -n --argjson n "$n" --arg m "$me" '{issue: $n, identity: $m, closed: true, already: false}' ;;
 
   release|handback)
+    if [ "$op" = handback ]; then
+      rfa=$(ship_triage_label ready-for-agent); rfh=$(ship_triage_label ready-for-human)
+      if ! { host_issue_remove_label "$n" "$rfa" && ship_issue_lacks_label "$n" "$rfa"; }; then
+        c=released; e="could not remove $rfa and confirm it is gone: nothing was unassigned"
+        if assigned; then c=held; e="could not remove $rfa and confirm it is gone: the claim was kept"; fi
+        jq -n --argjson n "$n" --arg m "$me" --arg c "$c" --arg e "$e" '{issue: $n, identity: $m, claim: $c, error: $e}'
+        echo "$e; re-read the issue before reporting it" >&2; exit 1
+      fi
+    fi
     already=true
     if assigned; then
       already=false
@@ -110,9 +126,7 @@ case $op in
     if [ "$op" = release ]; then
       jq -n --argjson n "$n" --arg m "$me" --argjson a "$already" '{issue: $n, identity: $m, claim: "released", already: $a}'; exit 0
     fi
-    rfa=$(ship_triage_label ready-for-agent); rfh=$(ship_triage_label ready-for-human)
-    removed=false; added=false; commented=false
-    host_issue_remove_label "$n" "$rfa" && ship_issue_lacks_label "$n" "$rfa" && removed=true
+    removed=true; added=false; commented=false
     host_issue_add_label "$n" "$rfh" && ship_issue_has_label "$n" "$rfh" && added=true
     host_issue_comment "$n" "$(ship_mark "🤖 Handed back by a ship run: $reason")" >/dev/null && commented=true
     handed=false; [ "$removed" = true ] && [ "$added" = true ] && handed=true
