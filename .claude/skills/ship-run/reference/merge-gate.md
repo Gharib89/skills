@@ -193,7 +193,7 @@ triggers on `edited` against the same head, so first re-run `ci-wait <pr> --sha
 admit clean <ci-file> --head <head> --issue <issue|slug>` on a clean gate
 (`<ci-file>`: the saved `ci-wait.json`'s full path; it records only where `gate
 clean` is clean); on a held gate, `human` in place of `clean <ci-file>` on the
-human's "merge", or `waiver --ruling "<quote>"` quoting a supervisor's waiver or
+human's "merge", or `waiver --ruling '<quote>'` quoting a supervisor's waiver or
 ruling, never `human`. Both cover unmet criteria, not a red leg
 (`checks-unsettled`). Then `merge <pr> <issue|none> <head> [--worktree <path>]
 [--run <slug>]`, landing only `<head>`, this gate's `read-pr` `head_sha`. Run

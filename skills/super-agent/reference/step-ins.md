@@ -54,7 +54,8 @@ ones:
    for the run's repo), whose condition matches the hold, quoted word for
    word, telling the run to record it with
    `.claude/skills/ship-run/scripts/run-file.sh gate admit waiver --ruling
-   "<the quote>" --head <head> --issue <issue>`, then merge through
+   '<the quote>' --head <head> --issue <issue>`, each `'` in the quote
+   written `'\''`, then merge through
    `.claude/skills/ship-run/scripts/merge.sh`, each its own command from the
    worktree root, and name that waiver in its PR body. A hold none matches goes
    to whoever `merge_gate_ruler` names, and the step-in carries that ruling
