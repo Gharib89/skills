@@ -4,7 +4,7 @@ description: >-
   Run one scheduled cloud fire: invoke `ship-run` unattended, relay its outcome.
   Use when a routine says "Run the cloud-ship skill"; humans run `/ship-run`.
 metadata:
-  version: 0.3.1
+  version: 0.4.0
 ---
 
 # cloud-ship
