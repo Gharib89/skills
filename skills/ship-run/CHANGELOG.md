@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.75.1 (2026-11-24)
+
+### Bug Fixes
+
+- **ship-run**: Context-discipline names the cleanup none branch
+  ([#1410](https://github.com/Gharib89/skills/pull/1410),
+  [`46a6137`](https://github.com/Gharib89/skills/commit/46a6137cfca73b67210344003f6e38e54c733eb1))
+
+
 ## v0.75.0 (2026-11-24)
 
 ### Features
