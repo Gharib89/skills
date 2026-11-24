@@ -69,5 +69,5 @@ merges from the PR.", and with an unmet criterion it adds "Waive each unmet
 criterion, or take its action, before merging." A Ship defect's draft is never
 filed from here, and the comment drops the "file defects" line: it carries each
 draft verbatim under the command a human runs from a file they save it to,
-`.claude/skills/ship/scripts/file-issue.sh --repo Gharib89/skills --title
+`.claude/skills/ship-run/scripts/file-issue.sh --repo Gharib89/skills --title
 "<title>" --body-file <file> --label needs-triage`.

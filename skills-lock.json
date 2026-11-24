@@ -4,7 +4,7 @@
     "cloud-ship": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "e9efee35202287f908df309c308e7570961ea2ace9fa1e39f51d2c35b38a887b"
+      "computedHash": "f7fa17d6ba91468162701fbef99dcbaa0c0365482861c0285511432492e4aa0f"
     },
     "code-review": {
       "source": "mattpocock/skills",
@@ -35,7 +35,7 @@
     "drive-session": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "0adc138eedcde64c9f70ad0647ce30638eb35b5995f5f0589453ea9e4c86ae14"
+      "computedHash": "7fec61d05119d9332443bf6abb1793bcd6422e4eba737388bae9dac53147a7ee"
     },
     "explainer-video": {
       "source": ".",
@@ -130,17 +130,17 @@
     "setup-project": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "93a3c14ee911116a90aef0f98a61243ade7ed28ffedbd28f067f10a8d354fe59"
+      "computedHash": "9a434825ae964a7b2ab9df6c5e2d9f297ae1de3dcacac370da4f4e3fa83e4749"
     },
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "13693c3f43827bc5d45b280278dce858a7b2c30401c173d860080934ac950782"
+      "computedHash": "78c7c78e85a86acd8f6ea7f6d5e7c7d6b12f20166e0c9baf41f12223be9bab6a"
     },
-    "ship": {
+    "ship-run": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "a73846e5c6a9c4d8601153ea202f0e4602e95c53aa83da6d1ad5b03b0a7901f2"
+      "computedHash": "4ab6fa21c11ae866cf8396405a2fb060910ab8c5c8574b4ab9521d5ef56c197c"
     },
     "show-me": {
       "source": "humanlayer/skills",
@@ -152,7 +152,7 @@
     "super-agent": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "84109242cbe1c09f4b6102842c6731dc9f5fe94826c28ac99eed1751fa9ec668"
+      "computedHash": "2f2dc0d4ce14a035a2353e93dd8fb2379aac60647a1816d03425d08694b7c283"
     },
     "tdd": {
       "source": "mattpocock/skills",
@@ -185,7 +185,7 @@
     "update-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "599eec1dec8e5bb1ceaf1a0c53f79e59810e6977f811deec10c24fe2d17d8612"
+      "computedHash": "2c91095739180c6c1dfc170387939cc554d764714027961db91871e57c1dd530"
     },
     "wayfinder": {
       "source": "mattpocock/skills",

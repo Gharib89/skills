@@ -47,7 +47,7 @@ run "$d"
 check_rc "a marker past the header's first 60 lines does not count" 1 "$rc"
 
 # The hardcoded list keeps working unedited.
-run skills/ship/scripts
+run skills/ship-run/scripts
 check_rc "the real mechanics, listed ones unedited, pass" 0 "$rc"
 
 # A file planted in the real home and XDG directories is not readable by a bare

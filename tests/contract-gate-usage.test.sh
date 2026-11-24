@@ -245,7 +245,7 @@ check "and is named at its line" \
 
 # _lib.sh is exempt on the SHIP_AWK_FENCE definition alone.
 shell_run lib-fence 'true'
-lib=$sk/ship/scripts/_lib.sh
+lib=$sk/ship-run/scripts/_lib.sh
 n=$(($(wc -l < "$lib") + 1))
 printf 'x=%s\n' "'"'```'"'" >> "$lib"
 rm "$sk/zz/bad.sh"
@@ -270,8 +270,8 @@ $rows
 EOT
 '
 sed -i.bak '/^readonly SHIP_AWK_FENCE=/a\
-  x = "```"' "$sk/ship/scripts/_lib.sh"
-rm "$sk/ship/scripts/_lib.sh.bak"
+  x = "```"' "$sk/ship-run/scripts/_lib.sh"
+rm "$sk/ship-run/scripts/_lib.sh.bak"
 run "$inert" "$sk"
 check_rc "near misses, and a fence pattern inside the SHIP_AWK_FENCE definition, pass" 0 "$rc"
 check "and print nothing" "" "$out"
@@ -372,9 +372,9 @@ check_rc "an absent skills tree is tooling, not a pass" 2 "$rc"
 # case would assert the wrong thing.
 if [ "$(id -u)" -ne 0 ]; then
   d=$(copy_skills grep-failure)
-  chmod 000 "$d/ship"
+  chmod 000 "$d/ship-run"
   run "$inert" "$d"
-  chmod 755 "$d/ship"
+  chmod 755 "$d/ship-run"
   check_rc "a search the tree refuses is tooling, not a pass" 2 "$rc"
 else
   skipped "a search the tree refuses is tooling, not a pass"

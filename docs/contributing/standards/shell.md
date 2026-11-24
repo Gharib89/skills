@@ -13,11 +13,11 @@ exceptions bound these rules.
   with its usage line then its header's `stdout:` block and exit 0 through
   `ship_help`, called before `ship_load_host` so the answer reaches no host.
   What a run makes of all this is
-  [skills/ship/reference/mechanics.md](../../../skills/ship/reference/mechanics.md);
+  [skills/ship-run/reference/mechanics.md](../../../skills/ship-run/reference/mechanics.md);
   the `contract` gate enforces it.
 - **No host CLI outside a named mechanic.** In this repo's code, `gh` and `az`
-  are called only from `skills/ship/scripts/host/<host>.sh`; a gating call no
-  mechanic performs or prints is a ship defect, not a prose fallback. The PR
+  are called only from `skills/ship-run/scripts/host/<host>.sh`; a gating call
+  no mechanic performs or prints is a ship defect, not a prose fallback. The PR
   create is the printed one: the adapter builds it and the agent runs it as its
   own Bash call, because Claude Code counts a PR only when the create is the
   Bash command itself (#1239). A run itself may make a direct call no mechanic
@@ -205,11 +205,11 @@ The limit is in `scripts/token-limit-check.sh`. Where the pieces go depends on
 who shares them:
 
 - A library several scripts source goes in a `lib/` folder beside them
-  (`skills/ship/scripts/lib/`), sourced by one entry point (`_lib.sh`). It never
-  goes in as `*.sh` siblings in `scripts/`: `contract-check.sh` and
+  (`skills/ship-run/scripts/lib/`), sourced by one entry point (`_lib.sh`). It
+  never goes in as `*.sh` siblings in `scripts/`: `contract-check.sh` and
   `mechanic-help` treat every top-level script there as a mechanic.
 - Pieces private to one script go in `<script>.d/` beside it
-  (`scripts/contract-check.d/`, `skills/ship/scripts/poll-pr.d/`).
+  (`scripts/contract-check.d/`, `skills/ship-run/scripts/poll-pr.d/`).
 - A split test file's shared fixtures go in `tests/<name>-lib.sh`
   (`tests/run-file-lib.sh`), sourced after `tests/lib.sh`.
 - A sourced file carries `# shellcheck disable=SC2034,SC2154` with a reason only

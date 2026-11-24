@@ -8,7 +8,7 @@
 #
 #   export SHIP_FAKE=<dir> SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 #   printf '%s\n' '{...}' > "$SHIP_FAKE/host_pr_get.1.json"
-#   ( cd "$repo" && bash skills/ship/scripts/read-pr.sh 7 )
+#   ( cd "$repo" && bash skills/ship-run/scripts/read-pr.sh 7 )
 #   cat "$SHIP_FAKE/calls"
 #
 # The n-th call of a function answers from $SHIP_FAKE/<fn>.<n>.json, or from

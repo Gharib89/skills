@@ -14,7 +14,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 T=$'\t'  # the calls log separates arguments with a tab
 
-mech=$PWD/skills/ship/scripts/merge.sh
+mech=$PWD/skills/ship-run/scripts/merge.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 origin=$work/github.com/owner/repo.git; repo=$work/repo; export SHIP_FAKE=$work/fake
 export SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh SHIP_MERGE_CHECKS_GRACE=0
@@ -33,7 +33,7 @@ g commit -q --allow-empty -m "a later commit"; C=$(g rev-parse HEAD)
 
 export XDG_STATE_HOME=$work/state
 rr=$(cd "$repo" && bash -c 'source "$1"; ship_record_root' _ "$(dirname "$mech")/_lib.sh") || exit 2
-runfm=$PWD/skills/ship/scripts/run-file.sh
+runfm=$PWD/skills/ship-run/scripts/run-file.sh
 # admit <slug> <head> [clean]: the record `merge` reads, written by the mechanic that owns it.
 admit() { mkdir -p "$rr/ship-$1"; : >> "$rr/ship-$1/run.md"; ( cd "$repo" && bash "$runfm" gate admit human --head "$2" --issue "$1" >/dev/null 2>&1 ); }
 admit t "$A"; admit t "$C"

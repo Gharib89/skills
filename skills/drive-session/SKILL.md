@@ -2,7 +2,7 @@
 name: drive-session
 description: >-
   Supervise Claude sessions in Herdr tabs and answer what they ask. Use when
-  the user wants sessions driven in Herdr: a batch of `/ship` runs, or a skill
+  the user wants sessions driven in Herdr: a batch of `/ship-run` runs, or a skill
   smoke test in another checkout. Needs Herdr: a pane, or a server answering
   `herdr workspace list`.
 metadata:
@@ -177,9 +177,10 @@ supervisor relays. A `reviewer <x>: past cap <n>, ..., head moved: read
 
 ## Supervised ship runs
 
-A supervised `/ship` is an **attended** run: you are the human present. Launch
-it as `/ship <issue>`, leaving `--unattended` to the user alone, and answer its
-hand-offs and questions the way the user would, by the escalation list.
+A supervised `/ship-run` is an **attended** run: you are the human present.
+Launch it as `/ship-run <issue>`, leaving `--unattended` to the user alone, and
+answer its hand-offs and questions the way the user would, by the escalation
+list.
 
 Your answers are the supervisor's: say in the launch prompt that only an
 `Owner:` answer is the owner's choice, so only it becomes owner feedback (a

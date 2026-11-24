@@ -7,7 +7,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-scripts=$PWD/skills/ship/scripts
+scripts=$PWD/skills/ship-run/scripts
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo; export SHIP_FAKE=$work/fake SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 mkdir -p "$repo"
@@ -50,8 +50,8 @@ check "a failed sub-issue query stops with exit 1, it never reads as no sub-issu
 # (Hierarchy-Reverse) or a predecessor (Dependency-Reverse) link.
 github=$(
   SHIP_OWNER=o SHIP_REPO=r
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/github.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/github.sh
   api() { printf '%s\n' "$1" > "$work/route"; printf '[{"number":3,"state":"open"},{"number":4,"state":"closed"}]\n' | jq -c "${!#}"; }
   host_issue_subissues_open 9 | jq -c .; cat "$work/route"
 )
@@ -60,8 +60,8 @@ repos/o/r/issues/9/sub_issues' "$github"
 
 ado=$(
   SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/ado.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/ado.sh
   _wi_show() { printf '%s\n' '{"relations":[
     {"rel":"System.LinkTypes.Hierarchy-Forward","url":"https://x/_apis/wit/workItems/21"},
     {"rel":"System.LinkTypes.Hierarchy-Forward","url":"https://x/_apis/wit/workItems/22"},

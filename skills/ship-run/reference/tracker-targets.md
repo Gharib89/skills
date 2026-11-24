@@ -29,5 +29,5 @@ attached.
 
 The unattended lane runs no merge, so under each draft the summary gives the
 command a human runs after merging, from a file they save the draft to,
-`.claude/skills/ship/scripts/update-issue-body.sh <n> --section "<section>"
+`.claude/skills/ship-run/scripts/update-issue-body.sh <n> --section "<section>"
 --body-file <file>`, once they have checked the section has not changed.

@@ -7,9 +7,9 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
-section=$(awk '/^## Collapsing long sections/{f=1; next} /^## /{f=0} f' skills/ship/reference/pr-body-collapse.md | tr '\n' ' ' | tr -s ' ')
+section=$(awk '/^## Collapsing long sections/{f=1; next} /^## /{f=0} f' skills/ship-run/reference/pr-body-collapse.md | tr '\n' ' ' | tr -s ' ')
 has() { grep -qiF -- "$2" <<<"$1" && echo yes || echo no; }
 
 # <case>|<clause the section must hold>|<the clause with its meaning negated>

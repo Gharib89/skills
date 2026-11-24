@@ -9,7 +9,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 T=$'\t'  # the calls log separates arguments with a tab
 
-mech=$PWD/skills/ship/scripts/update-issue-body.sh
+mech=$PWD/skills/ship-run/scripts/update-issue-body.sh
 usage='usage: update-issue-body <issue> [--repo <owner>/<repo>] --section <name> --body-file <path>'
 
 # Any readable file stands in for a body below: `ship_args` refuses one that is not.

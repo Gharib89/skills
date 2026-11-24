@@ -12,7 +12,7 @@ tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 bin=$tmp/bin origin=$tmp/origin.git work=$tmp/work
 mkdir -p "$bin"
-cp -r skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh skills/ship/scripts/lib "$bin/"
+cp -r skills/ship-run/scripts/run-file.sh skills/ship-run/scripts/_lib.sh skills/ship-run/scripts/lib "$bin/"
 cat > "$bin/read-pr.sh" <<STUB
 #!/usr/bin/env bash
 printf '{"head_sha":"%s"}\n' "\$(cat "$tmp/pr-head")"

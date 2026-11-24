@@ -14,7 +14,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 root=$PWD
-scripts=$root/skills/ship/scripts
+scripts=$root/skills/ship-run/scripts
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 real_git=$(command -v git)
 g() { "$real_git" -c user.name=t -c user.email=t@t -c init.defaultBranch=main "$@"; }

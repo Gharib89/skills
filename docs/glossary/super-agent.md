@@ -57,7 +57,7 @@ A merge-gate hold the owner waives in advance, with its condition written out, s
 _Avoid_: auto-merge, merge allowance (that is the permission to merge at all), exception
 
 **Launch message**:
-The first message of a supervised thread: its owner-skill invocation (`/ship <n>`, `/triage <n>`), plus one `Note:` line only when the owner gave one for that ticket. A `/triage` message also carries one contract line after the invocation, since the triage skill is upstream and cannot ask for the waiting line itself. Nothing else rides on it: rules the run must follow live in the skill, the repo's profile or the global rules it loads.
+The first message of a supervised thread: its owner-skill invocation (`/ship-run <n>`, `/triage <n>`), plus one `Note:` line only when the owner gave one for that ticket. A `/triage` message also carries one contract line after the invocation, since the triage skill is upstream and cannot ask for the waiting line itself. Nothing else rides on it: rules the run must follow live in the skill, the repo's profile or the global rules it loads.
 _Avoid_: launch brief, preamble, system prompt
 
 **Step-in**:
@@ -85,7 +85,7 @@ The most supervised threads one repo may have open at once, across every machine
 _Avoid_: repo limit, concurrency limit, quota (that is a provider's)
 
 **Claim**:
-The mark a super agent puts on a ticket before it launches one: a comment (never an assignment: `/ship` assigns through its own claim), first line `<!-- super-agent-claim machine=<key> thread=<id> -->`, naming the machine and the claiming thread. The earliest claim comment on an issue holds it, so another super agent skips the ticket. A claim older than the stale window (3 days by default) is **stale**: it is offered back to the owner and never taken over.
+The mark a super agent puts on a ticket before it launches one: a comment (never an assignment: `/ship-run` assigns through its own claim), first line `<!-- super-agent-claim machine=<key> thread=<id> -->`, naming the machine and the claiming thread. The earliest claim comment on an issue holds it, so another super agent skips the ticket. A claim older than the stale window (3 days by default) is **stale**: it is offered back to the owner and never taken over.
 _Avoid_: lock, lease, reservation
 
 **Active repos**:

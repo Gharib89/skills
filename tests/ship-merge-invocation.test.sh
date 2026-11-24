@@ -6,9 +6,9 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-rel='.claude/skills/ship/scripts/merge.sh'
+rel='.claude/skills/ship-run/scripts/merge.sh'
 flat() { tr '\n' ' ' | tr -s ' '; }
-step=$(awk '/^## Attended: post, then wait/{f=1;next} /^## /{f=0} f' skills/ship/reference/merge-gate.md | flat)
+step=$(awk '/^## Attended: post, then wait/{f=1;next} /^## /{f=0} f' skills/ship-run/reference/merge-gate.md | flat)
 setup=$(flat < skills/setup-skills/SKILL.md)
 # Each predicate anchors on the sentence's opening words, so a negated sentence
 # fails it on the negation, not on letter case.

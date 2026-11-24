@@ -72,7 +72,7 @@ read-verdict|scripts/read-lint.sh verdict
 list-paging|scripts/read-lint.sh paging
 frontmatter|scripts/frontmatter-check.sh
 self-contained|scripts/self-contained-check.sh
-contract|scripts/contract-check.sh skills/ship/scripts skills scripts tests .claude/hooks && scripts/contract-check.sh skills/update-skills/scripts skills/update-skills && scripts/contract-check.sh skills/drive-session/scripts skills/drive-session && scripts/contract-check.sh skills/setup-project/scripts skills/setup-project && scripts/contract-check.sh skills/retro-run/scripts skills/retro-run && scripts/contract-check.sh skills/super-agent/scripts skills/super-agent'
+contract|scripts/contract-check.sh skills/ship-run/scripts skills scripts tests .claude/hooks && scripts/contract-check.sh skills/update-skills/scripts skills/update-skills && scripts/contract-check.sh skills/drive-session/scripts skills/drive-session && scripts/contract-check.sh skills/setup-project/scripts skills/setup-project && scripts/contract-check.sh skills/retro-run/scripts skills/retro-run && scripts/contract-check.sh skills/super-agent/scripts skills/super-agent'
 # FULL_ROWS names the cloud cannot run (the profile's Local-only: parts),
 # space-separated: `skipped` unrun when CLAUDE_CODE_REMOTE=true.
 LOCAL_ONLY=''

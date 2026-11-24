@@ -36,17 +36,17 @@ tree() {
   git -C "$d" init -q && git -C "$d" remote add origin https://github.com/o/r.git || return 1
   printf '{}\n' > "$d/package.json"
   # This list is the source-repo skills of setup-project's SKILL.md first install line.
-  for s in ship cloud-ship setup-skills update-skills setup-harness; do
+  for s in ship-run cloud-ship setup-skills update-skills setup-harness; do
     mkdir -p "$d/.claude/skills/$s"
     printf -- '---\nname: %s\nmetadata:\n  version: 0.2.0\n---\n' "$s" > "$d/.claude/skills/$s/SKILL.md"
   done
-  printf -- '---\nname: ship\nmetadata:\n  version: 0.2.0\n  profile-schema: 4\n  composes: o/r#%s:tdd\n---\n' "$A" \
-    > "$d/.claude/skills/ship/SKILL.md"
+  printf -- '---\nname: ship-run\nmetadata:\n  version: 0.2.0\n  profile-schema: 4\n  composes: o/r#%s:tdd\n---\n' "$A" \
+    > "$d/.claude/skills/ship-run/SKILL.md"
   printf -- '---\nname: setup-harness\nmetadata:\n  version: 0.2.0\n  harness-schema: 3\n---\n' \
     > "$d/.claude/skills/setup-harness/SKILL.md"
   mkdir -p "$d/.claude/skills/tdd" "$d/.claude/skills/setup-matt-pocock-skills"
   jq -n --arg A "$A" --arg osrc "$own_src" --arg osha "$own_sha" '{version: 1, skills: ({
-    ship: {source: "Gharib89/skills"}, "cloud-ship": {source: "Gharib89/skills"},
+    "ship-run": {source: "Gharib89/skills"}, "cloud-ship": {source: "Gharib89/skills"},
     "setup-skills": {source: "Gharib89/skills"}, "update-skills": {source: "gharib89/skills"},
     "setup-harness": {source: "Gharib89/skills"}, tdd: {source: "o/r", ref: $A}}
     + {"setup-matt-pocock-skills": {source: $osrc, ref: $osha}})}' > "$d/skills-lock.json"
@@ -54,7 +54,7 @@ tree() {
   printf '# Harness profile\n\nSchema: 3\n' > "$d/docs/agents/harness.md"
   printf '# Ship profile\n\nSchema: 4\n' > "$d/docs/agents/ship.md"
   git -C "$d" add -A && git -C "$d" -c user.name=t -c user.email=t@t commit -qm init || return 1
-  jq -n '{skills: {ship: {source: "Gharib89/skills", version: "0.2.0"},
+  jq -n '{skills: {"ship-run": {source: "Gharib89/skills", version: "0.2.0"},
     "setup-skills": {source: "Gharib89/skills", version: "0.2.0"},
     grilling: {source: "mattpocock/skills", ref: "'"$B"'"}}}' > "$fixture/$1.lock"
   printf '%s' "$d"
@@ -94,7 +94,7 @@ check "the harness reads run with no harness profile" "run" "$(state harness "$d
 d=$(tree noship); rm "$d/docs/agents/ship.md"
 check "Ship's setup reads run with no ship profile" "run" "$(state ships-setup "$d")"
 
-d=$(tree quotedship); sed -i 's/profile-schema: 4/profile-schema: "4"/' "$d/.claude/skills/ship/SKILL.md"
+d=$(tree quotedship); sed -i 's/profile-schema: 4/profile-schema: "4"/' "$d/.claude/skills/ship-run/SKILL.md"
 check "a quoted ship profile-schema still matches the profile's bare Schema" \
   "done" "$(state ships-setup "$d")"
 
@@ -116,15 +116,15 @@ d=$(tree nested); sed -i.bak 's/^  version: /    version: /' "$d/.claude/skills/
 check "a version nested deeper than metadata reads unreadable" "cloud-ship version unreadable" \
   "$(evidence installed-skills "$d" | grep '^cloud-ship')"
 
-d=$(tree behind); jq '.skills.ship.version = "0.10.0"' "$fixture/behind.lock" > "$fixture/behind2.lock"
+d=$(tree behind); jq '.skills["ship-run"].version = "0.10.0"' "$fixture/behind.lock" > "$fixture/behind2.lock"
 check "a source-repo skill behind the source lock reads re-run audit" \
   "re-run audit" "$(state installed-skills "$d" "$fixture/behind2.lock")"
-check "its evidence names both versions" "ship 0.2.0 behind 0.10.0" \
+check "its evidence names both versions" "ship-run 0.2.0 behind 0.10.0" \
   "$(evidence installed-skills "$d" "$fixture/behind2.lock" | grep behind)"
 # Versions compare by number, not as text: 0.10.0 is ahead of 0.9.0.
-printf -- '---\nname: ship\nmetadata:\n  version: 0.10.0\n  profile-schema: 4\n  composes: o/r#%s:tdd\n---\n' "$A" \
-  > "$d/.claude/skills/ship/SKILL.md"
-jq '.skills.ship.version = "0.9.0"' "$fixture/behind.lock" > "$fixture/behind3.lock"
+printf -- '---\nname: ship-run\nmetadata:\n  version: 0.10.0\n  profile-schema: 4\n  composes: o/r#%s:tdd\n---\n' "$A" \
+  > "$d/.claude/skills/ship-run/SKILL.md"
+jq '.skills["ship-run"].version = "0.9.0"' "$fixture/behind.lock" > "$fixture/behind3.lock"
 check "a copy ahead of the source lock by number is not behind" \
   "done" "$(state installed-skills "$d" "$fixture/behind3.lock")"
 
@@ -132,11 +132,11 @@ d=$(tree offpin); jq --arg B "$B" '.skills.tdd.ref = $B' "$d/skills-lock.json" >
 check "a composed skill off its pin reads re-run audit" "re-run audit" "$(state installed-skills "$d")"
 check "its evidence names the ref and the pin" "tdd at o/r#$B, pinned o/r#$A" \
   "$(evidence installed-skills "$d" | grep ', pinned')"
-d=$(tree forked); jq '.skills.ship.source = "other/ship"' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
+d=$(tree forked); jq '.skills["ship-run"].source = "other/ship"' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
 check "a chain skill installed from another source reads run" "run" "$(state installed-skills "$d")"
-check "its evidence names the source" "ship from other/ship, not Gharib89/skills" \
-  "$(evidence installed-skills "$d" | grep '^ship from')"
-d=$(tree local); jq '.skills.ship.source = "."' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
+check "its evidence names the source" "ship-run from other/ship, not Gharib89/skills" \
+  "$(evidence installed-skills "$d" | grep '^ship-run from')"
+d=$(tree local); jq '.skills["ship-run"].source = "."' "$d/skills-lock.json" > "$d/l" && mv "$d/l" "$d/skills-lock.json"
 check "a chain skill recorded as local in a consumer reads run" "run" "$(state installed-skills "$d")"
 git -C "$d" remote set-url origin git@github.com:Gharib89/skills.git
 check "and as local in the source repo itself reads done" "done" "$(state installed-skills "$d")"
@@ -169,7 +169,7 @@ check_rc "a malformed source lock exits 2" 2 "$(run "$d" "$fixture/bad.lock" >/d
 check "and prints one error object, no rows" "error" "$(run "$d" "$fixture/bad.lock" | jq -r 'keys[]')"
 printf '{"skills": []}\n' > "$fixture/bad2.lock"
 check_rc "a source lock whose skills is no object exits 2" 2 "$(run "$d" "$fixture/bad2.lock" >/dev/null; echo $?)"
-printf '{"skills": {"ship": {"version": "latest"}}}\n' > "$fixture/bad3.lock"
+printf '{"skills": {"ship-run": {"version": "latest"}}}\n' > "$fixture/bad3.lock"
 check_rc "a source lock whose version is no version exits 2" 2 "$(run "$d" "$fixture/bad3.lock" >/dev/null; echo $?)"
 check_rc "a source lock that cannot be read exits 2" 2 "$(run "$d" "$fixture/none.lock" >/dev/null; echo $?)"
 
@@ -257,23 +257,23 @@ check_rc "a root that is no directory exits 2" 2 "$(run "$fixture/nowhere" >/dev
 # source-lock.sh: the source repo's lock with each skill it writes carrying its
 # version. A fake `curl` serves $raw_dir as the raw file host.
 srclock=skills/setup-project/scripts/source-lock.sh
-raw_dir=$fixture/raw; mkdir -p "$raw_dir/skills/ship"
+raw_dir=$fixture/raw; mkdir -p "$raw_dir/skills/ship-run"
 fake curl 'for a; do u=$a; done; f="$FAKE_RAW/${u#https://raw.githubusercontent.com/Gharib89/skills/main/}"
   [ -f "$f" ] && cat "$f" || exit 22'
-jq -n '{version: 1, skills: {ship: {source: ".", computedHash: "x"}, tdd: {source: "o/r", ref: "'"$A"'"}}}' \
+jq -n '{version: 1, skills: {"ship-run": {source: ".", computedHash: "x"}, tdd: {source: "o/r", ref: "'"$A"'"}}}' \
   > "$raw_dir/skills-lock.json"
-printf -- '---\nname: ship\nmetadata:\n  version: 0.22.1\n---\n# ship\n' > "$raw_dir/skills/ship/SKILL.md"
+printf -- '---\nname: ship-run\nmetadata:\n  version: 0.22.1\n---\n# ship-run\n' > "$raw_dir/skills/ship-run/SKILL.md"
 fetched() { FAKE_RAW=$raw_dir PATH="$bin:$sys" "$BASH" "$srclock" "$@" 2>/dev/null; }
 check "the source lock rewrites a source-. skill and carries its version, upstream entries kept" \
-  '{"skills":{"ship":{"source":"Gharib89/skills","version":"0.22.1"},"tdd":{"source":"o/r","ref":"'"$A"'"}}}' \
+  '{"skills":{"ship-run":{"source":"Gharib89/skills","version":"0.22.1"},"tdd":{"source":"o/r","ref":"'"$A"'"}}}' \
   "$(fetched)"
 check "and setup-status takes it as a source lock" "done" "$(fetched > "$fixture/fetched.lock"; d=$(tree fetched)
   state installed-skills "$d" "$fixture/fetched.lock")"
-printf -- '---\nname: ship\nmetadata:\n  version: latest\n---\n' > "$raw_dir/skills/ship/SKILL.md"
+printf -- '---\nname: ship-run\nmetadata:\n  version: latest\n---\n' > "$raw_dir/skills/ship-run/SKILL.md"
 check_rc "a SKILL.md with no dotted version exits 1" 1 "$(fetched >/dev/null; echo $?)"
-printf -- '---\nname: ship\nmetadata:\n  version: 0.22.1-rc1\n---\n' > "$raw_dir/skills/ship/SKILL.md"
+printf -- '---\nname: ship-run\nmetadata:\n  version: 0.22.1-rc1\n---\n' > "$raw_dir/skills/ship-run/SKILL.md"
 check_rc "a version with a suffix past the dotted number exits 1" 1 "$(fetched >/dev/null; echo $?)"
-rm "$raw_dir/skills/ship/SKILL.md"
+rm "$raw_dir/skills/ship-run/SKILL.md"
 check_rc "a SKILL.md that cannot be fetched exits 1" 1 "$(fetched >/dev/null; echo $?)"
 printf 'not json\n' > "$raw_dir/skills-lock.json"
 check_rc "a lock that is not JSON exits 1" 1 "$(fetched >/dev/null; echo $?)"

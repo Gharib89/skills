@@ -4,7 +4,7 @@
 # `Gatng:` line. Prints the parsed rows and the refusal reasons (none). Run from
 # the repo root.
 set -uo pipefail
-src=$PWD/skills/ship/scripts
+src=$PWD/skills/ship-run/scripts
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 cat > "$work/ship.md" <<'PROFILE'
 ## Reviewers

@@ -3,7 +3,7 @@
 # branch commits no profile change; an uncommitted edit that drops the reviewer
 # turns the same evidence from held to clean. Run from the repo root.
 set -uo pipefail
-src=$PWD/skills/ship/scripts
+src=$PWD/skills/ship-run/scripts
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 origin=$work/github.com/owner/repo.git

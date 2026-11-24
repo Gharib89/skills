@@ -8,7 +8,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-m=${RUN_FILE_MECHANIC:-$PWD/skills/ship/scripts/run-file.sh}
+m=${RUN_FILE_MECHANIC:-$PWD/skills/ship-run/scripts/run-file.sh}
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 echo "No findings." > "$tmp/local-report.md"
@@ -35,7 +35,7 @@ history() { # history: <$tmp/ship.md> in c0
   git init -q --bare -b main "$origin"
   g remote add origin "$origin"
   mkdir -p "$repo/docs/agents"; cp "$tmp/ship.md" "$repo/docs/agents/ship.md"; g add docs/agents/ship.md
-  put skills/ship/SKILL.md one; put skills/index.md index; put skills/ship/reference/verify.md v; put feat.txt base
+  put skills/ship-run/SKILL.md one; put skills/index.md index; put skills/ship-run/reference/verify.md v; put feat.txt base
   g commit -q -m c0
   g checkout -q -b pr
   put feat.txt pr; g commit -q -m 'pr work'
@@ -55,7 +55,7 @@ history() { # history: <$tmp/ship.md> in c0
   g checkout -q -b own "$stamp"
   put notes.txt fix; g commit -q -m 'post-loop fix'
   outside=$(g rev-parse HEAD)
-  put skills/ship/SKILL.md two; g commit -q -m 'skill prose'
+  put skills/ship-run/SKILL.md two; g commit -q -m 'skill prose'
   inside=$(g rev-parse HEAD)
   # A file its glob matches only at the head (added), or only at the stamp (deleted).
   g checkout -q -b added "$stamp"
@@ -139,7 +139,7 @@ profile
 run "$outside" "tree unchanged at $outside" "pass at $stamp"
 holds 'a verification without Paths: before a fix' "$outside" "$(verif_stale "$stamp" "$outside")"
 # With Paths:, only a changed file its globs match holds it.
-profile 'Paths: skills/ship/SKILL.md, skills/ship/reference/**'
+profile 'Paths: skills/ship-run/SKILL.md, skills/ship-run/reference/**'
 passes 'a verification whose Paths: no change matches' "$outside"
 run "$inside" "tree unchanged at $inside" "pass at $stamp"
 holds 'a verification whose Paths: a change matches' "$inside" "$(verif_stale "$stamp" "$inside")"
@@ -147,7 +147,7 @@ profile 'Paths: skills/*.md'
 passes 'a single-star glob does not cross a directory' "$inside"
 # A glob that matches no file, a typo or the sentinel spelling, proves nothing.
 run "$outside" "tree unchanged at $outside" "pass at $stamp"
-for p in 'Paths: None.' 'Paths: skill/ship/**' 'Paths: skills/ship/SKILL.md, skill/ship/**' 'Paths:  '; do
+for p in 'Paths: None.' 'Paths: skill/ship/**' 'Paths: skills/ship-run/SKILL.md, skill/ship/**' 'Paths:  '; do
   profile "$p"
   holds "a verification whose '$p' matches no file" "$outside" "$(verif_stale "$stamp" "$outside")"
 done
@@ -160,7 +160,7 @@ run "$removed" "tree unchanged at $removed" "pass at $stamp"
 holds 'a verification whose glob matches a file deleted since' "$removed" "$(verif_stale "$stamp" "$removed")"
 # Near misses: an indented Paths: line is no Paths: line, and a stamp inside a
 # longer word is no stamp.
-profile '  Paths: skills/ship/SKILL.md'
+profile '  Paths: skills/ship-run/SKILL.md'
 run "$outside" "tree unchanged at $outside" "pass at $stamp"
 holds 'a verification whose Paths: line is indented' "$outside" "$(verif_stale "$stamp" "$outside")"
 profile
@@ -172,14 +172,14 @@ run "$stamp" "tree unchanged at ${stamp:0:7}" "pass at ${stamp:0:7}: ran it"
 passes 'an abbreviated stamp of the head' "$stamp"
 run "$stamp" "tree unchanged at ${stamp}0" "pass at $stamp"
 holds 'a stop stamped at the head plus a digit' "$stamp" "$(reviewer_stale "${stamp}0" "$stamp")"
-profile 'Paths: skills/ship/SKILL.md'
+profile 'Paths: skills/ship-run/SKILL.md'
 run "$outside" "tree unchanged at $outside" "pass at ${outside}0"
 holds 'a verification stamped at the head plus a digit, under Paths:' "$outside" "$(verif_stale "${outside}0" "$outside")"
 # A tab is whitespace between Paths: globs, like a blank.
-profile $'Paths: notes.txt,\tskills/ship/SKILL.md'
+profile $'Paths: notes.txt,\tskills/ship-run/SKILL.md'
 run "$inside" "tree unchanged at $inside" "pass at $outside"
 holds 'a verification whose tab-separated glob a change matches' "$inside" "$(verif_stale "$outside" "$inside")"
-profile $'Paths: skills/index.md,\tskills/ship/SKILL.md'
+profile $'Paths: skills/index.md,\tskills/ship-run/SKILL.md'
 run "$outside" "tree unchanged at $outside" "pass at $stamp"
 passes 'a verification whose tab-separated globs no change matches' "$outside"
 # An unknown stamp proves nothing.

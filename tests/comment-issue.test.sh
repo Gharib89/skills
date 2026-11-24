@@ -9,7 +9,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source tests/gh-fake.sh
 
-m=$PWD/skills/ship/scripts/comment-issue.sh
+m=$PWD/skills/ship-run/scripts/comment-issue.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 mkdir "$tmp/bin" "$tmp/repo"

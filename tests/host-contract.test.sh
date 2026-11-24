@@ -13,8 +13,8 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-lib=skills/ship/scripts/_lib.sh
-doc=skills/ship/scripts/lib/host.sh
+lib=skills/ship-run/scripts/_lib.sh
+doc=skills/ship-run/scripts/lib/host.sh
 defaults=tests/host-fake/defaults
 
 # <adapter>: the host_* functions it defines, one per line, sorted. The
@@ -26,10 +26,10 @@ fns() {
     # shellcheck source=/dev/null
     source "$lib" && source "$1" && declare -F | awk '$3 ~ /^host_/ {print $3}' | sort )
 }
-gh_fns=$(fns skills/ship/scripts/host/github.sh)
+gh_fns=$(fns skills/ship-run/scripts/host/github.sh)
 check "the GitHub adapter defines host functions at all" true "$([ -n "$gh_fns" ] && echo true)"
 check "the Azure DevOps adapter defines the GitHub adapter's host functions" "$gh_fns" \
-  "$(fns skills/ship/scripts/host/ado.sh)"
+  "$(fns skills/ship-run/scripts/host/ado.sh)"
 check "the Host fake defines the GitHub adapter's host functions" "$gh_fns" "$(fns tests/host-fake.sh)"
 
 # `<fn> <key,key,...>` for every function whose contract line documents an

@@ -8,7 +8,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 rep() { printf "%${1}s" '' | tr ' ' "$2"; }
 
@@ -25,9 +25,9 @@ poll=$(jq -cn --argjson r "$round" --argjson m "$mine" --argjson o "$older" '
    checks: [{name: "gate", status: "success"}],
    reviews: {on_head: [$r, $m], all: [$o, $r, $m], total: 3},
    threads: [{id: "t1", resolved: false, replied: false, author: "Copilot",
-              path: "skills/ship/scripts/merge.sh", body: "nit: name the base"},
+              path: "skills/ship-run/scripts/merge.sh", body: "nit: name the base"},
              {id: "t2", resolved: true, replied: true, author: "Copilot",
-              path: "skills/ship/scripts/poll-pr.sh", body: "done"}],
+              path: "skills/ship-run/scripts/poll-pr.sh", body: "done"}],
    reviewer: {name: "copilot", login: "copilot-pull-request-reviewer[bot]", rule: "head",
               await_run: null, timeout: 600},
    reviewer_blocked: null, reviewer_run: {status: "completed", conclusion: "success",
@@ -44,7 +44,7 @@ poll=$(jq -cn --argjson r "$round" --argjson m "$mine" --argjson o "$older" '
 leads=$(jq -cn '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
   reviews: {on_head: [], all: [], total: 0},
   threads: [{id: "t3", resolved: false, replied: false, author: "Copilot",
-             path: "skills/ship/scripts/ci-wait.sh",
+             path: "skills/ship-run/scripts/ci-wait.sh",
              body: "\n\nthe grace is read twice\n\n```suggestion\ngrace=0\n```"},
             {id: "t4", resolved: false, replied: false, author: "Copilot",
              path: null, body: "a round finding naming no file"}]}')
@@ -65,7 +65,7 @@ check "a thread on no file carries a null path" \
 long=$(jq -cn --arg b "$(rep 240 t)" '{head_sha: "abc1234", mergeable: "clean", landed_by: null,
   reviews: {on_head: [], all: [], total: 0},
   threads: [{id: "t5", resolved: false, replied: false, author: "Copilot",
-             path: "skills/ship/scripts/poll-pr.sh", body: $b}]}')
+             path: "skills/ship-run/scripts/poll-pr.sh", body: $b}]}')
 check "a long lead is cut at the finding-items width and says so" \
   "$(printf '%s\n...[truncated]' "$(rep 200 t)")" \
   "$(ship_brief "$long" Gharib89 on_head | jq -r '.threads[0].lead')"
@@ -226,7 +226,7 @@ check "a usage line quoted in a finding keeps its placeholders, real tags still 
 # bullet names each field the projection emits on a thread row and says the row
 # has no `body`; a negated copy of the bullet must fail each half.
 loop_brief=$(awk '/^- \*\*`--brief` is how a round is read/ {on=1; print; next}
-  on && /^- \*\*/ {exit} on' skills/ship/reference/review-loop.md)
+  on && /^- \*\*/ {exit} on' skills/ship-run/reference/review-loop.md)
 thread_keys=$(ship_brief "$poll" Gharib89 on_head | jq -r '.threads[0] | keys_unsorted[]')
 # <bullet>: each thread-row field the bullet leaves unnamed, then `body` where it
 # does not say a thread row has none.

@@ -9,7 +9,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-m=$PWD/skills/ship/scripts/isolate.sh
+m=$PWD/skills/ship-run/scripts/isolate.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 g() { git -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$@"; }

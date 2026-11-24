@@ -15,7 +15,7 @@ work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 read_github() { # <classic: json | notprotected | 403 | hidden> <rules: json | fail> -> compact answer
   (
     SHIP_OWNER=o SHIP_REPO=r
-    source skills/ship/scripts/_lib.sh; source skills/ship/scripts/host/github.sh
+    source skills/ship-run/scripts/_lib.sh; source skills/ship-run/scripts/host/github.sh
     api() { # the adapter's two reads, answered by endpoint; stderr carries gh's message
       case $1 in
         */protection) case $CLASSIC in
@@ -67,7 +67,7 @@ check "a bypass allowance opens the bypass even with enforce_admins" '"yes"' "$(
 read_ado() { # <policy-list json | fail> -> compact answer
   (
     SHIP_ORG_URL=https://dev.azure.com/o SHIP_PROJECT=p SHIP_REPO=r
-    source skills/ship/scripts/_lib.sh; source skills/ship/scripts/host/ado.sh
+    source skills/ship-run/scripts/_lib.sh; source skills/ship-run/scripts/host/ado.sh
     az() { case "$1 $2" in
       "repos show") if [ -n "$REPO" ]; then echo "$REPO"; else echo '{"id":"rid","defaultBranch":"refs/heads/main"}'; fi ;;
       "repos policy") [ "$POLICIES" != fail ] && echo "$POLICIES" || return 1 ;; esac; }

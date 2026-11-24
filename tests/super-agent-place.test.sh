@@ -149,15 +149,15 @@ check_rc "an open entry cannot also wait" 2 "$(P --readings "$readings" --number
 
 # --- the same repo beside itself -------------------------------------------------------------
 reset
-bash "$s/ledger.sh" --ledger "$led" add --repo Gharib89/skills --number 1 --thread t-1 --worktree /wt/1 --branch b-1 --machine home --area skills/ship >/dev/null
-check "a same-repo ticket with an overlapping area waits, whichever machine" true "$(P --area skills/ship/scripts --readings "$readings" | jq .waiting)"
-check "with the ticket in the way named" 1 "$(P --area skills/ship --readings "$readings" | jq '.reason | test("skills#1") | if . then 1 else 0 end')"
+bash "$s/ledger.sh" --ledger "$led" add --repo Gharib89/skills --number 1 --thread t-1 --worktree /wt/1 --branch b-1 --machine home --area skills/ship-run >/dev/null
+check "a same-repo ticket with an overlapping area waits, whichever machine" true "$(P --area skills/ship-run/scripts --readings "$readings" | jq .waiting)"
+check "with the ticket in the way named" 1 "$(P --area skills/ship-run --readings "$readings" | jq '.reason | test("skills#1") | if . then 1 else 0 end')"
 check "an apart area is placed beside it" home "$(P --area skills/drive-session --readings "$readings" | jq -r .placed.machine)"
 
 # --- a rethread of a ticket the ledger already holds ---------------------------------------
 reset
-bash "$s/ledger.sh" --ledger "$led" add --repo Gharib89/skills --number 1 --thread t-1 --worktree /wt/1 --branch b-1 --machine home --area skills/ship >/dev/null
-out=$(P --area skills/ship --readings "$readings" --number 1); rc=$?
+bash "$s/ledger.sh" --ledger "$led" add --repo Gharib89/skills --number 1 --thread t-1 --worktree /wt/1 --branch b-1 --machine home --area skills/ship-run >/dev/null
+out=$(P --area skills/ship-run --readings "$readings" --number 1); rc=$?
 check_rc "a rethread does not conflict with its own open entry" 0 "$rc"
 check "and is placed, its own slot not counted" home "$(jq -r .placed.machine <<<"$out")"
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# skills/ship/scripts/run-file.sh `call`: a direct call is logged under the Run
+# skills/ship-run/scripts/run-file.sh `call`: a direct call is logged under the Run
 # file's `## Direct calls` before the run makes it, and only in the host's REST
 # form, so a cloud run never meets the proxy's GraphQL refusal (#254, ADR 0010).
 # The seam is `run-file call <why> --file <run file> -- <command>...`: an exit
@@ -10,7 +10,7 @@ source tests/lib.sh
 
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
-m=$PWD/skills/ship/scripts/run-file.sh
+m=$PWD/skills/ship-run/scripts/run-file.sh
 rf=$(bash "$m" init 9 --scratchpad "$T/sp" | jq -r .run_file)
 
 # call <args>...: sets out, status and err for one call.

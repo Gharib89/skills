@@ -11,13 +11,13 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 head=84c7f25fccd0b31fdb95bc19bdd262c9994006d2
 
 # GitHub. The activity rows are the shape the API returned for PR #622's branch.
 ( SHIP_OWNER=o SHIP_REPO=r
-  source skills/ship/scripts/host/github.sh
+  source skills/ship-run/scripts/host/github.sh
   log=$(mktemp); trap 'rm -f "$log"' EXIT
   ACTIVITY=''
   api() {
@@ -60,7 +60,7 @@ head=84c7f25fccd0b31fdb95bc19bdd262c9994006d2
 
 # Azure DevOps.
 ( SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
-  source skills/ship/scripts/host/ado.sh
+  source skills/ship-run/scripts/host/ado.sh
   ANSWER=''
   invoke() { [ -n "$ANSWER" ] || return 1; printf '%s' "$ANSWER"; }
   ANSWER='{"value": [

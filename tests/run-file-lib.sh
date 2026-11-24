@@ -25,7 +25,7 @@ run_file_commit_profile() { # run_file_commit_profile <repo> <origin>
 # commit has, so `m` is tests/run-file-at-head.sh: it runs the real mechanic
 # against a real head and shows the fixture the label back.
 run_file_clean_setup() {
-export RUN_FILE_REAL=${RUN_FILE_MECHANIC:-$PWD/skills/ship/scripts/run-file.sh}
+export RUN_FILE_REAL=${RUN_FILE_MECHANIC:-$PWD/skills/ship-run/scripts/run-file.sh}
 m=$PWD/tests/run-file-at-head.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
@@ -47,7 +47,7 @@ trap 'rm -rf "$tmp"' EXIT
 
 bin=$tmp/bin work=$tmp/work origin=$tmp/origin.git
 mkdir -p "$bin"
-cp -r skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh skills/ship/scripts/lib "$bin/"
+cp -r skills/ship-run/scripts/run-file.sh skills/ship-run/scripts/_lib.sh skills/ship-run/scripts/lib "$bin/"
 cat > "$bin/dropped-lines.sh" <<'STUB'
 #!/usr/bin/env bash
 printf '{"base":"x","blocks":[{"id":"scripts/old.sh:1","file":"scripts/old.sh","line":1,"lines":3,"text":"t"}]}\n'

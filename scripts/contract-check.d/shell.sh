@@ -223,7 +223,7 @@ fi
 #     _lib.sh, the one fence grammar: a second, hand-rolled one, even elsewhere
 #     in _lib.sh, is how a four-backtick fence ended up closed by a
 #     three-backtick line.
-find "$skills" -name '*.sh' | sort | tr '\n' '\0' | xargs -0 awk -v lib="$skills/ship/scripts/_lib.sh" '
+find "$skills" -name '*.sh' | sort | tr '\n' '\0' | xargs -0 awk -v lib="$skills/ship-run/scripts/_lib.sh" '
     function indent(s) { match(s, /^[ \t]*/); return substr(s, 1, RLENGTH) }
     FNR == 1 { delete L; acc = ""; start = 0; def = 0 }
     { L[FNR] = $0 }

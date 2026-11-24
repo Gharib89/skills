@@ -1,6 +1,6 @@
 # The rework run
 
-`/ship <issue> --rework ["<feedback>"]` reworks the PR an earlier run of the
+`/ship-run <issue> --rework ["<feedback>"]` reworks the PR an earlier run of the
 issue, attended or unattended, left open at the merge gate. The change to make
 is its **feedback**, from three sources: the PR's unresolved review threads
 whose latest comment is not Ship's own, the PR's authoritative comments posted

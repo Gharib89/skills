@@ -7,7 +7,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 rep() { printf "%${1}s" '' | tr ' ' "$2"; }
 
@@ -24,9 +24,9 @@ poll=$(jq -cn --argjson r "$round" --argjson m "$mine" --argjson o "$older" '
    checks: [{name: "gate", status: "success"}],
    reviews: {on_head: [$r, $m], all: [$o, $r, $m], total: 3},
    threads: [{id: "t1", resolved: false, replied: false, author: "Copilot",
-              path: "skills/ship/scripts/merge.sh", body: "nit: name the base"},
+              path: "skills/ship-run/scripts/merge.sh", body: "nit: name the base"},
              {id: "t2", resolved: true, replied: true, author: "Copilot",
-              path: "skills/ship/scripts/poll-pr.sh", body: "done"}],
+              path: "skills/ship-run/scripts/poll-pr.sh", body: "done"}],
    reviewer: {name: "copilot", login: "copilot-pull-request-reviewer[bot]", rule: "head",
               await_run: null, timeout: 600},
    reviewer_blocked: null, reviewer_run: {status: "completed", conclusion: "success",
@@ -49,7 +49,7 @@ check "the head rule projects on_head without the run's own row" \
       done: true, pending_checks: [], stale: false, reviewer_blocked: null,
       reviewer_run: {status: "completed", conclusion: "success", url: "https://example.invalid/runs/9"},
       rounds: [{id: 11, submitted_at: "2026-09-14T03:00:00Z", substantive: true, body: $f}],
-      threads: [{id: "t1", path: "skills/ship/scripts/merge.sh", lead: "nit: name the base",
+      threads: [{id: "t1", path: "skills/ship-run/scripts/merge.sh", lead: "nit: name the base",
                  resolved: false, replied: false}]}')" \
   "$(ship_brief "$poll" Gharib89 on_head)"
 
@@ -64,7 +64,7 @@ check "the since rule projects all[]" \
       reviewer_run: {status: "completed", conclusion: "success", url: "https://example.invalid/runs/9"},
       rounds: [{id: 9, submitted_at: "2026-09-14T02:00:00Z", substantive: true, body: "- first round finding"},
                {id: 11, submitted_at: "2026-09-14T03:00:00Z", substantive: true, body: $f}],
-      threads: [{id: "t1", path: "skills/ship/scripts/merge.sh", lead: "nit: name the base",
+      threads: [{id: "t1", path: "skills/ship-run/scripts/merge.sh", lead: "nit: name the base",
                  resolved: false, replied: false}]}')" \
   "$(ship_brief "$poll" Gharib89 all)"
 

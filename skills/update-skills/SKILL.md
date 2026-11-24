@@ -23,10 +23,13 @@ The source repo's own steps live in
 upstream-drift issue without invoking this skill.
 
 **This skill calls Ship's generic mechanics by path** from the worktree: `$S`
-below stands for `.claude/skills/ship/scripts` and `$U` for
+below stands for `.claude/skills/ship-run/scripts` and `$U` for
 `.claude/skills/update-skills/scripts`. Each mechanic answers `--help` with its
 flags. Plan files and body files go in your scratchpad, outside the repo. `$S`
-and `$U` are notation: write the paths out.
+and `$U` are notation: write the paths out. A repo whose lock still records
+`ship` (installed before Ship's skill was renamed `ship-run`) has only
+`.claude/skills/ship/`: there `$S` is `.claude/skills/ship/scripts` until step 2
+replaces it.
 
 ## Process
 
@@ -49,10 +52,14 @@ skill the lock records from `Gharib89/skills`, in any case: one left out keeps
 its old version, and step 3 then reads it as unmoved.
 
 ```sh
-flags=$(jq -er '[.skills | to_entries[] | select(.value.source | ascii_downcase == "gharib89/skills") | .key] + ["ship", "cloud-ship", "setup-skills", "update-skills"] | unique | map("--skill " + @sh) | join(" ")' skills-lock.json) && eval "npx skills@1.8.1 add Gharib89/skills $flags --agent claude-code -y"
+flags=$(jq -er '[.skills | to_entries[] | select(.value.source | ascii_downcase == "gharib89/skills") | .key | select(. != "ship")] + ["ship-run", "cloud-ship", "setup-skills", "update-skills"] | unique | map("--skill " + @sh) | join(" ")' skills-lock.json) && eval "npx skills@1.8.1 add Gharib89/skills $flags --agent claude-code -y" \
+  && { ! jq -e '.skills.ship' skills-lock.json >/dev/null || npx skills@1.8.1 remove --skill ship --agent claude-code -y; }
 ```
 
-In the source repo, whose `skills-lock.json` records `ship`'s source as `.`,
+The last clause removes a pre-rename `ship` copy and its lock entry, since
+`ship-run` replaces it and the CLI ignores a `--skill` the source no longer has.
+
+In the source repo, whose `skills-lock.json` records `ship-run`'s source as `.`,
 run the refresh line its CLAUDE.md carries instead. Project scope always: no
 `-g`.
 

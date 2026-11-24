@@ -64,7 +64,7 @@ printf '%s\n' "$*" >> "$S/claude.log"
 # What Ship's in-place isolation meets: the tree's status, untracked files shown
 # whatever the config says, then find-docs' ref.
 { git status --porcelain --untracked-files=normal; jq -r '.skills["find-docs"].ref' skills-lock.json; } > "$S/clone"
-n=${*: -1}; n=${n#/ship }; n=${n%% *}
+n=${*: -1}; n=${n#/ship-run }; n=${n%% *}
 play=$(head -n 1 "$S/script"); tail -n +2 "$S/script" > "$S/s"; mv "$S/s" "$S/script"
 run=$XDG_STATE_HOME/ship/key/ship-$n/run.md
 mkdir -p "${run%/*}"
@@ -153,7 +153,7 @@ export PATH="$T/bin:$PATH"
 
 # The seed carries every skill on ship's composes line at its pin, but OFF_PIN,
 # which its lock records at another ref, and MISSING, which it lacks.
-read -ra composes <<<"$(sed -n 's/^  composes: //p' skills/ship/SKILL.md)"
+read -ra composes <<<"$(sed -n 's/^  composes: //p' skills/ship-run/SKILL.md)"
 off_ref=522c4db000000000000000000000000000000000
 seed() {
   local entry k ref lock='{"version": 1, "skills": {}}'

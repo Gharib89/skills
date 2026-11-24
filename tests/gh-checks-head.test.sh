@@ -85,8 +85,8 @@ actions_reads() { grep -c '/actions/runs' "$FAKE/calls" 2>/dev/null; }
 
 (
   SHIP_OWNER=owner SHIP_REPO=repo
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/github.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/github.sh
   checks() { host_pr_checks 1 abc | jq -c .; }
 
   # The #392 shape: a success, then a run the concurrency group cancelled when a
@@ -202,8 +202,8 @@ jq -n --arg s "$old" '[{id: 9, user: {login: "rev"}, state: "COMMENTED", submitt
   body: "a round on the old head", commit_id: $s}]' > "$FAKE/reviews.json"
 
 polls() { rm -f "$FAKE/pulls.n"; printf '%s' "$1" > "$FAKE/old-polls"; }
-ciwait() { ( cd "$1" && shift && SHIP_CI_WAIT_GRACE=${SHIP_CI_WAIT_GRACE:-0} bash "$root/skills/ship/scripts/ci-wait.sh" 1 "$@" 2>/dev/null ); }
-pollpr() { ( cd "$1" && shift && bash "$root/skills/ship/scripts/poll-pr.sh" 1 "$@" 2>/dev/null ); }
+ciwait() { ( cd "$1" && shift && SHIP_CI_WAIT_GRACE=${SHIP_CI_WAIT_GRACE:-0} bash "$root/skills/ship-run/scripts/ci-wait.sh" 1 "$@" 2>/dev/null ); }
+pollpr() { ( cd "$1" && shift && bash "$root/skills/ship-run/scripts/poll-pr.sh" 1 "$@" 2>/dev/null ); }
 
 # The no-checks grace counts from the expected head's arrival, which only a
 # nonzero grace shows: a checkout whose profile names a leg keeps one, shortened

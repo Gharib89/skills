@@ -4,7 +4,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 ids()    { ship_id_list "$1" 2>/dev/null; }
 verdict() { ship_id_list "$1" >/dev/null 2>&1 && echo accepted || echo rejected; }

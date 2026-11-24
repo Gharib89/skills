@@ -14,7 +14,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-dir=skills/ship/scripts
+dir=skills/ship-run/scripts
 errfile=$(mktemp); trap 'rm -f "$errfile"' EXIT
 covered=""
 

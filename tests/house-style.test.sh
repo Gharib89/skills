@@ -69,13 +69,13 @@ check_rc "a symlink to a file with a trailing blank and no final newline passes"
 # reflow drew review findings. Lines no reflow can shorten are exempt.
 wide=$(printf '%081d' 0 | tr 0 w)
 d=$(checkout wrap-ragged)
-mkdir -p "$d/skills/ship"
-printf 'short line\n%s\n' "$wide" > "$d/skills/ship/SKILL.md"; git -C "$d" add -A
+mkdir -p "$d/skills/ship-run"
+printf 'short line\n%s\n' "$wide" > "$d/skills/ship-run/SKILL.md"; git -C "$d" add -A
 check_rc "an 81-column prose line in a wrapped file fails" 1 "$(rc_of C.UTF-8 "$d")"
-check "the finding names the line" "skills/ship/SKILL.md:2:$wide" "$(out_of C.UTF-8 "$d" | tail -n 1)"
+check "the finding names the line" "skills/ship-run/SKILL.md:2:$wide" "$(out_of C.UTF-8 "$d" | tail -n 1)"
 
 d=$(checkout wrap-exempt)
-mkdir -p "$d/skills/ship"
+mkdir -p "$d/skills/ship-run"
 { printf -- '---\ndescription: %s\n---\n' "$wide"
   printf '```sh\n%s\n```\n' "$wide"
   printf '| %s |\n' "$wide"
@@ -83,8 +83,8 @@ mkdir -p "$d/skills/ship"
   printf '[ref]: https://example.com/%s\n' "$wide"
   printf '`%s`.\n' "$wide"
   printf '1. item\n\n     ```sh\n     %s\n     ```\n' "$wide"
-} > "$d/skills/ship/SKILL.md"
-printf '%s\n' "$wide" > "$d/skills/ship/CHANGELOG.md"
+} > "$d/skills/ship-run/SKILL.md"
+printf '%s\n' "$wide" > "$d/skills/ship-run/CHANGELOG.md"
 printf '%s\n' "$wide" > "$d/skills/x/SKILL.md"
 git -C "$d" add -A
 check_rc "frontmatter, fences (one nested in a list item), table, link-only and code-span-only lines, a changelog and an unwrapped file pass" 0 "$(rc_of C.UTF-8 "$d")"
@@ -94,7 +94,7 @@ check_rc "frontmatter, fences (one nested in a list item), table, link-only and 
 # line 1, so a rule mid-file exempts nothing after it.
 for c in "see [$wide](#a) here" "\`a\` and \`$wide\`" 'fence-closed' 'fence-other-char' 'fence-shorter' 'fence-not-opener' 'rule-mid-file'; do
   d=$(checkout "wrap-adversarial-${c:0:5}-${#c}")
-  mkdir -p "$d/skills/ship"
+  mkdir -p "$d/skills/ship-run"
   case $c in
     fence-closed) printf '```\nx\n```\n%s\n' "$wide" ;;
     # A fence closes only on its own character, at least as long as its opener.
@@ -104,7 +104,7 @@ for c in "see [$wide](#a) here" "\`a\` and \`$wide\`" 'fence-closed' 'fence-othe
     fence-not-opener) printf '```a`b\n%s\n' "$wide" ;;
     rule-mid-file) printf 'text\n---\n%s\n---\n' "$wide" ;;
     *) printf '%s\n' "$c" ;;
-  esac > "$d/skills/ship/SKILL.md"
+  esac > "$d/skills/ship-run/SKILL.md"
   git -C "$d" add -A
   check_rc "a long line fails: $c" 1 "$(rc_of C.UTF-8 "$d")"
 done

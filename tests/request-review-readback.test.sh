@@ -21,7 +21,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-mech=$PWD/skills/ship/scripts/request-review.sh
+mech=$PWD/skills/ship-run/scripts/request-review.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo bin=$work/bin
 export FAKE=$work/fake

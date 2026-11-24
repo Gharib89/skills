@@ -29,17 +29,17 @@ out_of() { bash scripts/stray-file-check.sh "$1" 2>/dev/null; }
 # every synthetic fixture green.
 check_rc "the current tree tracks nothing stray" 0 "$(rc_of .)"
 
-d=$(repo owned skills/ship/SKILL.md .claude/skills/ship/SKILL.md docs/agents/ship.md \
+d=$(repo owned skills/ship-run/SKILL.md .claude/skills/ship-run/SKILL.md docs/agents/ship.md \
   scripts/local-gate.sh tests/run.sh .github/workflows/claude-review.yml \
   .out-of-scope/note.md .release/ship.toml .gitattributes .gitignore AGENTS.md CLAUDE.md GLOSSARY.md skills-lock.json)
 check_rc "a checkout of owned paths passes" 0 "$(rc_of "$d")"
 
-d=$(repo stray-root skills/ship/SKILL.md null.x)
+d=$(repo stray-root skills/ship-run/SKILL.md null.x)
 check_rc "a stray root file fails" 1 "$(rc_of "$d")"
 check "the message names the path" \
   "null.x: tracked outside the repo's top-level allowlist" "$(out_of "$d")"
 
-d=$(repo stray-dir skills/ship/SKILL.md src/main.sh)
+d=$(repo stray-dir skills/ship-run/SKILL.md src/main.sh)
 check_rc "a stray top-level directory fails" 1 "$(rc_of "$d")"
 check "the message names the path, not the directory" \
   "src/main.sh: tracked outside the repo's top-level allowlist" "$(out_of "$d")"
@@ -52,7 +52,7 @@ check_rc "a tab in a tracked name is read whole" 0 "$(rc_of "$d")"
 
 # Untracked is not tracked: scratch a run leaves in the tree is not a finding,
 # which is what keeps this gate from firing on a worktree mid-run.
-d=$(repo untracked skills/ship/SKILL.md); : > "$d/null.x"
+d=$(repo untracked skills/ship-run/SKILL.md); : > "$d/null.x"
 check_rc "an untracked stray passes" 0 "$(rc_of "$d")"
 
 # The tooling paths: a root outside any checkout, a root that is not there, and a
@@ -63,7 +63,7 @@ check_rc "an untracked stray passes" 0 "$(rc_of "$d")"
 check_rc "a root that is not a checkout is tooling" 2 "$(rc_of "$fixture")"
 check_rc "a root that does not exist is tooling" 2 "$(rc_of "$fixture/absent")"
 
-d=$(repo subdir skills/ship/SKILL.md docs/agents/ship.md)
+d=$(repo subdir skills/ship-run/SKILL.md docs/agents/ship.md)
 check_rc "a subdirectory of a checkout is tooling" 2 "$(rc_of "$d/docs")"
 
 finish

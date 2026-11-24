@@ -9,8 +9,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source tests/gh-fake.sh
 SHIP_OWNER=owner SHIP_REPO=repo
-source skills/ship/scripts/_lib.sh
-source skills/ship/scripts/host/github.sh
+source skills/ship-run/scripts/_lib.sh
+source skills/ship-run/scripts/host/github.sh
 
 sleep() { :; }
 
@@ -109,7 +109,7 @@ check    "and reports no status rather than the last one" null "$(status_of "$ou
 
 # ship_fail with an answer is what turns that into the mechanic's verdict. It is
 # host agnostic: an adapter that reports no status, as `az` does, yields null.
-verdict() { bash -c 'source skills/ship/scripts/_lib.sh; ship_fail "PR body update failed" "$1"' _ "$1" 2>/dev/null; }
+verdict() { bash -c 'source skills/ship-run/scripts/_lib.sh; ship_fail "PR body update failed" "$1"' _ "$1" 2>/dev/null; }
 check "the verdict carries the error and the status" \
   '{"error":"PR body update failed","status":500}' "$(verdict '{"status":500}' | jq -c .)"
 check "a verdict with no adapter answer is null" \
@@ -118,12 +118,12 @@ check "a verdict whose adapter answer is not JSON is null" \
   '{"error":"PR body update failed","status":null}' "$(verdict 'gh: something' | jq -c .)"
 check_rc "a failed write is exit 1" 1 "$(verdict '{"status":500}' >/dev/null; echo $?)"
 check "the error is also on stderr, where a jq over stdout cannot read it as null" \
-  "PR body update failed" "$(bash -c 'source skills/ship/scripts/_lib.sh; ship_fail "PR body update failed" "$1"' _ '{"status":500}' 2>&1 >/dev/null)"
+  "PR body update failed" "$(bash -c 'source skills/ship-run/scripts/_lib.sh; ship_fail "PR body update failed" "$1"' _ '{"status":500}' 2>&1 >/dev/null)"
 
 # Without an answer argument there is no status to report, so the key is absent
 # rather than null: a refusal the host never saw is not a host failure.
 check "a verdict given no answer argument carries no status key" \
   '{"error":"PR body update failed"}' \
-  "$(bash -c 'source skills/ship/scripts/_lib.sh; ship_fail "PR body update failed"' 2>/dev/null | jq -c .)"
+  "$(bash -c 'source skills/ship-run/scripts/_lib.sh; ship_fail "PR body update failed"' 2>/dev/null | jq -c .)"
 
 finish

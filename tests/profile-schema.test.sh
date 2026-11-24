@@ -21,9 +21,9 @@ doc_file() { printf '# Profile schema\n\n'; printf '%s\n\n' "$@"; }
 # <case> <tmpl> <ship> <doc>: a root holding the three files; prints its path.
 tree() {
   local d="$fixture/$1"; rm -rf "$d"
-  mkdir -p "$d/skills/setup-skills" "$d/skills/ship" || return 1
+  mkdir -p "$d/skills/setup-skills" "$d/skills/ship-run" || return 1
   printf '%s\n' "$2" > "$d/skills/setup-skills/ship-profile.md"
-  printf '%s\n' "$3" > "$d/skills/ship/SKILL.md"
+  printf '%s\n' "$3" > "$d/skills/ship-run/SKILL.md"
   printf '%s\n' "$4" > "$d/skills/setup-skills/profile-schema.md"
   printf '%s' "$d"
 }
@@ -96,14 +96,14 @@ verif_block() { printf '\n## Verification\n\n### real-run\n\nProves: p\nRun: r\n
 check_rc "a Verification entry with a Timebox line agrees" 0 \
   "$(rc_of "$(tree timebox "$(tmpl_file 2)$(verif_block $'Timebox: 10 minutes\n')" "$(ship_file 2)" "$(doc_file '## Schema 2')")")"
 check_rc "a Verification entry with a Paths line agrees" 0 \
-  "$(rc_of "$(tree paths "$(tmpl_file 2)$(verif_block $'Paths: skills/ship/SKILL.md, skills/ship/reference/**\n')" "$(ship_file 2)" "$(doc_file '## Schema 2')")")"
+  "$(rc_of "$(tree paths "$(tmpl_file 2)$(verif_block $'Paths: skills/ship-run/SKILL.md, skills/ship-run/reference/**\n')" "$(ship_file 2)" "$(doc_file '## Schema 2')")")"
 check_rc "a Verification entry without a Timebox line agrees" 0 \
   "$(rc_of "$(tree no-timebox "$(tmpl_file 2)$(verif_block '')" "$(ship_file 2)" "$(doc_file '## Schema 2')")")"
 
 # A file missing under the root is the tooling path, not drift: the check has
 # nothing to compare rather than something that disagrees.
 missing=$(tree missing "$(tmpl_file 2)" "$(ship_file 2)" "$(doc_file '## Schema 2')")
-rm -f "$missing/skills/ship/SKILL.md"
+rm -f "$missing/skills/ship-run/SKILL.md"
 check_rc "a missing file under the root is tooling" 2 "$(rc_of "$missing")"
 
 # The same path for a file that is there and cannot be read: the selector's own

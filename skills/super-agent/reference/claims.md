@@ -11,8 +11,8 @@
 ## The claim
 
 A **claim** keeps two super agents off one ticket: a comment, never an
-assignment (`/ship` assigns). `launch.sh` runs `scripts/claim.sh` before every
-launch, with `--machine` this machine's fleet key and `--thread` your own
+assignment (`/ship-run` assigns). `launch.sh` runs `scripts/claim.sh` before
+every launch, with `--machine` this machine's fleet key and `--thread` your own
 (`$T3CODE_THREAD_ID`), and answers its `status`:
 
 - `taken` or `own`: it launches.

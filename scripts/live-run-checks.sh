@@ -51,8 +51,8 @@ jq -e --argjson amb "$early" '(.assignees | type == "array") and (.open_prs | ty
   || { echo "host state unreadable: $host" >&2; exit 2; }
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # ship_body_closes: whether a PR closes the issue is read the way Ship reads it.
-# shellcheck source=../skills/ship/scripts/_lib.sh
-source "$here/../skills/ship/scripts/_lib.sh"
+# shellcheck source=../skills/ship-run/scripts/_lib.sh
+source "$here/../skills/ship-run/scripts/_lib.sh"
 
 failed=0
 fail() { printf '%s\n' "$1"; failed=1; }

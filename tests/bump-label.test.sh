@@ -132,7 +132,7 @@ check "the refusal names the label to add" \
   "bump-guard: this PR is a breaking change (a '!' in the title or a 'BREAKING CHANGE:' footer in the description or in a commit message), which grades major, a minor while the skill is 0.x. A breaking change must be opted in by a maintainer: add the 'major' label to confirm, or remove the breaking change (drop the '!' / the footer)." \
   "$(out_of 'feat!: x' '' '')"
 check "the invalid-title refusal names the title and the types" \
-  "bump-guard: title 'update the profile' is not a Conventional Commit of a type the release run reads (build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test). PR titles must be, e.g. 'fix: ...' or 'feat(ship): ...', because the squash subject drives the release version bump." \
+  "bump-guard: title 'update the profile' is not a Conventional Commit of a type the release run reads (build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test). PR titles must be, e.g. 'fix: ...' or 'feat(ship-run): ...', because the squash subject drives the release version bump." \
   "$(out_of 'update the profile' '' '')"
 
 finish

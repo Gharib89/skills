@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# skills/ship/scripts/dropped-lines.sh: which removed lines of the diff have no
+# skills/ship-run/scripts/dropped-lines.sh: which removed lines of the diff have no
 # matching added line anywhere in it? The seam is the script's CLI, driven end to
 # end against throwaway fixture repos whose `origin/HEAD` is set by hand so no
 # remote is needed. Every case builds its own repo from a base commit, so a case
@@ -8,7 +8,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-script=$PWD/skills/ship/scripts/dropped-lines.sh
+script=$PWD/skills/ship-run/scripts/dropped-lines.sh
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 

@@ -8,7 +8,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-open=$PWD/skills/ship/scripts/open-pr.sh
+open=$PWD/skills/ship-run/scripts/open-pr.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo; bare=$work/origin.git; export SHIP_FAKE=$work/fake
 g() { git -c user.name=t -c user.email=t@t -c init.defaultBranch=main "$@"; }

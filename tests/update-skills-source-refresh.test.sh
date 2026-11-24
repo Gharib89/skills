@@ -7,6 +7,8 @@
 # argument, never shell text the line runs. Each printed line (update-skills
 # step 2, the `### Ship` block's) is run in a scratch directory over a fixture
 # lock, `npx` a function that prints its arguments. No call here reaches a host.
+# The fixture lock still records `ship`, as one installed before Ship's skill
+# was renamed `ship-run` does: both lines install `ship-run` in its place.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -37,7 +39,7 @@ refresh() {
 # The --skill names the line in <file> installs over the good lock, sorted.
 installed() { refresh "$1" "$tmp/good" | grep -A1 -x -- --skill | grep -v -- '^--' | sort; }
 
-want=$(printf '%s\n' cloud-ship grill-with-artifact setup-harness setup-skills ship update-skills 'x$(echo INJECTED)' | sort)
+want=$(printf '%s\n' cloud-ship grill-with-artifact setup-harness setup-skills ship-run update-skills 'x$(echo INJECTED)' | sort)
 check "update-skills step 2 refreshes every source-repo lock entry" "$want" "$(installed skills/update-skills/SKILL.md)"
 check "the ### Ship block's refresh line does too" "$want" "$(installed skills/setup-skills/ship-block.md)"
 for f in skills/update-skills/SKILL.md skills/setup-skills/ship-block.md; do

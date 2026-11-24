@@ -3,7 +3,7 @@
 # fails on the lock, yet pruned[] names the worktree. Driven over the Host fake
 # inside a throwaway GitHub-origin checkout. Run from the repo root.
 set -uo pipefail
-scripts=$PWD/skills/ship/scripts
+scripts=$PWD/skills/ship-run/scripts
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo
 export SHIP_FAKE=$work/fake SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh GIT_ALLOW_PROTOCOL=file

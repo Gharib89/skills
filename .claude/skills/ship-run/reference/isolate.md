@@ -65,7 +65,7 @@ Claude Code roots its language server at the session's directory at the first
 left at the main checkout gets every `LSP` answer from the main checkout's code,
 and a Bash `cd` changes nothing. Under `.claude/worktrees/` the switch raises no
 permission prompt, which is why `isolate` creates the worktree there. A session
-that edited a served file before `/ship` keeps its server where it started.
+that edited a served file before `/ship-run` keeps its server where it started.
 
 Through any stop or hand-back the session stays in the worktree, so the human
 picks up there. At the merge gate it leaves with `ExitWorktree`

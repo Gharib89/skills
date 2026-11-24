@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
-src=$PWD/skills/ship/scripts
+src=$PWD/skills/ship-run/scripts
 source "$src/_lib.sh"
 source "$src/host/github.d/prs.sh"
 R=repos/example/repo

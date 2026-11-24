@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
-src=$PWD/skills/ship/scripts
+src=$PWD/skills/ship-run/scripts
 source "$src/host/ado.d/threads-and-lists.sh"
 SHIP_PROJECT=project; SHIP_REPO=repo; SHIP_ORG_URL=https://dev.azure.com/example
 azx() {

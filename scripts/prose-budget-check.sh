@@ -15,8 +15,8 @@
 # (#606), rounded up to the next 500: a ratchet, so prose that regrows fails here
 # instead of accumulating again.
 #
-# Ship's always-read set has a word budget of its own, 16000: `skills/ship/SKILL.md`
-# plus every `skills/ship/reference/*.md` but the files a run reads only on their
+# Ship's always-read set has a word budget of its own, 16000: `skills/ship-run/SKILL.md`
+# plus every `skills/ship-run/reference/*.md` but the files a run reads only on their
 # branch (the case list below). A full-lane run reads that whole set, so a rule
 # moved out of SKILL.md into a reference file still costs every run; the per-file
 # caps never bounded the sum. 16000 is the set at 16,000 words after prose
@@ -55,7 +55,7 @@ words() { local n; n=$(wc -w < "$1") || return; printf '%s\n' "$((n))"; }
 # so the fence grammar below is stated once.
 #
 # A `## Contents` line inside a fenced example is example text, so the scan
-# tracks fences, in the grammar `SHIP_AWK_FENCE` in skills/ship/scripts/_lib.sh
+# tracks fences, in the grammar `SHIP_AWK_FENCE` in skills/ship-run/scripts/_lib.sh
 # states in full: three or more backticks or tildes under up to three spaces
 # open a fence, and only a bare run of the same character at least as long
 # closes it, with one asymmetry: a backtick run carrying another backtick after
@@ -164,9 +164,9 @@ for f in "$root"/skills/*/SKILL.md; do
   [ "$n" -le 3500 ] \
     || { printf '%s: %s words, over the 3500-word budget\n' "${f#"$root"/}" "$n"; rc=1; }
 done
-if [ -f "$root/skills/ship/SKILL.md" ]; then
+if [ -f "$root/skills/ship-run/SKILL.md" ]; then
   sum=0
-  for f in "$root"/skills/ship/SKILL.md "$root"/skills/ship/reference/*.md; do
+  for f in "$root"/skills/ship-run/SKILL.md "$root"/skills/ship-run/reference/*.md; do
     case ${f##*/} in
       rework.md|small-lane.md|unattended.md|review-loop-examples.md|merge-gate-branches.md|review-unconverged.md|spec-gaps.md|tracker-targets.md|pr-body-collapse.md) continue ;;
     esac
@@ -174,7 +174,7 @@ if [ -f "$root/skills/ship/SKILL.md" ]; then
     sum=$((sum + n))
   done
   [ "$sum" -le 16000 ] \
-    || { printf 'skills/ship: the always-read set is %s words, over the 16000-word budget\n' "$sum"; rc=1; }
+    || { printf 'skills/ship-run: the always-read set is %s words, over the 16000-word budget\n' "$sum"; rc=1; }
 fi
 for f in "$root"/skills/*/reference/*.md; do
   n=$(lines "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }

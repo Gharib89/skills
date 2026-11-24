@@ -105,8 +105,8 @@ chmod +x "$bin/gh" "$bin/sleep"
 export PATH=$bin:$PATH
 
 SHIP_OWNER=owner SHIP_REPO=repo
-source skills/ship/scripts/_lib.sh
-source skills/ship/scripts/host/github.sh
+source skills/ship-run/scripts/_lib.sh
+source skills/ship-run/scripts/host/github.sh
 sleep() { :; }
 
 reset() { # [refused | <gql-seq words>]
@@ -236,7 +236,7 @@ repo=$work/repo
 git -C "$work" init -q repo
 git -C "$repo" remote add origin https://github.com/owner/repo.git
 reset refused
-out=$( cd "$repo" && bash "$OLDPWD/skills/ship/scripts/resolve-thread.sh" 7 999 2>/dev/null ); rc=$?
+out=$( cd "$repo" && bash "$OLDPWD/skills/ship-run/scripts/resolve-thread.sh" 7 999 2>/dev/null ); rc=$?
 check_rc "resolve-thread on an unknown id exits 1" 1 "$rc"
 check "resolve-thread names no such thread" 'no such thread' "$(jq -r .error <<<"$out")"
 

@@ -92,7 +92,7 @@ skill "$d" flow name: flow 'description: Use when flowing.' 'argument-hint: [iss
 check "a plain value opening with [ fails" \
   "skills/flow/SKILL.md: frontmatter key argument-hint needs quoting" "$(out_of "$d")"
 d=$(tree plain-backtick)
-skill "$d" tick name: tick 'description: `/ship` drives an issue. Use when shipping.'
+skill "$d" tick name: tick 'description: `/ship-run` drives an issue. Use when shipping.'
 check "a plain value opening with a backtick fails" \
   "skills/tick/SKILL.md: frontmatter key description needs quoting" "$(out_of "$d")"
 d=$(tree plain-ok)

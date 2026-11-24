@@ -5,7 +5,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-m=skills/ship/scripts/request-review.sh
+m=skills/ship-run/scripts/request-review.sh
 u='usage: request-review <pr> --reviewer <name>'
 
 err() { bash "$m" "$@" 2>/dev/null | jq -r '.error'; }

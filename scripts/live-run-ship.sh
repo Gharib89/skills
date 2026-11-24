@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Ship's live run, the `ship-live-run` Verification in docs/agents/ship.md, also
-# started by hand: real `/ship --unattended` turns, driven headless on the
+# started by hand: real `/ship-run --unattended` turns, driven headless on the
 # fixture repo, each judged from what it left behind
 # (scripts/live-run-checks.sh). ADR 0008 says why a standing GitHub repo and not
 # the host fake.
 #
 #   scripts/live-run-ship.sh <ship-source>
-#   <ship-source>: a checkout of this repo, usually a worktree, whose skills/ship
+#   <ship-source>: a checkout of this repo, usually a worktree, whose skills/ship-run
 #                  is the Ship under test; installed into the fixture with
-#                  `npx skills@1.8.1 add <ship-source> --skill ship`, then each skill
+#                  `npx skills@1.8.1 add <ship-source> --skill ship-run`, then each skill
 #                  on ship's `composes` line that the seed lacks or holds at
 #                  another ref, installed at its pin
 #   LIVE_RUN_REPO: the fixture repo, default Gharib89/ship-fixture. Its `main`
@@ -26,7 +26,7 @@
 # red path, whose change turns the repo's own tests red and which Ship must stop
 # on (`red-after-retry` or `mis-specified`) with no PR and the claim handed back.
 # Each runs `claude -p --model sonnet --permission-mode auto` with
-# `/ship <n> --unattended`, then closes the issue and every PR from the run and
+# `/ship-run <n> --unattended`, then closes the issue and every PR from the run and
 # deletes its branches, pass or fail. That cleanup is this script's
 # scaffolding, not a Ship mechanic.
 #
@@ -68,7 +68,7 @@ set -uo pipefail
 command -v jq >/dev/null || { echo 'jq not installed' >&2; exit 2; }
 unavailable() { jq -cn --arg r "$1" '{result: "unavailable", reason: $r}'; exit 2; }
 src=$(cd "$1" 2>/dev/null && pwd) || src=""
-[ -f "$src/skills/ship/SKILL.md" ] || unavailable "not a ship source: $1 (no skills/ship/SKILL.md)"
+[ -f "$src/skills/ship-run/SKILL.md" ] || unavailable "not a ship source: $1 (no skills/ship-run/SKILL.md)"
 for t in gh git npx claude timeout; do
   command -v "$t" >/dev/null || unavailable "$t not installed"
 done
@@ -90,8 +90,8 @@ here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # copy rather than <ship-source>'s, so a Ship under test cannot change how it is
 # judged while this script runs from another checkout, as the profile's Run line
 # runs it from the default branch; run from <ship-source>, the judge is its own.
-# shellcheck source=../skills/ship/scripts/_lib.sh
-source "$here/../skills/ship/scripts/_lib.sh"
+# shellcheck source=../skills/ship-run/scripts/_lib.sh
+source "$here/../skills/ship-run/scripts/_lib.sh"
 tmp=$(mktemp -d)
 # Armed before anything else can be interrupted; reset_host is a no-op until
 # the issue exists.
@@ -199,9 +199,9 @@ gh repo clone "$repo" "$base" -- -q || unavailable "cannot clone $repo"
 # seed's versions back, so mark the edited tracked files skip-worktree and
 # exclude the new untracked ones, locally: the tree reads clean, the switch
 # keeps the files, and Ship's commits leave them out.
-(cd "$base" && npx -y skills@1.8.1 add "$src" --skill ship --agent claude-code -y) >"$tmp/install.log" 2>&1 \
+(cd "$base" && npx -y skills@1.8.1 add "$src" --skill ship-run --agent claude-code -y) >"$tmp/install.log" 2>&1 \
   || { tail -n 40 "$tmp/install.log" >&2; unavailable "ship install from $src failed"; }
-composes=$(ship_frontmatter "$src/skills/ship/SKILL.md" composes)
+composes=$(ship_frontmatter "$src/skills/ship-run/SKILL.md" composes)
 while IFS= read -r reason; do
   case $reason in *'; run '*) ;; *) continue ;; esac
   read -ra cmd <<<"${reason##*; run }"
@@ -252,7 +252,7 @@ attempt() { # <happy|ambiguous|defect|red> <attempt>
   # -k: a claude that outlives SIGTERM by a minute is killed, and timeout then
   # exits 137 instead of 124; a 137 before the cap is claude killed by another hand.
   (cd "$co" && XDG_STATE_HOME=$tmp/state timeout -k 60 "$wall_cap" claude -p --model sonnet --permission-mode auto \
-    --max-budget-usd "$budget" --output-format json "/ship $issue --unattended") >"$co.json" 2>"$co.err"
+    --max-budget-usd "$budget" --output-format json "/ship-run $issue --unattended") >"$co.json" 2>"$co.err"
   rc=$?
   wall=$(( $(date +%s) - start ))
   : > "$failed"

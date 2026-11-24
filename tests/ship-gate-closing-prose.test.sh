@@ -10,9 +10,9 @@ source tests/lib.sh
 
 flat() { tr '\n' ' ' | tr -s ' '; }
 has() { grep -qiF -- "$2" <<<"$1" && echo yes || echo no; }
-gate=$(flat < skills/ship/reference/merge-gate.md)
-skill=$(flat < skills/ship/SKILL.md)
-isolate=$(flat < skills/ship/reference/isolate.md)
+gate=$(flat < skills/ship-run/reference/merge-gate.md)
+skill=$(flat < skills/ship-run/SKILL.md)
+isolate=$(flat < skills/ship-run/reference/isolate.md)
 
 # <case>¦<text read>¦<clause it must hold>¦<the clause with its meaning negated>
 rules=(

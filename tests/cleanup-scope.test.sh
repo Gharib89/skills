@@ -9,8 +9,8 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-c=$PWD/skills/ship/scripts/cleanup.sh
-r=$PWD/skills/ship/scripts/run-file.sh
+c=$PWD/skills/ship-run/scripts/cleanup.sh
+r=$PWD/skills/ship-run/scripts/run-file.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 export XDG_STATE_HOME=$tmp/state

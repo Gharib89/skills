@@ -6,7 +6,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 # <skills-dir> <composed names, one per line>: one line per skill a composed
 # skill's Markdown calls through the Skill tool that is not composed. A call is
@@ -25,7 +25,7 @@ uncomposed() {
   done | sort -u
 }
 
-composed=$(ship_frontmatter skills/ship/SKILL.md composes | tr ' ' '\n' | sed 's/.*://')
+composed=$(ship_frontmatter skills/ship-run/SKILL.md composes | tr ' ' '\n' | sed 's/.*://')
 check "every Skill-tool call in a composed skill names a composed skill" '' "$(uncomposed .claude/skills "$composed")"
 
 fx=$(mktemp -d); trap 'rm -rf "$fx"' EXIT

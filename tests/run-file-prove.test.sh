@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# skills/ship/scripts/run-file.sh `prove`: the red line a test earns by going red
+# skills/ship-run/scripts/run-file.sh `prove`: the red line a test earns by going red
 # with its fix reverted is written by the mechanic that ran the revert, never by
 # hand. The seam is `run-file prove <test> <path>... --file <run file>`: an exit
 # code, one JSON answer, and the Run file's bytes. Driven end to end over a copy
@@ -13,7 +13,7 @@ T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 bin=$T/bin repo=$T/repo
 mkdir -p "$bin"
-cp -r skills/ship/scripts/run-file.sh skills/ship/scripts/revert-red.sh skills/ship/scripts/_lib.sh skills/ship/scripts/lib "$bin/"
+cp -r skills/ship-run/scripts/run-file.sh skills/ship-run/scripts/revert-red.sh skills/ship-run/scripts/_lib.sh skills/ship-run/scripts/lib "$bin/"
 
 git init -q -b main "$repo"
 g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$@"; }

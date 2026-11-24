@@ -5,7 +5,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 check "an open PR admits the merge"    "" "$(ship_pr_state_reason open)"
 check "a merged PR admits the merge"   "" "$(ship_pr_state_reason merged)"

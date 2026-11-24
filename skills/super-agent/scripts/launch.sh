@@ -31,14 +31,14 @@
 # skill to run in place of the one the labels pick: installed in the repo
 # (`.claude/skills/<name>/SKILL.md` on its default branch), or else on this machine
 # (`~/.claude/skills/<name>/SKILL.md`), which then places the thread here alone.
-# `ship` and `triage` keep their kinds, and any other skill records a `task` entry
+# `ship-run` (or `ship`) records a `ship` entry, `triage` a `triage` one, and any other skill records a `task` entry
 # keyed `task:<name>-<repo name>-<n>`, interactive when the skill waits on the owner
 # by design (`sa_interactive_skills`, `_lib.sh`). --note is the owner's note for
 # this ticket, one line: a newline in it exits 2. --out also writes the answer to a
 # file, only when it launches; `record` reads that file as --launch.
 # The ticket's Size label picks the tier (M when it has none, `size_source` says
 # so); `ready-for-agent` is a `ship` launch, `needs-triage` a `triage` one.
-# The launch message (`args.message`) is the owner-skill invocation (`/ship <n>`,
+# The launch message (`args.message`) is the owner-skill invocation (`/ship-run <n>`,
 # `/triage <n>`, or `/<name> <n>` with --skill), plus one `Note: <text>` line with
 # --note: every rule a run follows lives in its skill, its repo's profile or the global rules, and the super agent says
 # anything more only at a step-in (ADR 0020). One exception: a `/triage` message carries
@@ -168,6 +168,8 @@ answer() { jq -cn --arg k "$key" --arg r "$1" --argjson d "$2" '{key: $k, launch
 issue=$(gh api "repos/$repo/issues/$number" 2>/dev/null </dev/null) && jq -e '.labels | type == "array"' <<<"$issue" >/dev/null 2>&1 \
   || sa_tooling "cannot read $repo#$number"
 labels=$(jq -c '[.labels[].name]' <<<"$issue")
+# Ship's skill is `ship-run`: a `/ship` line reaches Claude Code's built-in command.
+[ "$skill" != ship ] || skill=ship-run
 if [ -n "$skill" ]; then
   # the owner named the skill: it must be installed where the thread can load it, and a
   # copy only this machine holds keeps the thread here (a 404 is the one "not in the repo")
@@ -176,11 +178,11 @@ if [ -n "$skill" ]; then
     [ -f "$HOME/.claude/skills/$skill/SKILL.md" ] || answer no_skill "$(jq -cn --arg s "$skill" '{skill: $s}')"
     while IFS= read -r m; do pargs+=(--exclude "$m"); done < <(jq -r --arg o "$machine" '.machines | keys[] | select(. != $o)' "$fleet")
   fi
-  case $skill in ship|triage) kind=$skill ;; *) kind=task ;; esac
+  case $skill in ship-run) kind=ship ;; triage) kind=triage ;; *) kind=task ;; esac
 else
   kind=$(jq -r 'if index("ready-for-agent") then "ship" elif index("needs-triage") then "triage" else "" end' <<<"$labels")
   [ -n "$kind" ] || answer no_owner_skill "$labels"
-  skill=$kind
+  skill=$kind; [ "$kind" != ship ] || skill=ship-run
 fi
 interactive=false
 case $sa_interactive_skills in *" $skill "*) [ "$kind" != task ] || interactive=true ;; esac
@@ -190,7 +192,7 @@ size_source=label; [ -n "$size" ] || { size=M size_source=default; }
 # 1b. A ship launch needs the repo's installed ship at `sa_min_ship` or above, read before
 # the claim so a refused launch leaves none.
 if [ "$kind" = ship ]; then
-  installed=$(sa_skill_version "$repo" .claude/skills/ship/SKILL.md)
+  installed=$(sa_skill_version "$repo" .claude/skills/ship-run/SKILL.md)
   [ -n "$installed" ] || sa_tooling "cannot read the installed ship version of $repo"
   jq -en --arg i "$installed" --arg m "$sa_min_ship" "$sa_jq_ver"'($i | ver) >= ($m | ver)' >/dev/null \
     || answer stale_ship "$(jq -cn --arg i "$installed" --arg m "$sa_min_ship" '{installed: $i, minimum: $m}')"
@@ -223,7 +225,7 @@ if [ "$placed" = null ]; then
   answer waiting "$(jq -c '{reason, considered}' <<<"$out")"
 fi
 
-# 5. The names, the base and the launch message. The branch is named the way `/ship` names
+# 5. The names, the base and the launch message. The branch is named the way `/ship-run` names
 # its own: <type>/<slug>-<n>, the slug the title past its `area: ` prefix.
 raw=$(gh api "repos/$repo" 2>/dev/null </dev/null) && base=$(jq -r '.default_branch // empty' <<<"$raw") && [ -n "$base" ] \
   || sa_tooling "cannot read the default branch of $repo"

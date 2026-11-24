@@ -1,7 +1,7 @@
 ### Supervision
 
 **Supervisor**:
-The main agent in a `drive-session` run: it spawns supervised sessions, waits on all of them with one background `watch`, reads each event, and answers it or escalates it to the human. A supervised `/ship` treats it as the human present, so the run is attended.
+The main agent in a `drive-session` run: it spawns supervised sessions, waits on all of them with one background `watch`, reads each event, and answers it or escalates it to the human. A supervised `/ship-run` treats it as the human present, so the run is attended.
 _Avoid_: orchestrator, driver, parent session, main session
 
 **Supervised session**:
@@ -21,7 +21,7 @@ The launch prompt's permission for the supervisor to answer a supervised ship ru
 _Avoid_: auto-merge, merge permission, `Merge: on-clean-gate` (that is the ship profile's opt-in)
 
 **Spec batch**:
-A supervisor's drive of one spec parent's sub-issues to merge, each as a supervised `/ship` run, at most two at a time and only when no blocking edge joins them and the areas their briefs name do not overlap. It ends when every sub-issue it can reach is at rest.
+A supervisor's drive of one spec parent's sub-issues to merge, each as a supervised `/ship-run` run, at most two at a time and only when no blocking edge joins them and the areas their briefs name do not overlap. It ends when every sub-issue it can reach is at rest.
 _Avoid_: supervised batch, spec run (run is ship's), wave
 
 **Batch log**:

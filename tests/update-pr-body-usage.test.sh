@@ -7,7 +7,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-m=skills/ship/scripts/update-pr-body.sh
+m=skills/ship-run/scripts/update-pr-body.sh
 usage='usage: update-pr-body <pr> (--section <name> [--drop-records] | --preamble) --body-file <path>'
 # A readable file, so only the flag under test is what refuses the call.
 body=$(mktemp); open_fence=$(mktemp); heading=$(mktemp)

@@ -28,9 +28,9 @@ below lands as a minor
 - **Additive is a minor bump.** Something is added and nothing already there
   changes meaning: a mechanic added, an optional flag or a stop reason added, a
   key added to a mechanic's JSON, a line added to a `setup-skills` template or
-  to the `### Ship` block, the profile's own structure, `ship`'s `composes` line
-  and a new blocking precondition excepted by the bullets below. A consumer that
-  refreshes keeps working without reading anything.
+  to the `### Ship` block, the profile's own structure, `ship-run`'s `composes`
+  line and a new blocking precondition excepted by the bullets below. A consumer
+  that refreshes keeps working without reading anything.
 - **Breaking is a major bump.** Something already there is removed, renamed or
   redefined: a mechanic or flag removed, a mechanic's JSON shape changed (a key
   renamed, removed or retyped), a mechanic's CLI signature changed so that an
@@ -59,8 +59,8 @@ below lands as a minor
 - **The profile's structure is a ship major.** A heading or `Label:` line added,
   renamed, removed or reordered, a `Label:` vocabulary changed, or the `Schema:`
   number moved, is a major bump, additive or not. The same PR moves
-  `metadata.profile-schema` in `skills/ship/SKILL.md` and the `Schema:` line in
-  `skills/setup-skills/ship-profile.md` by hand, and adds the matching
+  `metadata.profile-schema` in `skills/ship-run/SKILL.md` and the `Schema:` line
+  in `skills/setup-skills/ship-profile.md` by hand, and adds the matching
   `## Schema N` entry to `skills/setup-skills/profile-schema.md`; a PR that
   edits `ship-profile.md`'s structure without that entry is incomplete. The
   `derived-copies` gate fails when the three disagree
@@ -68,7 +68,7 @@ below lands as a minor
   profile alone moves none of them. Preflight refuses a schema mismatch in
   either direction, so an added heading stops an installed profile from running
   until `setup-skills` migrates it, which is what makes it breaking where an
-  added optional flag is not. A line `ship` accepts without expecting, the
+  added optional flag is not. A line `ship-run` accepts without expecting, the
   optional lines paragraph of `profile-schema.md`, takes no entry and no bump.
 - **The harness profile's structure is a setup-harness major.** A setup-harness
   PR that changes what the profile must contain (a heading or `Label:` line
@@ -85,10 +85,10 @@ below lands as a minor
   (check 8) fails when the profile template lacks either.
 - **Adding to `composes` or moving a pin is breaking, removing is additive.**
   The direction is inverted relative to every other item, so read it before
-  grading one. Adding a skill to `ship`'s `metadata.composes` line is a `ship`
-  major bump: preflight collects one
+  grading one. Adding a skill to `ship-run`'s `metadata.composes` line is a
+  `ship-run` major bump: preflight collects one
   `skill missing: <skill>; run <install line>` reason per composed skill absent
-  from the consumer's `.claude/skills/`, so a consumer that refreshes `ship`
+  from the consumer's `.claude/skills/`, so a consumer that refreshes `ship-run`
   alone has its next run refused until it installs the new skill from that
   skill's own source repo. Moving a pin is breaking too: preflight collects
   `skill off pin: <skill> at <ref>, pinned <sha>; run <install line>` for a
@@ -96,9 +96,9 @@ below lands as a minor
   setup-skills' `triage` pin is not breaking: nothing refuses on it, and
   setup-skills only prints the new line. Removing one is additive, a minor bump,
   because nothing already installed stops working. A minor bump taken for an
-  added composed skill before this rule existed is not precedent. A skill `ship`
-  newly composes is added to that line in the same PR: preflight checks only the
-  skills the line names.
+  added composed skill before this rule existed is not precedent. A skill
+  `ship-run` newly composes is added to that line in the same PR: preflight
+  checks only the skills the line names.
 - **A change that touches no public surface is a patch.**
 
 ## The PR title and commits
@@ -114,14 +114,14 @@ below lands as a minor
   and the title, every commit and the description carry no `!` and no
   `BREAKING CHANGE:` footer. The PR releasing it at 1.0, and every breaking
   change after, carries a `!` and the maintainer's `major` label. Grade first,
-  then pick the type to match, rather than the other way round: a `feat(ship):`
-  that only adds an optional flag is correctly minor, and a rename of a JSON key
-  is breaking whatever verb describes it, so on a 0.x skill it is titled
-  `feat(ship):` and not `fix(ship):`. A title whose type under-grades the change
-  is a finding. One title grades every skill the diff touched, because
-  `path_filters` route a commit to a skill by path and cannot route a grade:
-  **the title carries the highest grade across those skills, and the others
-  take that number.** A patch-sized reword riding
+  then pick the type to match, rather than the other way round: a
+  `feat(ship-run):` that only adds an optional flag is correctly minor, and a
+  rename of a JSON key is breaking whatever verb describes it, so on a 0.x skill
+  it is titled `feat(ship-run):` and not `fix(ship-run):`. A title whose type
+  under-grades the change is a finding. One title grades every skill the diff
+  touched, because `path_filters` route a commit to a skill by path and cannot
+  route a grade: **the title carries the highest grade across those skills, and
+  the others take that number.** A patch-sized reword riding
   along with a `feat` is released minor, which is the cost of one subject, and
   splitting the PR to avoid it is not worth a second review cycle.
 - **Every title type cuts at least a patch.** The release run grades a type
@@ -141,7 +141,7 @@ below lands as a minor
   names the file; with the line present it passes, because judging the grade
   stays the reviewer's.
 - **Commit subjects** are conventional-commit prefixed and scoped to the skill:
-  `fix(ship):`, `docs:`, `feat(setup-skills):`.
+  `fix(ship-run):`, `docs:`, `feat(setup-skills):`.
 - **Commit messages** carry no em dashes either. The `house-style` gate reads
   files, not messages, so this one is on the author.
 

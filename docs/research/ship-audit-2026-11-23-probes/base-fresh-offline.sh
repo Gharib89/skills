@@ -3,7 +3,7 @@
 # the fetch fails, and the verdict is fresh against the last-known ref. With
 # origin back, the same checkout is one commit behind. Run from the repo root.
 set -uo pipefail
-base_fresh=$PWD/skills/ship/scripts/base-fresh.sh
+base_fresh=$PWD/skills/ship-run/scripts/base-fresh.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 g() { git -c user.name=t -c user.email=t@t -c init.defaultBranch=main "$@"; }
 {

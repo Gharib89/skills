@@ -8,7 +8,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-dir=$PWD/skills/ship/scripts
+dir=$PWD/skills/ship-run/scripts
 work=$(mktemp -d); trap 'chmod 600 "$work/locked.md" 2>/dev/null; rm -rf "$work"' EXIT
 repo=$work/repo
 mkdir -p "$repo"

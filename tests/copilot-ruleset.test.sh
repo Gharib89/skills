@@ -8,8 +8,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 # The adapter reads these at source time; no case here reaches a host.
 SHIP_OWNER=owner SHIP_REPO=repo
-source skills/ship/scripts/_lib.sh
-source skills/ship/scripts/host/github.sh
+source skills/ship-run/scripts/_lib.sh
+source skills/ship-run/scripts/host/github.sh
 
 # `$BRANCH` is what the repo read answers; `$RULES` is one review_on_push value
 # per line, standing for the copilot_code_review rules the host resolved for that

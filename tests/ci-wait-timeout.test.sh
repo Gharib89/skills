@@ -12,9 +12,9 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
-m=$PWD/skills/ship/scripts/ci-wait.sh
+m=$PWD/skills/ship-run/scripts/ci-wait.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 nogit=$work/nogit; mkdir -p "$nogit"
 

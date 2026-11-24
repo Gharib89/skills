@@ -35,7 +35,7 @@ check "an unreadable source copy leaves the flag unknown, and the wake still ans
   "0 $(jq -cn --arg l "$loaded" '{loaded: $l, source: null, stale: null}')" "$rc $(jq -c .skill <<<"$out")"
 
 # --- launch: the target repo's installed ship -------------------------------------
-ship=.claude/skills/ship/SKILL.md
+ship=.claude/skills/ship-run/SKILL.md
 reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
 sa_skill_file "$repo" "$ship" 0.66.3
 out=$(L 7 --area x --out "$out_f"); rc=$?

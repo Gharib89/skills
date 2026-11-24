@@ -4,7 +4,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 # `ship_reviewer_reasons` stats the file a `Workflow:` line names, so the cases
 # need a checkout root to stat against. A fixture tree, not this repo: a case

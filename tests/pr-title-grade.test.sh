@@ -13,9 +13,9 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 T=$'\t'
 
-open=$PWD/skills/ship/scripts/open-pr.sh
-rf=$PWD/skills/ship/scripts/run-file.sh
-retitle=$PWD/skills/ship/scripts/update-pr-title.sh
+open=$PWD/skills/ship-run/scripts/open-pr.sh
+rf=$PWD/skills/ship-run/scripts/run-file.sh
+retitle=$PWD/skills/ship-run/scripts/update-pr-title.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo; bare=$work/origin.git; export SHIP_FAKE=$work/fake
 mkdir -p "$SHIP_FAKE"
@@ -183,7 +183,7 @@ rtl "feat(ship)!: new" >/dev/null; rc=$?
 check_rc "update-pr-title: feat! against Grade: breaking exits 0" 0 "$rc"
 
 # --- ship_title_grade ------------------------------------------------------
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 tg() { check "ship_title_grade: $1" "$2" "$(ship_title_grade "$1")"; }
 tg "feat: x" minor
 tg "feat(ship): x" minor

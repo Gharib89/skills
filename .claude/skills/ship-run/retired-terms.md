@@ -16,3 +16,4 @@ same diff. A cell holds no `|`.
 | 0.13.0 | CONTEXT-MAP.md | GLOSSARY-MAP.md |
 | 0.40.0 | informational read | direct call |
 | 0.40.0 | Direct reads | Direct calls |
+| 0.72.0 | /ship | /ship-run |

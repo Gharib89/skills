@@ -71,7 +71,7 @@ ship_shadowed_skills() {
   local root=$1 home=$3 skill state
   local -a entries
   read -ra entries <<<"$2"
-  for skill in ship ${entries[@]+"${entries[@]}"}; do
+  for skill in ship-run ${entries[@]+"${entries[@]}"}; do
     skill=${skill##*:}
     [ -f "$home/.claude/skills/$skill/SKILL.md" ] || continue
     # diff's exit 2 is a read that failed, not a difference: say the comparison is

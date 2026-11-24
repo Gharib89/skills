@@ -1,5 +1,5 @@
 ---
-name: ship
+name: ship-run
 description: Drive one tracker issue to a merge-ready PR in a single run, reaching the merge gate or merging when the repo opts in and the gate is clean. Use when the user wants to ship an issue, or to run the unattended lane.
 argument-hint: "[issue-number] [--unattended | [--rework [\"<feedback>\"]] [--inline [--review]]]"
 metadata:
@@ -8,13 +8,13 @@ metadata:
   composes: mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:tdd mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa:codebase-design mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:writing-for-agents mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa:code-review upstash/context7#681554c5d3a688c67879d02d4f01d79ffd15df13:find-docs humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c:show-me
 ---
 
-# ship
+# ship-run
 
 This skill is **generic**: it knows how to ship and nothing about the repo, and
 every repo fact comes from the **ship profile**, `docs/agents/ship.md`. The copy
-under `.claude/skills/ship` is a **derived copy**, changed in its source repo
-`Gharib89/skills` and refreshed through the command the repo's `### Ship` block
-in CLAUDE.md carries.
+under `.claude/skills/ship-run` is a **derived copy**, changed in its source
+repo `Gharib89/skills` and refreshed through the command the repo's `### Ship`
+block in CLAUDE.md carries.
 
 **Version.** The harness strips this file's frontmatter on load, so read the
 version once, at the run's start, with

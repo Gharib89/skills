@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# skills/ship/scripts/run-file.sh `note`: one line appended under a `## ` section
+# skills/ship-run/scripts/run-file.sh `note`: one line appended under a `## ` section
 # of the Run file, the section created at the end when the record has none, so a
 # run writes its Round, Stop and evidence lines through a mechanic instead of a
 # heredoc edit the worktree guard refuses (#787). The seam is
@@ -11,7 +11,7 @@ source tests/lib.sh
 
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
-m=$PWD/skills/ship/scripts/run-file.sh
+m=$PWD/skills/ship-run/scripts/run-file.sh
 rf=$(bash "$m" init 9 --scratchpad "$T/sp" | jq -r .run_file)
 
 # note <args>...: sets out and status for one call.

@@ -10,8 +10,8 @@ source tests/lib.sh
 # The adapter reads these at source time; `azx` and `invoke` are stubbed below,
 # so no case here reaches a host.
 SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
-source skills/ship/scripts/_lib.sh
-source skills/ship/scripts/host/ado.sh
+source skills/ship-run/scripts/_lib.sh
+source skills/ship-run/scripts/host/ado.sh
 
 # One vote and one thread on the latest iteration: a row of each kind the
 # adapter emits, in both `on_head` and `all`.

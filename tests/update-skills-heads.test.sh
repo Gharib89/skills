@@ -46,13 +46,13 @@ export FAKE_CURL_LOG=$tmp/log FAKE_CURL_FIX=$tmp/fix PATH="$tmp/bin:$PATH"
 fix() { printf '%s' "$2" > "$tmp/fix/$(printf '%s' "$1" | tr '/' '_')"; }
 
 repo=$tmp/repo
-mkdir -p "$repo/.claude/skills/ship" "$repo/.claude/skills/setup-skills"
+mkdir -p "$repo/.claude/skills/ship-run" "$repo/.claude/skills/setup-skills"
 # setup-skills composes code-review a second time, at a pin the first entry
 # overrides, and grilling unpinned, which is no pin at all.
-printf -- '---\nname: ship\nmetadata:\n  composes: o/r#%s:tdd o/r#%s:code-review o/r#%s:find-docs\n---\n' "$A" "$A" "$H" > "$repo/.claude/skills/ship/SKILL.md"
+printf -- '---\nname: ship\nmetadata:\n  composes: o/r#%s:tdd o/r#%s:code-review o/r#%s:find-docs\n---\n' "$A" "$A" "$H" > "$repo/.claude/skills/ship-run/SKILL.md"
 printf -- '---\nname: setup-skills\nmetadata:\n  composes: o/r#%s:code-review o/r:grilling\n---\n' "$X" > "$repo/.claude/skills/setup-skills/SKILL.md"
 jq -n --arg a "$A" '{version: 1, skills: {
-  ship: {source: "gharib89/skills", sourceType: "github", skillPath: "skills/ship/SKILL.md"},
+  ship: {source: "gharib89/skills", sourceType: "github", skillPath: "skills/ship-run/SKILL.md"},
   tdd: {source: "o/r", ref: $a, sourceType: "github", skillPath: "skills/engineering/tdd/SKILL.md"},
   "code-review": {source: "o/r", sourceType: "github", skillPath: "skills/engineering/code-review/SKILL.md"},
   "find-docs": {source: "o/r", ref: $a, sourceType: "github", skillPath: "skills/find-docs/SKILL.md"},

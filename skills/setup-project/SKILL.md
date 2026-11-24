@@ -2,7 +2,7 @@
 name: setup-project
 description: >-
   Take a folder, whether empty, loose code with no git or already a repo, to a
-  consumer repo ready for its first /ship: show the setup status, then follow
+  consumer repo ready for its first /ship-run: show the setup status, then follow
   setup-matt-pocock-skills, setup-harness and setup-skills in order, each in
   its first-run or re-run mode, and prove it with Ship's preflight. Run again
   to catch a repo up.
@@ -194,7 +194,7 @@ is handed to another session.
   chosen extras.
 
   ```sh
-  npx skills@1.8.1 add Gharib89/skills --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --agent claude-code -y
+  npx skills@1.8.1 add Gharib89/skills --skill ship-run --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --agent claude-code -y
   npx skills@1.8.1 add mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa --skill setup-matt-pocock-skills --skill code-review --skill codebase-design --agent claude-code -y
   npx skills@1.8.1 add mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea --skill tdd --agent claude-code -y
   npx skills@1.8.1 add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill writing-for-agents --agent claude-code -y
@@ -227,7 +227,7 @@ is handed to another session.
 Re-run step 3's `setup-status.sh`, then:
 
 ```sh
-.claude/skills/ship/scripts/preflight.sh none
+.claude/skills/ship-run/scripts/preflight.sh none
 ```
 
 The setup is done only when every row but `proof` reads `done` and preflight
@@ -243,10 +243,10 @@ Bash call, so Claude Code counts the PR, and skipped where none was printed.
 The `--verify` line then answers the PR either way:
 
 ```sh
-.claude/skills/ship/scripts/open-pr.sh none --title "chore: set up this repo for Ship" --body-file <body>
+.claude/skills/ship-run/scripts/open-pr.sh none --title "chore: set up this repo for Ship" --body-file <body>
 <create>
-.claude/skills/ship/scripts/open-pr.sh none --verify
-.claude/skills/ship/scripts/update-pr-body.sh <pr> --section "Setup status" --body-file <table>
+.claude/skills/ship-run/scripts/open-pr.sh none --verify
+.claude/skills/ship-run/scripts/update-pr-body.sh <pr> --section "Setup status" --body-file <table>
 ```
 
 `<body>` and `<table>` are files the run writes first: the body follows the

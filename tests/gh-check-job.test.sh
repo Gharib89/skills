@@ -6,9 +6,9 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 SHIP_OWNER=o SHIP_REPO=r
-source skills/ship/scripts/host/github.sh
+source skills/ship-run/scripts/host/github.sh
 
 reqs=$(mktemp); trap 'rm -f "$reqs"' EXIT
 APP=github-actions LOGFAIL='' RUN='' LOGBODY='' FAILED=1
