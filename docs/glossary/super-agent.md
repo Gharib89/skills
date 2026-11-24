@@ -115,3 +115,11 @@ _Avoid_: rollover, rotation
 **Bearings file**:
 The Markdown file `handover.sh` writes from the ledger for the successor: the predecessor thread, the ledger, the skill versions, and the open entries, needs and waiting rows. It is a starting summary; the ledger stays the record.
 _Avoid_: handoff notes, state dump
+
+**Scorecard**:
+The daily row `scorecard.sh` counts from the ledger, the guard and timer logs and the super agent's own transcript (workload, messages, needs, questions, wakes and tokens), stamped with the skill version that ran the day, and the weekly review that raises one Needs you row per number over its target. A new super-agent version is judged by these counts, not by a model's reading.
+_Avoid_: metrics, dashboard, report card
+
+**Replay case**:
+A test that reproduces one dated super-agent incident from a hand-built fixture, `tests/super-agent-replay-<incident>.test.sh`, proven red on the incident's version before the fix makes it green.
+_Avoid_: regression fixture, incident test

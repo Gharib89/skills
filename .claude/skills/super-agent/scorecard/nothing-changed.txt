@@ -1,0 +1,9 @@
+# A message that says nothing changed or nothing is needed: one jq (Oniguruma)
+# regex a line, matched case-insensitively against each assistant message.
+# Fixed on purpose: a changed pattern changes the count, so edit it only with
+# a note in the baseline of the day the counts stop being comparable.
+nothing (else )?(has )?changed
+nothing needs (you|doing)
+nothing (is )?needed
+nothing (new|to act on|owed)
+no change

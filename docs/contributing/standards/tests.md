@@ -85,3 +85,19 @@ index's clock exception bounds the clock rule below.
   stop root from reading the file, and a Cloud sandbox runs as root, so guard
   the case on `[ "$(id -u)" -ne 0 ]` and report it skipped there rather than
   letting it fail for the wrong reason.
+
+## Replay cases
+
+- **A super-agent incident earns a replay case before its fix.** A replay case
+  is `tests/super-agent-replay-<incident>.test.sh`, `<incident>` a short slug
+  of what went wrong. Its header names the dated incident (the day, the ledger
+  entry or issue, and what the super agent did), so the case reads as the
+  record of why it exists.
+- **Its fixture is hand-built.** It drives the scripts through
+  `tests/super-agent-fake.sh` with a ledger, logs and transcript lines written
+  in the test to reproduce the incident's shape; no real ledger, transcript or
+  thread content is copied in, since those name private repos and people.
+- **It is proven red on the incident's version first.** Run it against the
+  scripts as they were at the incident's version and watch it fail for the
+  incident's reason, then against the fix and watch it pass; the revert-red
+  proof above is the same step for the fix's own hunk.
