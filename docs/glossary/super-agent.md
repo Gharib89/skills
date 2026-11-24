@@ -123,3 +123,7 @@ _Avoid_: metrics, dashboard, report card
 **Replay case**:
 A test that reproduces one dated super-agent incident from a hand-built fixture, `tests/super-agent-replay-<incident>.test.sh`, proven red on the incident's version before the fix makes it green.
 _Avoid_: regression fixture, incident test
+
+**Super agent folder**:
+The folder the pinned super agent thread runs in, `super-agent/home` under `$XDG_STATE_HOME`, holding the generated `.claude/settings.local.json` that `setup.sh --write` and every daily handover rewrite. Its settings reach only that thread, so they carry the super agent's hooks, starting with the state guard. The owner creates its T3 project once.
+_Avoid_: home folder, super agent workspace

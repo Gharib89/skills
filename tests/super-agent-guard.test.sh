@@ -88,4 +88,20 @@ printf '{}\n' > "$cfg"; chmod 600 "$cfg"
 (umask 022; bash "$s/guard.sh" --install --settings "$cfg" >/dev/null)
 check "--install keeps the settings file's mode" 600 "$(stat -c %a "$cfg")"
 check_rc "a settings file that is no JSON exits 2" 2 "$(printf 'x' > "$cfg"; bash "$s/guard.sh" --install --settings "$cfg" >/dev/null 2>&1; echo $?)"
+# --- the default settings file is the super agent folder's, never user settings ----
+export HOME=$tmp/u XDG_STATE_HOME=$tmp/state
+hc=$XDG_STATE_HOME/super-agent/home/.claude/settings.local.json
+check "--status reads the super agent folder's local settings by default" "$hc false" \
+  "$(bash "$s/guard.sh" --status | jq -r '"\(.settings) \(.installed)"')"
+bash "$s/guard.sh" --install >/dev/null
+check "--install writes the folder's settings, and no user settings" "true absent" \
+  "$(bash "$s/guard.sh" --status | jq .installed) $([ -e "$HOME/.claude/settings.json" ] && echo present || echo absent)"
+check "no stale entry while user settings hold none" null "$(bash "$s/guard.sh" --status | jq -c .stale)"
+mkdir -p "$HOME/.claude"
+old='{"matcher":"Edit|Write|MultiEdit|NotebookEdit|Bash","hooks":[{"type":"command","command":"bash '\''/old/copy/super-agent/scripts/guard.sh'\''"}]}'
+jq -n --argjson o "$old" '{model: "x", hooks: {PreToolUse: [$o, {matcher: "Bash", hooks: [{type: "command", command: "other"}]}]}}' > "$HOME/.claude/settings.json"
+out=$(bash "$s/guard.sh" --status)
+check "a stale entry left in user settings is reported with the line to remove" "$HOME/.claude/settings.json $old" \
+  "$(jq -r '.stale.settings' <<<"$out") $(jq -c '.stale.entries[]' <<<"$out")"
+
 finish
