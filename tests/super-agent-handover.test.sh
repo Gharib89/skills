@@ -61,7 +61,7 @@ check_rc "$x with one page of several exits 2" 2 \
 jq -n '{projects: [{id: "p5", workspaceRoot: 5}]}' > "$tmp/badrow.json"
 out=$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/badrow.json" 2>/dev/null); rc=$?
 check_rc "$x with a project row whose workspaceRoot is no string exits 2" 2 "$rc"
-check "$x names the projects file for a bad row" 1 "$(jq -r .error <<<"$out" | grep -c badrow.json)"
+check "$x names the projects file and the field for a bad row" "$tmp/badrow.json: a project row is no object, or its workspaceRoot is no string" "$(jq -r .error <<<"$out")"
 
 # --- the bearings file, from the ledger -----------------------------------------
 seed
