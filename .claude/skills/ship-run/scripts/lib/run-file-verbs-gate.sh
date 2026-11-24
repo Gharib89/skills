@@ -8,8 +8,8 @@ gate)
   # `merge` reads (#1204). `clean` runs `gate clean` on the CI answer first and records
   # only on exit 0, printing one object whose `clean` is that answer (a held gate prints
   # the answer alone, exit 1); `human` records the human's word "merge" on a held gate;
-  # `waiver` records a delegated ruler's waiver or ruling, quoted and trimmed, so the record never
-  # claims an approval the human did not give (#1402).
+  # `waiver` records a delegated ruler's waiver or ruling, trimmed, so the record
+  # never claims an approval the human did not give (#1402).
   sub=${1:-}
   case $sub in record | read | clean | summary | admit) shift ;; *) ship_tooling "$usage" ;; esac
   kind="" ruling="" has_ruling=false

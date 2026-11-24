@@ -147,6 +147,7 @@ check_rc "gate admit waiver needs --ruling" 2 "$(inrc "$repo" gate admit waiver 
 check_rc "gate admit waiver refuses an empty ruling" 2 "$(inrc "$repo" gate admit waiver --ruling "" --head "$first" --file "$fw")"
 check_rc "gate admit waiver refuses a blank ruling" 2 "$(inrc "$repo" gate admit waiver --ruling "   " --head "$first" --file "$fw")"
 check_rc "gate admit waiver refuses a ruling holding a newline" 2 "$(inrc "$repo" gate admit waiver --ruling $'one\ntwo' --head "$first" --file "$fw")"
+check_rc "gate admit waiver refuses a ruling ending in a newline" 2 "$(inrc "$repo" gate admit waiver --ruling $'one\n' --head "$first" --file "$fw")"
 check_rc "--ruling on human is a usage error" 2 "$(inrc "$repo" gate admit human --ruling "x" --head "$first" --file "$fw")"
 check_rc "--ruling on clean is a usage error" 2 "$(printf '{}' | inrc "$repo" gate admit clean - --ruling "x" --head "$first" --file "$fw")"
 check "a refused admission leaves the Run file unchanged" "$before" "$(cksum < "$fw")"
