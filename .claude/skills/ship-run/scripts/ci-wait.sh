@@ -127,33 +127,35 @@ emit() { # <status> [<cursor>]
     + (if $cur != "" then {cursor: $cur} else {} end)
     + (if $rr != "" then {rerun: ($rr | fromjson)} else {} end)'
 }
-# The window is open and nothing is final. Sleep, unless the sleep would pass
-# this call's cap: then the answer is `pending` with the cursor, which carries
-# the deadline and the grace's start so the next call is the same window.
+# The window's deadline has passed: the answer is `timeout`, and the call ends.
+# Also stamps $waited, which the answers carry.
+window_closed() {
+  local now
+  now=$(date +%s); waited=$((now - start))
+  if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
+}
 pend() {
   view
   emit pending "$(ship_cursor_make "$(jq -cn --argjson d "$deadline" --argjson s "$start" --arg h "$head_at" --arg hs "$head_seen" --arg w "$want" \
     '{deadline: $d, start: $s, head_at: (if $h == "" then null else ($h | tonumber) end), head_sha: $hs, want: $w}')")"
   exit 1
 }
+# The window is open and nothing is final. Sleep, unless the sleep would pass
+# this call's cap: then the answer is `pending` with the cursor, which carries
+# the deadline and the grace's start so the next call is the same window.
 again() {
   local now step
-  now=$(date +%s); waited=$((now - start))
-  if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
+  window_closed
+  now=$(date +%s)
   step=$((deadline - now)); [ "$step" -le "$interval" ] || step=$interval
   if [ $((now + step)) -gt "$call_end" ]; then pend; fi
   sleep "$step"
 }
+cut_off() { window_closed; pend; }
 # A host read is bounded by the time left in the window and in this call: set
 # before each read, and a read cut off by the bound ends the call the way the
 # bound would have, `timeout` at the window's deadline, else `pending`. A window
 # already closed (a resumed cursor's) is `timeout` with no read at all.
-cut_off() {
-  local now
-  now=$(date +%s); waited=$((now - start))
-  if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
-  pend
-}
 bounded_read() { # <out-file> <fn> <args...>
   local now lim rc
   now=$(date +%s)

@@ -23,11 +23,15 @@ ship_poll_read() {
   : > "$SHIP_HTTP_STATUS_FILE"
   if [ -n "${SHIP_READ_LIMIT:-}" ]; then
     "$@" > "$out" & pid=$!
-    ( sleep "$SHIP_READ_LIMIT"; pkill -TERM -P "$pid" 2>/dev/null; kill -TERM "$pid" 2>/dev/null ) >/dev/null 2>&1 </dev/null & dog=$!
+    # The watchdog traps TERM to end its own sleep, so `kill "$dog"` alone stops
+    # both once the read has returned: left running, the sleep would hold a
+    # caller's `$( )` pipe open until the limit ran out, and a watchdog that
+    # outlived its sleep would signal a pid the `wait` below has already reaped.
+    ( trap 'kill "$s" 2>/dev/null; exit 0' TERM
+      sleep "$SHIP_READ_LIMIT" & s=$!; wait "$s"
+      pkill -TERM -P "$pid" 2>/dev/null; kill -TERM "$pid" 2>/dev/null ) >/dev/null 2>&1 </dev/null & dog=$!
     wait "$pid"; rc=$?
-    # The watchdog's own sleep goes first: left running it would hold a caller's
-    # `$( )` pipe open until the limit ran out.
-    pkill -TERM -P "$dog" 2>/dev/null; kill "$dog" 2>/dev/null; wait "$dog" 2>/dev/null
+    kill "$dog" 2>/dev/null; wait "$dog" 2>/dev/null
     [ "$rc" -ne 143 ] || return 4
     [ "$rc" -ne 0 ] || return 0
   else
