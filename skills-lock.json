@@ -44,10 +44,10 @@
     },
     "find-docs": {
       "source": "upstash/context7",
-      "ref": "681554c5d3a688c67879d02d4f01d79ffd15df13",
+      "ref": "9169e8b29fd744758e1fe2d3a2e826177b61b7a9",
       "sourceType": "github",
       "skillPath": "skills/find-docs/SKILL.md",
-      "computedHash": "2f042e7e9711a2a720b595083eb13c7f06380e6557f2eb689ce3182d4380e39d"
+      "computedHash": "80e435f2020187d04db0458a72f1c3cc0d5a16ab2d252bd06719a746136b89c1"
     },
     "grill-with-artifact": {
       "source": ".",
@@ -130,17 +130,17 @@
     "setup-project": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "407ab022e0a4e5bc40107f2832d6462cceea66c27e9b4b8a85562f4c43fbfa6d"
+      "computedHash": "642d7beff64bd074be998e29efd8de5408c074cbeaf4bf899055fc988ab36b0a"
     },
     "setup-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "2748c57da8ee7f292b3705224156fa46c248cb9e97e2fadd82aff6236fe810b9"
+      "computedHash": "4921e4abb4b8fd33b5f6f9cdb6bdee1241a81f6dd9366a1b9a2a57bf659c7f39"
     },
     "ship-run": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "0073f34608bb4238e48cad1145a6e8f9c9b7f94397e4e6096d541543fe58dd6e"
+      "computedHash": "9e0d33f05bf4607291e9ca16b5cbbe636ad009be83773d05fdd4764820b3d6e6"
     },
     "show-me": {
       "source": "humanlayer/skills",

@@ -199,7 +199,7 @@ is handed to another session.
   npx skills@1.8.1 add mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea --skill tdd --agent claude-code -y
   npx skills@1.8.1 add mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7 --skill writing-for-agents --agent claude-code -y
   npx skills@1.8.1 add mattpocock/skills#d81f3a183412e71a5b1e84ca21bc1a35eea03a60 --skill triage --agent claude-code -y
-  npx skills@1.8.1 add upstash/context7#681554c5d3a688c67879d02d4f01d79ffd15df13 --skill find-docs --agent claude-code -y
+  npx skills@1.8.1 add upstash/context7#9169e8b29fd744758e1fe2d3a2e826177b61b7a9 --skill find-docs --agent claude-code -y
   npx skills@1.8.1 add humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c --skill show-me --agent claude-code -y
   ```
 
