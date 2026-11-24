@@ -160,16 +160,12 @@ bounded_read() { # <out-file> <fn> <args...>
   local now lim rc
   now=$(date +%s)
   lim=$((deadline < call_end ? deadline : call_end)); lim=$((lim - now))
-  # A window already closed ends here with no read. A call cap spent before its
-  # first read still gets that read, one second at most, so the answer carries
-  # the head it saw.
-  [ "$lim" -gt 0 ] || { window_closed; lim=1; }
+  # A bound spent before the read, by the clock ticking over or a call cap used
+  # up, still allows one second: the answer then carries the head it saw. A
+  # resumed cursor's closed window never gets here, it is answered before the loop.
+  [ "$lim" -gt 0 ] || lim=1
   SHIP_READ_LIMIT=$lim ship_poll_read "$@"; rc=$?
   [ "$rc" -ne 4 ] || cut_off
-  # An answer that arrives past the deadline is `timeout`, never graded: the
-  # bound is whole seconds, so a read can run a fraction over it. A refusal or
-  # a read with no answer keeps its own path.
-  [ "$rc" -ne 0 ] || window_closed
   return "$rc"
 }
 # A read with no answer: three in a row, or the window closing on one, is the
@@ -200,11 +196,17 @@ rerun_failed() {
       '. + [{name: $r.name, rerun: $d, attempt: $r.attempt, log_tail: $r.log_tail}]' <<<"$rerun_json")
   done < <(jq -c '.[]' <<<"$jobs")
 }
+# A resumed cursor whose window has closed is `timeout` without a read, naming
+# the head its last call saw.
+[ -z "$cursor" ] || { sha=$head_seen; window_closed; }
 while :; do
   bounded_read "$prf" host_pr_get "$pr"; rc=$?
   [ "$rc" -ne 1 ] || ship_tooling "cannot read PR $pr"
   [ "$rc" -ne 3 ] || { unread "PR $pr"; continue; }
   prj=$(<"$prf"); sha=$(jq -r .head_sha <<<"$prj")
+  # An answer that arrives past the deadline is `timeout`, never graded: a read's
+  # bound is whole seconds, so it can run a fraction over the window.
+  window_closed
   waited=$(( $(date +%s) - start ))
   if ship_head_stale "$prj" "$want"; then checks='[]'; fails=0; again; continue; fi
   # The grace counts from the expected head's arrival, so a late push cannot
@@ -221,6 +223,7 @@ while :; do
   [ "$rc" -ne 3 ] || { unread checks; continue; }
   checks=$(jq -c . "$ckf") && ship_checks_valid "$checks" || ship_tooling "malformed check rows on $sha: $(head -c 400 "$ckf")"
   fails=0
+  window_closed
   view
   read -r ln lp nf nm <<<"$(jq -r '[.leg_n, .leg_pending, (.failing | length), (.missing_legs | length)] | @tsv' <<<"$view")"
   now=$(date +%s); waited=$((now - start))
