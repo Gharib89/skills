@@ -142,14 +142,21 @@ at "$repo" gate admit waiver --ruling $'  \tpadded ruling  ' --head "$first" --f
 check "a padded ruling is trimmed, one space after the word" 1 \
   "$(grep -cE "^- [0-9]{2}:[0-9]{2} $first waiver padded ruling$" "$ft")"
 before=$(cksum < "$fw")
-check_rc "--ruling takes no flag as its text" 2 "$(inrc "$repo" gate admit waiver --head "$first" --ruling --file "$fw")"
-check_rc "gate admit waiver needs --ruling" 2 "$(inrc "$repo" gate admit waiver --head "$first" --file "$fw")"
-check_rc "gate admit waiver refuses an empty ruling" 2 "$(inrc "$repo" gate admit waiver --ruling "" --head "$first" --file "$fw")"
-check_rc "gate admit waiver refuses a blank ruling" 2 "$(inrc "$repo" gate admit waiver --ruling "   " --head "$first" --file "$fw")"
-check_rc "gate admit waiver refuses a ruling holding a newline" 2 "$(inrc "$repo" gate admit waiver --ruling $'one\ntwo' --head "$first" --file "$fw")"
-check_rc "gate admit waiver refuses a ruling ending in a newline" 2 "$(inrc "$repo" gate admit waiver --ruling $'one\n' --head "$first" --file "$fw")"
-check_rc "--ruling on human is a usage error" 2 "$(inrc "$repo" gate admit human --ruling "x" --head "$first" --file "$fw")"
-check_rc "--ruling on clean is a usage error" 2 "$(printf '{}' | inrc "$repo" gate admit clean - --ruling "x" --head "$first" --file "$fw")"
+# Each refusal is exit 2 and names its own reason, so a case cannot pass on another refusal.
+refuses() { # refuses <case> <reason substring> <args...>
+  local c=$1 r=$2; shift 2
+  check_rc "$c" 2 "$(inrc "$repo" "$@")"
+  local out; out=$(inerr "$repo" "$@")
+  check "$c: names its reason" true "$(case $out in *"$r"*) echo true ;; esac)"
+}
+refuses "--ruling takes no flag as its text" "usage: run-file" gate admit waiver --head "$first" --ruling --file "$fw"
+refuses "gate admit waiver needs --ruling" "gate admit waiver needs --ruling" gate admit waiver --head "$first" --file "$fw"
+refuses "gate admit waiver refuses an empty ruling" "--ruling needs the ruler's waiver" gate admit waiver --ruling "" --head "$first" --file "$fw"
+refuses "gate admit waiver refuses a blank ruling" "gate admit waiver needs --ruling" gate admit waiver --ruling "   " --head "$first" --file "$fw"
+refuses "gate admit waiver refuses a ruling holding a newline" "a waiver's ruling is one line" gate admit waiver --ruling $'one\ntwo' --head "$first" --file "$fw"
+refuses "gate admit waiver refuses a ruling ending in a newline" "a waiver's ruling is one line" gate admit waiver --ruling $'one\n' --head "$first" --file "$fw"
+refuses "--ruling on human is a usage error" "--ruling belongs to gate admit waiver only" gate admit human --ruling "x" --head "$first" --file "$fw"
+refuses "--ruling on clean is a usage error" "--ruling belongs to gate admit waiver only" gate admit clean ci.json --ruling "x" --head "$first" --file "$fw"
 check "a refused admission leaves the Run file unchanged" "$before" "$(cksum < "$fw")"
 
 finish
