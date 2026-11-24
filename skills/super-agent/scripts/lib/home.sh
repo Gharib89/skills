@@ -64,7 +64,7 @@ sa_home() {
   if [ -n "${2:-}" ]; then
     # shellcheck disable=SC2154  # sa_jq_norm is set in _lib.sh, which sources this file
     pid=$(jq -c --arg d "$dir" "$sa_jq_norm$sa_jq_projects"'first(project_rows[] | select((.workspaceRoot // "" | norm_path) == ($d | norm_path)
-      and .deletedAt == null and .archivedAt == null) | .id) // null' "$2")
+      and .deletedAt == null and .archivedAt == null) | .id) // null' "$2") || sa_tooling "$2: a project row cannot be read"
     [ "$pid" != null ] || needs=$(jq -c --arg d "$dir" '. + ["Super agent folder: no T3 project has \($d) as its workspace: create one there once, in full access, and the next handover moves the super agent into it"]' <<<"$needs")
   fi
   home=$(jq -cn --arg d "$dir" --arg s "$settings" --argjson w "$written" --argjson g "$has" --argjson st "$stale" --argjson p "$pid" --argjson n "$needs" \
