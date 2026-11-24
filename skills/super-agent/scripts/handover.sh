@@ -53,7 +53,9 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$ledger" ] && [ -n "$from" ] && [ -n "$out" ] && [ -n "$projects" ] || sa_tooling "$usage"
 sa_read "$ledger"
-jq -e "$sa_jq_projects"'project_rows | type == "array"' "$projects" >/dev/null 2>&1 || sa_tooling "$projects: not a t3_project_list answer"
+# One page with more after it would miss the folder's project on a later page.
+jq -e "$sa_jq_projects"'(project_rows | type == "array") and (type == "array" or .nextCursor == null)' "$projects" >/dev/null 2>&1 \
+  || sa_tooling "$projects: not a t3_project_list answer with every page (a nextCursor is set: save all pages' rows as one array)"
 # Writable before the refresh, so a refresh never runs for a handover that cannot finish.
 { : >> "$out"; } 2>/dev/null || sa_tooling "cannot write $out"
 

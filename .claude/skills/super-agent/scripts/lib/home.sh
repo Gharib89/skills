@@ -7,8 +7,11 @@ sa_home_dir() { printf '%s/super-agent/home' "${XDG_STATE_HOME:-$HOME/.local/sta
 sa_home_settings() { printf '%s/.claude/settings.local.json' "$(sa_home_dir)"; }
 
 # sa_guard_entry: the state guard's PreToolUse entry for this copy of guard.sh.
+# The path is single-quoted with each ' in it written '\'' so any path stays one word.
 sa_guard_entry() {
-  jq -cn --arg c "bash '$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/guard.sh'" \
+  local p q="'\\''"
+  p=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/guard.sh
+  jq -cn --arg c "bash '${p//\'/$q}'" \
     '{matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash", hooks: [{type: "command", command: $c}]}'
 }
 

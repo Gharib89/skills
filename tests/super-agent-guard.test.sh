@@ -113,6 +113,9 @@ check "a trailing space still reads as the guard" 1 "$(stale_of "bash '/x/super-
 check "a bare path is the guard" 1 "$(stale_of /x/super-agent/scripts/guard.sh)"
 check "another skill's guard.sh is not" 0 "$(stale_of "bash '/x/my-super-agent/scripts/guard.sh'")"
 check "a script beside it is not" 0 "$(stale_of "bash '/x/super-agent/scripts/guard.sh.bak'")"
+q="$tmp/owner's skills/super-agent"; mkdir -p "$q" && cp -r "$s" "$q/"
+c=$(bash "$q/scripts/guard.sh" --status | jq -r .entry.hooks[0].command)
+check "a guard path holding a quote is one shell word" "$q/scripts/guard.sh" "$(eval "set -- ${c#bash }"; printf %s "$1")"
 printf 'not json' > "$HOME/.claude/settings.json"
 check "user settings that are no JSON are unreadable, never no entry" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
 : > "$HOME/.claude/settings.json"

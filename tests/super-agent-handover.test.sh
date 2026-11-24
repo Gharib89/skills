@@ -55,6 +55,9 @@ check_rc "$x without --projects exits 2" 2 "$(bash "$s/$x.sh" --ledger "$led" --
 printf 'not json\n' > "$tmp/bad.json"
 check_rc "$x with a --projects file that is no project list exits 2" 2 \
   "$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/bad.json" >/dev/null 2>&1; echo $?)"
+jq -n '{projects: [], nextCursor: "c2"}' > "$tmp/page1.json"
+check_rc "$x with one page of several exits 2" 2 \
+  "$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/page1.json" >/dev/null 2>&1; echo $?)"
 
 # --- the bearings file, from the ledger -----------------------------------------
 seed
