@@ -25,7 +25,10 @@
 # so <fn>.1.fail alone fails every call and <fn>.1.fail with <fn>.2.json is one
 # failure then an answer. A <fn>.<n>.delay holding a number of seconds makes that
 # call sleep first, a host read that is slow (the nearest lower entry applies
-# the same way), so a caller's bound on a read can be proven.
+# the same way), so a caller's bound on a read can be proven. A <fn>.<n>.advance
+# holding a number of seconds adds it to $SHIP_FAKE/clock when that call returns,
+# for a test whose `date` stub reads that file: a read that ends past a deadline
+# with no sleep to race the read's bound.
 #
 # Every call appends one line to $SHIP_FAKE/calls: `<fn>`, then each raw
 # argument after a tab, so an argument's own spaces (a PR title) stay inside
@@ -54,6 +57,8 @@ _host_fake() { # <fn> <args...>
     [ -f "$SHIP_FAKE/$fn.$i.delay" ] && { sleep "$(cat "$SHIP_FAKE/$fn.$i.delay")"; break; }
     i=$((i - 1))
   done
+  [ -f "$SHIP_FAKE/$fn.$n.advance" ] \
+    && echo $(( $(cat "$SHIP_FAKE/clock") + $(cat "$SHIP_FAKE/$fn.$n.advance") )) > "$SHIP_FAKE/clock"
   i=$n
   while [ "$i" -gt 0 ]; do
     if [ -f "$SHIP_FAKE/$fn.$i.fail" ]; then

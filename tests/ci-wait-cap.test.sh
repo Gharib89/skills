@@ -40,10 +40,14 @@ check "a read outlasting the window is timeout, not green" timeout "$(jq -r .sta
 check_rc "and exits 1" 1 "$rc"
 check "and the wait ended near the window, not after the read" true "$([ "$took" -lt 3 ] && echo true || echo false)"
 
-# A read that finishes just past the window is no green either: its bound is whole
-# seconds, from a clock read earlier in the second.
-reset; echo 1 > "$SHIP_FAKE/host_pr_get.1.delay"
-ci --timeout 1
+# A read that finishes inside its bound but past the window's deadline is no green
+# either. The clock is a stub the fake read advances, so the read ends past the
+# deadline with no second-long sleep racing the read's own bound (#1409).
+mkdir -p "$work/bin"
+printf '#!/bin/sh\n[ "$1" = "+%%s" ] && exec cat "%s/clock"\nexec /usr/bin/date "$@"\n' "$SHIP_FAKE" > "$work/bin/date"
+chmod +x "$work/bin/date"
+reset; echo 1000 > "$SHIP_FAKE/clock"; echo 3 > "$SHIP_FAKE/host_pr_get.1.advance"
+out=$( cd "$repo" && PATH=$work/bin:$PATH SHIP_CI_WAIT_GRACE=0 bash "$mech" 7 --sha deadbee --interval 1 --timeout 2 2>/dev/null )
 check "a read finishing past the deadline is timeout, naming the head it read" "timeout deadbee" \
   "$(jq -r '"\(.status) \(.head_sha)"' <<<"$out")"
 
