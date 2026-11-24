@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.73.0 (2026-11-24)
+
+### Features
+
+- **ship-run**: Preflight refuses invalid reviewer fields, and ci-wait ends at its cap
+  ([#1401](https://github.com/Gharib89/skills/pull/1401),
+  [`d2c147a`](https://github.com/Gharib89/skills/commit/d2c147ae9a43ff15384d489e1e9b15cc2bf348d0))
+
+
 ## v0.72.1 (2026-11-24)
 
 ### Bug Fixes
