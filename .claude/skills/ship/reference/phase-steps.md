@@ -27,7 +27,8 @@ changed.
 
 ## Hand-back
 
-`handback` unassigns, drops `ready-for-agent`, adds `ready-for-human` and
-comments the reason; one that exits 1 says on its own output what the claim is
-left as. In an attended run you stop and ask, and hand back only if the human
-says stop, to the human queue: never to the agent queue, which loops forever.
+`handback` drops `ready-for-agent` (read back gone), unassigns, adds
+`ready-for-human` and comments the reason; one that exits 1 says what the
+claim is left as. In an attended run you stop and ask, and hand back only if
+the human says stop, to the human queue: never to the agent queue, which loops
+forever.

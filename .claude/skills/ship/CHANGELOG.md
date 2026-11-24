@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.71.2 (2026-11-24)
+
+### Bug Fixes
+
+- **ship**: Hand-back removes the agent label before it releases the claim
+  ([#1360](https://github.com/Gharib89/skills/pull/1360),
+  [`7469cb8`](https://github.com/Gharib89/skills/commit/7469cb8373f552920e5c791977dfc1c11192649c))
+
+
 ## v0.71.1 (2026-11-23)
 
 ### Bug Fixes
