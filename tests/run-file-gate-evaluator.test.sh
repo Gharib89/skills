@@ -90,7 +90,8 @@ for e in clean admit; do
   case $e in clean) a=(gate clean "$work/ci.json") ;; admit) a=(gate admit clean "$work/ci.json") ;; esac
   out=$(cd "$repo" && bash "$m" "${a[@]}" --head "$head" --file "$rf" 2>/dev/null); rc=$?
   check_rc "an unreadable issue: gate $e exits 2" 2 "$rc"
-  check "and gate $e names the read" yes "$(jq -r '.error' <<<"$out" | grep -q 'cannot read issue 9' && echo yes)"
+  err=$(jq -r '.error' <<<"$out")
+  check "and gate $e names the read" yes "$(grep -q 'cannot read issue 9' <<<"$err" && echo yes)"
 done
 check 'and admit clean writes no admission' 0 "$(admitted)"
 rm "$SHIP_FAKE/host_issue_get.1.fail"
