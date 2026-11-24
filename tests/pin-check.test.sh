@@ -68,7 +68,7 @@ check "the same sha from another repo is drift" \
 
 # An install line a skill prints is a pin too: setup-skills hands these to a
 # human, so one left behind when the pins move installs the old commit.
-body=$(printf '%s\n\n```sh\nnpx skills add o/r#%s --skill tdd --skill triage --agent claude-code -y\nnpx skills add Gharib89/skills --skill ship --agent claude-code -y\n```\n' "$setup" "$B")
+body=$(printf '%s\n\n```sh\nnpx skills add o/r#%s --skill tdd --skill triage --agent claude-code -y\nnpx skills add Gharib89/skills --skill ship-run --agent claude-code -y\n```\n' "$setup" "$B")
 d=$(tree printed "$ship" "$body" "$lock")
 check "a printed install line is checked per --skill, unpinned lines skipped" \
   "pin drift: tdd is pinned at o/r#$B in skills/setup-skills/SKILL.md, the lock installed o/r#$A
@@ -112,7 +112,7 @@ d=$(tree span "$ship" "$body" "$lock")
 check "an unpinned install line in a code span for a pinned skill is drift" \
   "pin drift: tdd is pinned at o/r#none in skills/setup-skills/SKILL.md, the lock installed o/r#$A" \
   "$(out_of "$d")"
-body=$(printf '%s\n\nPrint `npx skills add o/r#%s --skill tdd -y` or `npx skills add Gharib89/skills --skill ship -y`.\n' "$setup" "$A")
+body=$(printf '%s\n\nPrint `npx skills add o/r#%s --skill tdd -y` or `npx skills add Gharib89/skills --skill ship-run -y`.\n' "$setup" "$A")
 check_rc "a pinned install line in a code span passes, beside an unpinned one for an unpinned skill" 0 \
   "$(rc_of "$(tree span-ok "$ship" "$body" "$lock")")"
 

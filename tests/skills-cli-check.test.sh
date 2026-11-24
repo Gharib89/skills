@@ -50,23 +50,23 @@ check "and names the file and line" \
   "skills/x/SKILL.md:1: unversioned npx skills, write npx skills@1.8.1" \
   "$(out_of "$d")"
 
-d=$(tree npxy 2 "$H" scripts/run.sh '(npx -y skills add "$src" --skill ship)')
+d=$(tree npxy 2 "$H" scripts/run.sh '(npx -y skills add "$src" --skill ship-run)')
 check_rc "an unversioned npx -y invocation fails too" 1 "$(rc_of "$d")"
 check "and names the file and line" \
   "scripts/run.sh:1: unversioned npx skills, write npx skills@1.8.1" \
   "$(out_of "$d")"
 
-d=$(tree other 2 "$H" CLAUDE.md 'npx skills@latest add . --skill ship')
+d=$(tree other 2 "$H" CLAUDE.md 'npx skills@latest add . --skill ship-run')
 check_rc "another version fails" 1 "$(rc_of "$d")"
 check "and names the version and the pin" \
   "CLAUDE.md:1: npx skills@latest, not the pinned npx skills@1.8.1" \
   "$(out_of "$d")"
 
 # The release configs run the refresh line on main, so they are read too.
-d=$(tree release 2 "$H" .release/ship.toml 'npx -y skills@1.7.0 add . --skill ship --agent claude-code -y')
+d=$(tree release 2 "$H" .release/ship-run.toml 'npx -y skills@1.7.0 add . --skill ship-run --agent claude-code -y')
 check_rc "a release config on another version fails" 1 "$(rc_of "$d")"
 check "and names the file, the version and the pin" \
-  ".release/ship.toml:1: npx skills@1.7.0, not the pinned npx skills@1.8.1" \
+  ".release/ship-run.toml:1: npx skills@1.7.0, not the pinned npx skills@1.8.1" \
   "$(out_of "$d")"
 
 # A file the search cannot read is a failed read, never a clean pass. Root
