@@ -193,6 +193,8 @@ size_source=label; [ -n "$size" ] || { size=M size_source=default; }
 # the claim so a refused launch leaves none.
 if [ "$kind" = ship ]; then
   installed=$(sa_skill_version "$repo" .claude/skills/ship-run/SKILL.md)
+  # A repo holding only the pre-rename `ship` copy reads its version, below the minimum.
+  [ -n "$installed" ] || installed=$(sa_skill_version "$repo" .claude/skills/ship/SKILL.md)
   [ -n "$installed" ] || sa_tooling "cannot read the installed ship version of $repo"
   jq -en --arg i "$installed" --arg m "$sa_min_ship" "$sa_jq_ver"'($i | ver) >= ($m | ver)' >/dev/null \
     || answer stale_ship "$(jq -cn --arg i "$installed" --arg m "$sa_min_ship" '{installed: $i, minimum: $m}')"

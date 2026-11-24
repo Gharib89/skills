@@ -58,6 +58,10 @@ flags=$(jq -er '[.skills | to_entries[] | select(.value.source | ascii_downcase 
 
 The last clause removes a pre-rename `ship` copy and its lock entry, since
 `ship-run` replaces it and the CLI ignores a `--skill` the source no longer has.
+When it removed one, rewrite each `.claude/skills/ship/` path in an allow rule
+of `.claude/settings.local.json` (setup-skills' merge rule) to
+`.claude/skills/ship-run/`: that file is untracked, so the retired-terms sweep
+never reads it, and the old rule leaves the merge refused.
 
 In the source repo, whose `skills-lock.json` records `ship-run`'s source as `.`,
 run the refresh line its CLAUDE.md carries instead. Project scope always: no

@@ -72,4 +72,12 @@ out=$(L 7 --area x 2>/dev/null); rc=$?
 check "an unreadable ship copy exits 2 naming it, never launching" "2 false 1" \
   "$rc $(jq -r 'has("args")' <<<"$out") $(jq -r .error <<<"$out" | grep -c 'ship version')"
 
+# A repo still holding only the pre-rename `.claude/skills/ship/` copy cannot answer
+# `/ship-run`: stale_ship with that copy's version, so the owner refreshes it first.
+reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+rm -f "$SA_FAKE/gh/$(printf '%s' "repos/$repo/contents/$ship" | sed 's/[^A-Za-z0-9._-]/_/g')"
+sa_skill_file "$repo" .claude/skills/ship/SKILL.md 0.71.3
+check "a repo with only the pre-rename ship copy answers stale_ship with its version" \
+  '1 stale_ship 0.71.3' "$(L 7 --area x >/dev/null; echo $?) $(L 7 --area x | jq -r '"\(.reason) \(.detail.installed)"')"
+
 finish

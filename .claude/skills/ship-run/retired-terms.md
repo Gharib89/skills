@@ -17,3 +17,4 @@ same diff. A cell holds no `|`.
 | 0.40.0 | informational read | direct call |
 | 0.40.0 | Direct reads | Direct calls |
 | 0.72.0 | /ship | /ship-run |
+| 0.72.0 | .claude/skills/ship | .claude/skills/ship-run |

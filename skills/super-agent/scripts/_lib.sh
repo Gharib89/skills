@@ -144,10 +144,10 @@ sa_waiting_line='Waiting on my own background work.'
 sa_interactive_skills=' grilling grill-me grill-with-artifact grill-with-docs '
 
 # The lowest installed ship a ship launch accepts: `launch.sh` answers `stale_ship` below
-# it, so the repo is refreshed first. 0.67.0 is the first ship whose SKILL.md asks for
-# `sa_waiting_line`; an older copy waits without it, and its waits read as stalls.
+# it, so the repo is refreshed first. 0.72.0 is the first release named `ship-run`: an
+# older copy is installed as `ship`, which a `/ship-run` launch line cannot reach.
 # shellcheck disable=SC2034  # read by launch.sh
-sa_min_ship='0.67.0'
+sa_min_ship='0.72.0'
 
 # The repo the super agent's own skill is published from: a refresh
 # (`npx skills@1.8.1 add`) installs from it, so its default branch holds the version a
