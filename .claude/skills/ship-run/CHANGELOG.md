@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.74.1 (2026-11-24)
+
+### Bug Fixes
+
+- **ship-run**: The Azure DevOps CI read keeps a policy and a status of one name apart
+  ([#1404](https://github.com/Gharib89/skills/pull/1404),
+  [`3b228ce`](https://github.com/Gharib89/skills/commit/3b228ce8616b6e8c4741b42ced53183f3ad073bf))
+
+
 ## v0.74.0 (2026-11-24)
 
 ### Features
