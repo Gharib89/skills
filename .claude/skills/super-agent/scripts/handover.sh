@@ -54,13 +54,11 @@ sa_read "$ledger"
 # holds the first day of the last week reviewed.
 card=$(bash "$(dirname "${BASH_SOURCE[0]}")/scorecard.sh" row --ledger "$ledger" --thread "$from") \
   || printf 'the scorecard row failed: %s\n' "$(jq -r .error <<<"$card" 2>/dev/null)" >&2
-review=$(bash "$(dirname "${BASH_SOURCE[0]}")/scorecard.sh" review --ledger "$ledger") || review=''
-mark="$(dirname "$ledger")/scorecard-reviewed"
-if [ -n "$review" ] && [ "$(cat "$mark" 2>/dev/null)" != "$(jq -r .week.from <<<"$review")" ]; then
-  jq -r .week.from <<<"$review" > "$mark"
-else
-  review=null
-fi
+review=$(bash "$(dirname "${BASH_SOURCE[0]}")/scorecard.sh" review --ledger "$ledger") \
+  || { printf 'the scorecard review failed: %s\n' "$(jq -r .error <<<"$review" 2>/dev/null)" >&2; review=''; }
+mark="$(dirname "$ledger")/scorecard-reviewed" week=''
+[ -z "$review" ] || week=$(jq -r .week.from <<<"$review")
+[ -n "$week" ] && [ "$(cat "$mark" 2>/dev/null)" != "$week" ] || { review=null week=''; }
 scorecard=$(jq -cn --argjson c "${card:-null}" --argjson r "$review" \
   '{row: ($c.row.day // null), error: ($c.error // null), review: (if $r == null then null else $r.needs end)}')
 skill=$(sa_skill_stale)
@@ -80,6 +78,8 @@ jq -r --arg from "$from" --arg l "$ledger" --argjson sk "$skill" --argjson r "$r
   + ["", "## Needs you", ""] + lines([((.needs // [])[] | "- \(.key): \(.action)"), (($sc.review // [])[] | "- \(.)")])
   + ["", "## Waiting", ""] + lines([waiting_list[] | "- \(.key): \(.reason)"])
   | join("\n")' <<<"$doc" > "$out" || sa_tooling "cannot write $out"
+# Marked only once the bearings hold the review's rows.
+[ -z "$week" ] || printf '%s\n' "$week" > "$mark" || printf 'cannot write %s\n' "$mark" >&2
 
 jq -cn --arg b "$out" --argjson sk "$skill" --argjson r "$refreshed" --argjson sc "$scorecard" '{bearings: $b, skill: $sk, refreshed: $r, scorecard: $sc}'
 exit "$rc"

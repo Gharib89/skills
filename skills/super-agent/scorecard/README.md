@@ -37,7 +37,8 @@ week, runs the weekly review, whose rows join the bearings file's Needs you.
   once. They come from the transcript, since `unneed` removes a need from the
   ledger.
 - **Questions**: owner wakes whose text holds a `?`; `with_write` those whose
-  wake made a changing call.
+  wake made a changing call other than a reply or hand-off (`AskUserQuestion`,
+  `PushNotification`, `Agent`, `Artifact`).
 
 ## Logs
 
@@ -48,9 +49,11 @@ event, `{at, event: "block" | "pass"}`; the wake timer writes
 
 ## Targets
 
-[targets.json](targets.json) maps a dotted path into the row to its `max`, and
-the slice that owns it. The weekly review raises one row per number over its
-`max` on any day of the week, and one per guard that blocked nothing for four
-weeks. A number with no target never raises one.
+[targets.json](targets.json) maps a dotted path into the row to its `max`. A
+target still tagged with the `slice` that owns it is inert: that slice drops
+the tag when it lands, so the review never raises a row for work not shipped.
+The weekly review raises one row per live target a day of the week went over,
+and one per guard whose log covers the four weeks ending with that week and
+that blocked nothing in them. A number with no target never raises one.
 
 [baseline.md](baseline.md) holds the rows recounted for 6 to 19 November 2026.

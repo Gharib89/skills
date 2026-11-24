@@ -17,18 +17,10 @@
 # files given instead. The row is stamped with `--version`, else the version of
 # the copy running this script.
 #
-# Logs: each `<name>-guard.jsonl` beside the ledger is a guard's, one JSON line
-# per event, `{at, event: "block" | "pass"}`; `wake-timer.jsonl` is the wake
-# timer's, `{at, event: "outage", minutes}`. A log not written yet is absent
-# (`null` in the row), never an error.
-#
 # `review` covers the full week (Monday to Sunday, UTC) starting `--week`, by
-# default the last full week. Each number with a target (`../scorecard/
-# targets.json`: a dotted path into the row and its `max`) that went over it on
-# any day of the week is one row; a guard whose log covers the four weeks ending
-# with that week and blocked nothing in them is one row. A number with no target
-# never raises one. Wakes, messages and the nothing-changed patterns
-# (`../scorecard/nothing-changed.txt`, one regex a line) are defined in
+# default the last full week, against `../scorecard/targets.json`. What each
+# number counts, the guard and timer logs' contract (a log not written yet is
+# absent, never an error) and when a review raises a row are defined once, in
 # `../scorecard/README.md`.
 #
 # stdout: `row` {row, file}: the row and the file it went to · `review` {week:
@@ -46,8 +38,8 @@ ledger='' day='' thread='' week='' targets="$data/targets.json" files=() version
 while [ $# -gt 0 ]; do
   case $1 in
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2 ;;
-    --day) day=${2:-} ;;
-    --week) week=${2:-} ;;
+    --day) sa_flag_value "$usage" "${2:-}"; day=$2 ;;
+    --week) sa_flag_value "$usage" "${2:-}"; week=$2 ;;
     --thread) sa_flag_value "$usage" "${2:-}"; thread=$2 ;;
     --transcript) sa_flag_value "$usage" "${2:-}"; files+=("$2") ;;
     --version) sa_flag_value "$usage" "${2:-}"; versions+=("$2") ;;
@@ -79,7 +71,7 @@ if [ "$cmd" = review ]; then
     | ($from - 21 * 86400 | strftime("%Y-%m-%d")) as $four
     | (map(select(.day >= $w and .day <= $to)) | unique_by(.day)) as $days
     | {week: {from: $w, to: $to}, days: ($days | length), needs: (
-        [$t[0] | to_entries[] | .key as $k | .value.max as $max
+        [$t[0] | to_entries[] | select(.value.slice == null) | .key as $k | .value.max as $max
           | [$days[] | at($k) | select(type == "number" and . > $max)] as $over
           | select($over | length > 0)
           | "Scorecard: \($k) missed its target of \($max) on \($over | length) of \($days | length) days (worst \($over | max))."]
@@ -113,7 +105,7 @@ if [ ${#files[@]} -eq 0 ]; then
     done < <(grep -rlF --include='*.jsonl' -- "$thread" "${roots[@]}" 2>/dev/null | sort -u)
   fi
 fi
-for f in "${files[@]}"; do [ -r "$f" ] || sa_tooling "$f: cannot read"; done
+for f in ${files[@]+"${files[@]}"}; do [ -r "$f" ] || sa_tooling "$f: cannot read"; done
 patterns=$(jq -Rsr 'split("\n") | map(select(length > 0 and (startswith("#") | not))) | join("|")' "$data/nothing-changed.txt") \
   || sa_tooling "$data/nothing-changed.txt: cannot read"
 [ ! -f "$ledger.archive.jsonl" ] || jq -s . "$ledger.archive.jsonl" >/dev/null 2>&1 || sa_tooling "$ledger.archive.jsonl: not JSON lines"
@@ -131,7 +123,7 @@ timer=null
 # One slim record per transcript entry, file by file in order, so a 30 MB
 # transcript is never held whole: a user entry's text (null for a tool result),
 # an assistant entry's usage, texts and tool calls.
-slim=$(for i in "${!files[@]}"; do
+slim=$(for i in ${files[@]+"${!files[@]}"}; do
   jq -cR --argjson f "$i" 'fromjson? // empty | select(type == "object" and (.isSidechain | not))
     | if .type == "user" then (.message.content) as $c
       | {f: $f, ts: .timestamp, u: true, origin: (.origin.kind? // null),
@@ -160,6 +152,8 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
     else (.[$n / 2 - 1] + .[$n / 2]) / 2 end;
   def per($n): if $n > 0 then (. / $n * 100 | round) / 100 else null end;
   def ledger_write: "ledger\\.sh[^|;&\\n]*?\\s(add|adopt|set|rethread|ruling|pin|migrate-rulings|wait|unwait|need|pushed|unneed|limit|unlimit|pause|unpause|drop|reset-stalls)\\b";
+  # Every ledger.sh subcommand that writes, and every script or tool that changes
+  # state: one this list misses counts as changing nothing.
   def changing_bash: [ledger_write, "launch\\.sh", "claim\\.sh", "worktree\\.sh[^|;&\\n]*\\sremove", "merge\\.sh",
     "cleanup\\.sh", "reply\\.sh", "intake\\.sh", "handover\\.sh",
     "\\bgh\\s+(issue|pr)\\s+(edit|close|comment|create|reopen|merge|review|ready)",
@@ -170,6 +164,8 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
     "AskUserQuestion", "PushNotification", "mcp__t3-code__t3_thread_interrupt", "mcp__t3-code__t3_thread_configure",
     "mcp__t3-code__schedule_task", "mcp__t3-code__delete_scheduled_task", "mcp__t3-code__delegate_task",
     "mcp__t3-code__link_pull_request", "Write", "Edit", "Agent", "Artifact"];
+  # A reply to the owner or a hand-off changes a wake, but is no write.
+  def replies: ["AskUserQuestion", "PushNotification", "Agent", "Artifact"];
   def boiler: ["<local-command-", "<command-name>/compact", "<command-name>/reload-skills", "<command-name>/model",
     "This session is being continued", "Base directory for this skill", "[Image:", "<system-reminder>",
     "(Re-invocation of"] as $p | . as $t | any($p[]; . as $q | $t | startswith($q));
@@ -196,7 +192,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
     if $e.u then ($e.text // "" | sub("^\\s+"; "")) as $t
       | if $e.text == null or $e.skip or ($t | boiler) then .
       else .bg as $bg | .w += [{ts: $e.ts, cause: ($t | cause($bg; $e.origin)), text: $t,
-        tok: {in: 0, cw: 0, cr: 0, out: 0}, api: 0, changed: false}] end
+        tok: {in: 0, cw: 0, cr: 0, out: 0}, api: 0, changed: false, wrote: false}] end
     elif (.w | length) == 0 then .
     else (.w | length - 1) as $cur | .seen[$e.id] as $prev | ($prev.w // $cur) as $own
       | (if $prev then .w[$own].tok |= with_entries(.value -= $prev.use[.key]) else .w[$cur].api += 1 end)
@@ -205,7 +201,9 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
       | reduce $e.tools[] as $t (.;
           (if $t.name == "Bash" and $t.bg then .bg[$t.id] = $t.cmd else . end)
           | if ($t.name == "Bash" and (($t.cmd // "") | test(changing_bash))) or ($t.name | IN(changing_tools[]))
-            then .w[$cur].changed = true else . end)
+            then .w[$cur].changed = true
+              | if $t.name | IN(replies[]) then . else .w[$cur].wrote = true end
+            else . end)
     end) | .w;
   . as $all
   | [group_by(.f)[] | wakes[]] | map(select(.api > 0 and (.ts // "" | startswith($day)))) as $wakes
@@ -216,7 +214,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
   | ($day | strptime("%Y-%m-%d") | mktime) as $d0 | ($d0 + 86400) as $d1
   | ([$led[0].entries[]] + $archive) as $ents
   | def ended: (.settled_at // (if is_open then null else .updated_at end));
-    def epoch: if . == null then null else fromdateiso8601 end;
+    def epoch: if . == null then null else sub("[.][0-9]+Z$"; "Z") | try fromdateiso8601 catch null end;
     ([$ents[] | select((.launched_at | epoch) as $a | $a != null and $a < $d1)
       | select((ended | epoch) as $e | $e == null or $e >= $d0)] | length) as $open
   | ([$ents[] | select((ended | epoch) as $e | $e != null and $e >= $d0 and $e < $d1)] | length) as $settled
@@ -236,7 +234,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
      else [$timer[] | select(.event == "outage" and (.at // "" | startswith($day))) | .minutes] as $m
        | {outages: ($m | length), median_minutes: ($m | median), worst_minutes: ($m | max)} end),
    questions: ([$wakes[] | select(.cause == "owner" and (.text | contains("?")))] as $q
-     | {asked: ($q | length), with_write: ($q | map(select(.changed)) | length)}),
+     | {asked: ($q | length), with_write: ($q | map(select(.wrote)) | length)}),
    wakes: {count: ($wakes | length), per_open: ($wakes | length | per($open)),
      by_cause: ($wakes | group_by(.cause) | map({key: .[0].cause, value: length}) | from_entries),
      changed_nothing: ($wakes | map(select(.changed | not)) | length)},
@@ -244,8 +242,10 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
      nothing_changed_share: (if ($tok | weighted) > 0 then (($nctok | weighted) / ($tok | weighted) * 100 | round) / 100 else null end)}}
   ' <<<"$slim") || sa_tooling "cannot count the row for $day"
 
-# Replace the day's row, or append it.
+# Replace the day's row, or append it; rows that do not parse are never dropped.
+[ ! -f "$card" ] || jq -e . "$card" >/dev/null 2>&1 || sa_tooling "$card: not JSON lines"
 mkdir -p "$dir" || sa_tooling "cannot create $dir"
+trap 'rm -f "${tmp:-}"' EXIT
 tmp=$(mktemp "$dir/.scorecard.XXXXXX") || sa_tooling "cannot write in $dir"
 { [ -f "$card" ] && jq -c --arg d "$day" 'select(.day != $d)' "$card"; printf '%s\n' "$row"; } > "$tmp" && mv "$tmp" "$card" \
   || { rm -f "$tmp"; sa_tooling "cannot write $card"; }

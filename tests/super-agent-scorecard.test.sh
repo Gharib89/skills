@@ -106,6 +106,22 @@ out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9); rc=$?
 check "no guard or timer log: exit 0, both absent, the rest still counted" "0 null null 3" \
   "$rc $(jq -c .row.guards <<<"$out") $(jq -c .row.timer <<<"$out") $(jq .row.messages.count <<<"$out")"
 
+# --- refusals and edges ----------------------------------------------------------
+for f in --day --week; do
+  check "$x: $f with no value answers its usage line, exit 2" 2 "$(timeout 5 bash "$sc" row --ledger "$led" "$f" >/dev/null 2>&1; echo $?)"
+done
+cp "$card" "$tmp/card"; printf 'not json\n' >> "$card"
+check "an unreadable scorecard.jsonl is refused by name and left as it was, exit 2" "2 true" \
+  "$(out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 2>/dev/null); echo "$? $(tail -n 1 "$card" | grep -qx 'not json' && echo true)")"
+mv "$tmp/card" "$card"
+{ transcript; u "${day}T12:00:00Z" "can you ping me when #8 lands?"
+  a "${day}T12:00:05Z" m4 "$(use 1 0 1)" '[{"type": "tool_use", "name": "PushNotification", "id": "p", "input": {}}]'; } > "$tmp/t2.jsonl"
+check "a question answered only by a reply or hand-off has no write" '{"asked":2,"with_write":1}' \
+  "$(R --day "$day" --transcript "$tmp/t2.jsonl" --version 9.9.9 | jq -c .row.questions)"
+jq '.entries["acme/widgets#7"].launched_at = "2026-11-18T09:00:00.250Z"' "$led" > "$tmp/l" && cp "$tmp/l" "$led"
+check "a time with fractional seconds is read, not a failed row" 2 \
+  "$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 | jq .row.workload.open)"
+
 # --- the transcript, found by thread id ----------------------------------------
 proj=$HOME/.claude/projects/p
 mkdir -p "$proj/subagents"
@@ -153,6 +169,9 @@ check "a week where every target holds prints nothing, and the default week is t
 week 2 > "$card"
 check "a number that missed its target is one row naming it (a number with no target raises none)" \
   '["Scorecard: needs.alerted_twice missed its target of 0 on 1 of 7 days (worst 2)."]' "$(V | jq -c .needs)"
+jq -n '{"needs.alerted_twice": {max: 0, slice: 12}}' > "$tmp/pending.json"
+check "a target still tagged with its slice raises no row" '[]' \
+  "$(SA_NOW=$(jq -n '"2026-11-18T08:00:00Z" | fromdateiso8601') bash "$sc" review --ledger "$led" --targets "$tmp/pending.json" | jq -c .needs)"
 { for d in 19 20 21 22 23 24 25 26 27 28 29 30; do rowfor "2026-10-$d" 0 10 0; done
   for d in 01 02 03 04 05 06 07 08; do rowfor "2026-11-$d" 0 10 0; done; week 0 0; } > "$card"
 check "a guard with zero blocks for four weeks is one row" \

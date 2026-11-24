@@ -88,10 +88,16 @@ check "a handover counts the previous day's scorecard row for the old thread" "0
 check "the first handover of a week runs the weekly review over the last full week" "[] 2026-11-09" \
   "$(jq -c .scorecard.review <<<"$out") $(cat "$(dirname "$led")/scorecard-reviewed")"
 check "a later handover that week runs no review" null "$(SA_NOW=$((now + 86400)) H | jq -c .scorecard.review)"
-printf '%s\n' '{"day":"2026-11-11","needs":{"alerted_twice":3}}' >> "$(dirname "$led")/scorecard.jsonl"
+printf '%s\n' '{"day":"2026-10-19","guards":{"watch":{"blocks":0,"passes":0}}}' >> "$(dirname "$led")/scorecard.jsonl"
 rm -f "$(dirname "$led")/scorecard-reviewed"
 SA_NOW=$now H >/dev/null
-check "a review row joins the bearings' Needs you list" 1 "$(grep -c '^- Scorecard: needs.alerted_twice missed its target' "$bear")"
+check "a review row joins the bearings' Needs you list" 1 "$(grep -c '^- Scorecard: the watch guard blocked nothing' "$bear")"
+rm -f "$(dirname "$led")/scorecard-reviewed"
+printf 'not json\n' >> "$(dirname "$led")/scorecard.jsonl"
+err=$(SA_NOW=$now H 2>&1 >/dev/null); rc=$?
+check "a review that fails is reported, holds nothing and marks no week" "0 1 absent" \
+  "$rc $(grep -c 'the scorecard review failed' <<<"$err") $([ -f "$(dirname "$led")/scorecard-reviewed" ] && echo present || echo absent)"
+rm -f "$(dirname "$led")/scorecard.jsonl"
 printf 'not json\n' > "$led.archive.jsonl"
 out=$(SA_NOW=$now H 2>/dev/null); rc=$?
 check "a scorecard that fails is reported and holds nothing" "0 null true" \
