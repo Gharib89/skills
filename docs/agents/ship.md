@@ -49,10 +49,10 @@ Workflow: .github/workflows/claude-review.yml
 Cap: 2
 Resolve: resolve-thread
 Gating: no
-Fallback-for: None.
+Fallback-for: codex
 Instructions: .github/copilot-instructions.md
 
-Claude Code on GitHub Actions. This repo's primary reviewer, driven on every run and capped at two rounds; `codex` below is its fallback. Each round is one formal review whose per-file findings are inline threads, resolved with `resolve-thread`; a finding that names no file stays on the review body and is answered with `comment-pr`, which leaves nothing to resolve. Why `Login:` is the app's, and how a round that dies or is cancelled reads: [ship-reviewers.md](ship-reviewers.md#claude).
+Claude Code on GitHub Actions. `codex` below is the primary reviewer and this is its fallback, capped at two rounds: driven only when `codex` exits `not reviewed`, is capped with findings, or stops `not landed`; on any other run it reports `not invoked: codex reviewed` and costs nothing. Each round is one formal review whose per-file findings are inline threads, resolved with `resolve-thread`; a finding that names no file stays on the review body and is answered with `comment-pr`, which leaves nothing to resolve. Why `Login:` is the app's, and how a round that dies or is cancelled reads: [ship-reviewers.md](ship-reviewers.md#claude).
 
 ### codex
 
@@ -63,10 +63,10 @@ Workflow: native codex
 Cap: 1
 Resolve: resolve-thread
 Gating: no
-Fallback-for: claude
+Fallback-for: None.
 Instructions: AGENTS.md
 
-Native Codex code review through the ChatGPT Codex Connector GitHub app, on the maintainer's ChatGPT subscription: no API key, no Actions workflow. Claude's fallback, because the maintainer's Codex allowance is low: driven only when `claude` exits `not reviewed`, is capped with findings, or stops `not landed`, and then for at most one round; on any other run it reports `not invoked: claude reviewed` and costs nothing. The review rules Codex reads are the `## Code Review Rules` section of the root `AGENTS.md`. How a round answers, setup, disabling it and probe evidence: [ship-reviewers.md](ship-reviewers.md#codex).
+Native Codex code review through the ChatGPT Codex Connector GitHub app, on the maintainer's ChatGPT subscription: no API key, no Actions workflow. This repo's primary reviewer, requested first on every run that takes a review and capped at one round; `claude` above is its fallback. It is primary because the weekly Codex quota goes partly unused ([#1323](https://github.com/Gharib89/skills/issues/1323), a trial with terms there). The review rules Codex reads are the `## Code Review Rules` section of the root `AGENTS.md`. How a round answers, setup, disabling it and probe evidence: [ship-reviewers.md](ship-reviewers.md#codex).
 
 ## Coding standards
 
