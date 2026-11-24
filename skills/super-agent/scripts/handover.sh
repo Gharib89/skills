@@ -57,7 +57,7 @@ card=$(bash "$(dirname "${BASH_SOURCE[0]}")/scorecard.sh" row --ledger "$ledger"
   || printf 'the scorecard row failed: %s\n' "$(jq -r .error <<<"$card" 2>/dev/null)" >&2
 review_error=null
 review=$(bash "$(dirname "${BASH_SOURCE[0]}")/scorecard.sh" review --ledger "$ledger") \
-  || { review_error=$(jq -c '.error // "the review failed"' <<<"$review" 2>/dev/null || echo '"the review failed"')
+  || { review_error=$(jq -c '.error // empty' <<<"$review" 2>/dev/null); review_error=${review_error:-'"the review failed"'}
        printf 'the scorecard review failed: %s\n' "$(jq -r . <<<"$review_error")" >&2; review=''; }
 mark="$(dirname "$ledger")/scorecard-reviewed" week=''
 [ -z "$review" ] || week=$(jq -r .week.from <<<"$review")

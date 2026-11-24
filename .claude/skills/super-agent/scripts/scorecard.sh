@@ -161,7 +161,7 @@ slim=$(for i in ${files[@]+"${!files[@]}"}; do
          texts: [$m.content[]? | select(.type == "text") | .text],
          tools: [$m.content[]? | select(.type == "tool_use")
            | {name, id, cmd: (.input.command? // null), bg: (.input.run_in_background? // false)}]}
-    else empty end' "${files[$i]}"
+    else empty end' "${files[$i]}" || exit 1
 done | jq -sc .) || sa_tooling "cannot read the transcripts"
 
 row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')" \

@@ -169,6 +169,8 @@ check "a thread with no transcript is refused by name, exit 2" \
 { transcript; printf '%s\n' '{"type":"assistant","timestamp":"2026-11-19T12:00:00Z","message":"a string"}'; } > "$tmp/t3.jsonl"
 check "a transcript entry of the wrong shape refuses the row, exit 2" "2 cannot read the transcripts" \
   "$(out=$(R --day "$day" --transcript "$tmp/t3.jsonl" --version 9.9.9 2>/dev/null); echo "$? $(jq -r .error <<<"$out")")"
+check "a bad transcript before a good one still refuses the row, exit 2" "2 cannot read the transcripts" \
+  "$(out=$(R --day "$day" --transcript "$tmp/t3.jsonl" --transcript "$tmp/t.jsonl" --version 9.9.9 2>/dev/null); echo "$? $(jq -r .error <<<"$out")")"
 check "the row is stamped with the running copy's version by default" \
   "$(sed -n 's/^  version: //p' "$s/../SKILL.md")" "$(R --day "$day" --thread th-arg | jq -r '.row.versions[0]')"
 
