@@ -44,7 +44,8 @@ check "and the wait ended near the window, not after the read" true "$([ "$took"
 # seconds, from a clock read earlier in the second.
 reset; echo 1 > "$SHIP_FAKE/host_pr_get.1.delay"
 ci --timeout 1
-check "a read finishing past the deadline is timeout" timeout "$(jq -r .status <<<"$out")"
+check "a read finishing past the deadline is timeout, naming the head it read" "timeout deadbee" \
+  "$(jq -r '"\(.status) \(.head_sha)"' <<<"$out")"
 
 # A call cap already spent before the first read still allows that read, so the
 # answer carries the head it saw.

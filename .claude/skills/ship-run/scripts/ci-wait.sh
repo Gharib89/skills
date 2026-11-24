@@ -154,8 +154,7 @@ again() {
 cut_off() { window_closed; pend; }
 # A host read is bounded by the time left in the window and in this call: set
 # before each read, and a read cut off by the bound ends the call the way the
-# bound would have, `timeout` at the window's deadline, else `pending`. A window
-# already closed (a resumed cursor's) is `timeout` with no read at all.
+# bound would have, `timeout` at the window's deadline, else `pending`.
 bounded_read() { # <out-file> <fn> <args...>
   local now lim rc
   now=$(date +%s)
@@ -205,7 +204,9 @@ while :; do
   [ "$rc" -ne 3 ] || { unread "PR $pr"; continue; }
   prj=$(<"$prf"); sha=$(jq -r .head_sha <<<"$prj")
   # An answer that arrives past the deadline is `timeout`, never graded: a read's
-  # bound is whole seconds, so it can run a fraction over the window.
+  # bound is whole seconds, so it can run a fraction over the window. The checks
+  # held are another head's when this head is new.
+  [ "$sha" = "$head_seen" ] || checks='[]'
   window_closed
   waited=$(( $(date +%s) - start ))
   if ship_head_stale "$prj" "$want"; then checks='[]'; fails=0; again; continue; fi
