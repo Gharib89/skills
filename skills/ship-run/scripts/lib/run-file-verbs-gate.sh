@@ -8,7 +8,7 @@ gate)
   # `merge` reads (#1204). `clean` runs `gate clean` on the CI answer first and records
   # only on exit 0, printing one object whose `clean` is that answer (a held gate prints
   # the answer alone, exit 1); `human` records the human's word "merge" on a held gate;
-  # `waiver` records a delegated ruler's waiver or ruling verbatim, so the record never
+  # `waiver` records a delegated ruler's waiver or ruling, quoted and trimmed, so the record never
   # claims an approval the human did not give (#1402).
   sub=${1:-}
   case $sub in record | read | clean | summary | admit) shift ;; *) ship_tooling "$usage" ;; esac
@@ -20,6 +20,7 @@ gate)
     while [ $# -gt 0 ]; do
       if [ "$1" = --ruling ]; then
         ship_flag_value "$usage" "${2:-}" "--ruling needs the ruler's waiver or ruling, quoted word for word"
+        case $2 in *$'\n'* | *$'\r'*) ship_tooling "a waiver's ruling is one line" ;; esac
         # Trimmed, so the line keeps one space after `waiver`, the form merge reads.
         ruling=$(printf '%s' "$2" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//') has_ruling=true; shift 2
       else
@@ -29,7 +30,6 @@ gate)
     set -- ${others[@]+"${others[@]}"}
     if [ "$kind" = waiver ]; then
       [[ $ruling =~ [^[:space:]] ]] || ship_tooling "gate admit waiver needs --ruling <text>, the ruler's waiver or ruling quoted word for word"
-      case $ruling in *$'\n'* | *$'\r'*) ship_tooling "a waiver's ruling is one line" ;; esac
     else
       [ "$has_ruling" = false ] || ship_tooling "--ruling belongs to gate admit waiver only"
     fi

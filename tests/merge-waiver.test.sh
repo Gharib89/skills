@@ -2,6 +2,7 @@
 # merge on a `waiver` admission over the Host fake (#1402): a delegated ruler's
 # ruling, recorded by `run-file gate admit waiver`, admits like the human's word,
 # base-retargeted aside, while every other refusal still holds.
+# Turn check: names merge.sh, run-file.sh and _lib.sh, whose fixture lives in tests/merge-lib.sh.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/merge-lib.sh

@@ -9,6 +9,7 @@
 # with nothing merged, a head whose checks are not settled, a head with no
 # admission record in the Run file, and a cloud sandbox whose profile says that
 # lane does not merge (#1204).
+# Turn check: names merge.sh, run-file.sh and _lib.sh, whose fixture lives in tests/merge-lib.sh.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/merge-lib.sh
@@ -160,7 +161,6 @@ reset; push_at "$A"; pr 1 open "$A" release; pr 2 merged "$A" release
 printf '[{"name":"build","status":"success"}]\n' > "$SHIP_FAKE/host_pr_checks.1.json"
 run 7 none "$A" >/dev/null 2>&1; rc=$?
 check_rc "the human's word admits a PR on another base" 0 "$rc"
-
 
 reset; push_at "$A"; pr 1 open "$A"
 mkdir -p "$rr/ship-w"; printf '## Merge admission\n```\n- 10:00 %s human\n```\n' "$A" > "$rr/ship-w/run.md"
