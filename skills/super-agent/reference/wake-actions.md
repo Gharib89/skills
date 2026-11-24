@@ -72,7 +72,8 @@ A run at rest on a merge-gate hold gets the gate-hold
 [step-in](step-ins.md#the-step-ins) when a standing waiver in the fleet file
 or a ruling scoped to its repo (`ledger.sh --ledger <ledger> scoped --repo
 <owner/name>`) matches the hold: quote it, and tell the run to record it with
-`run-file.sh gate admit waiver --ruling "<the quote>"`, then merge through
+`run-file.sh gate admit waiver --ruling "<the quote>" --head <head> --issue
+<issue>`, then merge through
 `merge.sh` and name the waiver in its PR body. A hold none matches follows the
 fleet file's `merge_gate_ruler`. `owner` (the default, and a fleet file
 without the key): record a need with `ledger.sh --ledger <ledger> need <key>

@@ -19,8 +19,9 @@ gate)
     others=()
     while [ $# -gt 0 ]; do
       if [ "$1" = --ruling ]; then
-        [ $# -ge 2 ] || ship_tooling "$usage"
-        ruling=$2 has_ruling=true; shift 2
+        ship_flag_value "$usage" "${2:-}" "--ruling needs the ruler's waiver or ruling, quoted word for word"
+        # Trimmed, so the line keeps one space after `waiver`, the form merge reads.
+        ruling=$(printf '%s' "$2" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//') has_ruling=true; shift 2
       else
         others+=("$1"); shift
       fi

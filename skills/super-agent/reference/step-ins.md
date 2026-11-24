@@ -52,8 +52,8 @@ ones:
    from the fleet file's `waivers`, or the one ruling scoped to the repo (the
    `scoped` rows of `ledger.sh --ledger <ledger> scoped --repo <owner/name>`
    for the run's repo), whose condition matches the hold, quoted word for
-   word, telling the run to record it with
-   `run-file.sh gate admit waiver --ruling "<the quote>"`, then merge through
+   word, telling the run to record it with `run-file.sh gate admit waiver
+   --ruling "<the quote>" --head <head> --issue <issue>`, then merge through
    `merge.sh` and name that waiver in its PR body. A hold none matches goes
    to whoever `merge_gate_ruler` names, and the step-in carries that ruling
    once it exists. A triage run that reports a PR it opened to ship a small
