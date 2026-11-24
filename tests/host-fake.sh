@@ -23,7 +23,9 @@
 # <fn>.<n>.status beside it (the failure answer `ship_fail` reads), else
 # nothing. A marker is an entry of the sequence like a fixture,
 # so <fn>.1.fail alone fails every call and <fn>.1.fail with <fn>.2.json is one
-# failure then an answer.
+# failure then an answer. A <fn>.<n>.delay holding a number of seconds makes that
+# call sleep first, a host read that is slow (the nearest lower entry applies
+# the same way), so a caller's bound on a read can be proven.
 #
 # Every call appends one line to $SHIP_FAKE/calls: `<fn>`, then each raw
 # argument after a tab, so an argument's own spaces (a PR title) stay inside
@@ -47,6 +49,11 @@ _host_fake() { # <fn> <args...>
   } >> "$SHIP_FAKE/calls"
   n=$(( $(cat "$SHIP_FAKE/$fn.n" 2>/dev/null || echo 0) + 1 ))
   printf '%s' "$n" > "$SHIP_FAKE/$fn.n"
+  i=$n
+  while [ "$i" -gt 0 ]; do
+    [ -f "$SHIP_FAKE/$fn.$i.delay" ] && { sleep "$(cat "$SHIP_FAKE/$fn.$i.delay")"; break; }
+    i=$((i - 1))
+  done
   i=$n
   while [ "$i" -gt 0 ]; do
     if [ -f "$SHIP_FAKE/$fn.$i.fail" ]; then
