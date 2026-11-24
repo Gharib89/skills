@@ -107,8 +107,8 @@ check "a week missing a row: the review error is in the JSON and a Needs you lin
   "$(jq -r '.scorecard.review_error | contains("no row for 2026-11-15")' <<<"$out") $(grep -c '^- Scorecard: the weekly review failed: .*no row for 2026-11-15' "$bear")"
 cp -r "$s/.." "$tmp/sa" && printf '#!/usr/bin/env bash\n[ "$1" = review ] && exit 1\nexec bash %q "$@"\n' "$s/scorecard.sh" > "$tmp/sa/scripts/scorecard.sh"
 out=$(SA_NOW=$now bash "$tmp/sa/scripts/handover.sh" --ledger "$led" --from th-old --out "$bear" 2>/dev/null); rc=$?
-check "a review that dies with no output is still reported and holds nothing" '0 "the review failed"' \
-  "$rc $(jq -c .scorecard.review_error <<<"$out")"
+check "a review that dies with no output is still reported and holds nothing" '0 "the review failed" null absent' \
+  "$rc $(jq -c .scorecard.review_error <<<"$out") $(jq -c .scorecard.review <<<"$out") $([ -f "$(dirname "$led")/scorecard-reviewed" ] && echo present || echo absent)"
 rm -f "$(dirname "$led")/scorecard.jsonl"
 printf 'not json\n' > "$led.archive.jsonl"
 out=$(SA_NOW=$now H 2>/dev/null); rc=$?
