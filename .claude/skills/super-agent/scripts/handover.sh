@@ -18,10 +18,11 @@
 # (`scorecard row --thread <--from>`), and at the first handover of a week runs
 # the weekly review, whose rows join the bearings' Needs you list. A scorecard
 # that fails is reported, never a reason to hold the handover. --projects is the
-# saved `t3_project_list` answer: the successor launches in the project whose
-# workspace is the super agent folder (`home.project_id`), and a missing project, a
-# guard entry the folder's settings lack after the rewrite, or a stale guard entry
-# in user settings is a Needs you line in the bearings.
+# saved `t3_project_list` answer, or a bare array of the rows of all its pages: the
+# successor launches in the project whose workspace is the super agent folder
+# (`home.project_id`), and a missing project, a guard entry the folder's settings
+# lack after the rewrite, or a stale guard entry in user settings, or user settings
+# that are no JSON object (`home.stale.unreadable`), is a Needs you line.
 #
 # stdout: {bearings, skill: {loaded, source, stale}, refreshed, scorecard: {row,
 #         error, review, review_error}, home: {folder, settings, written, guard,

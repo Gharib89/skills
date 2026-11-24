@@ -48,8 +48,9 @@ sa_guard_stale() {
 sa_home() {
   local dir settings entry written=false has stale pid=null needs='[]'
   dir=$(sa_home_dir) settings=$(sa_home_settings) entry=$(sa_guard_entry)
-  # sa_write exits on a failed write, so it runs in a subshell: a failure is a need.
-  if [ "$1" = true ] && (sa_write "$settings" "$(jq -cn --argjson e "$entry" '{hooks: {PreToolUse: [$e]}}')") >/dev/null 2>&1; then written=true; fi
+  # sa_write exits on a failed write, so it runs in a subshell: a failure is a need,
+  # its reason left on stderr.
+  if [ "$1" = true ] && (sa_write "$settings" "$(jq -cn --argjson e "$entry" '{hooks: {PreToolUse: [$e]}}')") >/dev/null; then written=true; fi
   has=$(jq --argjson e "$entry" "$sa_jq_guard_has"'guard_has($e)' "$settings" 2>/dev/null) || has=false
   [ "$has" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the state guard\u0027s hook is missing from \($s): run scripts/setup.sh --write, or scripts/guard.sh --install"]' <<<"$needs")
   stale=$(sa_guard_stale)

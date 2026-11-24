@@ -91,9 +91,11 @@ the pinned thread runs in that folder, so the hook reaches no other session.
 `scripts/guard.sh --status` reads that file: `installed` is `true` when it
 holds the entry for this copy of the script, and `stale` lists each guard
 entry an older install left in `~/.claude/settings.json`, the line the owner
-removes there (it would fire in every session). Both are also `needs` lines in
-`home`. Run `--install` only when a `needs` line names the missing hook: it
-adds the entry to the folder's file, or to the file `--settings` names.
+removes there (it would fire in every session); `stale.unreadable` is true
+when that file is no JSON object, so no entry could be checked. Each is also a
+`needs` line in `home`. Run `--install` only when a `needs` line names the
+missing hook: it adds the entry to the folder's file, or to the file
+`--settings` names.
 
 ## Cursor and Grok
 

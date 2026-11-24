@@ -81,9 +81,10 @@
 #         auth_reason, status} per enabled instance; `home` the super agent folder,
 #         {folder, settings, written, guard, stale, project_id, needs}: --write
 #         rewrites the folder's generated `.claude/settings.local.json` (the state
-#         guard's hook), and `needs` holds one Needs you line per missing guard
-#         entry or stale user-settings entry (project_id is null: setup reads no
-#         projects, the handover does)
+#         guard's hook), `stale` is {settings, entries, unreadable} or null, and
+#         `needs` holds one Needs you line per missing guard entry, stale
+#         user-settings entry or unreadable user settings (project_id is null:
+#         setup reads no projects, the handover does)
 # exit: 0 a proposal or a write, failed probes included · 2 usage, a fleet file
 #       that is not JSON, has a field of the wrong shape or a retired `brief`
 #       line under a repo or machine, a machine probe
