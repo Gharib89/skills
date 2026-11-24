@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.71.3 (2026-11-24)
+
+### Refactoring
+
+- **ship**: Remove the dead gating case, duplicate parser assertions and the identical body write
+  ([#1365](https://github.com/Gharib89/skills/pull/1365),
+  [`25b4163`](https://github.com/Gharib89/skills/commit/25b41633d9d39586b4f7a83c12869d4aced3f139))
+
+
 ## v0.71.2 (2026-11-24)
 
 ### Bug Fixes
