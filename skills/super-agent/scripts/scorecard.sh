@@ -59,7 +59,8 @@ dir=$(dirname "$ledger") card="$(dirname "$ledger")/scorecard.jsonl"
 now=$(sa_now_s)
 
 if [ "$cmd" = review ]; then
-  [ -f "$targets" ] && jq -e 'type == "object"' "$targets" >/dev/null 2>&1 || sa_tooling "$targets: not a targets file"
+  [ -f "$targets" ] && jq -e 'type == "object" and all(.[]; type == "object" and (.max | type) == "number")' "$targets" >/dev/null 2>&1 \
+    || sa_tooling "$targets: not a targets file, {<path>: {max: <number>}}"
   # The Monday of the week `$now` falls in, less 7 days: the last full week.
   [ -n "$week" ] || week=$(jq -rn --argjson n "$now" '($n - ($n | strftime("%u") | tonumber) * 86400 - 6 * 86400) | strftime("%Y-%m-%d")')
   rows='[]'
@@ -70,6 +71,8 @@ if [ "$cmd" = review ]; then
     . as $rows | (day($w)) as $from | ($from + 6 * 86400 | strftime("%Y-%m-%d")) as $to
     | ($from - 21 * 86400 | strftime("%Y-%m-%d")) as $four
     | (map(select(.day >= $w and .day <= $to)) | unique_by(.day)) as $days
+    | ([range(7) | $from + . * 86400 | strftime("%Y-%m-%d")] - [$days[].day]) as $missing
+    | if $missing != [] then error("week \($w): no row for \($missing | join(", ")); count it with row --day") else . end
     | {week: {from: $w, to: $to}, days: ($days | length), needs: (
         [$t[0] | to_entries[] | select(.value.slice == null) | .key as $k | .value.max as $max
           | [$days[] | at($k) | select(type == "number" and . > $max)] as $over
@@ -77,9 +80,15 @@ if [ "$cmd" = review ]; then
           | "Scorecard: \($k) missed its target of \($max) on \($over | length) of \($days | length) days (worst \($over | max))."]
         + [[$rows[] | .guards // {} | keys[]] | unique[] as $g
           | [$rows[] | select(.guards[$g] != null)] as $seen
-          | select(($seen | map(.day) | min) <= $four
-              and ([$seen[] | select(.day >= $four and .day <= $to) | .guards[$g].blocks] | add // 0) == 0)
-          | "Scorecard: the \($g) guard blocked nothing for four weeks; delete it?"])}' <<<"$rows"
+          | [$seen[] | select(.day >= $four and .day <= $to)] as $in
+          # Logged in each of the four weeks, and no block in them.
+          | select(($seen | map(.day) | min) <= $four and all(range(4) as $k | ($from - (21 - 7 * $k) * 86400 | strftime("%Y-%m-%d")) as $a
+                  | ($from - (15 - 7 * $k) * 86400 | strftime("%Y-%m-%d")) as $b
+                  | any($in[]; .day >= $a and .day <= $b); .)
+              and ([$in[] | .guards[$g].blocks] | add // 0) == 0)
+          | "Scorecard: the \($g) guard blocked nothing for four weeks; delete it?"])}' <<<"$rows" 2>"$dir/.scorecard-review.err" \
+    || { e=$(sed -n 's/^jq: error ([^)]*): //p' "$dir/.scorecard-review.err" | head -n 1); rm -f "$dir/.scorecard-review.err"; sa_tooling "review failed: ${e:-jq error}"; }
+  rm -f "$dir/.scorecard-review.err"
   exit 0
 fi
 
@@ -104,6 +113,7 @@ if [ ${#files[@]} -eq 0 ]; then
         && files+=("$f")
     done < <(grep -rlF --include='*.jsonl' -- "$thread" "${roots[@]}" 2>/dev/null | sort -u)
   fi
+  [ ${#files[@]} -gt 0 ] || sa_tooling "no transcript for thread $thread: none under ~/.claude*/projects loaded the super-agent skill"
 fi
 for f in ${files[@]+"${files[@]}"}; do [ -r "$f" ] || sa_tooling "$f: cannot read"; done
 patterns=$(jq -Rsr 'split("\n") | map(select(length > 0 and (startswith("#") | not))) | join("|")' "$data/nothing-changed.txt") \
@@ -115,10 +125,11 @@ logs='{}'
 for g in "$dir"/*-guard.jsonl; do
   [ -f "$g" ] || continue
   n=$(basename "$g" -guard.jsonl)
-  logs=$(jq -c --arg n "$n" --slurpfile e <(jq -cR 'fromjson? // empty' "$g") '.[$n] = $e' <<<"$logs")
+  e=$(jq -sc . "$g" 2>/dev/null) || sa_tooling "$g: not JSON lines"
+  logs=$(jq -c --arg n "$n" --argjson e "$e" '.[$n] = $e' <<<"$logs")
 done
 timer=null
-[ -f "$dir/wake-timer.jsonl" ] && timer=$(jq -scR '[split("\n")[] | fromjson? // empty]' "$dir/wake-timer.jsonl")
+if [ -f "$dir/wake-timer.jsonl" ]; then timer=$(jq -sc . "$dir/wake-timer.jsonl" 2>/dev/null) || sa_tooling "$dir/wake-timer.jsonl: not JSON lines"; fi
 
 # One slim record per transcript entry, file by file in order, so a 30 MB
 # transcript is never held whole: a user entry's text (null for a tool result),

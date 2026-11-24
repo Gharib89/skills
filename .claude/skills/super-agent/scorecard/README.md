@@ -45,15 +45,19 @@ week, runs the weekly review, whose rows join the bearings file's Needs you.
 Each guard writes `<name>-guard.jsonl` beside the ledger, one JSON line per
 event, `{at, event: "block" | "pass"}`; the wake timer writes
 `wake-timer.jsonl`, `{at, event: "outage", minutes}`. A log not written yet is
-`null` in the row, never an error.
+`null` in the row, never an error; a log with a line that is not JSON is
+refused by name. A row for a thread with no transcript that loaded this skill is
+refused too, rather than counted as an empty day.
 
 ## Targets
 
 [targets.json](targets.json) maps a dotted path into the row to its `max`. A
 target still tagged with the `slice` that owns it is inert: that slice drops
 the tag when it lands, so the review never raises a row for work not shipped.
-The weekly review raises one row per live target a day of the week went over,
-and one per guard whose log covers the four weeks ending with that week and
-that blocked nothing in them. A number with no target never raises one.
+The weekly review refuses a week missing a day's row, naming the day to count
+with `row --day`. Otherwise it raises one row per live target a day of the
+week went over, and one per guard logged in each of the four weeks ending with
+that week and blocking nothing in them. A number with no target never raises
+one.
 
 [baseline.md](baseline.md) holds the rows recounted for 6 to 19 November 2026.

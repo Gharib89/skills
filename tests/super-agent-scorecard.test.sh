@@ -105,6 +105,12 @@ rm -f "$dir/watch-guard.jsonl" "$dir/wake-timer.jsonl"
 out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9); rc=$?
 check "no guard or timer log: exit 0, both absent, the rest still counted" "0 null null 3" \
   "$rc $(jq -c .row.guards <<<"$out") $(jq -c .row.timer <<<"$out") $(jq .row.messages.count <<<"$out")"
+for log in watch-guard.jsonl wake-timer.jsonl; do
+  printf '{"at":"2026-11-19T09:00:00Z","event":"block"}\n{"at":"2026-11-19T09:' > "$dir/$log"
+  check "a $log with a malformed line is refused by name, exit 2" "2 $dir/$log: not JSON lines" \
+    "$(out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 2>/dev/null); echo "$? $(jq -r .error <<<"$out")")"
+  rm -f "$dir/$log"
+done
 
 # --- refusals and edges ----------------------------------------------------------
 for f in --day --week; do
@@ -149,6 +155,9 @@ check "else the thread id in the environment" "3 th-env" "$(count "$(T3CODE_THRE
 out=$(R --day "$day" 2>/dev/null); rc=$?
 check "no thread id at all is refused by name, exit 2" "2 no thread id: pass --thread, or run in the super agent's thread" \
   "$rc $(jq -r .error <<<"$out")"
+out=$(R --day "$day" --thread th-none 2>/dev/null); rc=$?
+check "a thread with no transcript is refused by name, exit 2" \
+  "2 no transcript for thread th-none: none under ~/.claude*/projects loaded the super-agent skill" "$rc $(jq -r .error <<<"$out")"
 check "the row is stamped with the running copy's version by default" \
   "$(sed -n 's/^  version: //p' "$s/../SKILL.md")" "$(R --day "$day" --thread th-arg | jq -r '.row.versions[0]')"
 
@@ -185,6 +194,16 @@ check "a guard logged for less than four weeks raises none" '[]' "$(V | jq -c .n
 { for d in 19 20 21 22 23 24 25 26 27 28 29 30; do rowfor "2026-10-$d" 0 10 0; done
   rowfor 2026-11-01 0 10 1; for d in 02 03 04 05 06 07 08; do rowfor "2026-11-$d" 0 10 0; done; week 0 0; } > "$card"
 check "a guard that blocked once in the four weeks raises none" '[]' "$(V | jq -c .needs)"
+{ rowfor 2026-09-01 0 10 0; week 0; } > "$card"
+check "a guard logged before the four weeks but not in each of them raises none" '[]' "$(V | jq -c .needs)"
+week 0 | grep -v 2026-11-15 > "$card"
+check "a week missing a day's row is refused by name, exit 2" \
+  '2 review failed: week 2026-11-09: no row for 2026-11-15; count it with row --day' \
+  "$(out=$(V 2>/dev/null); echo "$? $(jq -r .error <<<"$out")")"
+week 0 > "$card"; jq -n '{"needs.alerted_twice": 0}' > "$tmp/bad.json"
+check "a target that is no {max} is refused, exit 2" 2 \
+  "$(SA_NOW=$(jq -n '"2026-11-18T08:00:00Z" | fromdateiso8601') bash "$sc" review --ledger "$led" --targets "$tmp/bad.json" >/dev/null 2>&1; echo $?)"
+for d in 02 03 04 05 06 07 08; do rowfor "2026-11-$d" 0 10; done > "$card"
 check "--week reviews the week given" '{"from":"2026-11-02","to":"2026-11-08"} 7' \
   "$(V --week 2026-11-02 | jq -r '"\(.week | tojson) \(.days)"')"
 
