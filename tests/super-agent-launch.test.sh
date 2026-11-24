@@ -36,12 +36,12 @@ check_rc "a launch exits 0" 0 "$rc"
 check "it launches a ship of the labelled size, on a fresh claim" '{"launch":true,"kind":"ship","size":"L","size_source":"label","claim":"taken"}' \
   "$(jq -c '{launch, kind, size, size_source, claim}' <<<"$out")"
 check "the title is the repo and the slug" "widgets#7 add-a-frobnicator-to-the" "$(jq -r .args.title <<<"$out")"
-check "the worktree strategy names the base and the branch /ship would" \
+check "the worktree strategy names the base and the branch /ship-run would" \
   '{"type":"worktree","baseRef":"main","branch":"fix/add-a-frobnicator-to-the-7","startFromOrigin":true}' "$(jq -c .args.workspaceStrategy <<<"$out")"
 check "L starts on the third rung, on route's instance, options an array" \
   '{"instanceId":"claudeAgent","model":"opus","options":[{"id":"effort","value":"high"}]}' "$(jq -c .args.modelSelection <<<"$out")"
 check "a local launch carries no environment id" false "$(jq '.args | has("environmentId")' <<<"$out")"
-check "with --note the message is the invocation plus one Note: line, nothing else" "$(printf '/ship 7\nNote: Mind the flaky test.')" "$(jq -r .args.message <<<"$out")"
+check "with --note the message is the invocation plus one Note: line, nothing else" "$(printf '/ship-run 7\nNote: Mind the flaky test.')" "$(jq -r .args.message <<<"$out")"
 check "the argument only an MCP read fills is named" '["projectId"]' "$(jq -c .needs <<<"$out")"
 check "the record block holds what the ledger will carry" \
   '{"key":"acme/widgets#7","kind":"ship","machine":"home","environment_id":null,"instance_id":"claudeAgent","model":"opus","effort":"high","areas":["skills/widgets"],"branch":"fix/add-a-frobnicator-to-the-7"}' "$(jq -c .record <<<"$out")"
@@ -75,8 +75,8 @@ withnote=$(L 11 --note "Look at the logs first." | jq -r .args.message)
 check "with --note the Note: line follows the contract line and ends the message" "Note: Look at the logs first." "$(tail -1 <<<"$withnote")"
 check "with --note the triage message is still the invocation, the contract line and the note" 3 "$(wc -l <<<"$withnote")"
 reset; issue 12 "Another one" ready-for-agent
-check "without --note a ship message is the invocation alone" "/ship 12" "$(L 12 | jq -r .args.message)"
-check "with --note a ship message is the invocation plus one Note: line" "$(printf '/ship 12\nNote: Look at the logs first.')" \
+check "without --note a ship message is the invocation alone" "/ship-run 12" "$(L 12 | jq -r .args.message)"
+check "with --note a ship message is the invocation plus one Note: line" "$(printf '/ship-run 12\nNote: Look at the logs first.')" \
   "$(L 12 --note "Look at the logs first." | jq -r .args.message)"
 # The fleet's waivers and the ledger's rulings both exist here, and none of them
 # reaches the launch message.

@@ -2,7 +2,7 @@
 
 Schema: 5
 
-Every repo-specific fact `/ship` needs, one section per axis. Vocabulary: [GLOSSARY.md](../../GLOSSARY.md).
+Every repo-specific fact `/ship-run` needs, one section per axis. Vocabulary: [GLOSSARY.md](../../GLOSSARY.md).
 
 This repo is both the **source** of the shared skills and a **consumer** of them: `skills/<name>/` is the source of truth and `.claude/skills/<name>/` is the derived copy that actually runs. A change to a skill is not shipped until both carry it.
 
@@ -20,7 +20,7 @@ Nothing here is gitignored. The mechanics are bash; the gate needs `gitleaks` on
 ## Local gate
 
 Location: scripts/local-gate.sh
-Small node: the path of the changed script, e.g. `skills/ship/scripts/merge.sh`; for a `docs`-class change, the path of the changed document, e.g. `skills/ship/SKILL.md`
+Small node: the path of the changed script, e.g. `skills/ship-run/scripts/merge.sh`; for a `docs`-class change, the path of the changed document, e.g. `skills/ship-run/SKILL.md`
 Tripwires: None.
 
 Two CI legs report on a PR head: `bump-guard` reads the PR title and body rather than the diff, and `check-full` runs `scripts/check.sh full` on the head. The repo is public, so CI minutes cost nothing, and this script runs only what CI cannot or must not: `secrets` over the base range, so a secret is caught before the push, and `version-lines`, which needs the base `check-full` lacks. Every check `full` would report (its `runner`, a `TURN_ROWS` member's `typecheck:` and `tests:` checks, and each `FULL_ROWS` row: `tests`, `derived-copies`, the prose checks, `contract`) is a gate of the same name, `deferred-to-ci` and unrun, its names read from `check.sh`'s configuration block so they cannot drift. Ship's clean gate admits a `deferred-to-ci` gate only while every CI check on the head is green. No `full` check needs this machine. The small lane is the same gate, `secrets` and `version-lines` with the rest deferred, so the recorded node is only what the run records.
@@ -77,7 +77,7 @@ docs/contributing/coding-standards.md
 ### github-mechanics
 
 Proves: a changed generic mechanic or the GitHub adapter performs its host call against a real issue, PR, thread or merge.
-Applies when: the change touches `skills/ship/scripts/`, on any path the GitHub adapter reaches.
+Applies when: the change touches `skills/ship-run/scripts/`, on any path the GitHub adapter reaches.
 Run: drive the changed mechanic by hand against a scratch issue on this repo, the way issues #30 and #31 were used, then `manage-issue <n> close` to close the scratch issue after. Where the change reaches the PR body, the run's own PR is the subject and no scratch PR is needed: open it carrying the attribution footer, and after the phase-7 `update-pr-body --section Review` write, `read-pr` reads the body back and confirms the footer is still there. Where the change reaches the body's preamble, the same PR is the subject of an `update-pr-body <pr> --preamble` write, read back the same way, confirming the closing reference survived it. The thread-reply path is driven against a thread the reviewer opened on that same PR; the reviewer opens it and ship does not, so a PR carrying none when the reviewers exit leaves that path unexercised. Where an issue asks for a scratch review thread instead, creating and deleting it with `gh api` is verification setup done by hand, the way the scratch issue is, and not a Ship defect: no mechanic creates or deletes a review comment, by design. The verification then takes the result of the paths that did run, and its what-ran note on the merge summary's `Verification` item names the unexercised one for the human to weigh. Where the thread-reply path is the **only** path the change touches, a threadless PR leaves no path to take a result from, and the verification's result is `unexercised`.
 Needs: `gh` signed in with push permission on `Gharib89/skills`.
 Without it: hand-off
@@ -87,7 +87,7 @@ Claims to probe: the REST response shapes and api-versions the adapter reads, an
 ### ado-mechanics
 
 Proves: a changed Azure DevOps adapter performs its host call against a real work item, PR, thread or completion.
-Applies when: the change touches `skills/ship/scripts/host/ado.sh`.
+Applies when: the change touches `skills/ship-run/scripts/host/ado.sh`.
 Run: drive the changed mechanic by hand against the lab at `https://dev.azure.com/AhmedGharib`, project `AhmedGharib`, repo `AhmedGharib`, from a scratch checkout whose origin is that repo, carrying a scratch profile whose reviewer blocks name the maintainer's own Azure DevOps identity. The fixture is an active PR there (PR 1 today) reviewed by that identity. A scratch round opened on that PR is dispositioned with `resolve-thread` and left in place: the lab PR is a shared fixture whose resolved rounds accumulate, and no mechanic removes them. A later verification picks its own round out of `all[]` by `submitted_at`, then reads it whole: `poll-pr <pr> --reviewer <name> --since <iso>` reports a round at or after that time as `landed_by: since`, and `poll-pr <pr> --brief --full <id>` lifts the round clip on that row alone.
 Needs: `az login` with Entra (the PAT path has known gaps, issue #29) plus the `azure-devops` extension.
 Without it: blocked
@@ -107,14 +107,14 @@ Claims to probe: that a permission dialog, not only a question dialog, reads `bl
 ### ship-live-run
 
 Proves: Ship's prose, as a real model reads it, takes a plain issue to the merge gate, stops `ambiguous` on a vague one with no claim, no branch and no PR, does not mark a criterion `met` on a proof unrelated to it, and stops on a change that turns the tests red; with two mechanic-level paths, `merge` refusing `head-moved` and `run-file gate clean` holding a reviewer outage.
-Applies when: the change touches `skills/ship/SKILL.md` or `skills/ship/reference/`.
+Applies when: the change touches `skills/ship-run/SKILL.md` or `skills/ship-run/reference/`.
 Run: `git -C <worktree> worktree add --detach <scratch>/verify/live-run-judge origin/HEAD`, then `<scratch>/verify/live-run-judge/scripts/live-run-ship.sh <worktree>`, then `git -C <worktree> worktree remove <scratch>/verify/live-run-judge` whatever the driver exits: the driver and its checks come from the default branch, in an attended worktree and an unattended clone alike, so a change under test cannot change its own judge. The `result` field of its JSON line is the result word; a failed `worktree add`, or a `result` of `unavailable`, is a `Needs:` failure, so take `Without it:`. Non-empty `retried` lines go in the `Verification` item's what-ran note. `LIVE_RUN_PATHS` narrows the run to some paths (comma-separated) when only one is under test.
 The JSON line also carries each run's usage (`input_tokens`, `output_tokens`, `cache_read_tokens`, `cache_write_tokens` summed over every model in the result's `modelUsage`, parent and child agents alike, plus `turns` and `subagents`, null where the result omits them) and `per_path`, the cost and tokens of each path summed over its attempts, a failed first attempt's included. The `claude` JSON has no tool-call count, so `tool_calls` is null. Three repetitions per scenario are an engineering screen, not a statistical comparison: read a delta inside the run-to-run range as no measurable difference.
 Needs: `gh` and `claude` signed in, and `Gharib89/ship-fixture` reachable with its `main` at its `seed` tag.
 Without it: hand-off
 Also proven by CI: None.
 Claims to probe: that `claude -p` reports a hit `--max-budget-usd` cap as a nonzero exit with `subtype` `error_max_budget_usd` (it did on 2026-10-12).
-Paths: skills/ship/SKILL.md, skills/ship/reference/**
+Paths: skills/ship-run/SKILL.md, skills/ship-run/reference/**
 
 ### real-render
 
@@ -142,8 +142,8 @@ Paths: skills/creative-video/scripts/render/**, skills/creative-video/scripts/ga
 
 Tooling: semantic-release
 Reads: the squash subject's Conventional-Commit type, one configuration per skill under `.release/`; it writes `metadata.version` in that skill's `SKILL.md` and its section of `skills/<name>/CHANGELOG.md`
-In-PR requirement: the PR title is a Conventional Commit, of a type the release run reads, whose type is the public-surface grade from [release.md](../contributing/standards/release.md), because the squash subject is what the release run reads; a change to what `ship` expects of a profile still bumps `metadata.profile-schema` by hand and adds the matching `## Schema N` entry to `skills/setup-skills/profile-schema.md`
-Subject constraints: conventional-commit prefix, scoped to the skill where the change is a skill's, e.g. `fix(ship):`, and to the area otherwise, e.g. `feat(ci):`. The scope is for a human reading the log: `path_filters` in `.release/*.toml` route a commit to a skill by the paths it touched, and `bump-guard` accepts a scopeless subject, so it is the type that decides the bump and the type is graded first
+In-PR requirement: the PR title is a Conventional Commit, of a type the release run reads, whose type is the public-surface grade from [release.md](../contributing/standards/release.md), because the squash subject is what the release run reads; a change to what `ship-run` expects of a profile still bumps `metadata.profile-schema` by hand and adds the matching `## Schema N` entry to `skills/setup-skills/profile-schema.md`
+Subject constraints: conventional-commit prefix, scoped to the skill where the change is a skill's, e.g. `fix(ship-run):`, and to the area otherwise, e.g. `feat(ci):`. The scope is for a human reading the log: `path_filters` in `.release/*.toml` route a commit to a skill by the paths it touched, and `bump-guard` accepts a scopeless subject, so it is the type that decides the bump and the type is graded first
 
 Why the release run owns the version line and the title is load-bearing: [ship-versioning.md](ship-versioning.md). Read it for a title or version question; a run needs nothing in it at start.
 
@@ -158,14 +158,14 @@ Merge: on-clean-gate
 Everything a consumer repo depends on, all of it under `skills/`:
 
 - each skill's name, `description` and `argument-hint`, which decide when an agent reaches it
-- `ship`'s flags and its stop-reason vocabulary
+- `ship-run`'s flags and its stop-reason vocabulary
 - every generic mechanic's CLI signature and the shape of the JSON it prints
 - the local-gate contract: the flags, the gate statuses, the verdict
 - the ship profile's fourteen headings, their `Label:` lines, and the schema number
 - the `### Ship` CLAUDE.md block `setup-skills` writes
 - the `setup-skills` templates, which land verbatim in consumer repos
 - each skill's `retired-terms.md` table (version, term, replacement or `None.`), which `update-skills`' plan reads
-- `ship`'s `metadata.composes` line: the set of skills a consumer must have installed, each at its pinned ref, for a run to pass preflight
+- `ship-run`'s `metadata.composes` line: the set of skills a consumer must have installed, each at its pinned ref, for a run to pass preflight
 
 ## Triage
 
@@ -193,6 +193,6 @@ PR cap: 3
 Sandbox merge: no
 Bootstrap: scripts/cloud-ship-bootstrap.sh
 
-`Bootstrap:` runs in any cloud sandbox, attended or unattended: `prepare` runs it after `tooling --install` at the start of every run there and of any `--unattended` run, local included, so an attended `/ship` from a cloud session gets the same tools a fire does. `PR cap:` is the fire's alone, read only by the unattended lane before it selects. `Sandbox merge:` is `yes` or `no`, `no` where the line is absent: `merge` reads it, and in a cloud sandbox (`CLAUDE_CODE_REMOTE=true`, attended or unattended) it refuses `cloud-sandbox` unless it says `yes`, so a cloud session posts the summary and a human merges. A local `--unattended` run is not a sandbox and never reaches `merge`.
+`Bootstrap:` runs in any cloud sandbox, attended or unattended: `prepare` runs it after `tooling --install` at the start of every run there and of any `--unattended` run, local included, so an attended `/ship-run` from a cloud session gets the same tools a fire does. `PR cap:` is the fire's alone, read only by the unattended lane before it selects. `Sandbox merge:` is `yes` or `no`, `no` where the line is absent: `merge` reads it, and in a cloud sandbox (`CLAUDE_CODE_REMOTE=true`, attended or unattended) it refuses `cloud-sandbox` unless it says `yes`, so a cloud session posts the summary and a human merges. A local `--unattended` run is not a sandbox and never reaches `merge`.
 
 The sandbox image lacks `gitleaks`, and its proxy refuses a release-asset download. Without this bootstrap every cloud run stops `local gate unavailable: secrets`. The script runs the harness profile's `Setup:` (`.claude/hooks/cloud-setup.sh`, idempotent) and then apt-installs a missing `gitleaks`, so it is safe to rerun. It is a no-op outside a cloud session, so a local `--unattended` run needs `gitleaks` on PATH already. The `SessionStart` command in `.claude/settings.json` runs it silently, then calls `cloud-setup.sh` again, a fast no-op, to print `harness cloud setup: ok`.

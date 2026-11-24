@@ -20,15 +20,15 @@ fleet=$tmp/fleet.json led=$tmp/ledger.json
 printf '%s\n' '{"machines":{"home":{"slots":5},"box":{"slots":5}},"active_repos":["Acme/Widgets"]}' > "$fleet"
 L() { bash "$s/ledger.sh" --ledger "$led" "$@"; }
 LC() { bash "$s/launch-check.sh" --fleet "$fleet" --ledger "$led" --own home --machine box --load 1 --free-gb 8 "$@"; }
-L add --repo acme/widgets --number 5 --thread t5 --worktree /wt/5 --branch b5 --area skills/ship >/dev/null
+L add --repo acme/widgets --number 5 --thread t5 --worktree /wt/5 --branch b5 --area skills/ship-run >/dev/null
 
 # --- launch-check: repo name and area path ---------------------------------------
-for spelling in "acme/widgets skills/ship" "ACME/Widgets skills/ship" "acme/widgets ./skills/ship/" "Acme/WIDGETS skills/ship//"; do
+for spelling in "acme/widgets skills/ship-run" "ACME/Widgets skills/ship-run" "acme/widgets ./skills/ship-run/" "Acme/WIDGETS skills/ship-run//"; do
   read -r repo area <<<"$spelling"
   check "launch-check: $spelling conflicts with the open ticket" '["acme/widgets#5"]' "$(LC --repo "$repo" --area "$area" | jq -c .repo.conflicts)"
 done
 check "launch-check: a mixed-case repo with an apart area is free" '[]' "$(LC --repo ACME/Widgets --area docs/ | jq -c .repo.conflicts)"
-check "launch-check: --key in another case leaves the ticket's own entry out" '[]' "$(LC --repo acme/widgets --key ACME/Widgets#5 --area skills/ship | jq -c .repo.conflicts)"
+check "launch-check: --key in another case leaves the ticket's own entry out" '[]' "$(LC --repo acme/widgets --key ACME/Widgets#5 --area skills/ship-run | jq -c .repo.conflicts)"
 
 # --- ledger: a key in another case names the same entry ----------------------------
 check "ledger get: a mixed-case key finds the entry" acme/widgets#5 "$(L get ACME/Widgets#5 | jq -r .key)"

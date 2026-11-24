@@ -26,8 +26,8 @@ GH
 chmod +x "$bin/gh"
 export PATH=$bin:$PATH
 export SHIP_OWNER=o SHIP_REPO=r SHIP_REPO_SLUG=o/r
-source skills/ship/scripts/_lib.sh
-source skills/ship/scripts/host/github.sh
+source skills/ship-run/scripts/_lib.sh
+source skills/ship-run/scripts/host/github.sh
 
 ev() { jq -cn --arg e "$1" --arg l "$2" --arg t "$3" '{event: $e, login: $l, created_at: $t}'; }
 timeline() { printf '%s\n' "$@" > "$FAKE/timeline"; }

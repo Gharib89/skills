@@ -10,8 +10,8 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-m=$PWD/skills/ship/scripts/isolate.sh
-c=$PWD/skills/ship/scripts/cleanup.sh
+m=$PWD/skills/ship-run/scripts/isolate.sh
+c=$PWD/skills/ship-run/scripts/cleanup.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 tmp=$(cd "$tmp" && pwd -P)

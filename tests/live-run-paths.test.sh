@@ -37,12 +37,12 @@ check "and start no claude run" "absent" "$([ -e "$LIVE_STUB/claude.log" ] && ec
 check "and record no cost" '[null,null]' "$(PATHS=head-moved,reviewer-outage DRIVE_KEEP='[.per_path[].cost_usd]' drive | head -n 1)"
 
 # Failing on purpose: a Ship whose mechanic has regressed turns the path red.
-mutant=$T/mutant; mkdir -p "$mutant/skills"; cp -r skills/ship "$mutant/skills/ship"
-sed -i '/\[ "\$head" = "\$gated" \] || ship_fail "head-moved/d' "$mutant/skills/ship/scripts/merge.sh"
+mutant=$T/mutant; mkdir -p "$mutant/skills"; cp -r skills/ship-run "$mutant/skills/ship-run"
+sed -i '/\[ "\$head" = "\$gated" \] || ship_fail "head-moved/d' "$mutant/skills/ship-run/scripts/merge.sh"
 check "a merge that no longer refuses a moved head fails head-moved" "true" \
   "$(SRC=$mutant PATHS=head-moved DRIVE_KEEP='.result == "fail" and any(.failed[]; startswith("head-moved: refusal: ")) and any(.failed[]; startswith("head-moved: merge: a merge call reached the host"))' drive | head -n 1)"
-rm -rf "$mutant"; mkdir -p "$mutant/skills"; cp -r skills/ship "$mutant/skills/ship"
-sed -i 's/{clean: (\$held == \[\])/{clean: true/' "$mutant/skills/ship/scripts/lib/run-file-clean-gate.sh"
+rm -rf "$mutant"; mkdir -p "$mutant/skills"; cp -r skills/ship-run "$mutant/skills/ship-run"
+sed -i 's/{clean: (\$held == \[\])/{clean: true/' "$mutant/skills/ship-run/scripts/lib/run-file-clean-gate.sh"
 check "a clean gate that no longer holds on a reviewer outage fails reviewer-outage" "true" \
   "$(SRC=$mutant PATHS=reviewer-outage DRIVE_KEEP='.result == "fail" and any(.failed[]; startswith("reviewer-outage: outage: both reviewers out exited 0"))' drive | head -n 1)"
 

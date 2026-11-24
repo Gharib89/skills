@@ -6,7 +6,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-base_fresh="$PWD/skills/ship/scripts/base-fresh.sh"
+base_fresh="$PWD/skills/ship-run/scripts/base-fresh.sh"
 
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT

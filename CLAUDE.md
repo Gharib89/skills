@@ -25,7 +25,7 @@ Single-context: `GLOSSARY.md` and `docs/adr/` at the repo root. See
 
 ### Ship
 
-`/ship` drives one issue to a merge-ready PR. This repo's ship profile:
+`/ship-run` drives one issue to a merge-ready PR. This repo's ship profile:
 `docs/agents/ship.md`. Without that file ship refuses: run `/setup-skills`.
 
 `skills-lock.json` is the skill inventory: one entry per installed skill, its
@@ -40,11 +40,11 @@ same upstream at the same ref. Adding a skill this repo writes touches the
 sites in the checklist under `## Adding a skill this repo writes` in
 `docs/contributing/standards/release.md`. Refresh at project scope, without
 `-g`; ship's refresh chains its preflight, so a profile the refreshed ship no
-longer reads is reported now, not on the next `/ship`:
+longer reads is reported now, not on the next `/ship-run`:
 
 ```sh
-npx skills@1.8.1 add . --skill ship --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --skill grill-with-artifact --skill drive-session --skill setup-project --skill explainer-video --skill retro-run --skill creative-video --skill super-agent --agent claude-code -y \
-  && .claude/skills/ship/scripts/preflight.sh none
+npx skills@1.8.1 add . --skill ship-run --skill cloud-ship --skill setup-skills --skill update-skills --skill setup-harness --skill grill-with-artifact --skill drive-session --skill setup-project --skill explainer-video --skill retro-run --skill creative-video --skill super-agent --agent claude-code -y \
+  && .claude/skills/ship-run/scripts/preflight.sh none
 ```
 
 **A change to `skills/<name>/` is not finished until the refresh line has run

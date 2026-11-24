@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
-src=$PWD/skills/ship/scripts
+src=$PWD/skills/ship-run/scripts
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 repo=$work/repo

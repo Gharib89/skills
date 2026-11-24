@@ -33,8 +33,8 @@ argv() { PATH=$work:$PATH bash -c "$1" >/dev/null 2>&1; cat "$ARGV_LOG"; }
 # --- GitHub ------------------------------------------------------------------
 (
   SHIP_OWNER=owner SHIP_REPO=repo
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/github.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/github.sh
 
   check "github body: the closing line goes above the first heading" \
     "$(printf 'Closes #7\n\n## Summary\n\nit\x27s "quoted" $HOME')" "$(host_pr_create_body "$body" 7 | jq -r .body)"
@@ -70,8 +70,8 @@ printf '%s\n' "$@" > "$ARGV_LOG"
 FAKE
 (
   SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/ado.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/ado.sh
 
   check "ado body: unchanged, the work item links the PR instead" \
     "$(cat "$body")" "$(host_pr_create_body "$body" 7 | jq -r .body)"

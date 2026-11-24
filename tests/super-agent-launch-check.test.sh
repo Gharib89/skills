@@ -80,29 +80,29 @@ check "and is named" "nowhere is not in the fleet file" "$(jq -r .error <<<"$out
 
 # --- the same repo runs beside itself only apart -----------------------------------
 rm -f "$led"
-add Gharib89/skills 1 box --area skills/ship; add Gharib89/other 2 box --area skills/ship
+add Gharib89/skills 1 box --area skills/ship-run; add Gharib89/other 2 box --area skills/ship-run
 R() { LC --machine home --load 1 --free-gb 8 --repo Gharib89/skills "$@"; }
 check "a ticket of another repo never conflicts, whatever its areas" '[]' \
-  "$(R --area skills/ship | jq -c '.repo.conflicts // []' | jq -c 'map(select(test("other")))')"
-out=$(R --area skills/ship/scripts); rc=$?
+  "$(R --area skills/ship-run | jq -c '.repo.conflicts // []' | jq -c 'map(select(test("other")))')"
+out=$(R --area skills/ship-run/scripts); rc=$?
 check_rc "an area under an open ticket's area is refused" 1 "$rc"
 check "and names the ticket in the way" '["Gharib89/skills#1"]' "$(jq -c .repo.conflicts <<<"$out")"
 check "the refusal is the repo's" '["repo"]' "$(jq -c .refused <<<"$out")"
 check "an area above it overlaps too" 1 "$(R --area skills >/dev/null; echo $?)"
-check "the same area overlaps" 1 "$(R --area skills/ship >/dev/null; echo $?)"
+check "the same area overlaps" 1 "$(R --area skills/ship-run >/dev/null; echo $?)"
 check "an apart area runs beside it" 0 "$(R --area skills/drive-session >/dev/null; echo $?)"
 check "a sibling sharing only a name prefix is apart" 0 "$(R --area skills/ship-extra >/dev/null; echo $?)"
-check "a trailing slash on either side does not hide an overlap" 1 "$(R --area skills/ship/scripts/ >/dev/null; echo $?)"
-check "nor does a leading ./" 1 "$(R --area ./skills/ship/scripts >/dev/null; echo $?)"
+check "a trailing slash on either side does not hide an overlap" 1 "$(R --area skills/ship-run/scripts/ >/dev/null; echo $?)"
+check "nor does a leading ./" 1 "$(R --area ./skills/ship-run/scripts >/dev/null; echo $?)"
 check "no area at all overlaps everything, since nothing says it is apart" 1 "$(R >/dev/null; echo $?)"
 add Gharib89/skills 3 box
 check "an open ticket with no areas blocks a same-repo launch" 1 "$(R --area skills/drive-session >/dev/null; echo $?)"
 rm -f "$led"
-add Gharib89/skills 1 box --area skills/ship
+add Gharib89/skills 1 box --area skills/ship-run
 check "a blocking edge to an open ticket refuses even apart" 1 "$(R --area docs --blocked-by 1 >/dev/null; echo $?)"
 check "an edge to a ticket not open here refuses nothing" 0 "$(R --area docs --blocked-by 9 >/dev/null; echo $?)"
 sa_stage "$led" Gharib89/skills#1 settled
-check "a settled ticket is out of the way" 0 "$(R --area skills/ship >/dev/null; echo $?)"
+check "a settled ticket is out of the way" 0 "$(R --area skills/ship-run >/dev/null; echo $?)"
 
 
 # --- the repo's ship cap: every open ticket of the repo, ship and triage, on any machine ---

@@ -9,7 +9,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-mech=$PWD/skills/ship/scripts/prepare.sh
+mech=$PWD/skills/ship-run/scripts/prepare.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo; export SHIP_FAKE=$work/fake
 mkdir -p "$repo/docs/agents" "$repo/scripts" "$SHIP_FAKE"

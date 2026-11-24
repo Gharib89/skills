@@ -10,9 +10,9 @@ source tests/lib.sh
 
 flat() { tr '\n' ' ' | tr -s ' '; }
 has() { grep -qiF -- "$2" <<<"$1" && echo yes || echo no; }
-loop=$(awk '/^## A window that closes with no round/{f=1; next} /^## /{f=0} f' skills/ship/reference/review-unconverged.md | flat)
-skill=$(flat < skills/ship/SKILL.md)
-round=$(awk '/^## The round/{f=1; next} /^## /{f=0} f' skills/ship/reference/review-loop.md | flat)
+loop=$(awk '/^## A window that closes with no round/{f=1; next} /^## /{f=0} f' skills/ship-run/reference/review-unconverged.md | flat)
+skill=$(flat < skills/ship-run/SKILL.md)
+round=$(awk '/^## The round/{f=1; next} /^## /{f=0} f' skills/ship-run/reference/review-loop.md | flat)
 
 check 'review-unconverged has the closed-window section' yes "$([ -n "$loop" ] && echo yes || echo no)"
 

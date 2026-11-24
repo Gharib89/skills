@@ -9,21 +9,21 @@ source tests/lib.sh
 
 fixture=$(mktemp -d); trap 'rm -rf "$fixture"' EXIT
 
-# <case>: a tree writing `ship` and `setup-skills`, with `tdd` vendored. Each
+# <case>: a tree writing `ship-run` and `setup-skills`, with `tdd` vendored. Each
 # file is the least the check and its two sub-checks read.
 tree() {
   local d="$fixture/$1" s; rm -rf "$d"
   mkdir -p "$d/.github/workflows" "$d/.release" "$d/.claude/skills/tdd" || return 1
   jq -n --arg h "$(printf 'f%.0s' {1..64})" '{version: 2, skills: {
-    ship: {source: ".", sourceType: "local", computedHash: $h},
+    "ship-run": {source: ".", sourceType: "local", computedHash: $h},
     "setup-skills": {source: ".", sourceType: "local", computedHash: $h},
     tdd: {source: "o/r", ref: "'"$(printf 'a%.0s' {1..40})"'", sourceType: "github", computedHash: $h}}}' > "$d/skills-lock.json"
-  mkdir -p "$d/skills/ship" "$d/skills/setup-skills"
-  printf -- '---\nname: ship\nmetadata:\n  profile-schema: 3\n---\n\n# ship\n' > "$d/skills/ship/SKILL.md"
+  mkdir -p "$d/skills/ship-run" "$d/skills/setup-skills"
+  printf -- '---\nname: ship-run\nmetadata:\n  profile-schema: 3\n---\n\n# ship-run\n' > "$d/skills/ship-run/SKILL.md"
   printf -- '---\nname: setup-skills\n---\n\n# setup-skills\n' > "$d/skills/setup-skills/SKILL.md"
   printf 'Schema: 3\n' > "$d/skills/setup-skills/ship-profile.md"
   printf '## Schema 3\n' > "$d/skills/setup-skills/profile-schema.md"
-  for s in ship setup-skills; do
+  for s in ship-run setup-skills; do
     cp -R "$d/skills/$s" "$d/.claude/skills/$s"
     printf 'commit_message = "chore(release): %s v{version}"\n' "$s" > "$d/.release/$s.toml"
     printf '.claude/skills/%s/** linguist-generated\n' "$s" >> "$d/.gitattributes"
@@ -33,10 +33,10 @@ jobs:
   release:
     if: >-
       ${{ !(github.event.head_commit.author.name == 'github-actions[bot]'
-      && (startsWith(github.event.head_commit.message, 'chore(release): ship v')
+      && (startsWith(github.event.head_commit.message, 'chore(release): ship-run v')
       || startsWith(github.event.head_commit.message, 'chore(release): setup-skills v'))) }}
     env:
-      SKILLS: ship setup-skills
+      SKILLS: ship-run setup-skills
 EOF
   printf '%s' "$d"
 }
@@ -51,22 +51,22 @@ d=$(tree nocopy); rm -rf "$d/.claude/skills/setup-skills"
 check "a source-. skill with no derived copy fails" \
   "missing derived copy: .claude/skills/setup-skills" "$(out_of "$d")"
 
-d=$(tree list); sed -i.bak 's/SKILLS: ship setup-skills/SKILLS: ship/' "$d/$wf"
+d=$(tree list); sed -i.bak 's/SKILLS: ship-run setup-skills/SKILLS: ship-run/' "$d/$wf"
 check "a workflow SKILLS list missing a skill fails" \
-  "$wf SKILLS names ship, the lock's set is setup-skills ship" "$(out_of "$d")"
+  "$wf SKILLS names ship-run, the lock's set is setup-skills ship-run" "$(out_of "$d")"
 
-d=$(tree cond); sed -i.bak "/setup-skills v'/d; s/ship v')\$/ship v'))) }}/" "$d/$wf"
+d=$(tree cond); sed -i.bak "/setup-skills v'/d; s/ship-run v')\$/ship-run v'))) }}/" "$d/$wf"
 check "a release condition missing a skill fails" \
-  "$wf release-commit conditions name ship, the lock's set is setup-skills ship" "$(out_of "$d")"
+  "$wf release-commit conditions name ship-run, the lock's set is setup-skills ship-run" "$(out_of "$d")"
 
 # A subject quoted in a comment or a SKILLS line under a comment marker is not
 # the condition or the list the release job reads.
-d=$(tree decoy); sed -i.bak "/setup-skills v'/d; s/ship v')\$/ship v'))) }}/" "$d/$wf"
-printf "      # 'chore(release): setup-skills v'\n      # SKILLS: ship setup-skills\n" >> "$d/$wf"
-sed -i.bak 's/SKILLS: ship setup-skills$/SKILLS: ship/' "$d/$wf"
+d=$(tree decoy); sed -i.bak "/setup-skills v'/d; s/ship-run v')\$/ship-run v'))) }}/" "$d/$wf"
+printf "      # 'chore(release): setup-skills v'\n      # SKILLS: ship-run setup-skills\n" >> "$d/$wf"
+sed -i.bak 's/SKILLS: ship-run setup-skills$/SKILLS: ship-run/' "$d/$wf"
 check "a decoy subject or list in a comment does not satisfy the check" \
-  "$wf SKILLS names ship, the lock's set is setup-skills ship
-$wf release-commit conditions name ship, the lock's set is setup-skills ship" "$(out_of "$d")"
+  "$wf SKILLS names ship-run, the lock's set is setup-skills ship-run
+$wf release-commit conditions name ship-run, the lock's set is setup-skills ship-run" "$(out_of "$d")"
 
 d=$(tree norelease); rm "$d/.release/setup-skills.toml"
 check "a source-. skill with no release configuration fails" \
@@ -134,7 +134,7 @@ check "a glob that also marks a vendored skill fails" \
 d=$(tree noattributes); rm "$d/.gitattributes"
 check "no .gitattributes fails for every source-. skill" \
   "missing .gitattributes line: .claude/skills/setup-skills/** linguist-generated
-missing .gitattributes line: .claude/skills/ship/** linguist-generated" "$(out_of "$d")"
+missing .gitattributes line: .claude/skills/ship-run/** linguist-generated" "$(out_of "$d")"
 
 # A workflow the check cannot read is tooling, not a list that disagrees. Root
 # reads a mode-000 file, so the case only runs where the mode bits bind.

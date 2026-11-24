@@ -1,7 +1,7 @@
 ### Ship run
 
 **Ship**:
-The skill that drives one tracker issue from nothing to a merge-ready PR in a single unattended run, stopping at the merge gate.
+The skill that drives one tracker issue from nothing to a merge-ready PR in a single unattended run, stopping at the merge gate. Its skill name is `ship-run`, invoked as `/ship-run <issue>`, because Claude Code's built-in `/ship` command shadows a skill named `ship`; Ship stays the concept's name in prose.
 _Avoid_: pipeline, deliver, autopilot
 
 **Local gate**:
@@ -81,7 +81,7 @@ The collapsed form of a Ship run for a change that is narrow, locally provable, 
 _Avoid_: fast path, quick mode, hotfix
 
 **Inline lane**:
-The small lane's tier entered only by `/ship <issue> --inline`, attended and for a tracked issue: the same floor, a 20-line cap counted on the diff, no reviewer round unless `--review` buys one, and a merge on a clean gate, the invocation being the human's approval for that one PR. Revocable one way, inline then small then full, and the approval goes with the lane.
+The small lane's tier entered only by `/ship-run <issue> --inline`, attended and for a tracked issue: the same floor, a 20-line cap counted on the diff, no reviewer round unless `--review` buys one, and a merge on a clean gate, the invocation being the human's approval for that one PR. Revocable one way, inline then small then full, and the approval goes with the lane.
 _Avoid_: inline fix (the hand-made PR it replaces), one-liner lane
 
 **Hand-off**:

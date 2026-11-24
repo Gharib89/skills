@@ -87,7 +87,7 @@ The owner's "queue" is the waiting list: "add N to the queue" is `ledger.sh
 ## Claims and intake
 
 A **claim** keeps two super agents off one ticket: a comment, never an
-assignment (`/ship` assigns). `launch.sh` claims before every launch and
+assignment (`/ship-run` assigns). `launch.sh` claims before every launch and
 answers `claimed` or `stale` when it does not launch; the owner's "track
 <repo>" and "stop tracking <repo>" run `track.sh`; the **daily offer** is
 `intake.sh`, run at your first turn of each calendar day and whenever the owner
@@ -115,9 +115,9 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    file>` one per ticket beside the ledger, adding the flags the ticket needs
    (Routing, Placement), `--note <text>` for a line only this ticket's thread
    should read, and `--raise <n>` on a raised launch. It reads the labels
-   (`ready-for-agent` takes `/ship <n>`, `needs-triage` takes `/triage <n>`),
-   claims, routes, places and writes the launch message, records it at stage
-   `launching`, and prints `launch:
+   (`ready-for-agent` takes `/ship-run <n>`, `needs-triage` takes `/triage
+   <n>`), claims, routes, places and writes the launch message, records it at
+   stage `launching`, and prints `launch:
    true` with `args`, the whole `t3_thread_launch` argument object, or `launch:
    false` with a `reason`: `claimed`, `stale`, `waiting`, `need_reading`, `ask`,
    `no_owner_skill`, `no_instance` or `stale_ship`. Act on the reason as Claims,

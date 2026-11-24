@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# skills/ship/scripts/revert-red.sh: does a test go red when the fix under it is
+# skills/ship-run/scripts/revert-red.sh: does a test go red when the fix under it is
 # reverted? The seam is the mechanic's CLI: `<test> <path>...` in, an exit code
 # and one JSON verdict out. Driven end to end against a fixture repo with a base,
 # a fix and a test commit, whose `origin/HEAD` is set by hand so no remote is
@@ -9,7 +9,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-script=$PWD/skills/ship/scripts/revert-red.sh
+script=$PWD/skills/ship-run/scripts/revert-red.sh
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 # The script's temp worktree lands here, so a leftover is visible.
@@ -163,8 +163,8 @@ check "and no verdict is on stdout" \
   "true" "$(out_of tests/redhead.test.sh lib.sh | jq -r 'has("error") and (has("red") | not)')"
 
 # The stubs are the mechanic's own: copied to a directory with no tests/ beside
-# it, which is what a consumer's skills/ship/scripts is, it still stubs the host.
-standalone=$T/consumer/skills/ship/scripts
+# it, which is what a consumer's skills/ship-run/scripts is, it still stubs the host.
+standalone=$T/consumer/skills/ship-run/scripts
 mkdir -p "$standalone"
 cp -r "$(dirname "$script")/revert-red.sh" "$(dirname "$script")/_lib.sh" "$(dirname "$script")/lib" "$standalone/"
 check_rc "with no tests/host-stub.sh anywhere near it, a red test still exits 0" \

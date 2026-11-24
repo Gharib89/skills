@@ -4,7 +4,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 title='repo has no test harness, so mechanic-level unit tests have nowhere to live'
 dup='{"number":10,"title":"repo has no test harness for mechanic unit tests","url":"u10"}'

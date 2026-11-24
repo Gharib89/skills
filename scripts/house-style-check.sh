@@ -73,7 +73,7 @@ fi
 # hard-wrapped file joins this list. Exempt are changelogs, which the release
 # run writes, and the lines no reflow shortens: frontmatter, fences, tables, and
 # a line holding only a link, a code span or a link reference definition.
-wrapped=('skills/ship/*.md' 'skills/cloud-ship/*.md' 'skills/update-skills/*.md'
+wrapped=('skills/ship-run/*.md' 'skills/cloud-ship/*.md' 'skills/update-skills/*.md'
   'skills/grill-with-artifact/*.md' 'skills/drive-session/*.md'
   'skills/setup-project/*.md' 'skills/explainer-video/*.md' 'skills/retro-run/*.md'
   'skills/creative-video/*.md' 'skills/super-agent/*.md' docs/contributing/coding-standards.md

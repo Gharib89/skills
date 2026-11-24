@@ -2,7 +2,7 @@
 # Claim a ticket so two super agents on different machines never take the same
 # one: post a claim comment naming the machine and the claiming thread. The
 # claim is that comment only: the script never assigns the ticket, because
-# Ship's preflight stops on any assignee (`already claimed`) and `/ship`
+# Ship's preflight stops on any assignee (`already claimed`) and `/ship-run`
 # assigns through its own claim. A claim by another machine is reported with its age
 # and never taken over: a claim older than --stale-after is `stale`, which the
 # caller offers back to the owner. The claim is a comment whose first line is

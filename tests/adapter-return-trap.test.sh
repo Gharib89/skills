@@ -20,8 +20,8 @@ trap 'rm -rf "$tmp"' EXIT
 out=$(
   set -uo pipefail
   SHIP_OWNER=owner SHIP_REPO=repo
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/github.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/github.sh
   host_pr_comment() { printf '%s' "$2" > "$tmp/gh-file"; }
   wrapper() { host_issue_comment 1 "a comment"; }
   wrapper
@@ -35,8 +35,8 @@ check "github: the temp file is gone" "gone" "$([ -n "$(cat "$tmp/gh-file" 2>/de
 out=$(
   set -uo pipefail
   SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/ado.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/ado.sh
   invoke() { echo '{"status":"fixed"}'; }
   wrapper() { host_pr_resolve_thread 7 3 >/dev/null; }
   wrapper

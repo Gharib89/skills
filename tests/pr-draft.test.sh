@@ -7,7 +7,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 gh_pull() { # <draft>
   jq -n --argjson d "$1" '{number: 7, html_url: "u", title: "t", body: "", draft: $d,
@@ -22,7 +22,7 @@ ado_pull() { # <isDraft>
 
 (
   SHIP_OWNER=owner SHIP_REPO=repo
-  source skills/ship/scripts/host/github.sh
+  source skills/ship-run/scripts/host/github.sh
   api() { jq "${@: -1}" <<<"$pull"; } # the call's own --jq over the fixture
   pull=$(gh_pull true);  check "GitHub: a draft PR reads draft true" true "$(host_pr_get 7 | jq .draft)"
   pull=$(gh_pull false); check "GitHub: a ready PR reads draft false" false "$(host_pr_get 7 | jq .draft)"
@@ -31,7 +31,7 @@ ado_pull() { # <isDraft>
 
 (
   SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
-  source skills/ship/scripts/host/ado.sh
+  source skills/ship-run/scripts/host/ado.sh
   az() { printf '%s\n' "$pull"; }
   pull=$(ado_pull true);  check "Azure DevOps: a draft PR reads draft true" true "$(host_pr_get 7 | jq .draft)"
   pull=$(ado_pull false); check "Azure DevOps: a ready PR reads draft false" false "$(host_pr_get 7 | jq .draft)"

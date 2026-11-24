@@ -25,8 +25,8 @@ lock_file() {
 # <case> <ship> <setup-skills> <lock>: a root holding the three files.
 tree() {
   local d="$fixture/$1"; rm -rf "$d"
-  mkdir -p "$d/skills/ship" "$d/skills/setup-skills" || return 1
-  printf '%s\n' "$2" > "$d/skills/ship/SKILL.md"
+  mkdir -p "$d/skills/ship-run" "$d/skills/setup-skills" || return 1
+  printf '%s\n' "$2" > "$d/skills/ship-run/SKILL.md"
   printf '%s\n' "$3" > "$d/skills/setup-skills/SKILL.md"
   printf '%s\n' "$4" > "$d/skills-lock.json"
   printf '%s' "$d"
@@ -46,14 +46,14 @@ check_rc "every pin matches its lock ref" 0 "$(rc_of "$(tree agree "$ship" "$set
 d=$(tree moved "$ship" "$setup" "$(lock_file tdd o/r "$B" find-docs u/c "$B" triage o/r "$A")")
 check_rc "a pin that differs from the lock ref fails" 1 "$(rc_of "$d")"
 check "and names the skill, the pin and the lock's ref" \
-  "pin drift: tdd is pinned at o/r#$A in skills/ship/SKILL.md, the lock installed o/r#$B" \
+  "pin drift: tdd is pinned at o/r#$A in skills/ship-run/SKILL.md, the lock installed o/r#$B" \
   "$(out_of "$d")"
 
 # A lock entry the CLI wrote without `#<sha>` installed upstream HEAD, which no
 # pin names.
 d=$(tree unpinned "$ship" "$setup" "$(lock_file tdd o/r "" find-docs u/c "$B" triage o/r "$A")")
 check "a lock entry with no ref is drift" \
-  "pin drift: tdd is pinned at o/r#$A in skills/ship/SKILL.md, the lock installed o/r#none" \
+  "pin drift: tdd is pinned at o/r#$A in skills/ship-run/SKILL.md, the lock installed o/r#none" \
   "$(out_of "$d")"
 
 d=$(tree absent "$ship" "$setup" "$(lock_file tdd o/r "$A" find-docs u/c "$B")")
@@ -63,12 +63,12 @@ check "a composed skill absent from the lock is drift" \
 
 d=$(tree source "$ship" "$setup" "$(lock_file tdd fork/r "$A" find-docs u/c "$B" triage o/r "$A")")
 check "the same sha from another repo is drift" \
-  "pin drift: tdd is pinned at o/r#$A in skills/ship/SKILL.md, the lock installed fork/r#$A" \
+  "pin drift: tdd is pinned at o/r#$A in skills/ship-run/SKILL.md, the lock installed fork/r#$A" \
   "$(out_of "$d")"
 
 # An install line a skill prints is a pin too: setup-skills hands these to a
 # human, so one left behind when the pins move installs the old commit.
-body=$(printf '%s\n\n```sh\nnpx skills add o/r#%s --skill tdd --skill triage --agent claude-code -y\nnpx skills add Gharib89/skills --skill ship --agent claude-code -y\n```\n' "$setup" "$B")
+body=$(printf '%s\n\n```sh\nnpx skills add o/r#%s --skill tdd --skill triage --agent claude-code -y\nnpx skills add Gharib89/skills --skill ship-run --agent claude-code -y\n```\n' "$setup" "$B")
 d=$(tree printed "$ship" "$body" "$lock")
 check "a printed install line is checked per --skill, unpinned lines skipped" \
   "pin drift: tdd is pinned at o/r#$B in skills/setup-skills/SKILL.md, the lock installed o/r#$A
@@ -86,7 +86,7 @@ check "a printed line naming the CLI version is checked too" \
 # form, and this check must not read the source as the skill.
 d=$(tree nopin "$(skill_file "o/r:tdd u/c#$B:find-docs")" "$setup" "$lock")
 check "an unpinned composes entry is drift, named by its skill" \
-  "pin drift: tdd is pinned at o/r#none in skills/ship/SKILL.md, the lock installed o/r#$A" \
+  "pin drift: tdd is pinned at o/r#none in skills/ship-run/SKILL.md, the lock installed o/r#$A" \
   "$(out_of "$d")"
 
 # A composes entry is a pin by definition: one with no sha is drift even where
@@ -94,7 +94,7 @@ check "an unpinned composes entry is drift, named by its skill" \
 d=$(tree nopin-nolock "$(skill_file "o/r:tdd u/c#$B:find-docs")" "$setup" \
   "$(lock_file tdd o/r "" find-docs u/c "$B" triage o/r "$A")")
 check "an unpinned composes entry is drift against an unpinned lock" \
-  "pin drift: tdd is pinned at o/r#none in skills/ship/SKILL.md, the lock installed o/r#none" \
+  "pin drift: tdd is pinned at o/r#none in skills/ship-run/SKILL.md, the lock installed o/r#none" \
   "$(out_of "$d")"
 
 # A printed line that lost its sha installs upstream HEAD for a skill the lock
@@ -112,7 +112,7 @@ d=$(tree span "$ship" "$body" "$lock")
 check "an unpinned install line in a code span for a pinned skill is drift" \
   "pin drift: tdd is pinned at o/r#none in skills/setup-skills/SKILL.md, the lock installed o/r#$A" \
   "$(out_of "$d")"
-body=$(printf '%s\n\nPrint `npx skills add o/r#%s --skill tdd -y` or `npx skills add Gharib89/skills --skill ship -y`.\n' "$setup" "$A")
+body=$(printf '%s\n\nPrint `npx skills add o/r#%s --skill tdd -y` or `npx skills add Gharib89/skills --skill ship-run -y`.\n' "$setup" "$A")
 check_rc "a pinned install line in a code span passes, beside an unpinned one for an unpinned skill" 0 \
   "$(rc_of "$(tree span-ok "$ship" "$body" "$lock")")"
 

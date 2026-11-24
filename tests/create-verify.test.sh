@@ -6,8 +6,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 # The adapter reads these at source time; no call in this file reaches a host.
 SHIP_OWNER=owner SHIP_REPO=repo
-source skills/ship/scripts/_lib.sh
-source skills/ship/scripts/host/github.sh
+source skills/ship-run/scripts/_lib.sh
+source skills/ship-run/scripts/host/github.sh
 
 # The helper runs each stub in a command substitution, so the call trace lives
 # in a file rather than a variable a subshell would drop. Asserting the order,

@@ -63,10 +63,10 @@ stub_head_moved() { # <attempt>
     && git -C "$repo" push -q -f origin "$a:refs/heads/fix/x" || unavailable "cannot build the head-moved stub"
   pr() { jq -n --arg s "$1" --arg h "$2" '{number: 7, title: "fix: x", head_sha: $h, head_ref: "fix/x", base_ref: "main", state: $s}' \
     > "$fake/host_pr_get.$3.json"; }
-  merge() { (cd "$repo" && XDG_STATE_HOME=$w/state SHIP_MERGE_CHECKS_GRACE=0 SHIP_FAKE=$fake SHIP_HOST_ADAPTER=$here/../tests/host-fake.sh bash "$src/skills/ship/scripts/merge.sh" 7 none "$a" --run stub 2>/dev/null); }
+  merge() { (cd "$repo" && XDG_STATE_HOME=$w/state SHIP_MERGE_CHECKS_GRACE=0 SHIP_FAKE=$fake SHIP_HOST_ADAPTER=$here/../tests/host-fake.sh bash "$src/skills/ship-run/scripts/merge.sh" 7 none "$a" --run stub 2>/dev/null); }
   # The gated head carries its admission record, so only the head check can refuse the moved one.
-  (cd "$repo" && XDG_STATE_HOME=$w/state bash "$src/skills/ship/scripts/run-file.sh" init stub >/dev/null 2>&1 \
-    && XDG_STATE_HOME=$w/state bash "$src/skills/ship/scripts/run-file.sh" gate admit human --head "$a" --issue stub >/dev/null 2>&1) \
+  (cd "$repo" && XDG_STATE_HOME=$w/state bash "$src/skills/ship-run/scripts/run-file.sh" init stub >/dev/null 2>&1 \
+    && XDG_STATE_HOME=$w/state bash "$src/skills/ship-run/scripts/run-file.sh" gate admit human --head "$a" --issue stub >/dev/null 2>&1) \
     || echo "control: cannot record the admission" >> "$stub_failed"
   # The host now reports a head past the one the merge gate read.
   pr open "$c" 1
@@ -100,7 +100,7 @@ stub_reviewer_outage() { # <attempt>
   gate() { # <fallback lines...>: the primary was not reviewed
     printf '## Local gate\n- 10:00 %s pass {"tests":"pass","secrets":"pass"}\n## Review evidence\nStop: primary: not reviewed: outage\n' "$head" > "$run"
     printf '%s\n' "$@" >> "$run"
-    (cd "$repo" && bash "$src/skills/ship/scripts/run-file.sh" gate clean "$w/ci.json" --head "$head" --file "$run" 2>/dev/null)
+    (cd "$repo" && bash "$src/skills/ship-run/scripts/run-file.sh" gate clean "$w/ci.json" --head "$head" --file "$run" 2>/dev/null)
   }
   out=$(gate 'Stop: fallback: not reviewed: outage'); rc=$?
   [ "$rc" -eq 1 ] || echo "outage: both reviewers out exited $rc, want 1 (held)" >> "$stub_failed"

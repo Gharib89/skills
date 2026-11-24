@@ -1,7 +1,7 @@
 # The daily upstream-drift check: update-skills' heads and plan, run with no
 # model, file the source repo's drift issue or rewrite its `## Drift` table
 # when an upstream skill moved, and mention the owner once per table it
-# announces. A day with nothing new writes nothing. The owner then runs /ship on the issue,
+# announces. A day with nothing new writes nothing. The owner then runs /ship-run on the issue,
 # which moves the pins by update-skills' "In a Ship run".
 name: upstream-drift
 
@@ -34,7 +34,7 @@ jobs:
       # The issue's labels are only ever set when it is filed: a
       # `ready-for-human` on it is the owner's, after a run held a pin back.
       # Its Kind is the title type update-skills gives the run that ships it:
-      # `enhancement` where a skill ship composes drifted (`feat(ship)`),
+      # `enhancement` where a skill ship composes drifted (`feat(ship-run)`),
       # `chore` where only `others` rows moved (`chore(skills)`).
       # A bot-filed issue alone reaches no one's notifications; the mention
       # does. It posts with gh: comment-issue's create-then-verify reads
@@ -46,7 +46,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          U=skills/update-skills/scripts S=skills/ship/scripts t=$RUNNER_TEMP
+          U=skills/update-skills/scripts S=skills/ship-run/scripts t=$RUNNER_TEMP
           title='Upstream drift: composed skills'
           rc=0
           "$U/heads.sh" . > "$t/heads.json" || rc=$?
@@ -94,6 +94,6 @@ jobs:
             echo "#$n already lists and announces this drift: nothing written." >> "$GITHUB_STEP_SUMMARY"; exit 0
           fi
           # shellcheck disable=SC2016  # the backticks are Markdown code spans
-          printf '@%s upstream drift changed: the `## Drift` table above lists what moved. `/ship %s` moves the pins.\n%s\n' \
+          printf '@%s upstream drift changed: the `## Drift` table above lists what moved. `/ship-run %s` moves the pins.\n%s\n' \
             "$OWNER" "$n" "$mark" > "$t/note.md"
           gh issue comment "$n" --repo "$REPO" --body-file "$t/note.md"

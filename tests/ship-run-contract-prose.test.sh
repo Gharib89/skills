@@ -11,7 +11,7 @@ source tests/lib.sh
 
 flat() { tr '\n' ' ' | tr -s ' '; }
 has() { grep -qF -- "$2" <<<"$1" && echo yes || echo no; }
-skill=$(flat < skills/ship/SKILL.md)
+skill=$(flat < skills/ship-run/SKILL.md)
 wl=$(sed -n "s/^sa_waiting_line='\(.*\)'\$/\1/p" skills/super-agent/scripts/_lib.sh)
 check "the watcher's waiting line was read from its source" "Waiting on my own background work." "$wl"
 

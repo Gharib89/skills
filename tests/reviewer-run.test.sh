@@ -209,7 +209,7 @@ check "and it outranks a newer concluded run" 'true since waiting' \
 reset
 run_row in_progress '' > "$SHIP_FAKE/host_workflow_runs.1.json"
 printf '%s\n' "$landed" > "$SHIP_FAKE/host_pr_reviews.1.json"
-real=$PWD/skills/ship/scripts/poll-pr.sh
+real=$PWD/skills/ship-run/scripts/poll-pr.sh
 out=$( cd "$repo" && SHIP_CALL_CAP=3 bash "$real" 7 --reviewer claude \
   --since 2026-09-17T11:58:00Z --timeout 0 --interval 1 ); rc=$?
 check "a landed round past the request's ceiling is not held for its run" '0 since in_progress null' \
@@ -341,8 +341,8 @@ check "and no count is read for it" 0 "$(calls run_denials)"
 # every read the host lacks: non-zero, silent.
 (
   SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/ado.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/ado.sh
   out=$(host_workflow_runs review.yml 2026-09-17T11:58:00Z 2>&1); rc=$?
   check_rc "the ADO adapter answers the new read non-zero" 1 "$rc"
   check "the ADO adapter says nothing" "" "$out"

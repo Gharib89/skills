@@ -158,11 +158,11 @@ LR add --repo Gharib89/skills --number 10 --thread t-10 --worktree /wt/10 --bran
 LR rethread Gharib89/skills#10 --thread t-11 --worktree /wt/11 --branch b-11 >/dev/null
 check "rethread without --kind or --area keeps both" 'triage ["docs"]' \
   "$(LR get Gharib89/skills#10 | jq -r '"\(.kind) \(.areas | tojson)"')"
-LR rethread Gharib89/skills#10 --thread t-12 --worktree /wt/12 --branch b-12 --kind ship --area skills/ship --area tests >/dev/null
-check "rethread with --kind and repeated --area replaces both" 'ship ["skills/ship","tests"]' \
+LR rethread Gharib89/skills#10 --thread t-12 --worktree /wt/12 --branch b-12 --kind ship --area skills/ship-run --area tests >/dev/null
+check "rethread with --kind and repeated --area replaces both" 'ship ["skills/ship-run","tests"]' \
   "$(LR get Gharib89/skills#10 | jq -r '"\(.kind) \(.areas | tojson)"')"
 LR rethread Gharib89/skills#10 --thread t-13 --worktree /wt/13 --branch b-13 --kind triage >/dev/null
-check "--kind alone leaves the areas" '["skills/ship","tests"]' "$(LR get Gharib89/skills#10 | jq -c .areas)"
+check "--kind alone leaves the areas" '["skills/ship-run","tests"]' "$(LR get Gharib89/skills#10 | jq -c .areas)"
 out=$(LR rethread Gharib89/skills#10 --thread t-13 --worktree /wt/13 --branch b-13 --kind bogus 2>/dev/null); rc=$?
 check_rc "rethread with a kind outside ship and triage exits 2" 2 "$rc"
 
@@ -183,8 +183,8 @@ done
 
 # --- areas: the paths a ticket's work touches, which placement reads ------------------
 rm -f "$led"
-out=$(L add --repo Gharib89/skills --number 20 --thread t-20 --worktree /wt/20 --branch b-20 --area skills/ship --area docs)
-check "add takes each --area, in order" '["skills/ship","docs"]' "$(jq -c .entry.areas <<<"$out")"
+out=$(L add --repo Gharib89/skills --number 20 --thread t-20 --worktree /wt/20 --branch b-20 --area skills/ship-run --area docs)
+check "add takes each --area, in order" '["skills/ship-run","docs"]' "$(jq -c .entry.areas <<<"$out")"
 check "an entry added with none holds an empty list" '[]' "$(add 21 t-21 | jq -c .entry.areas)"
 
 # --- waiting: a ticket nothing fits holds a row, never a thread --------------------------

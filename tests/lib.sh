@@ -41,7 +41,7 @@ finish() { exit "$_failed"; }
 # request in the past, so a case that holds a window runs a copy of ship's
 # scripts whose ceiling is the request's age plus the seconds it allows.
 ceiling_copy() { # <dir> <since> <seconds past the call>
-  cp -R skills/ship/scripts "$1"
+  cp -R skills/ship-run/scripts "$1"
   sed -i.bak "s/^ceiling=1800\$/ceiling=\$((\$(date +%s) - $(jq -rn --arg s "$2" '$s | fromdateiso8601') + $3))/" \
     "$1/poll-pr.sh"
 }

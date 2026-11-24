@@ -14,8 +14,8 @@ source tests/lib.sh
 source tests/gh-fake.sh
 # The adapter reads these at source time; no call in this file reaches a host.
 SHIP_OWNER=owner SHIP_REPO=repo
-source skills/ship/scripts/_lib.sh
-source skills/ship/scripts/host/github.sh
+source skills/ship-run/scripts/_lib.sh
+source skills/ship-run/scripts/host/github.sh
 
 # The wrapper waits between attempts. A no-op shadows the wait so the file runs
 # in no time, and records what it was asked for, because the growing backoff is

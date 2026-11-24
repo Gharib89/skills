@@ -43,13 +43,13 @@ lock() { jq '{version: 1, skills: .}' <<<"$2" > "$1/skills-lock.json"; }
 # triage, and one other skill at a recorded ref.
 repo=$tmp/repo
 mkdir -p "$repo" && git -C "$repo" init -q && git -C "$repo" config user.email t@t && git -C "$repo" config user.name t
-skill "$repo" ship 1.0.0 "o/r#$A:tdd o/r#$A:code-review"
+skill "$repo" ship-run 1.0.0 "o/r#$A:tdd o/r#$A:code-review"
 skill "$repo" setup-skills 2.0.0 "o/r#$A:triage"
 mkdir -p "$repo/.claude/skills/setup-skills/reviewers"
 for f in pull_request_template.md local-gate.sh coding-standards.md dimension-labels.md issue-tracker-ado.md ship-block.md reviewers/github-claude-review.md; do
   echo "old $f" > "$repo/.claude/skills/setup-skills/$f"
 done
-lock "$repo" '{"ship": {"source": "Gharib89/skills"}, "setup-skills": {"source": "gharib89/skills"},
+lock "$repo" '{"ship-run": {"source": "Gharib89/skills"}, "setup-skills": {"source": "gharib89/skills"},
   "tdd": {"source": "o/r", "ref": "'$A'"}, "code-review": {"source": "o/r"}, "triage": {"source": "o/r", "ref": "'$A'"},
   "grilling": {"source": "o/r", "ref": "'$A'"}, "research": {"source": "o/r", "ref": "'$A'"}}'
 git -C "$repo" add -A && git -C "$repo" commit -qm old
@@ -59,12 +59,12 @@ git -C "$repo" add -A && git -C "$repo" commit -qm old
 # tdd, at a pin ship's first entry overrides, and grilling unpinned, which is
 # no composes entry. The installs have begun, so the working-tree lock already
 # records tdd at B and grilling at D: the old refs come from the old tree.
-skill "$repo" ship 1.1.0 "o/r#$B:tdd o/r#$B:code-review"
+skill "$repo" ship-run 1.1.0 "o/r#$B:tdd o/r#$B:code-review"
 skill "$repo" setup-skills 2.0.1 "o/r#$A:triage o/r#$C:tdd o/r:grilling"
 echo "new" > "$repo/.claude/skills/setup-skills/pull_request_template.md"
 # ship's retired terms: one row below the refresh's range, one on each
 # boundary, one inside it and one above it.
-cat > "$repo/.claude/skills/ship/retired-terms.md" <<'EOF'
+cat > "$repo/.claude/skills/ship-run/retired-terms.md" <<'EOF'
 # Retired terms
 
 | Version | Term | Replacement |
@@ -85,7 +85,7 @@ check_rc "a plan exits 0" 0 "$rc"
 check "a consumer checkout is consumer mode" consumer "$(jq -r .mode <<<"$out")"
 
 check "each source-repo skill carries its old and new version and its changelog" \
-  '[{"skill":"setup-skills","old_version":"2.0.0","new_version":"2.0.1","changelog":".claude/skills/setup-skills/CHANGELOG.md"},{"skill":"ship","old_version":"1.0.0","new_version":"1.1.0","changelog":".claude/skills/ship/CHANGELOG.md"}]' \
+  '[{"skill":"setup-skills","old_version":"2.0.0","new_version":"2.0.1","changelog":".claude/skills/setup-skills/CHANGELOG.md"},{"skill":"ship-run","old_version":"1.0.0","new_version":"1.1.0","changelog":".claude/skills/ship-run/CHANGELOG.md"}]' \
   "$(jq -c .source_skills <<<"$out")"
 
 check "every composed skill refreshes at its first composes pin, from the old tree's lock ref; an unpinned entry is none" \
@@ -104,7 +104,7 @@ check "an other skill whose head differs from its old ref is offered at the head
 # source repo and the composed set (step 4 re-installs those), is re-added at
 # its own lock ref, so the refresh moves no version; one with no ref has no ref
 # to re-add at and is left to `others`.
-jq '.version = 2 | .skills |= with_entries(.value.computedHash = (if .key == "ship" or .key == "triage" or .key == "research" or .key == "code-review" then "" else "'"$(printf 'e%.0s' {1..64})"'" end))' \
+jq '.version = 2 | .skills |= with_entries(.value.computedHash = (if .key == "ship-run" or .key == "triage" or .key == "research" or .key == "code-review" then "" else "'"$(printf 'e%.0s' {1..64})"'" end))' \
   "$repo/skills-lock.json" > "$tmp/l" && cp "$repo/skills-lock.json" "$tmp/l.keep" && mv "$tmp/l" "$repo/skills-lock.json"
 check "a blank-hash entry outside the source repo and the composed set is re-added at its lock ref" \
   '[{"skill":"research","source":"o/r","ref":"'$A'","install":"npx skills@1.8.1 add o/r#'$A' --skill research --agent claude-code -y </dev/null"}]' \
@@ -116,7 +116,7 @@ check "a changed template file names its setup-skills section; a changed SKILL.m
   '[{"section":"pr-template","template":"pull_request_template.md"}]' "$(jq -c .sections <<<"$out")"
 
 check "a retired term is planned when its version is above the old version and at or below the new one" \
-  '[{"skill":"ship","version":"1.0.10","term":"inside","replacement":"inner words"},{"skill":"ship","version":"1.1.0","term":"new-boundary","replacement":null}]' \
+  '[{"skill":"ship-run","version":"1.0.10","term":"inside","replacement":"inner words"},{"skill":"ship-run","version":"1.1.0","term":"new-boundary","replacement":null}]' \
   "$(jq -c .retired <<<"$out")"
 
 # An added file under reviewers/ is a change to that section's template, though
@@ -174,23 +174,36 @@ check "a source-repo skill the old tree lacks plans no retired rows" \
 # --old names the tree before the refresh when it is not HEAD.
 git -C "$repo" add -A && git -C "$repo" commit -qm refreshed
 check "--old reads the old tree at that ref" \
-  '1.0.0' "$(bash "$plan" "$repo" "$tmp/heads.json" --old HEAD~1 | jq -r '.source_skills[] | select(.skill == "ship") | .old_version')"
+  '1.0.0' "$(bash "$plan" "$repo" "$tmp/heads.json" --old HEAD~1 | jq -r '.source_skills[] | select(.skill == "ship-run") | .old_version')"
 
 # The source repo installs its own skills from `.`.
-jq '.skills.ship.source = "."' "$repo/skills-lock.json" > "$tmp/l" && mv "$tmp/l" "$repo/skills-lock.json"
+jq '.skills["ship-run"].source = "."' "$repo/skills-lock.json" > "$tmp/l" && mv "$tmp/l" "$repo/skills-lock.json"
 check "a lock recording ship from . is source mode" source "$(bash "$plan" "$repo" "$tmp/heads.json" | jq -r .mode)"
 
 # The renumber note carries no meaning to the plan: a refresh from a
 # pre-renumber 5.2.1 to 0.11.4 reads 5.2.1 as it is, so no 0.x row is planned.
 d=$tmp/crossing
 mkdir -p "$d" && git -C "$d" init -q && git -C "$d" config user.email t@t && git -C "$d" config user.name t
-skill "$d" ship 5.2.1; lock "$d" '{"ship": {"source": "Gharib89/skills"}}'
+skill "$d" ship-run 5.2.1; lock "$d" '{"ship-run": {"source": "Gharib89/skills"}}'
 git -C "$d" add -A && git -C "$d" commit -qm old
-skill "$d" ship 0.11.4; printf '%s\n' '**The renumber to 0.x.** Every entry below predates it.' > "$d/.claude/skills/ship/CHANGELOG.md"
-printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 0.9.0 | converged | x |' > "$d/.claude/skills/ship/retired-terms.md"
+skill "$d" ship-run 0.11.4; printf '%s\n' '**The renumber to 0.x.** Every entry below predates it.' > "$d/.claude/skills/ship-run/CHANGELOG.md"
+printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 0.9.0 | converged | x |' > "$d/.claude/skills/ship-run/retired-terms.md"
 echo '{"heads": {}, "unreachable": []}' > "$tmp/heads0.json"
 check "a refresh across the renumber reads the installed version as it is" \
   '[]' "$(bash "$plan" "$d" "$tmp/heads0.json" | jq -c '[.retired[].term]')"
+
+# A refresh across Ship's rename reads the old version off the pre-rename
+# `.claude/skills/ship/`, so the rows ship-run retired since it are planned.
+d=$tmp/rename
+mkdir -p "$d" && git -C "$d" init -q && git -C "$d" config user.email t@t && git -C "$d" config user.name t
+skill "$d" ship 0.71.2; lock "$d" '{"ship": {"source": "Gharib89/skills"}}'
+git -C "$d" add -A && git -C "$d" commit -qm old
+rm -rf "$d/.claude/skills/ship"; skill "$d" ship-run 0.72.0; lock "$d" '{"ship-run": {"source": "Gharib89/skills"}}'
+printf '%s\n' '| Version | Term | Replacement |' '|---|---|---|' '| 0.71.0 | old | x |' '| 0.72.0 | /ship | /ship-run |' > "$d/.claude/skills/ship-run/retired-terms.md"
+check "a refresh across the rename reads ship's old version" \
+  '0.71.2' "$(bash "$plan" "$d" "$tmp/heads0.json" | jq -r '.source_skills[] | select(.skill == "ship-run") | .old_version')"
+check "and plans the rows retired since it" \
+  '["/ship"]' "$(bash "$plan" "$d" "$tmp/heads0.json" | jq -c '[.retired[].term]')"
 
 # A prerelease version compares by its release part, in the skill's version
 # and in a row's, and a row with no replacement cell, or a lowercase none, has

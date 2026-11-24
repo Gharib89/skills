@@ -7,7 +7,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-m=skills/ship/scripts/run-file.sh
+m=skills/ship-run/scripts/run-file.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 
@@ -22,7 +22,7 @@ rc()   { bash "$m" "$@" >/dev/null 2>&1; echo $?; }
 # the mechanic; the gates themselves are `tests/run-file-gates.test.sh`'s.
 quiet=$tmp/quiet-bin quietrepo=$tmp/quiet
 mkdir -p "$quiet" "$quietrepo.origin"
-cp -r skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh skills/ship/scripts/lib "$quiet/"
+cp -r skills/ship-run/scripts/run-file.sh skills/ship-run/scripts/_lib.sh skills/ship-run/scripts/lib "$quiet/"
 git init -q --bare -b main "$quietrepo.origin"
 git init -q -b main "$quietrepo"
 git -C "$quietrepo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m one

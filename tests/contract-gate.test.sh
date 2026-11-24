@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scripts/contract-check.sh: the mechanics' malformed-invocation contract.
-# The first case runs the checker against the real `skills/ship/scripts`, and
+# The first case runs the checker against the real `skills/ship-run/scripts`, and
 # every case under it runs it once against a fixture of its own, asserting on
 # the exit code and the stdout that one run left behind: the verdict and the
 # violation it names are two readings of the same run.
@@ -21,7 +21,7 @@ source tests/contract-gate-lib.sh
 # The real mechanics and the real skills tree, so this case holds every check
 # against the directory that ships, check 3 included: the tree carries no
 # Bash 4+ construct.
-run skills/ship/scripts
+run skills/ship-run/scripts
 check_rc "the current tree holds the contract" 0 "$rc"
 
 # A mechanic written with the pre-#62 idiom: bash's own diagnostic on stderr and
@@ -225,7 +225,7 @@ check_rc "a usage error with a second line fails the check" 1 "$rc"
 # carry no `set -e`, so a Bash 4 builtin there is a skipped line and a silent
 # pass rather than a stop. One case per named construct, because each is its own
 # branch of the pattern. The mechanics directory is `inert`.
-mechanics=ship/scripts/read-issue.sh
+mechanics=ship-run/scripts/read-issue.sh
 
 d=$(copy_skills bash4-mapfile)
 printf '\nmapfile -t lines < /dev/null\n' >> "$d/$mechanics"
@@ -309,10 +309,10 @@ run "$inert" "$d"
 check_rc "the one reader in _lib.sh passes" 0 "$rc"
 
 d=$(copy_skills host-adapter-mechanic)
-printf '\nadapter=${SHIP_HOST_ADAPTER:-}\n' >> "$d/ship/scripts/read-issue.sh"
+printf '\nadapter=${SHIP_HOST_ADAPTER:-}\n' >> "$d/ship-run/scripts/read-issue.sh"
 run "$inert" "$d"
 check_rc "a mechanic reading SHIP_HOST_ADAPTER fails" 1 "$rc"
-check "and the violation names the mechanic" 0 "$(named "$d/ship/scripts/read-issue.sh:")"
+check "and the violation names the mechanic" 0 "$(named "$d/ship-run/scripts/read-issue.sh:")"
 
 
 finish

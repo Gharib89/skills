@@ -68,10 +68,10 @@ the full local gate, and apply full-lane review terms, from there on.
 ## The inline lane
 
 The **inline lane** is the small lane's tier for a fix triage already has in
-hand, entered only by `/ship <issue> --inline [--review]`. Invoking it is the
-human's approval to merge this one PR on a clean gate, and nothing wider. With
-`--unattended`, or free text in place of an issue, stop `inline refused` before
-`prepare`, printing the usage line `/ship <issue> --inline [--review]`.
+hand, entered only by `/ship-run <issue> --inline [--review]`, the usage
+line. Invoking it is the human's approval to merge this one PR on a clean gate,
+and nothing wider. With `--unattended`, or free text in place of an issue, stop
+`inline refused` before `prepare`, printing that usage line.
 
 - **Keys:** the small lane's three, plus a **20-line cap**, a rule rather than a
   mark: counted by *The size*'s `--numstat` command and exclusions, folded

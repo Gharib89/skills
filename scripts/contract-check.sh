@@ -57,7 +57,7 @@
 # stdout: one line per violation, with the offending mechanic or file named
 # exit: 0 the contract holds · 1 a violation · 2 tooling
 set -uo pipefail
-dir=${1:-skills/ship/scripts}
+dir=${1:-skills/ship-run/scripts}
 skills=${2:-skills}
 extra=("${@:3}")
 [ -d "$dir" ] || { printf 'not a directory: %s\n' "$dir" >&2; exit 2; }
@@ -255,9 +255,9 @@ done
 # prose included: a doc teaching the variable is how a second reader starts.
 raw=$(grep -rn 'SHIP_HOST_ADAPTER' "$skills"); st=$?
 [ "$st" -le 1 ] || { printf 'cannot search %s\n' "$skills" >&2; exit 2; }
-hits=$(printf '%s' "$raw" | awk -F: -v lib="$skills/ship/scripts/_lib.sh" '$1 != lib')
+hits=$(printf '%s' "$raw" | awk -F: -v lib="$skills/ship-run/scripts/_lib.sh" '$1 != lib')
 if [ -n "$hits" ]; then
-  echo "SHIP_HOST_ADAPTER outside $skills/ship/scripts/_lib.sh; it is test-only, and _lib.sh is its one reader:"
+  echo "SHIP_HOST_ADAPTER outside $skills/ship-run/scripts/_lib.sh; it is test-only, and _lib.sh is its one reader:"
   echo "$hits"
   rc=1
 fi

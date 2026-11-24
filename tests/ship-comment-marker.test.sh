@@ -11,7 +11,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 T=$'\t'  # the calls log separates arguments with a tab
 
-scripts=$PWD/skills/ship/scripts
+scripts=$PWD/skills/ship-run/scripts
 M='<span data-ship=1></span>'
 L='🤖 Posted by a ship run.'  # the visible line, last before the marker
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT

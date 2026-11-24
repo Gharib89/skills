@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# skills/ship/scripts/run-file.sh `probe`: the line a self-review decline's claim
+# skills/ship-run/scripts/run-file.sh `probe`: the line a self-review decline's claim
 # owes is written by the mechanic that ran the command, carrying its exit status
 # and the head it ran on. The seam is `run-file probe <ref> --file <run file> --
 # <command>...`: an exit code, one JSON answer, and the Run file's bytes. Driven
@@ -12,7 +12,7 @@ T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 bin=$T/bin repo=$T/repo
 mkdir -p "$bin"
-cp -r skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh skills/ship/scripts/lib "$bin/"
+cp -r skills/ship-run/scripts/run-file.sh skills/ship-run/scripts/_lib.sh skills/ship-run/scripts/lib "$bin/"
 
 git init -q -b main "$repo"
 g() { git -C "$repo" -c user.email=t@t -c user.name=t -c commit.gpgsign=false "$@"; }

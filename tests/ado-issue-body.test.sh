@@ -9,8 +9,8 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
-source skills/ship/scripts/_lib.sh
-source skills/ship/scripts/host/ado.sh
+source skills/ship-run/scripts/_lib.sh
+source skills/ship-run/scripts/host/ado.sh
 
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 azx() { # work-item show answers the fixture; update records its --description

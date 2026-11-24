@@ -69,7 +69,8 @@ check "it records a task entry for the skill and the repo, interactive" '{"key":
 mkdir -p "$HOME/.claude/skills/to-tickets"; printf -- '---\nname: to-tickets\n---\n' > "$HOME/.claude/skills/to-tickets/SKILL.md"
 check "a personal skill counts as installed, and is not interactive" "true false" \
   "$(L 9 --skill to-tickets | jq -r '[.launch, .record.interactive] | map(tostring) | join(" ")')"
-check "--skill ship launches a ship whatever the labels" "ship /ship 9" "$(L 9 --skill ship | jq -r '"\(.kind) \(.args.message)"')"
+check "--skill ship-run launches a ship whatever the labels" "ship /ship-run 9" "$(L 9 --skill ship-run | jq -r '"\(.kind) \(.args.message)"')"
+check "--skill ship launches ship-run, never the built-in /ship" "ship /ship-run 9" "$(L 9 --skill ship | jq -r '"\(.kind) \(.args.message)"')"
 check "a skill name opening on a dot is refused" 2 "$(L 9 --skill .. >/dev/null 2>&1; echo $?)"
 sa_gh_fail contents/.claude/skills/to-tickets 1
 check "a failed read of the repo's skill is no verdict" 2 "$(L 9 --skill to-tickets >/dev/null 2>&1; echo $?)"

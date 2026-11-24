@@ -19,7 +19,7 @@
 set -uo pipefail
 root=${1:-.}
 tmpl=$root/skills/setup-skills/ship-profile.md
-ship=$root/skills/ship/SKILL.md
+ship=$root/skills/ship-run/SKILL.md
 doc=$root/skills/setup-skills/profile-schema.md
 
 # A file this cannot read is tooling, not drift: awk and grep report that in

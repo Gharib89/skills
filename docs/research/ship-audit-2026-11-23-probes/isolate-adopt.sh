@@ -4,7 +4,7 @@
 # worktree and returns its branch, not the branch the run's own slug names.
 # Driven over a clone of a local bare origin. Run from the repo root.
 set -uo pipefail
-m=$PWD/skills/ship/scripts/isolate.sh
+m=$PWD/skills/ship-run/scripts/isolate.sh
 work=$(mktemp -d) || exit 2
 trap 'rm -rf "$work"' EXIT
 work=$(cd "$work" && pwd -P)

@@ -10,7 +10,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 T=$'\t'  # the calls log separates arguments with a tab
 
-mech=$PWD/skills/ship/scripts/update-pr-title.sh
+mech=$PWD/skills/ship-run/scripts/update-pr-title.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo; export SHIP_FAKE=$work/fake
 mkdir -p "$repo" "$SHIP_FAKE"

@@ -5,7 +5,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 root=$(mktemp -d) || exit 2
 trap 'rm -rf "$root"' EXIT
@@ -126,7 +126,7 @@ check "a key the frontmatter lacks"   ''      "$(ship_frontmatter "$fm" missing-
 # `~/.claude/skills/<name>`, never the home path.
 home=$(mktemp -d) || exit 2
 trap 'rm -rf "$root" "$home"; rm -f "$fm"' EXIT
-install tdd; install find-docs; install ship
+install tdd; install find-docs; install ship-run
 shadow() { ship_shadowed_skills "$root" "$composes" "$home"; }
 out=$(shadow); rc=$?
 check "no personal copy prints nothing" '' "$out"
@@ -144,16 +144,16 @@ check "a differing personal copy is reported as different" \
 check_rc "a differing copy exits 0" 0 "$rc"
 check "the line holds no home path" '0' "$(grep -c -F "$home" <<<"$out")"
 
-mkdir -p "$home/.claude/skills/ship"; touch "$home/.claude/skills/ship/SKILL.md"
-check "an identical personal copy of ship prints nothing beside a differing one" \
+mkdir -p "$home/.claude/skills/ship-run"; touch "$home/.claude/skills/ship-run/SKILL.md"
+check "an identical personal copy of ship-run prints nothing beside a differing one" \
   'personal skill copy shadows tdd (~/.claude/skills/tdd): different from the project copy' "$(shadow)"
 
 # diff cannot read a project copy that is absent: the personal copy still wins,
 # so the line stays and says the comparison failed rather than guessing.
-rm -rf "$root/.claude/skills/ship"
+rm -rf "$root/.claude/skills/ship-run"
 out=$(shadow); rc=$?
 check "a failed comparison is reported as unavailable, not dropped" \
-  'personal skill copy shadows ship (~/.claude/skills/ship): comparison unavailable with the project copy
+  'personal skill copy shadows ship-run (~/.claude/skills/ship-run): comparison unavailable with the project copy
 personal skill copy shadows tdd (~/.claude/skills/tdd): different from the project copy' "$out"
 check_rc "an unavailable comparison exits 0" 0 "$rc"
 

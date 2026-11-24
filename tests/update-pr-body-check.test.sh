@@ -10,7 +10,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-scripts=$PWD/skills/ship/scripts
+scripts=$PWD/skills/ship-run/scripts
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 repo=$work/repo
 export SHIP_FAKE=$work/fake SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh

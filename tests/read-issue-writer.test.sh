@@ -10,7 +10,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-scripts=$PWD/skills/ship/scripts
+scripts=$PWD/skills/ship-run/scripts
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 FIXTURE=$work/fixture.json
 
@@ -22,8 +22,8 @@ FIXTURE=$work/fixture.json
 # where no file exists; every route asked is logged.
 github=$(
   SHIP_OWNER=o SHIP_REPO=r
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/github.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/github.sh
   api() {
     printf '%s\n' "$1" >> "$work/routes"
     local f; f="$work/route.$(printf '%s' "$1" | tr '/' '_')"
@@ -55,8 +55,8 @@ repos/o/r/collaborators/reader/permission' "$(grep collaborators "$work/routes" 
 # adapter cannot answer and every comment, a project admin's included, is null.
 ado=$(
   SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/ado.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/ado.sh
   invoke() { cat "$FIXTURE"; }
   printf '%s\n' '{"comments":[
     {"createdBy":{"uniqueName":"admin@x"},"text":"a","createdDate":"t"},

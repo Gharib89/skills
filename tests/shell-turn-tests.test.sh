@@ -23,18 +23,18 @@ check "an edited test beside a script is not widened by the script's name" \
   "$(printf 'tests/token-limit.test.sh\n%s' "$(naming token-limit-check.sh)" | sort -u)" \
   "$(sel tests/token-limit.test.sh scripts/token-limit-check.sh)"
 check "a lib piece selects the tests naming _lib.sh" \
-  "$(naming _lib.sh)" "$(sel skills/ship/scripts/lib/"$(ls skills/ship/scripts/lib | head -1)")"
+  "$(naming _lib.sh)" "$(sel skills/ship-run/scripts/lib/"$(ls skills/ship-run/scripts/lib | head -1)")"
 check "a <script>.d piece selects the tests naming the script" \
-  "$(naming poll-pr.sh)" "$(sel skills/ship/scripts/poll-pr.d/loop.sh)"
+  "$(naming poll-pr.sh)" "$(sel skills/ship-run/scripts/poll-pr.d/loop.sh)"
 check "_lib.sh selects the tests naming _lib.sh" \
-  "$(naming _lib.sh)" "$(sel skills/ship/scripts/_lib.sh)"
+  "$(naming _lib.sh)" "$(sel skills/ship-run/scripts/_lib.sh)"
 # The oracle above repeats the selector's grep, so an empty answer on both sides
 # would pass; these two fix the answer.
 check "_lib.sh is named by tests, so the selection is not vacuous" 1 \
   "$([ -n "$(naming _lib.sh)" ] && echo 1 || echo 0)"
 check "the runner's excluded prefixes select nothing through the turn rung" \
   '{"rung":"turn","verdict":"skipped","checks":{"turn":"skipped"}}' \
-  "$(scripts/check.sh turn tests/fixtures/x.sh .claude/skills/ship/scripts/_lib.sh)"
+  "$(scripts/check.sh turn tests/fixtures/x.sh .claude/skills/ship-run/scripts/_lib.sh)"
 # The turn rung, given the path of a script that no longer exists, hands it to
 # the shell row; which tests it then selects is the `sel` cases above. The
 # name is split so this file does not name it and select itself, which would

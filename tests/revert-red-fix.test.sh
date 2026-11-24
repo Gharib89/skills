@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# skills/ship/scripts/revert-red.sh `--fix <commit>`: a review fix is judged against
+# skills/ship-run/scripts/revert-red.sh `--fix <commit>`: a review fix is judged against
 # the tree before it, not the merge base, and a red that is only a missing file the
 # fix added is no proof (#933). Driven against a fixture repo whose `origin/HEAD` is
 # set by hand; tests/revert-red.test.sh holds the rest of the mechanic's cases.
@@ -7,7 +7,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
-script=$PWD/skills/ship/scripts/revert-red.sh
+script=$PWD/skills/ship-run/scripts/revert-red.sh
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 export TMPDIR=$T/tmp

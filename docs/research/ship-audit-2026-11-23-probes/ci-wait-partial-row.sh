@@ -2,7 +2,7 @@
 # ci-wait over the Host fake when the one check row for the profile's leg carries
 # a name and no status. The control row carries `pending`. Run from the repo root.
 set -uo pipefail
-mech=$PWD/skills/ship/scripts/ci-wait.sh
+mech=$PWD/skills/ship-run/scripts/ci-wait.sh
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 export SHIP_FAKE=$work/fake SHIP_HOST_ADAPTER=$PWD/tests/host-fake.sh
 repo=$work/repo

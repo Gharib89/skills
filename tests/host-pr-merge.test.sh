@@ -14,8 +14,8 @@ work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 
 (
   SHIP_OWNER=owner SHIP_REPO=repo
-  source skills/ship/scripts/_lib.sh
-  source skills/ship/scripts/host/github.sh
+  source skills/ship-run/scripts/_lib.sh
+  source skills/ship-run/scripts/host/github.sh
   api() { printf '%s\n' "$@" > "$work/gh"; }
   host_pr_merge 7 "fix: x (#7)" abc123
 )
@@ -31,8 +31,8 @@ ado() { # [pat]: runs the ADO adapter's merge with az stubbed, keeping its argv,
   (
     SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT="my proj" SHIP_REPO="my repo"
     if [ -n "${1:-}" ]; then export AZURE_DEVOPS_EXT_PAT=$1; else unset AZURE_DEVOPS_EXT_PAT; fi
-    source skills/ship/scripts/_lib.sh
-    source skills/ship/scripts/host/ado.sh
+    source skills/ship-run/scripts/_lib.sh
+    source skills/ship-run/scripts/host/ado.sh
     az() {
       printf '%s\n' "$@" > "$work/az"
       while [ $# -gt 0 ]; do

@@ -8,11 +8,11 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 gh=$(
   SHIP_OWNER=o SHIP_REPO=r
-  source skills/ship/scripts/host/github.sh
+  source skills/ship-run/scripts/host/github.sh
   # The adapter's `--jq` applied to the raw list, as `gh api --jq` would: a
   # string result prints raw.
   api() { local a prev="" j; for a in "$@"; do [ "$prev" = --jq ] && j=$a; prev=$a; done; jq -r "$j" <<<'[{"number": 285, "state": "closed", "merged_at": "2026-09-20T10:00:00Z",
@@ -24,7 +24,7 @@ check "the GitHub adapter answers the PR's head sha" \
 
 ado=$(
   SHIP_ORG_URL=https://dev.azure.com/org SHIP_PROJECT=proj SHIP_REPO=repo
-  source skills/ship/scripts/host/ado.sh
+  source skills/ship-run/scripts/host/ado.sh
   azx() { echo '[{"pullRequestId": 1, "status": "completed", "sourceRefName": "refs/heads/lab/270",
     "lastMergeSourceCommit": {"commitId": "c18afa554c0fbb09d85fe0a4ed52554cd875c45d"}}]'; }
   host_pr_for_branch lab/270

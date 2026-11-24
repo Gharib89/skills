@@ -9,7 +9,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source tests/run-file-lib.sh
 # The gate cases name a label head no commit has: m runs the real mechanic at a real one.
-export RUN_FILE_REAL=${RUN_FILE_MECHANIC:-$PWD/skills/ship/scripts/run-file.sh}
+export RUN_FILE_REAL=${RUN_FILE_MECHANIC:-$PWD/skills/ship-run/scripts/run-file.sh}
 m=$PWD/tests/run-file-at-head.sh
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT

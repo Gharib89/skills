@@ -5,7 +5,7 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
-source skills/ship/scripts/_lib.sh
+source skills/ship-run/scripts/_lib.sh
 
 fresh='{"fresh":true,"base":"origin/main","behind":0,"ahead":2,"fetched":true}'
 behind='{"fresh":false,"base":"origin/main","behind":3,"ahead":2,"fetched":true}'

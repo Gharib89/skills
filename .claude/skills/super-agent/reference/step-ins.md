@@ -13,7 +13,8 @@ threads (ADR 0020).
 
 ## The launch message
 
-`launch.sh` writes it into `args.message`: the owner-skill invocation (`/ship
+`launch.sh` writes it into `args.message`: the owner-skill invocation
+(`/ship-run
 <n>`, `/triage <n>`), plus one `Note: <text>` line when you passed `--note`.
 Send it unedited. Every rule the run follows lives in its owner skill, its
 repo's ship profile or the global rules it loads, so nothing rides on the
@@ -57,7 +58,8 @@ ones:
    reports a PR it opened to ship a small proven fix inline is at a gate too,
    and you never merge it. Assign the issue to the gh login the repo needs
    (`gh issue edit <n> --repo <owner/name> --add-assignee <login>`), because
-   `--rework` admits only an issue its own identity holds, then launch `/ship
+   `--rework` admits only an issue its own identity holds, then launch
+   `/ship-run
    <n> --rework "<feedback>"` with `t3_thread_launch` on the instance and tier
    `route.sh` picks ([Routing](routing.md)), never `launch.sh` (it would build a
    `/triage` message for this issue). Place it where the triage entry ran: the
@@ -65,7 +67,7 @@ ones:
    <key>`) as `environmentId` where they name another machine, and the repo's
    `projectId` resolved as in [Sending the launch](#sending-the-launch). Its
    feedback text, such as "take this PR through review and the merge gate", is
-   what stops `no feedback`; a plain `/ship <n>` stops `existing PR`. Point
+   what stops `no feedback`; a plain `/ship-run <n>` stops `existing PR`. Point
    the ticket's
    entry at the new thread with `ledger.sh --ledger <ledger> rethread <key>
    --thread <id> --worktree <the launched thread's path> --branch <the PR's

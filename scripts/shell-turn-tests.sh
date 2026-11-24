@@ -24,7 +24,7 @@ selected=''
 for f; do
   case $f in
     tests/*.test.sh) [ -f "$f" ] && selected="$selected$f"$'\n'; continue ;;
-    skills/ship/scripts/lib/*.sh) name=_lib.sh ;;
+    skills/ship-run/scripts/lib/*.sh) name=_lib.sh ;;
     *.d/*.sh) d=${f%/*}; name=${d##*/}; name=${name%.d}.sh ;;
     *) name=${f##*/} ;;
   esac

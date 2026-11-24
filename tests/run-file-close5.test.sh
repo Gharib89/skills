@@ -12,7 +12,7 @@ tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
 bin=$tmp/bin repo=$tmp/repo
 mkdir -p "$bin" "$repo/docs/agents"
-cp -r skills/ship/scripts/run-file.sh skills/ship/scripts/_lib.sh skills/ship/scripts/lib "$bin/"
+cp -r skills/ship-run/scripts/run-file.sh skills/ship-run/scripts/_lib.sh skills/ship-run/scripts/lib "$bin/"
 git init -q "$repo"
 # read-pr's stub answers the head the test sets, or fails when the file is absent.
 cat > "$bin/read-pr.sh" <<STUB

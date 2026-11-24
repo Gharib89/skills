@@ -198,9 +198,9 @@ criteria, not a red leg (`checks-unsettled`). `<slug>` is `--run`'s. Then `merge
 <pr> <issue|none> <head> [--worktree <path>] [--run <slug>]`, so the merge lands
 only the head the summary describes, `<head>`, this gate's `read-pr`
 `head_sha`. Invoke it from the worktree root as
-`.claude/skills/ship/scripts/merge.sh` where Ship is installed at project scope,
-since auto mode has refused the absolute form on a clean gate; the absolute
-base-directory path is for an install with no project copy. A
+`.claude/skills/ship-run/scripts/merge.sh` where Ship is installed at project
+scope, since auto mode has refused the absolute form on a clean gate; the
+absolute base-directory path is for an install with no project copy. A
 `none` run names its Run file's slug with `--run`. `merge.sh`'s header carries
 what it does and what each refusal protects against; a refusal merges nothing
 and stops at this gate, including after a clean-gate decision; on one, read

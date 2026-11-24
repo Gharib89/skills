@@ -119,7 +119,7 @@ state='done'
 [ -n "$slock" ] || ev+=("versions not compared: no source lock")
 pins=$own
 # This list is the source-repo skills of SKILL.md's first install line.
-for s in ship cloud-ship setup-skills update-skills setup-harness; do
+for s in ship-run cloud-ship setup-skills update-skills setup-harness; do
   e=$(entry "$s")
   if [ -z "$e" ] || [ ! -d "$root/.claude/skills/$s" ]; then ev+=("$s missing"); state=run; continue; fi
   # Only the source repo's copy is the chain skill, `.` only in the source repo itself.
@@ -163,7 +163,7 @@ profile() {
   if [ -n "$have" ] && [ "$have" = "$want" ]; then row "$1" 'done'; else row "$1" 're-run audit'; fi
 }
 profile harness docs/agents/harness.md setup-harness harness-schema
-profile ships-setup docs/agents/ship.md ship profile-schema
+profile ships-setup docs/agents/ship.md ship-run profile-schema
 
-ev=("read at the run's end: .claude/skills/ship/scripts/preflight.sh none")
+ev=("read at the run's end: .claude/skills/ship-run/scripts/preflight.sh none")
 row proof run
