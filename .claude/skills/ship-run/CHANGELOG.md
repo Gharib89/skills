@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.74.0 (2026-11-24)
+
+### Features
+
+- **ship-run**: A waiver admission records a delegated ruler's ruling, so a super-agent waiver can
+  merge ([#1403](https://github.com/Gharib89/skills/pull/1403),
+  [`eaedced`](https://github.com/Gharib89/skills/commit/eaedced7276896991fa6d3d5f6c417143a556c26))
+
+
 ## v0.73.0 (2026-11-24)
 
 ### Features
