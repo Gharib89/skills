@@ -194,7 +194,11 @@ size_source=label; [ -n "$size" ] || { size=M size_source=default; }
 if [ "$kind" = ship ]; then
   installed=$(sa_skill_version "$repo" .claude/skills/ship-run/SKILL.md)
   # A repo holding only the pre-rename `ship` copy reads its version, below the minimum.
-  [ -n "$installed" ] || installed=$(sa_skill_version "$repo" .claude/skills/ship/SKILL.md)
+  # Only a 404 on `ship-run` is "not there": a failed or malformed read stays unread.
+  if [ -z "$installed" ] \
+    && ! err=$(gh api "repos/$repo/contents/.claude/skills/ship-run/SKILL.md" 2>&1 >/dev/null </dev/null); then
+    case $err in *"HTTP 404"*) installed=$(sa_skill_version "$repo" .claude/skills/ship/SKILL.md) ;; esac
+  fi
   [ -n "$installed" ] || sa_tooling "cannot read the installed ship version of $repo"
   jq -en --arg i "$installed" --arg m "$sa_min_ship" "$sa_jq_ver"'($i | ver) >= ($m | ver)' >/dev/null \
     || answer stale_ship "$(jq -cn --arg i "$installed" --arg m "$sa_min_ship" '{installed: $i, minimum: $m}')"

@@ -160,10 +160,13 @@ Three cases rename nothing, each listed for step 8's Needs attention: a file
 that is not the one the row means, such as a test fixture or a vendored
 document, as `<path>: not renamed, not the <term> the row means`; a file whose
 target already exists, as `<path>: not renamed, <replacement> exists`; and every
-file of a row whose replacement is null. Then sweep the references:
+file of a row whose replacement is null. Then sweep the references, passing
+the row's `replacement` second (`''` when null): `-w` counts `-` as a word
+boundary, so a line whose every hit sits inside the replacement (`/ship` inside
+`/ship-run`) is already swept and drops out:
 
 ```sh
-bash -c 'T=$1; shift; L=$(jq -er ".skills | keys[]" skills-lock.json) || exit 2; for s in $L; do set -- "$@" ":!.claude/skills/$s/"; done; git grep -n -w -F -e "$T" -- . "$@"' _ '<term>'
+bash -c 'T=$1 R=$2; shift 2; L=$(jq -er ".skills | keys[]" skills-lock.json) || exit 2; for s in $L; do set -- "$@" ":!.claude/skills/$s/"; done; git grep -n -w -F -e "$T" -- . "$@" | while IFS= read -r h; do [ -z "$R" ] || case ${h//"$R"/} in *"$T"*) ;; *) continue ;; esac; printf "%s\n" "$h"; done' _ '<term>' '<replacement>'
 ```
 
 Replace each hit with the row's `replacement` where it reads correctly in that

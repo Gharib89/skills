@@ -152,7 +152,7 @@
     "super-agent": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "a4194fd1f73328aa3c0f5ebff056a007aadeb547406d1d5318853c7c41ac1ea0"
+      "computedHash": "08d681f6d134d1c6ccf180614d05a8f0a66394aad14bdee8f0c8a430a5b826ff"
     },
     "tdd": {
       "source": "mattpocock/skills",
@@ -185,7 +185,7 @@
     "update-skills": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "d95a1751128b22706939e4d79ff3766c610bf64700a957ee340e2c8d3f31887b"
+      "computedHash": "d26c7df6a2b27bb479c827074b27a2d82d2c4a70b016db88a22367e9e7273912"
     },
     "wayfinder": {
       "source": "mattpocock/skills",

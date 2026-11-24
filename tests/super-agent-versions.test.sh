@@ -80,4 +80,17 @@ sa_skill_file "$repo" .claude/skills/ship/SKILL.md 0.71.3
 check "a repo with only the pre-rename ship copy answers stale_ship with its version" \
   '1 stale_ship 0.71.3' "$(L 7 --area x >/dev/null; echo $?) $(L 7 --area x | jq -r '"\(.reason) \(.detail.installed)"')"
 
+# The fallback reads the old copy only on a 404 for `ship-run`: a failed or malformed read
+# of a copy that is there is no verdict, whatever the old copy beside it says.
+reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+sa_skill_file "$repo" .claude/skills/ship/SKILL.md 0.71.3
+sa_gh_fail "contents/.claude/skills/ship-run/SKILL.md" 5
+check "a failed read of the ship-run copy exits 2, never stale_ship off the old copy beside it" \
+  2 "$(L 7 --area x >/dev/null 2>&1; echo $?)"
+reset; issue 7 "widgets: add a frobnicator" ready-for-agent S
+sa_skill_file "$repo" .claude/skills/ship/SKILL.md 0.71.3
+sa_route "repos/$repo/contents/$ship" "$(jq -cn '{content: ("no frontmatter\n" | @base64)}')"
+check "a malformed ship-run copy exits 2, never stale_ship off the old copy beside it" \
+  2 "$(L 7 --area x >/dev/null 2>&1; echo $?)"
+
 finish
