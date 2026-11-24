@@ -4,7 +4,7 @@ description: >-
   Launch, record and watch T3 threads for the owner's tickets until their PRs
   merge. Use when running as the owner's pinned super agent thread in T3 Code.
 metadata:
-  version: 0.40.0
+  version: 0.41.0
 ---
 
 # super-agent

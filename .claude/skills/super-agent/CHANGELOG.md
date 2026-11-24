@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.41.0 (2026-11-24)
+
+### Features
+
+- **super-agent**: A scorecard script counts a daily row and recounts the baseline
+  ([#1412](https://github.com/Gharib89/skills/pull/1412),
+  [`5783566`](https://github.com/Gharib89/skills/commit/5783566b0553ce85d60085146aa854b3b1fa4d1d))
+
+
 ## v0.40.0 (2026-11-24)
 
 ### Features
