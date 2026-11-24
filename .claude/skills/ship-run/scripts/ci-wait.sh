@@ -148,20 +148,19 @@ again() {
 # before each read, and a read cut off by the bound ends the call the way the
 # bound would have, `timeout` at the window's deadline, else `pending`. A window
 # already closed (a resumed cursor's) is `timeout` with no read at all.
-bounded_read() { # <out-file> <fn> <args...>
-  local now lim
+cut_off() {
+  local now
   now=$(date +%s); waited=$((now - start))
+  if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
+  pend
+}
+bounded_read() { # <out-file> <fn> <args...>
+  local now lim rc
+  now=$(date +%s)
   lim=$((deadline < call_end ? deadline : call_end)); lim=$((lim - now))
-  if [ "$lim" -le 0 ]; then
-    if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
-    pend
-  fi
+  [ "$lim" -gt 0 ] || cut_off
   SHIP_READ_LIMIT=$lim ship_poll_read "$@"; rc=$?
-  [ "$rc" -ne 4 ] || {
-    now=$(date +%s); waited=$((now - start))
-    if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
-    pend
-  }
+  [ "$rc" -ne 4 ] || cut_off
   return "$rc"
 }
 # A read with no answer: three in a row, or the window closing on one, is the

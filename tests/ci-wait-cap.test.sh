@@ -55,14 +55,18 @@ check "a cursor whose window closed is timeout" timeout "$(jq -r .status "$work/
 check_rc "and exits 1" 1 "$rc"
 check "and the host read nothing" 0 "$(reads)"
 
-# A cursor with time left resumes its own deadline: pending's cursor, handed back.
+# A cursor with time left resumes its own deadline: a second slow read under the
+# cap hands back a cursor carrying the first one's deadline, then a fast host is green.
 reset; echo 3 > "$SHIP_FAKE/host_pr_get.1.delay"
 SHIP_CALL_CAP=1 ci --timeout 60
 d1=$(jq -r '.cursor | @base64d | fromjson | .deadline' <<<"$out")
 cur=$(jq -r .cursor <<<"$out")
+reset; echo 3 > "$SHIP_FAKE/host_pr_get.1.delay"
+( cd "$repo" && SHIP_CALL_CAP=1 SHIP_CI_WAIT_GRACE=0 bash "$mech" 7 --cursor "$cur" >"$work/out" 2>/dev/null ); rc=$?
+check "a resumed wait that is cut again stays pending" pending "$(jq -r .status "$work/out")"
+check "and its cursor keeps the first deadline" "$d1" "$(jq -r '.cursor | @base64d | fromjson | .deadline' "$work/out")"
 reset
 ( cd "$repo" && SHIP_CI_WAIT_GRACE=0 bash "$mech" 7 --cursor "$cur" >"$work/out" 2>/dev/null ); rc=$?
-check "a resumed wait answers on the same window" green "$(jq -r .status "$work/out")"
-check "and the cursor it was handed recorded a deadline" true "$([ -n "$d1" ] && echo true || echo false)"
+check "and a prompt host then answers green on that window" green "$(jq -r .status "$work/out")"
 
 finish

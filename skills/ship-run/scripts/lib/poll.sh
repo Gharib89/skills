@@ -133,7 +133,7 @@ ship_reviewers() {
 #
 # Fallbacks that name each other in a cycle leave no primary to withhold them
 # for, and a `Cap:` below zero or with a fraction bounds no loop, so each is
-# refused with the `Gating:` that is not yes or no; the cycle is reported once,
+# refused, as is a `Gating:` that is not yes or no; the cycle is reported once,
 # from its first block in profile order. Blocks sharing a name are skipped: the
 # name keys the walk, and the repeat is its own fault.
 #
@@ -196,7 +196,7 @@ ship_reviewer_reasons() {
     | if ($rows | type) != "array"
       then "profile invalid: the ## Reviewers blocks could not be parsed"
       else ([$rows[].name]) as $names
-        | ([$rows[] | select(.fallback_for != null) | {key: .name, value: .fallback_for}] | from_entries) as $fb
+        | ([$rows[] | select(.fallback_for != null) | {key: .name, value: .fallback_for}] | from_entries) as $fallback
         | $rows[]
         | . as $x
         | (if $x.name == "self-review" or ($x.name | startswith("self-review "))
@@ -218,11 +218,12 @@ ship_reviewer_reasons() {
            then "profile invalid: \($x.name) has Gating: \($x.gating), which is neither yes nor no"
            else empty end),
           (if ($names | unique | length) != ($names | length) then empty
-           else (([$x.name | limit(($names | length) + 1; recurse($fb[.]; . != null))]) as $c
-           | if ($c | length) > 1 and ($c[1:] | index($x.name)) != null
-                and ([$c[: ($c[1:] | index($x.name)) + 1][] | . as $m | $names | index($m)] | min) == ($names | index($x.name))
-             then "profile invalid: reviewers name each other as fallbacks in a cycle: \($c[: ($c[1:] | index($x.name)) + 2] | join(" -> "))"
-             else empty end) end),
+           else (([$x.name | limit(($names | length) + 1; recurse($fallback[.]; . != null))]) as $walk
+                 | ($walk[1:] | index($x.name)) as $back
+                 | if $back != null
+                      and ([$walk[: $back + 1][] | . as $m | $names | index($m)] | min) == ($names | index($x.name))
+                   then "profile invalid: reviewers name each other as fallbacks in a cycle: \($walk[: $back + 2] | join(" -> "))"
+                   else empty end) end),
           (if $x.trigger == "on-request" and $x.cap == null
            then "profile invalid: \($x.name) is on-request with no Cap:"
            else empty end),
