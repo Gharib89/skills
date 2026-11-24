@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.72.1 (2026-11-24)
+
+### Bug Fixes
+
+- **ship-run**: One clean gate evaluator for clean, summary and admit
+  ([#1373](https://github.com/Gharib89/skills/pull/1373),
+  [`8f11a73`](https://github.com/Gharib89/skills/commit/8f11a732942848f2ef0de07b2072ac678c5ee6f9))
+
+
 ## v0.72.0 (2026-11-24)
 
 ### Features
