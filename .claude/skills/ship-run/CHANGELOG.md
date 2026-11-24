@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.75.2 (2026-11-24)
+
+### Bug Fixes
+
+- **ship-run**: A read cut at its limit is never graded as answered
+  ([#1411](https://github.com/Gharib89/skills/pull/1411),
+  [`e64ef9b`](https://github.com/Gharib89/skills/commit/e64ef9b5a060ce07154847f809fc16c79b3ab6b0))
+
+
 ## v0.75.1 (2026-11-24)
 
 ### Bug Fixes
