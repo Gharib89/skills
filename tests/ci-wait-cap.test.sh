@@ -46,6 +46,17 @@ reset; echo 1 > "$SHIP_FAKE/host_pr_get.1.delay"
 ci --timeout 1
 check "a read finishing past the deadline is timeout" timeout "$(jq -r .status <<<"$out")"
 
+# A call cap already spent before the first read still allows that read, so the
+# answer carries the head it saw.
+reset
+SHIP_CALL_CAP=0 ci --timeout 60
+check "a spent call cap still reads once" green "$(jq -r .status <<<"$out")"
+
+# A read refused by the host past the window is the host's refusal, not a timeout.
+reset; echo 2 > "$SHIP_FAKE/host_pr_get.1.status"; touch "$SHIP_FAKE/host_pr_get.1.fail"
+ci --timeout 60
+check_rc "a refused read is tooling" 2 "$rc"
+
 # A read slower than one call's cap, inside a longer window, is pending.
 reset; echo 3 > "$SHIP_FAKE/host_pr_get.1.delay"
 SHIP_CALL_CAP=1 ci --timeout 60

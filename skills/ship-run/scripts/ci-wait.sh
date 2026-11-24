@@ -166,9 +166,10 @@ bounded_read() { # <out-file> <fn> <args...>
   [ "$lim" -gt 0 ] || { window_closed; lim=1; }
   SHIP_READ_LIMIT=$lim ship_poll_read "$@"; rc=$?
   [ "$rc" -ne 4 ] || cut_off
-  # The bound is whole seconds from a clock read earlier in the second, so a
-  # read can finish a fraction past the deadline: it is graded `timeout`.
-  window_closed
+  # An answer that arrives past the deadline is `timeout`, never graded: the
+  # bound is whole seconds, so a read can run a fraction over it. A refusal or
+  # a read with no answer keeps its own path.
+  [ "$rc" -ne 0 ] || window_closed
   return "$rc"
 }
 # A read with no answer: three in a row, or the window closing on one, is the

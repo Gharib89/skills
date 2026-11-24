@@ -138,9 +138,9 @@ ship_reviewers() {
 # Fallbacks that name each other in a cycle leave no primary to withhold them
 # for, and a `Cap:` below zero or with a fraction bounds no loop, so each is
 # refused, as is a `Gating:` that is not yes or no; the cycle is reported once,
-# from its first block in profile order. A name more than one block carries keys
-# no walk, so those blocks neither start one nor continue one; the rest are still
-# checked.
+# from its first block in profile order. A name more than one block carries is
+# ambiguous as a fallback target, so those blocks are left out of the walk and
+# the rest are still checked.
 #
 # A fallback that is not on-request cannot be withheld, and withholding it until
 # its primary degrades is the whole point of a fallback; one naming a reviewer
