@@ -95,6 +95,9 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
     jq -e ' . == null or (type == "object" and all(.[]; type == "string"))' \
       >/dev/null 2>&1 <<<"$rgates" || ship_tooling "cannot read recorded local gate results"
   fi
+  # Here so clean, summary and admit all hold on it (#1341).
+  local criteria_held
+  criteria_held=$(criteria_unrecorded "$lines") || { printf '%s\n' "$criteria_held"; exit 2; }
   record_dir=$(dirname "$file") || ship_tooling "cannot locate Run file drafts"
   [ -r "$record_dir" ] && [ -x "$record_dir" ] || ship_tooling "cannot read draft directory at $record_dir"
   for p in "$record_dir"/tracker-*.md; do
@@ -105,7 +108,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
   answer=$(jq -n --arg text "$lines" --arg head "$head" --arg rhead "$rhead" --arg verdict "$rverdict" \
     --argjson gates "$rgates" --argjson ci "$ci" --argjson legs "$legs" --argjson reviewers "$reviewers" \
     --argjson verifications "$verifications" --argjson drafts "$drafts" --argjson no_checks "$no_checks" --argjson cover "$cover" --argjson scope "$scope" --argjson descends "$descends" \
-    --argjson profile_held "$profile_held" --arg round_re "$round_re" --arg words "$result_re" '
+    --argjson profile_held "$profile_held" --argjson criteria_held "$criteria_held" --arg round_re "$round_re" --arg words "$result_re" '
     def samehead($a; $b): $a != "" and $b != "" and (($a | startswith($b)) or ($b | startswith($a)));
     def named($leg): .name == $leg or (.name | startswith($leg + " ("));
     ($text | split("\n")) as $lines
@@ -181,6 +184,9 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
        ((($gates // {}) | to_entries[] | select(.value == "deferred-to-ci")) as $g
          | ($ci.checks[] | . as $c | select(any($legs[]; . as $l | $c | named($l)) | not) | select(.status != "success"))
          | "local gate " + $g.key + ": deferred-to-ci while CI " + .name + ": " + .status),
+       # With no check row, nothing ran the deferred check, even where the profile allows no checks.
+       if $ci.checks == [] then ($gates // {}) | to_entries[] | select(.value == "deferred-to-ci")
+         | "local gate " + .key + ": deferred-to-ci but CI reported no check to cover it" else empty end,
        if samehead($ci.head_sha; $head) | not then "CI: head differs" else empty end,
        if $ci.status != "green" and ($ci.status != "no-checks" or ($no_checks | not)) then "CI: " + $ci.status else empty end,
        ($legs[] as $leg | [$ci.checks[] | select(named($leg))] as $checks
@@ -237,6 +243,7 @@ gate_clean() { # gate_clean <ci-file|->, with file and head already parsed
          | if $c == "" then "criterion " + $n + ": no line"
            elif $c | test("^met: .*[^ ]") then empty
            else "criterion " + $n + ": " + $c end),
+       $criteria_held[],
        (rests("Override: ")[] | select(. != "" and . != "none" and . != "None.") | "override needed: " + .),
        ($drafts[] | "Tracker draft: " + .)
       ] as $held | {clean: ($held == []), held_by: $held}

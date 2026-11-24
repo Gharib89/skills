@@ -37,3 +37,19 @@ issue_criteria() { # issue_criteria <n>
   body=$("$SHIP_SCRIPTS/read-issue.sh" "$1" 2>/dev/null | jq -er '.body // ""') || return 1
   criteria_entries "$body" | awk 'END { print NR }'
 }
+
+# Whether the unfenced Run file text records a `## Criteria` section, empty or not.
+criteria_recorded() { grep -q '^## Criteria[[:space:]]*$' <<<"$1"; }
+
+# The clean gate's hold for criteria an issue states and the Run file never
+# recorded, criteria nobody judged (#933), as a JSON array of at most one reason.
+# A recorded `## Criteria`, even an empty one, is the run's own judgment, and a
+# slug run has no issue to read.
+criteria_unrecorded() { # criteria_unrecorded <unfenced Run file text>, with file already parsed
+  local id count
+  id=$(basename "$(dirname "$file")"); id=${id#ship-}
+  if criteria_recorded "$1" || ! [[ $id =~ ^[1-9][0-9]*$ ]]; then echo '[]'; return 0; fi
+  count=$(issue_criteria "$id") || ship_tooling "cannot read issue $id to count its criteria: run \`read-issue $id\` and fix what it reports, then re-run"
+  [ "$count" -gt 0 ] || { echo '[]'; return 0; }
+  jq -cn --arg h "criteria: the Run file has no ## Criteria but issue #$id has $count criteria; record each with \`run-file note Criteria <text>\`" '[$h]'
+}

@@ -8,7 +8,7 @@
 # Run file, and the head `read-pr` returns. Neither is the caller's to supply,
 # so the summary cannot claim what the gate never read (#894).
 gate_summary() { # gate_summary <pr>, with file already parsed
-  local pr=$1 ci_file pull answer rc lines entries recorded=false id count
+  local pr=$1 ci_file pull answer rc lines entries recorded=false
   ci_file="$(dirname "$file")/ci-wait.json"
   # Exit 2, not the exit 1 of a held gate: a read that failed is no verdict.
   [ -f "$ci_file" ] || ship_tooling "no saved ci-wait answer at $ci_file: run \`ci-wait $pr\` and save its output there, then re-run"
@@ -22,20 +22,8 @@ gate_summary() { # gate_summary <pr>, with file already parsed
     { if (!ship_fence($0)) print }
     END { if (_fenced) exit 1 }' "$file") || ship_tooling "cannot read Run file evidence at $file"
   # With no `## Criteria` the gate read none, so "none" would be a claim it never
-  # checked: the line says so and the run lists the issue's criteria itself.
-  grep -q '^## Criteria[[:space:]]*$' <<<"$lines" && recorded=true
-  # Criteria an issue states and the Run file never recorded are criteria nobody
-  # judged, so the gate holds rather than only reporting them (#933). A slug run
-  # has no issue to read.
-  id=$(basename "$(dirname "$file")"); id=${id#ship-}
-  if [ "$recorded" = false ] && [[ $id =~ ^[1-9][0-9]*$ ]]; then
-    count=$(issue_criteria "$id") || ship_tooling "cannot read issue $id to count its criteria: run \`read-issue $id\` and fix what it reports, then re-run"
-    if [ "$count" -gt 0 ]; then
-      answer=$(jq --arg h "criteria: the Run file has no ## Criteria but issue #$id has $count criteria; record each with \`run-file note Criteria <text>\`" \
-        '.clean = false | .held_by += [$h]' <<<"$answer") || ship_tooling "cannot add the criteria hold"
-      rc=1
-    fi
-  fi
+  # checked: the line says so (a numbered issue's criteria also hold the gate).
+  criteria_recorded "$lines" && recorded=true
   # Each entry's text, so an unmet criterion reads as the requirement a human is
   # asked to waive and not only its number.
   entries=$(jq -Rn '[inputs | sub("[ \\t\\r]+$"; "")] | reduce .[] as $l ({in: false, m: {}};

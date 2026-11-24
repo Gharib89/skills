@@ -83,7 +83,8 @@ back. `gate clean` reads the same lines, holding on each criterion not met or
 with no line, so `Merge: on-clean-gate` posts the summary with the reply line
 and waits. A run whose Run file has no `## Criteria` section (a free-text run,
 an `init` given no `--criteria`, or criteria text yielding none) gives
-`gate clean` only its `Criterion <n>:` lines to read: with an unmet criterion
+`gate clean` only its `Criterion <n>:` lines, plus one hold while its
+numbered issue states criteria. With an unmet criterion
 listed, wait the same way, whatever it answers.
 
 ## A profile change

@@ -53,7 +53,7 @@ holds_verif() { # holds_verif <run file> <name>: the gate-clean holds naming tha
     | jq -r --arg v "verification $2:" 'if (.held_by | type) == "array"
         then [.held_by[] | select(startswith($v))] | join(",") else "no answer: \(.error)" end'
 }
-fa=$(at "$added" init 80 --from-profile | jq -r .run_file)
+fa=$(at "$added" init late80 --from-profile | jq -r .run_file)
 to_phase3 "$fa"
 add_heading live-run
 check "gate clean holds a heading the profile gained after init" 'verification live-run: missing; record it with `run-file close 3 --result live-run=<word>`' "$(holds_verif "$fa" live-run)"
@@ -109,7 +109,7 @@ check_rc "a re-opened phase 3 takes a heading added after it closed" 0 "$(inrc "
 check "that heading is recorded" '- second: pass' "$(entry '^- second: ' "$fa")"
 # A profile that named no Verification at init has no results section to append to.
 printf '## Local gate\n\nTripwires: None.\n\n## CI\n\nLegs: None.\n\n## Reviewers\n\nNone.\n\n## Verification\n' > "$added/docs/agents/ship.md"
-fe=$(at "$added" init 81 --from-profile | jq -r .run_file)
+fe=$(at "$added" init late81 --from-profile | jq -r .run_file)
 to_phase3 "$fe"
 add_heading first-check
 check_rc "the first heading a PR adds is recorded" 0 "$(inrc "$added" close 3 --file "$fe" --result first-check=pass)"
@@ -119,7 +119,7 @@ check "it opens the results section" '## Verification results
 check "gate clean reads the section it opened" '' "$(holds_verif "$fe" first-check)"
 # An added heading that prefixes one init recorded finds no entry of its own.
 printf '## Local gate\n\nTripwires: None.\n\n## CI\n\nLegs: None.\n\n## Reviewers\n\nNone.\n\n## Verification\n\n### lint: strict\n' > "$added/docs/agents/ship.md"
-fp=$(at "$added" init 82 --from-profile | jq -r .run_file)
+fp=$(at "$added" init late82 --from-profile | jq -r .run_file)
 to_phase3 "$fp"
 add_heading lint
 check_rc "an added heading that prefixes a recorded one takes its own result" 0 \
@@ -134,7 +134,7 @@ check "gate clean holds neither" '' "$(holds_verif "$fp" lint)"
 # The reverse: init recorded the shorter name, so the added longer entry lands
 # after it, the last row gate clean's prefix would read for it.
 printf '## Local gate\n\nTripwires: None.\n\n## CI\n\nLegs: None.\n\n## Reviewers\n\nNone.\n\n## Verification\n\n### lint\n' > "$added/docs/agents/ship.md"
-fr=$(at "$added" init 83 --from-profile | jq -r .run_file)
+fr=$(at "$added" init late83 --from-profile | jq -r .run_file)
 to_phase3 "$fr"
 add_heading 'lint: strict'
 check_rc "a recorded name that prefixes an added heading takes its own result" 0 \
@@ -146,7 +146,7 @@ check "gate clean reads each entry as its own" '' "$(holds_verif "$fr" lint)"
 # or been skipped, so close 3 records it there and leaves the row as is.
 row3() { grep '^- \[.\] 3 · ' "$1"; }
 cp "$profile" "$added/docs/agents/ship.md"
-fl=$(at "$added" init 84 --from-profile | jq -r .run_file)
+fl=$(at "$added" init late84 --from-profile | jq -r .run_file)
 to_phase3 "$fl"
 at "$added" close 3 --file "$fl" --result github-mechanics=pass --result ado-mechanics=pass >/dev/null
 at "$added" open 4 --file "$fl" >/dev/null
@@ -171,12 +171,12 @@ check "a bad word is refused on a closed phase 3" \
 check_rc "the bad-word refusal is malformed" 2 "$(inrc "$added" close 3 --file "$fl" --result late-check=great)"
 check "the refusals left the record unchanged" "$was" "$(cat "$fl")"
 check "close 3 with no result on a closed phase 3 is still refused" 'phase 3 is not open' "$(inerr "$added" close 3 --file "$fl")"
-fn=$(at "$added" init 85 --from-profile | jq -r .run_file)
+fn=$(at "$added" init late85 --from-profile | jq -r .run_file)
 check "a result on a phase 3 never opened is still refused" \
   'phase 3 was never opened; run `run-file open 3` first, then close it' \
   "$(inerr "$added" close 3 --file "$fn" --result github-mechanics=pass)"
 cp "$profile" "$added/docs/agents/ship.md"
-fs=$(at "$added" init 86 --from-profile | jq -r .run_file)
+fs=$(at "$added" init late86 --from-profile | jq -r .run_file)
 at "$added" close 0 --file "$fs" >/dev/null
 for p in 1 2; do at "$added" open "$p" --file "$fs" >/dev/null; at "$added" close "$p" --file "$fs" >/dev/null; done
 at "$added" skip 3 'docs only' --file "$fs" >/dev/null
