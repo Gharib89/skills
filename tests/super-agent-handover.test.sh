@@ -8,6 +8,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source tests/super-agent-fake.sh
 source tests/super-agent-launch-lib.sh
+# The scorecard row each handover counts looks for transcripts under HOME.
+export HOME=$tmp/home CLAUDE_CONFIG_DIR=''
 
 loaded=$(sed -n 's/^  version: //p' "$s/../SKILL.md")
 src=skills/super-agent/SKILL.md
@@ -76,5 +78,24 @@ check "an unreadable source runs no refresh" "null false " "$(H | jq -r '"\(.ski
 sa_skill_file Gharib89/skills "$src" 99.0.0
 out=$(NPX_RC=1 H); rc=$?
 check "a failed refresh exits 1, the bearings still written" "1 false true" "$rc $(jq -r .refreshed <<<"$out") $([ -s "$bear" ] && echo true)"
+
+# --- the scorecard: a row each handover, the weekly review once a week ------------
+seed; rm -f "$(dirname "$led")/scorecard.jsonl" "$(dirname "$led")/scorecard-reviewed"
+now=$(jq -n '"2026-11-18T08:00:00Z" | fromdateiso8601')
+out=$(SA_NOW=$now H); rc=$?
+check "a handover counts the previous day's scorecard row for the old thread" "0 2026-11-17 th-old" \
+  "$rc $(jq -r .scorecard.row <<<"$out") $(jq -r .thread "$(dirname "$led")/scorecard.jsonl")"
+check "the first handover of a week runs the weekly review over the last full week" "[] 2026-11-09" \
+  "$(jq -c .scorecard.review <<<"$out") $(cat "$(dirname "$led")/scorecard-reviewed")"
+check "a later handover that week runs no review" null "$(SA_NOW=$((now + 86400)) H | jq -c .scorecard.review)"
+printf '%s\n' '{"day":"2026-11-11","needs":{"alerted_twice":3}}' >> "$(dirname "$led")/scorecard.jsonl"
+rm -f "$(dirname "$led")/scorecard-reviewed"
+SA_NOW=$now H >/dev/null
+check "a review row joins the bearings' Needs you list" 1 "$(grep -c '^- Scorecard: needs.alerted_twice missed its target' "$bear")"
+printf 'not json\n' > "$led.archive.jsonl"
+out=$(SA_NOW=$now H 2>/dev/null); rc=$?
+check "a scorecard that fails is reported and holds nothing" "0 null true" \
+  "$rc $(jq -r .scorecard.row <<<"$out") $(jq -r '.scorecard.error | contains("archive")' <<<"$out")"
+rm -f "$led.archive.jsonl"
 
 finish

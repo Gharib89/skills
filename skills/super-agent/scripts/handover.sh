@@ -13,10 +13,16 @@
 # --skill super-agent --agent claude-code -g -y`; an unread version is no
 # verdict, so no refresh. The bearings file is Markdown: the predecessor thread
 # (`--from`), the ledger, the skill versions, and one line per open entry, open
-# need and waiting row.
+# need and waiting row. First it appends the previous day's scorecard row
+# (`scorecard row --thread <--from>`), and at the first handover of a week runs
+# the weekly review, whose rows join the bearings' Needs you list. A scorecard
+# that fails is reported, never a reason to hold the handover.
 #
-# stdout: {bearings, skill: {loaded, source, stale}, refreshed}: `bearings` the
-#         file written, `refreshed` true when the refresh ran and exited 0
+# stdout: {bearings, skill: {loaded, source, stale}, refreshed, scorecard: {row,
+#         error, review}}: `bearings` the file written, `refreshed` true when the
+#         refresh ran and exited 0, `scorecard.row` the day counted (null when it
+#         failed, `error` saying why), `review` the weekly review's rows on the
+#         first handover of a week, else null
 # exit: 0 the bearings written · 1 the refresh failed (the bearings still
 #       written, saying so) · 2 usage, an unreadable ledger, or a bearings file
 #       that could not be written
@@ -43,6 +49,20 @@ sa_read "$ledger"
 # One brace group, parsed whole before it runs: the refresh may rewrite this
 # very file, and bash reads a script as it goes.
 {
+# The scorecard before the refresh, so the row is stamped with the version that
+# ran the day. The weekly review is reported once per week: `scorecard-reviewed`
+# holds the first day of the last week reviewed.
+card=$(bash "$(dirname "${BASH_SOURCE[0]}")/scorecard.sh" row --ledger "$ledger" --thread "$from") \
+  || printf 'the scorecard row failed: %s\n' "$(jq -r .error <<<"$card" 2>/dev/null)" >&2
+review=$(bash "$(dirname "${BASH_SOURCE[0]}")/scorecard.sh" review --ledger "$ledger") || review=''
+mark="$(dirname "$ledger")/scorecard-reviewed"
+if [ -n "$review" ] && [ "$(cat "$mark" 2>/dev/null)" != "$(jq -r .week.from <<<"$review")" ]; then
+  jq -r .week.from <<<"$review" > "$mark"
+else
+  review=null
+fi
+scorecard=$(jq -cn --argjson c "${card:-null}" --argjson r "$review" \
+  '{row: ($c.row.day // null), error: ($c.error // null), review: (if $r == null then null else $r.needs end)}')
 skill=$(sa_skill_stale)
 refreshed=false rc=0
 if [ "$(jq -r .stale <<<"$skill")" = true ]; then
@@ -50,17 +70,17 @@ if [ "$(jq -r .stale <<<"$skill")" = true ]; then
   if [ "${PIPESTATUS[0]}" -eq 0 ]; then refreshed=true; else rc=1; printf 'the super-agent refresh failed (its output above)\n' >&2; fi
 fi
 
-jq -r --arg from "$from" --arg l "$ledger" --argjson sk "$skill" --argjson r "$refreshed" "$sa_jq_open$sa_jq_waiting"'
+jq -r --arg from "$from" --arg l "$ledger" --argjson sk "$skill" --argjson r "$refreshed" --argjson sc "$scorecard" "$sa_jq_open$sa_jq_waiting"'
   def lines($xs): if ($xs | length) == 0 then ["None."] else $xs end;
   ["# Super agent bearings", "",
    "Handed over from thread \($from). Ledger: \($l).", "",
    "Skill: loaded \($sk.loaded // "unread"), source \($sk.source // "unread"), "
      + (if $r then "refreshed to \($sk.source)." elif $sk.stale == true then "stale, the refresh failed." else "no refresh." end), "",
    "## Open entries", ""] + lines([.entries[] | select(is_open) | "- \(.key) thread \(.thread) \(.stage)"])
-  + ["", "## Needs you", ""] + lines([(.needs // [])[] | "- \(.key): \(.action)"])
+  + ["", "## Needs you", ""] + lines([((.needs // [])[] | "- \(.key): \(.action)"), (($sc.review // [])[] | "- \(.)")])
   + ["", "## Waiting", ""] + lines([waiting_list[] | "- \(.key): \(.reason)"])
   | join("\n")' <<<"$doc" > "$out" || sa_tooling "cannot write $out"
 
-jq -cn --arg b "$out" --argjson sk "$skill" --argjson r "$refreshed" '{bearings: $b, skill: $sk, refreshed: $r}'
+jq -cn --arg b "$out" --argjson sk "$skill" --argjson r "$refreshed" --argjson sc "$scorecard" '{bearings: $b, skill: $sk, refreshed: $r, scorecard: $sc}'
 exit "$rc"
 }
