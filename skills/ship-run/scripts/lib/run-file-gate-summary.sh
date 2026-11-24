@@ -23,7 +23,7 @@ gate_summary() { # gate_summary <pr>, with file already parsed
     END { if (_fenced) exit 1 }' "$file") || ship_tooling "cannot read Run file evidence at $file"
   # With no `## Criteria` the gate read none, so "none" would be a claim it never
   # checked: the line says so (a numbered issue's criteria also hold the gate).
-  grep -q '^## Criteria[[:space:]]*$' <<<"$lines" && recorded=true
+  criteria_recorded "$lines" && recorded=true
   # Each entry's text, so an unmet criterion reads as the requirement a human is
   # asked to waive and not only its number.
   entries=$(jq -Rn '[inputs | sub("[ \\t\\r]+$"; "")] | reduce .[] as $l ({in: false, m: {}};
