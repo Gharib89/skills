@@ -12,11 +12,31 @@
 # its persistent refusal costs the loop three reads before it ends.
 # The caller sets $SHIP_HTTP_STATUS_FILE to a file it traps for removal.
 # ship_poll_read <out-file> <fn> <args...>: 0 answered, the answer in <out-file>
-# · 1 the host refused, with a status · 3 no answer
+# · 1 the host refused, with a status · 3 no answer · 4 cut off at
+# $SHIP_READ_LIMIT seconds, where the caller sets one. A wait bounded by a window
+# or a call cap bounds its reads the same way: a read that outlasts the bound has
+# spent the time the answer would have been graded in (#1346). The read runs in
+# the background under a watchdog that ends it and its children, since the host
+# functions are shell functions `timeout` cannot run.
 ship_poll_read() {
-  local out=$1; shift
+  local out=$1 pid dog rc; shift
   : > "$SHIP_HTTP_STATUS_FILE"
-  "$@" > "$out" && return 0
+  if [ -n "${SHIP_READ_LIMIT:-}" ]; then
+    "$@" > "$out" & pid=$!
+    # The watchdog traps TERM to end its own sleep, so `kill "$dog"` alone stops
+    # both once the read has returned: left running, the sleep would hold a
+    # caller's `$( )` pipe open until the limit ran out, and a watchdog that
+    # outlived its sleep would signal a pid the `wait` below has already reaped.
+    ( trap 'kill "$s" 2>/dev/null; exit 0' TERM
+      sleep "$SHIP_READ_LIMIT" & s=$!; wait "$s"
+      pkill -TERM -P "$pid" 2>/dev/null; kill -TERM "$pid" 2>/dev/null ) >/dev/null 2>&1 </dev/null & dog=$!
+    wait "$pid"; rc=$?
+    kill "$dog" 2>/dev/null; wait "$dog" 2>/dev/null
+    [ "$rc" -ne 143 ] || return 4
+    [ "$rc" -ne 0 ] || return 0
+  else
+    "$@" > "$out" && return 0
+  fi
   [ -s "$SHIP_HTTP_STATUS_FILE" ] && return 1
   return 3
 }
@@ -58,8 +78,9 @@ ship_head_stale() { # <pr-json> [<sha>]
 # {name, login, trigger, request, workflow, cap, resolve, gating, fallback_for,
 # instructions}.
 # `None.` reads as null, `Cap:` as a number, `Gating:` as a boolean. A `Cap:` that
-# is neither a number nor `None.` comes back as the raw string, so
-# `ship_reviewer_reasons` can refuse it rather than read a typo as "uncapped".
+# is neither a number nor `None.`, and a `Gating:` that is neither `yes` nor `no`,
+# come back as the raw string, so `ship_reviewer_reasons` can refuse it rather
+# than read a typo as "uncapped" or "not gating".
 #
 # The row is the whole block, not just the fields preflight checks: a parser that
 # dropped the rest would force whoever needs `Login:` or `Request:` to parse the
@@ -103,7 +124,8 @@ ship_reviewers() {
                  workflow: null, cap: null, resolve: null, gating: false,
                  fallback_for: null, instructions: null}]
       else (($p[1] | ascii_downcase | sub("-"; "_")) as $k
-            | .[length - 1] += {($k): (if $k == "gating" then $p[2] == "yes"
+            | .[length - 1] += {($k): (if $k == "gating"
+                                       then ($p[2] | if . == "yes" then true elif . == "no" then false else . end)
                                        else norm($k; $p[2]) end)})
       end)'
 }
@@ -112,6 +134,13 @@ ship_reviewers() {
 # <detail>` line per reviewer-block fault, or nothing when the blocks hold.
 # Preflight's only reviewer check, so the faults are refused in both lanes and
 # before the claim, rather than at the phase that would have driven the reviewer.
+#
+# Fallbacks that name each other in a cycle leave no primary to withhold them
+# for, and a `Cap:` below zero or with a fraction bounds no loop, so each is
+# refused, as is a `Gating:` that is not yes or no; the cycle is reported once,
+# from its first block in profile order. A name more than one block carries is
+# ambiguous as a fallback target, so those blocks are left out of the walk and
+# the rest are still checked.
 #
 # A fallback that is not on-request cannot be withheld, and withholding it until
 # its primary degrades is the whole point of a fallback; one naming a reviewer
@@ -172,6 +201,9 @@ ship_reviewer_reasons() {
     | if ($rows | type) != "array"
       then "profile invalid: the ## Reviewers blocks could not be parsed"
       else ([$rows[].name]) as $names
+        | ([$names[] | . as $n | select(([$names[] | select(. == $n)] | length) > 1)] | unique) as $dups
+        | ([$rows[] | . as $r | select($r.fallback_for != null and ($dups | index($r.name)) == null)
+            | {key: $r.name, value: $r.fallback_for}] | from_entries) as $fallback
         | $rows[]
         | . as $x
         | (if $x.name == "self-review" or ($x.name | startswith("self-review "))
@@ -186,6 +218,19 @@ ship_reviewer_reasons() {
           (if ($x.cap | type) == "string"
            then "profile invalid: \($x.name) has Cap: \($x.cap), which is neither a number nor None."
            else empty end),
+          (if ($x.cap | type) == "number" and ($x.cap < 0 or $x.cap != ($x.cap | floor))
+           then "profile invalid: \($x.name) has Cap: \($x.cap), which is not a whole number of rounds, 0 or more"
+           else empty end),
+          (if ($x.gating | type) == "string"
+           then "profile invalid: \($x.name) has Gating: \($x.gating), which is neither yes nor no"
+           else empty end),
+          (if ($dups | index($x.name)) != null then empty
+           else (([$x.name | limit(($names | length) + 1; recurse($fallback[.]; . != null))]) as $walk
+                 | ($walk[1:] | index($x.name)) as $back
+                 | if $back != null
+                      and ([$walk[: $back + 1][] | . as $m | $names | index($m)] | min) == ($names | index($x.name))
+                   then "profile invalid: reviewers name each other as fallbacks in a cycle: \($walk[: $back + 2] | join(" -> "))"
+                   else empty end) end),
           (if $x.trigger == "on-request" and $x.cap == null
            then "profile invalid: \($x.name) is on-request with no Cap:"
            else empty end),

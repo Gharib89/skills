@@ -187,8 +187,12 @@ check "a Cap: with no value reads as absent, and on-request still refuses" \
   'profile invalid: claude is on-request with no Cap:' \
   "$(ship_reviewer_reasons "$(ship_reviewers "$bare")" "$root")"
 
-check "Gating: is a boolean whatever it reads, never null" \
-  'false' "$(ship_reviewers "$(sed 's|^Gating: no$|Gating: None.|' <<<"$profile")" | jq -r '.[0].gating')"
+check "Gating: yes reads true and no reads false" \
+  'true false' "$(ship_reviewers "$(sed '0,/^Gating: no$/s||Gating: yes|' <<<"$profile")" | jq -r '[.[].gating] | join(" ")')"
+
+# Neither yes nor no stays the raw string, so ship_reviewer_reasons can refuse it.
+check "any other Gating: value comes back as the raw string, never null" \
+  'None.' "$(ship_reviewers "$(sed 's|^Gating: no$|Gating: None.|' <<<"$profile")" | jq -r '.[0].gating')"
 
 # --- ship_copilot_trigger_reason: the profile's Copilot block against the host --
 #

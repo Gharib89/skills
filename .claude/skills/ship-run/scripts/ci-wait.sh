@@ -7,7 +7,11 @@
 # pass the cap answers `pending` with a cursor, and `--cursor` resumes it. The
 # cursor carries the window's deadline, the expected head only where --sha fixed
 # it, and the no-checks grace's clock with the head it started for: a resumed
-# call, like any pass, that finds another head starts that clock over.
+# call, like any pass, that finds another head starts that clock over. Each host
+# read is cut off at the time left in the window and in the call, so a slow host
+# cannot carry a call past either: a read cut at the window's deadline is
+# `timeout`, one cut at the call cap is `pending`, and a cursor whose window has
+# closed is `timeout` with no read.
 #
 #   ci-wait <pr> [--sha <sha>] [--timeout <s>, at least the no-checks grace the
 #           profile leaves standing] [--interval <s>] [--rerun-failed]
@@ -123,21 +127,45 @@ emit() { # <status> [<cursor>]
     + (if $cur != "" then {cursor: $cur} else {} end)
     + (if $rr != "" then {rerun: ($rr | fromjson)} else {} end)'
 }
+# The window's deadline has passed: the answer is `timeout`, and the call ends.
+# Also stamps $waited, which the answers carry.
+window_closed() {
+  local now
+  now=$(date +%s); waited=$((now - start))
+  if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
+}
+pend() {
+  view
+  emit pending "$(ship_cursor_make "$(jq -cn --argjson d "$deadline" --argjson s "$start" --arg h "$head_at" --arg hs "$head_seen" --arg w "$want" \
+    '{deadline: $d, start: $s, head_at: (if $h == "" then null else ($h | tonumber) end), head_sha: $hs, want: $w}')")"
+  exit 1
+}
 # The window is open and nothing is final. Sleep, unless the sleep would pass
 # this call's cap: then the answer is `pending` with the cursor, which carries
 # the deadline and the grace's start so the next call is the same window.
 again() {
   local now step
-  now=$(date +%s); waited=$((now - start))
-  if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
+  window_closed
+  now=$(date +%s)
   step=$((deadline - now)); [ "$step" -le "$interval" ] || step=$interval
-  if [ $((now + step)) -gt "$call_end" ]; then
-    view
-    emit pending "$(ship_cursor_make "$(jq -cn --argjson d "$deadline" --argjson s "$start" --arg h "$head_at" --arg hs "$head_seen" --arg w "$want" \
-      '{deadline: $d, start: $s, head_at: (if $h == "" then null else ($h | tonumber) end), head_sha: $hs, want: $w}')")"
-    exit 1
-  fi
+  if [ $((now + step)) -gt "$call_end" ]; then pend; fi
   sleep "$step"
+}
+cut_off() { window_closed; pend; }
+# A host read is bounded by the time left in the window and in this call: set
+# before each read, and a read cut off by the bound ends the call the way the
+# bound would have, `timeout` at the window's deadline, else `pending`.
+bounded_read() { # <out-file> <fn> <args...>
+  local now lim rc
+  now=$(date +%s)
+  lim=$((deadline < call_end ? deadline : call_end)); lim=$((lim - now))
+  # A bound spent before the read, by the clock ticking over or a call cap used
+  # up, still allows one second: the answer then carries the head it saw. A
+  # resumed cursor's closed window never gets here, it is answered before the loop.
+  [ "$lim" -gt 0 ] || lim=1
+  SHIP_READ_LIMIT=$lim ship_poll_read "$@"; rc=$?
+  [ "$rc" -ne 4 ] || cut_off
+  return "$rc"
 }
 # A read with no answer: three in a row, or the window closing on one, is the
 # host being down, which is a tooling error and not a status of the PR.
@@ -167,11 +195,19 @@ rerun_failed() {
       '. + [{name: $r.name, rerun: $d, attempt: $r.attempt, log_tail: $r.log_tail}]' <<<"$rerun_json")
   done < <(jq -c '.[]' <<<"$jobs")
 }
+# A resumed cursor whose window has closed is `timeout` without a read, naming
+# the head its last call saw.
+[ -z "$cursor" ] || { sha=$head_seen; window_closed; }
 while :; do
-  ship_poll_read "$prf" host_pr_get "$pr"; rc=$?
+  bounded_read "$prf" host_pr_get "$pr"; rc=$?
   [ "$rc" -ne 1 ] || ship_tooling "cannot read PR $pr"
   [ "$rc" -ne 3 ] || { unread "PR $pr"; continue; }
   prj=$(<"$prf"); sha=$(jq -r .head_sha <<<"$prj")
+  # An answer that arrives past the deadline is `timeout`, never graded: a read's
+  # bound is whole seconds, so it can run a fraction over the window. The checks
+  # held are another head's when this head is new.
+  [ "$sha" = "$head_seen" ] || checks='[]'
+  window_closed
   waited=$(( $(date +%s) - start ))
   if ship_head_stale "$prj" "$want"; then checks='[]'; fails=0; again; continue; fi
   # The grace counts from the expected head's arrival, so a late push cannot
@@ -183,11 +219,12 @@ while :; do
     echo "PR $pr conflicts with its base: fetch, merge the base in, resolve, re-run base-fresh and the local gate, push." >&2
     exit 1
   fi
-  ship_poll_read "$ckf" host_pr_checks "$pr" "$sha"; rc=$?
+  bounded_read "$ckf" host_pr_checks "$pr" "$sha"; rc=$?
   [ "$rc" -ne 1 ] || ship_tooling "cannot read checks"
   [ "$rc" -ne 3 ] || { unread checks; continue; }
   checks=$(jq -c . "$ckf") && ship_checks_valid "$checks" || ship_tooling "malformed check rows on $sha: $(head -c 400 "$ckf")"
   fails=0
+  window_closed
   view
   read -r ln lp nf nm <<<"$(jq -r '[.leg_n, .leg_pending, (.failing | length), (.missing_legs | length)] | @tsv' <<<"$view")"
   now=$(date +%s); waited=$((now - start))
