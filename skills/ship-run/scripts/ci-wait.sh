@@ -126,18 +126,39 @@ emit() { # <status> [<cursor>]
 # The window is open and nothing is final. Sleep, unless the sleep would pass
 # this call's cap: then the answer is `pending` with the cursor, which carries
 # the deadline and the grace's start so the next call is the same window.
+pend() {
+  view
+  emit pending "$(ship_cursor_make "$(jq -cn --argjson d "$deadline" --argjson s "$start" --arg h "$head_at" --arg hs "$head_seen" --arg w "$want" \
+    '{deadline: $d, start: $s, head_at: (if $h == "" then null else ($h | tonumber) end), head_sha: $hs, want: $w}')")"
+  exit 1
+}
 again() {
   local now step
   now=$(date +%s); waited=$((now - start))
   if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
   step=$((deadline - now)); [ "$step" -le "$interval" ] || step=$interval
-  if [ $((now + step)) -gt "$call_end" ]; then
-    view
-    emit pending "$(ship_cursor_make "$(jq -cn --argjson d "$deadline" --argjson s "$start" --arg h "$head_at" --arg hs "$head_seen" --arg w "$want" \
-      '{deadline: $d, start: $s, head_at: (if $h == "" then null else ($h | tonumber) end), head_sha: $hs, want: $w}')")"
-    exit 1
-  fi
+  if [ $((now + step)) -gt "$call_end" ]; then pend; fi
   sleep "$step"
+}
+# A host read is bounded by the time left in the window and in this call: set
+# before each read, and a read cut off by the bound ends the call the way the
+# bound would have, `timeout` at the window's deadline, else `pending`. A window
+# already closed (a resumed cursor's) is `timeout` with no read at all.
+bounded_read() { # <out-file> <fn> <args...>
+  local now lim
+  now=$(date +%s); waited=$((now - start))
+  lim=$((deadline < call_end ? deadline : call_end)); lim=$((lim - now))
+  if [ "$lim" -le 0 ]; then
+    if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
+    pend
+  fi
+  SHIP_READ_LIMIT=$lim ship_poll_read "$@"; rc=$?
+  [ "$rc" -ne 4 ] || {
+    now=$(date +%s); waited=$((now - start))
+    if [ "$now" -ge "$deadline" ]; then view; emit timeout; exit 1; fi
+    pend
+  }
+  return "$rc"
 }
 # A read with no answer: three in a row, or the window closing on one, is the
 # host being down, which is a tooling error and not a status of the PR.
@@ -168,7 +189,7 @@ rerun_failed() {
   done < <(jq -c '.[]' <<<"$jobs")
 }
 while :; do
-  ship_poll_read "$prf" host_pr_get "$pr"; rc=$?
+  bounded_read "$prf" host_pr_get "$pr"; rc=$?
   [ "$rc" -ne 1 ] || ship_tooling "cannot read PR $pr"
   [ "$rc" -ne 3 ] || { unread "PR $pr"; continue; }
   prj=$(<"$prf"); sha=$(jq -r .head_sha <<<"$prj")
@@ -183,7 +204,7 @@ while :; do
     echo "PR $pr conflicts with its base: fetch, merge the base in, resolve, re-run base-fresh and the local gate, push." >&2
     exit 1
   fi
-  ship_poll_read "$ckf" host_pr_checks "$pr" "$sha"; rc=$?
+  bounded_read "$ckf" host_pr_checks "$pr" "$sha"; rc=$?
   [ "$rc" -ne 1 ] || ship_tooling "cannot read checks"
   [ "$rc" -ne 3 ] || { unread checks; continue; }
   checks=$(jq -c . "$ckf") && ship_checks_valid "$checks" || ship_tooling "malformed check rows on $sha: $(head -c 400 "$ckf")"

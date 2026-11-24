@@ -72,7 +72,8 @@ reasons() { ship_reviewer_reasons "$(ship_reviewers "$1")" "$root"; }
 
 check "a valid pair yields no reason" '' "$(reasons "$profile")"
 
-bad_trigger=$(sed 's|^Fallback-for: None.$|Fallback-for: claude|' <<<"$profile")
+# claude drops its own Fallback-for: so the pair is not a cycle, which has its own test.
+bad_trigger=$(sed 's|^Fallback-for: None.$|Fallback-for: claude|;s|^Fallback-for: copilot$|Fallback-for: None.|' <<<"$profile")
 check "refuses Fallback-for: on a reviewer that is not on-request" \
   'profile invalid: copilot is Fallback-for: claude but its Trigger is on-push, not on-request' \
   "$(reasons "$bad_trigger")"
