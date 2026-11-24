@@ -9,7 +9,10 @@ source tests/lib.sh
 source tests/super-agent-fake.sh
 source tests/super-agent-launch-lib.sh
 # The scorecard row each handover counts looks for transcripts under HOME.
-export HOME=$tmp/home CLAUDE_CONFIG_DIR=''
+export HOME=$tmp/home CLAUDE_CONFIG_DIR='' XDG_STATE_HOME=$tmp/state
+folder=$XDG_STATE_HOME/super-agent/home hc=$XDG_STATE_HOME/super-agent/home/.claude/settings.local.json
+proj=$tmp/projects.json
+jq -n --arg f "$folder" '{projects: [{id: "p-other", workspaceRoot: "/repo"}, {id: "p-home", workspaceRoot: $f}]}' > "$proj"
 mkdir -p "$HOME/.claude/projects/p"
 jq -cn '{type: "user", timestamp: "2026-11-17T09:00:00Z", message: {role: "user",
   content: "Base directory for this skill: /x/.claude/skills/super-agent\nthread th-old"}}' > "$HOME/.claude/projects/p/s.jsonl"
@@ -23,7 +26,7 @@ printf '%s\n' "$*" >> "$SA_FAKE/npx-calls"
 exit "${NPX_RC:-0}"
 FAKE
 chmod +x "$tmp/bin/npx"
-H() { bash "$s/handover.sh" --ledger "$led" --from th-old --out "$bear"; }
+H() { bash "$s/handover.sh" --ledger "$led" --from th-old --out "$bear" --projects "$proj"; }
 npx_calls() { cat "$SA_FAKE/npx-calls" 2>/dev/null; }
 seed() {
   reset; rm -f "$bear" "$SA_FAKE/npx-calls"
@@ -44,10 +47,23 @@ out=$(bash "$s/$x.sh" --bogus 2>/dev/null); rc=$?
 check "$x: a bad flag answers its usage line" "$(sed -n 1p <<<"$(bash "$s/$x.sh" --help)")" "$(jq -r .error <<<"$out")"
 check_rc "$x: a bad flag exits 2" 2 "$rc"
 sa_skill_file Gharib89/skills "$src" 99.0.0
-out=$(bash "$s/$x.sh" --ledger "$led" --from th-old --out /nonexistent/b.md 2>/dev/null); rc=$?
+out=$(bash "$s/$x.sh" --ledger "$led" --from th-old --out /nonexistent/b.md --projects "$proj" 2>/dev/null); rc=$?
 check "$x refuses an unwritable --out by name, exit 2, before any refresh" "2 cannot write /nonexistent/b.md absent" \
   "$rc $(jq -r .error <<<"$out") $([ -e "$SA_FAKE/npx-calls" ] && echo present || echo absent)"
-check_rc "$x without --out exits 2" 2 "$(bash "$s/$x.sh" --ledger "$led" --from th-old >/dev/null 2>&1; echo $?)"
+check_rc "$x without --out exits 2" 2 "$(bash "$s/$x.sh" --ledger "$led" --from th-old --projects "$proj" >/dev/null 2>&1; echo $?)"
+check_rc "$x without --projects exits 2" 2 "$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" >/dev/null 2>&1; echo $?)"
+printf 'not json\n' > "$tmp/bad.json"
+out=$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/bad.json" 2>/dev/null); rc=$?
+check_rc "$x with a --projects file that is no project list exits 2" 2 "$rc"
+check "$x says the file is no project list" "$tmp/bad.json: not a t3_project_list answer" "$(jq -r .error <<<"$out")"
+jq -n '{projects: [], nextCursor: "c2"}' > "$tmp/page1.json"
+out=$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/page1.json" 2>/dev/null); rc=$?
+check_rc "$x with one page of several exits 2" 2 "$rc"
+check "$x says a nextCursor is set" "$tmp/page1.json: a nextCursor is set: save all pages' rows as one array" "$(jq -r .error <<<"$out")"
+jq -n '{projects: [{id: "p5", workspaceRoot: 5}]}' > "$tmp/badrow.json"
+out=$(bash "$s/$x.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/badrow.json" 2>/dev/null); rc=$?
+check_rc "$x with a project row whose workspaceRoot is no string exits 2" 2 "$rc"
+check "$x names the projects file and the field for a bad row" "$tmp/badrow.json: a project row is no object, or its workspaceRoot is no string" "$(jq -r .error <<<"$out")"
 
 # --- the bearings file, from the ledger -----------------------------------------
 seed
@@ -106,7 +122,7 @@ out=$(SA_NOW=$now H 2>/dev/null)
 check "a week missing a row: the review error is in the JSON and a Needs you line" "true 1" \
   "$(jq -r '.scorecard.review_error | contains("no row for 2026-11-15")' <<<"$out") $(grep -c '^- Scorecard: the weekly review failed: .*no row for 2026-11-15' "$bear")"
 cp -r "$s/.." "$tmp/sa" && printf '#!/usr/bin/env bash\n[ "$1" = review ] && exit 1\nexec bash %q "$@"\n' "$s/scorecard.sh" > "$tmp/sa/scripts/scorecard.sh"
-out=$(SA_NOW=$now bash "$tmp/sa/scripts/handover.sh" --ledger "$led" --from th-old --out "$bear" 2>/dev/null); rc=$?
+out=$(SA_NOW=$now bash "$tmp/sa/scripts/handover.sh" --ledger "$led" --from th-old --out "$bear" --projects "$proj" 2>/dev/null); rc=$?
 check "a review that dies with no output is still reported and holds nothing" '0 "the review failed" null absent' \
   "$rc $(jq -c .scorecard.review_error <<<"$out") $(jq -c .scorecard.review <<<"$out") $([ -f "$(dirname "$led")/scorecard-reviewed" ] && echo present || echo absent)"
 rm -f "$(dirname "$led")/scorecard.jsonl"
@@ -115,5 +131,35 @@ out=$(SA_NOW=$now H 2>/dev/null); rc=$?
 check "a scorecard that fails is reported and holds nothing" "0 null true" \
   "$rc $(jq -r .scorecard.row <<<"$out") $(jq -r '.scorecard.error | contains("archive")' <<<"$out")"
 rm -f "$led.archive.jsonl"
+
+# --- the super agent folder: rewritten at every handover, the successor launched in it ---
+seed; rm -rf "$XDG_STATE_HOME/super-agent/home"
+out=$(H); rc=$?
+check "a handover writes the folder's settings with the state guard and names the folder's project" "0 true true p-home $folder" \
+  "$rc $(jq .home.written <<<"$out") $(jq .home.guard <<<"$out") $(jq -r .home.project_id <<<"$out") $(jq -r .home.folder <<<"$out")"
+check "the guard's hook is the settings file's one entry" 1 "$(jq '.hooks.PreToolUse | length' "$hc")"
+check "a healthy folder adds no Needs you line" 0 "$(grep -c 'Super agent folder\|State guard' "$bear")"
+jq -n '{projects: [{id: "p-other", workspaceRoot: "/repo"}]}' > "$tmp/noproj.json"
+out=$(bash "$s/handover.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/noproj.json"); rc=$?
+check "a missing T3 project for the folder is one Needs you line saying what the owner creates" "0 null 1" \
+  "$rc $(jq -r .home.project_id <<<"$out") $(grep -c "^- Super agent folder: no T3 project has $folder as its workspace" "$bear")"
+jq -n --arg f "$folder/" '{projects: [{id: "p-slash", workspaceRoot: $f, archivedAt: null, deletedAt: null}]}' > "$tmp/slash.json"
+check "a project root written with a trailing slash is still the folder's" p-slash \
+  "$(bash "$s/handover.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/slash.json" | jq -r .home.project_id)"
+jq -n --arg f "$folder" '[{id: "p-gone", workspaceRoot: $f, archivedAt: "2026-11-01T00:00:00Z"}]' > "$tmp/archived.json"
+check "an archived project is not the folder's, and the rows may be a bare array" "null 1" \
+  "$(bash "$s/handover.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/archived.json" | jq -r .home.project_id) $(grep -c '^- Super agent folder: no T3 project' "$bear")"
+rm -rf "$folder"; mkdir -p "$folder"; printf 'x' > "$folder/.claude"
+out=$(H); rc=$?
+check "a guard entry the handover could not write is one Needs you line" "0 false 1" \
+  "$rc $(jq .home.guard <<<"$out") $(grep -c "^- Super agent folder: the state guard's hook is missing from $hc" "$bear")"
+rm -rf "$folder"
+mkdir -p "$HOME/.claude"
+old='{"matcher":"Edit|Write|MultiEdit|NotebookEdit|Bash","hooks":[{"type":"command","command":"bash '\''/old/copy/super-agent/scripts/guard.sh'\''"}]}'
+jq -n --argjson o "$old" '{hooks: {PreToolUse: [$o]}}' > "$HOME/.claude/settings.json"
+H >/dev/null
+check "a stale guard entry in user settings is a Needs you line with the line to remove" 1 \
+  "$(grep -cF -- "- State guard: remove its stale entry from $HOME/.claude/settings.json: $old" "$bear")"
+rm -f "$HOME/.claude/settings.json"
 
 finish

@@ -7,25 +7,7 @@
 # them, a re-run keeps the owner's edits, and the legacy CLI-named keys give way.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
-source tests/lib.sh
-source tests/super-agent-fake.sh
-
-s=skills/super-agent/scripts
-tmp=$(mktemp -d) || exit 2
-trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/bin" "$tmp/tools" "$tmp/fake"
-for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut find wc diff chmod; do
-  ln -s "$(command -v $t)" "$tmp/tools/$t" || exit 2
-done
-export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake
-sa_fake_install "$tmp/bin"
-fleet=$tmp/config/fleet.json
-S() { bash "$s/setup.sh" --fleet "$fleet" "$@"; }
-P() { S --propose "$@"; }
-
-claude_ok='{"type":"result","result":"Current session: 3% used · resets 14:00"}'
-agy_ok='{"conversation_id":"","status":"SUCCESS","response":"Gemini Models\tWeekly Limit Remaining\t96%"}'
-codex_ok=$'{"id":1,"result":{"codexHome":"/x"}}\n{"id":2,"result":{"rateLimits":{"primary":{"usedPercent":0}}}}'
+source tests/super-agent-setup-lib.sh
 reset() {
   rm -f "$fleet" "$SA_FAKE/calls" "$SA_FAKE/environments.json" "$SA_FAKE/gh-auth.json"
   sa_machine laptop 12 32768

@@ -71,14 +71,20 @@
 # probed by its CLI. Without --instances the providers are the three CLIs, as
 # before.
 #
-# stdout: {fleet_file, written, fleet, warnings, to_probe, instances}: `fleet` the merged
+# stdout: {fleet_file, written, fleet, warnings, to_probe, instances, home}: `fleet` the merged
 #         file as it is or would be written, `warnings` one string per probe
 #         that failed (T3 environments, GitHub accounts, a reply that is no
 #         probe); `to_probe` one {machine, environment_id} per reachable linked
 #         machine no `--probe` covered; a provider whose quota command
 #         fails is `unavailable` with a `reason` in `fleet.providers` (a `cursor` or `grok` one is `unknown`: no usage read exists), not a
 #         warning; `instances` one {instance_id, driver, quota_source, auth,
-#         auth_reason, status} per enabled instance
+#         auth_reason, status} per enabled instance; `home` the super agent folder,
+#         {folder, settings, written, guard, stale, project_id, needs}: --write
+#         rewrites the folder's generated `.claude/settings.local.json` (the state
+#         guard's hook), `stale` is {settings, entries, unreadable} or null, and
+#         `needs` holds one Needs you line per missing guard entry, stale
+#         user-settings entry or unreadable user settings (project_id is null:
+#         setup reads no projects, the handover does)
 # exit: 0 a proposal or a write, failed probes included · 2 usage, a fleet file
 #       that is not JSON, has a field of the wrong shape or a retired `brief`
 #       line under a repo or machine, a machine probe
@@ -258,8 +264,9 @@ done
 merged=$(jq -cn --argjson p "$proposed" --argjson e "$existing" --argjson f "$facts" '$p * $e * $f')
 
 if $write; then sa_write "$fleet_file" "$merged"; fi
-jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjson warn "$warnings" --argjson p "$to_probe" --argjson rows "$rows" \
-  '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn, to_probe: $p,
+sa_home "$write"
+jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjson warn "$warnings" --argjson p "$to_probe" --argjson rows "$rows" --argjson home "$home" \
+  '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn, to_probe: $p, home: $home,
     instances: [$rows[] | .providerInstanceId as $k | $m.providers[$k] as $v
       | {instance_id: $k, driver: $v.driver,
          weekly_weight: ($v.weekly_weight // 1),

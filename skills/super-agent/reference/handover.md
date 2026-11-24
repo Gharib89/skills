@@ -10,12 +10,17 @@ rule and to the Hard rules: the successor is launched without a claim and is
 never recorded or watched, this thread settles itself, and its pin request is
 the one push that is not a need. The old thread, in this order:
 
-1. `scripts/handover.sh --ledger <ledger> --from $T3CODE_THREAD_ID --out
-   <bearings file>`, `<bearings file>` being `bearings.md` beside the ledger.
-   It refreshes the global super-agent copy when the loaded one is stale and
-   writes the bearings file from the ledger. First it counts the previous
-   day's scorecard row and, once a week, the weekly review
-   (`scorecard/README.md`); a failed row is printed, never a hold. Exit 1
+1. Save every `projects` row of `t3_project_list` to a file as one JSON
+   array (call again with `cursor` set to `nextCursor` until it is null). Then
+   run `scripts/handover.sh --ledger <ledger> --from
+   $T3CODE_THREAD_ID --out <bearings file> --projects <file>`, `<bearings
+   file>` being `bearings.md` beside the ledger. It refreshes the global
+   super-agent copy when the loaded one is stale, rewrites the super agent
+   folder's generated settings ([setup](setup.md#the-guard-hook)), and writes
+   the bearings file from the ledger, each `home.needs` line under Needs
+   you. First it counts the previous day's scorecard row and, once a week,
+   the weekly review (`scorecard/README.md`); a failed row is printed, never
+   a hold. Exit 1
    (the refresh failed) still hands over; say so in chat.
 2. Stop the watcher, so two super agents never run on one ledger: TaskStop
    its background shell when its id is in hand, else `kill` the pid held in
@@ -25,9 +30,12 @@ the one push that is not a need. The old thread, in this order:
 3. `list_scheduled_tasks`, note the morning report's time, and
    `delete_scheduled_task` each schedule bound to this thread (the morning
    report and the backstop); retro-runs are bound to repo projects and stay.
-4. Launch the successor with `t3_thread_launch` in this thread's project, no
-   worktree, on this thread's provider instance and model (`t3 thread show
-   $T3CODE_THREAD_ID --json`), its message two lines: `/super-agent`, then
+4. Launch the successor with `t3_thread_launch` in the super agent folder's
+   project: `projectId` the answer's `home.project_id`, or this thread's
+   project while that is null (the bearings' Needs you list already asks the
+   owner to create the folder's project). No worktree, on this thread's
+   provider instance and model (`t3 thread show $T3CODE_THREAD_ID --json`),
+   its message two lines: `/super-agent`, then
    `Handover: read <bearings file>. Morning report at <HH:MM>.` If the launch
    fails, recreate the deleted schedules (the backstop only while an entry is
    open), start the watcher, post the `status.sh --ledger <file> --digest`

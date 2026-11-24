@@ -88,4 +88,39 @@ printf '{}\n' > "$cfg"; chmod 600 "$cfg"
 (umask 022; bash "$s/guard.sh" --install --settings "$cfg" >/dev/null)
 check "--install keeps the settings file's mode" 600 "$(stat -c %a "$cfg")"
 check_rc "a settings file that is no JSON exits 2" 2 "$(printf 'x' > "$cfg"; bash "$s/guard.sh" --install --settings "$cfg" >/dev/null 2>&1; echo $?)"
+# --- the default settings file is the super agent folder's, never user settings ----
+export HOME=$tmp/u XDG_STATE_HOME=$tmp/state
+hc=$XDG_STATE_HOME/super-agent/home/.claude/settings.local.json
+check "--status reads the super agent folder's local settings by default" "$hc false" \
+  "$(bash "$s/guard.sh" --status | jq -r '"\(.settings) \(.installed)"')"
+bash "$s/guard.sh" --install >/dev/null
+check "--install writes the folder's settings, and no user settings" "true absent" \
+  "$(bash "$s/guard.sh" --status | jq .installed) $([ -e "$HOME/.claude/settings.json" ] && echo present || echo absent)"
+check "no stale entry while user settings hold none" null "$(bash "$s/guard.sh" --status | jq -c .stale)"
+mkdir -p "$HOME/.claude"
+old='{"matcher":"Edit|Write|MultiEdit|NotebookEdit|Bash","hooks":[{"type":"command","command":"bash '\''/old/copy/super-agent/scripts/guard.sh'\''"}]}'
+jq -n --argjson o "$old" '{model: "x", hooks: {PreToolUse: [$o, {matcher: "Bash", hooks: [{type: "command", command: "other"}]}]}}' > "$HOME/.claude/settings.json"
+out=$(bash "$s/guard.sh" --status)
+check "a stale entry left in user settings is reported with the line to remove" "$HOME/.claude/settings.json $old" \
+  "$(jq -r '.stale.settings' <<<"$out") $(jq -c '.stale.entries[]' <<<"$out")"
+
+stale_of() { # <command>: the stale entries --status finds for a user-settings entry running it
+  jq -n --arg c "$1" '{hooks: {PreToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $c}]}]}}' > "$HOME/.claude/settings.json"
+  bash "$s/guard.sh" --status | jq -c '.stale.entries // [] | length'
+}
+check "a double-quoted guard command is stale too" 1 "$(stale_of 'bash "/x/super-agent/scripts/guard.sh"')"
+check "a trailing space still reads as the guard" 1 "$(stale_of "bash '/x/super-agent/scripts/guard.sh' ")"
+check "a bare path is the guard" 1 "$(stale_of /x/super-agent/scripts/guard.sh)"
+check "another skill's guard.sh is not" 0 "$(stale_of "bash '/x/my-super-agent/scripts/guard.sh'")"
+check "a script beside it is not" 0 "$(stale_of "bash '/x/super-agent/scripts/guard.sh.bak'")"
+q="$tmp/owner's skills/super-agent"; mkdir -p "$q" && cp -r "$s" "$q/"
+c=$(bash "$q/scripts/guard.sh" --status | jq -r .entry.hooks[0].command)
+check "a guard path holding a quote is one shell word" "$q/scripts/guard.sh" "$(eval "set -- ${c#bash }"; printf %s "$1")"
+printf 'not json' > "$HOME/.claude/settings.json"
+check "user settings that are no JSON are unreadable, never no entry" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
+: > "$HOME/.claude/settings.json"
+check "empty user settings are unreadable" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
+printf 'null' > "$HOME/.claude/settings.json"
+check "user settings holding null are unreadable" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
+
 finish

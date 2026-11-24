@@ -70,20 +70,32 @@ skill's base directory.
    its entry, and `launch` takes as `--machine` only the key whose entry holds
    the hostname of the machine it runs on (the key itself where an entry
    records none): any other key is a tooling error and launches nothing.
-6. Install the [guard hook](#the-guard-hook) on this machine.
+6. Read `home` in the `--write` answer ([the guard hook](#the-guard-hook)):
+   tell the owner each of its `needs` lines and, unless `t3_project_list`
+   already shows a project whose workspace is its `folder`, to create one
+   there once, in full access. The next daily handover
+   launches the super agent there.
 
 ## The guard hook
 
-Setup's last step: run `scripts/guard.sh --install`, which adds one PreToolUse
-entry to `~/.claude/settings.json` (`--settings <file>` names another). It is
-what refuses a hand write to the ledger, fleet or quota file (an Edit, a Write,
-a redirection or an `mv`) and names the script to use. A refusal means an
-override has no flag yet: report it to the owner, never work around it. To see
-that it is installed, run `scripts/guard.sh --status`: `installed` is `true`
-when the file holds the entry for this copy of the script, and `/hooks` in
-Claude Code lists it too. A settings file kept in dotfiles takes the `entry`
-that `--status` prints, added there by hand. A re-run adds nothing when it is
-already there.
+`setup.sh --write` and every daily handover rewrite the **super agent
+folder**'s generated `.claude/settings.local.json` (`super-agent/home` under
+`$XDG_STATE_HOME`, `~/.local/state` when unset): its one PreToolUse entry is
+the state guard, `scripts/guard.sh`, which refuses
+a hand write to the ledger, fleet or quota file (an Edit, a Write, a
+redirection or an `mv`) and names the script to use. The file is generated
+whole, so a hand edit there is lost on the next rewrite. A refusal means an
+override has no flag yet: report it to the owner, never work around it. Only
+the pinned thread runs in that folder, so the hook reaches no other session.
+
+`scripts/guard.sh --status` reads that file: `installed` is `true` when it
+holds the entry for this copy of the script, and `stale` lists each guard
+entry an older install left in `~/.claude/settings.json`, the line the owner
+removes there (it would fire in every session); `stale.unreadable` is true
+when that file is no JSON object, so no entry could be checked. Each is also a
+`needs` line in `home`. Run `--install` only when a `needs` line names the
+missing hook: it adds the entry to the folder's file, or to the file
+`--settings` names.
 
 ## Cursor and Grok
 

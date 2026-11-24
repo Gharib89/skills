@@ -14,14 +14,17 @@
 #   guard --install [--settings <file>]        add the hook to a Claude settings file
 #   guard --status [--settings <file>]         say whether that file holds it
 #
-# --settings defaults to `~/.claude/settings.json`. `--install` merges one PreToolUse
-# entry and keeps every other key, as a temp file then a rename, and adds nothing when
-# the hook is already there. If the file is managed elsewhere (dotfiles), add the entry
-# `--status` prints as `entry` there instead.
+# --settings defaults to the super agent folder's `.claude/settings.local.json`
+# (`super-agent/home` under $XDG_STATE_HOME), which `setup.sh --write` and every
+# handover generate with this entry, so the hook reaches the pinned thread and no
+# other session. `--install` merges one PreToolUse entry and keeps every other key,
+# as a temp file then a rename, and adds nothing when the hook is already there.
+# `--status` also reports `stale`: the guard entries left in `~/.claude/settings.json`
+# by an install from before the folder, each the line to remove there.
 #
 # contract: bare-run
 # stdout: hook mode prints nothing; `--install` {settings, installed, changed, entry};
-#         `--status` {settings, installed, entry}
+#         `--status` {settings, installed, entry, stale: {settings, entries, unreadable} or null}
 # exit: 0 allowed, installed or status read · 2 a call refused (the message on stderr),
 #       a usage error or a settings file that is not JSON
 set -uo pipefail
@@ -30,12 +33,11 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: guard [--install | --status] [--settings <file>]'
 sa_help "$usage" "$@"
 
-self=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/guard.sh
-entry=$(jq -cn --arg c "bash '$self'" '{matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash", hooks: [{type: "command", command: $c}]}')
+entry=$(sa_guard_entry)
 
 if [ $# -gt 0 ]; then
   mode=${1#--}; shift
-  settings=~/.claude/settings.json
+  settings=$(sa_home_settings)
   case $mode in install|status) ;; *) sa_tooling "$usage" ;; esac
   if [ "${1:-}" = --settings ]; then sa_flag_value "$usage" "${2:-}"; settings=$2; shift 2; fi
   [ $# -eq 0 ] || sa_tooling "$usage"
@@ -43,7 +45,7 @@ if [ $# -gt 0 ]; then
   jq -e 'type == "object"' <<<"$cur" >/dev/null 2>&1 || sa_tooling "$settings is not a JSON object"
   jq -e '(.hooks // {}) | type == "object"' <<<"$cur" >/dev/null || sa_tooling "$settings: .hooks must be an object"
   jq -e '(.hooks.PreToolUse // []) | type == "array"' <<<"$cur" >/dev/null || sa_tooling "$settings: .hooks.PreToolUse must be an array"
-  has=$(jq --argjson e "$entry" '[(.hooks.PreToolUse // [])[] | select(.hooks[]?.command == $e.hooks[0].command)] | length > 0' <<<"$cur") \
+  has=$(jq --argjson e "$entry" "$sa_jq_guard_has"'guard_has($e)' <<<"$cur") \
     || sa_tooling "cannot read the hooks in $settings"
   changed=false
   if [ "$mode" = install ] && [ "$has" = false ]; then
@@ -56,7 +58,7 @@ if [ $# -gt 0 ]; then
   if [ "$mode" = install ]; then
     jq -cn --arg s "$settings" --argjson i "$has" --argjson c "$changed" --argjson e "$entry" '{settings: $s, installed: $i, changed: $c, entry: $e}'
   else
-    jq -cn --arg s "$settings" --argjson i "$has" --argjson e "$entry" '{settings: $s, installed: $i, entry: $e}'
+    jq -cn --arg s "$settings" --argjson i "$has" --argjson e "$entry" --argjson st "$(sa_guard_stale)" '{settings: $s, installed: $i, entry: $e, stale: $st}'
   fi
   exit 0
 fi
