@@ -115,5 +115,9 @@ check "another skill's guard.sh is not" 0 "$(stale_of "bash '/x/my-super-agent/s
 check "a script beside it is not" 0 "$(stale_of "bash '/x/super-agent/scripts/guard.sh.bak'")"
 printf 'not json' > "$HOME/.claude/settings.json"
 check "user settings that are no JSON are unreadable, never no entry" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
+: > "$HOME/.claude/settings.json"
+check "empty user settings are unreadable" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
+printf 'null' > "$HOME/.claude/settings.json"
+check "user settings holding null are unreadable" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
 
 finish

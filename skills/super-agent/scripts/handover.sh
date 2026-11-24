@@ -20,9 +20,9 @@
 # that fails is reported, never a reason to hold the handover. --projects is the
 # saved `t3_project_list` answer, or a bare array of the rows of all its pages: the
 # successor launches in the project whose workspace is the super agent folder
-# (`home.project_id`), and a missing project, a guard entry the folder's settings
-# lack after the rewrite, or a stale guard entry in user settings, or user settings
-# that are no JSON object (`home.stale.unreadable`), is a Needs you line.
+# (`home.project_id`). Each of these is a Needs you line: a missing project, a guard
+# entry the folder's settings lack after the rewrite, a stale guard entry in user
+# settings, and user settings that are no JSON object (`home.stale.unreadable`).
 #
 # stdout: {bearings, skill: {loaded, source, stale}, refreshed, scorecard: {row,
 #         error, review, review_error}, home: {folder, settings, written, guard,
@@ -30,7 +30,8 @@
 #         true when the refresh ran and exited 0, `scorecard.row` the day counted
 #         (null when it failed, `error` saying why), `review` the weekly review's
 #         rows on the first handover of a week, else null, `review_error` why the
-#         review failed (also a Needs you line), else null
+#         review failed (also a Needs you line), else null, `home` the super agent
+#         folder (`stale` {settings, entries, unreadable} or null)
 # exit: 0 the bearings written · 1 the refresh failed (the bearings still
 #       written, saying so) · 2 usage, an unreadable ledger or projects file, or
 #       a bearings file that could not be written

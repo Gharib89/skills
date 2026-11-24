@@ -29,8 +29,10 @@ sa_jq_projects='def project_rows: if type == "array" then . else .projects end;'
 sa_guard_stale() {
   local f=$HOME/.claude/settings.json
   [ -e "$f" ] || { printf null; return 0; }
-  jq -c --arg f "$f" --arg re "(^|[[:space:]/'\"])super-agent/scripts/guard\\.sh['\"]?[[:space:]]*\$" \
-    '[(.hooks.PreToolUse // [])[]? | select(any(.hooks[]?; .command | strings | test($re)))]
+  # Slurped, so an empty file or one holding `null` or two values is no object too.
+  jq -cs --arg f "$f" --arg re "(^|[[:space:]/'\"])super-agent/scripts/guard\\.sh['\"]?[[:space:]]*\$" \
+    'if length != 1 or (.[0] | type) != "object" then error("no object") else .[0] end
+    | [(.hooks.PreToolUse // [])[]? | select(any(.hooks[]?; .command | strings | test($re)))]
     | if length == 0 then null else {settings: $f, entries: ., unreadable: false} end' "$f" 2>/dev/null \
     || jq -cn --arg f "$f" '{settings: $f, entries: [], unreadable: true}'
 }
