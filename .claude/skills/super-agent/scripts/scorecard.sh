@@ -164,8 +164,9 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
     "AskUserQuestion", "PushNotification", "mcp__t3-code__t3_thread_interrupt", "mcp__t3-code__t3_thread_configure",
     "mcp__t3-code__schedule_task", "mcp__t3-code__delete_scheduled_task", "mcp__t3-code__delegate_task",
     "mcp__t3-code__link_pull_request", "Write", "Edit", "Agent", "Artifact"];
-  # A reply to the owner or a hand-off changes a wake, but is no write.
-  def replies: ["AskUserQuestion", "PushNotification", "Agent", "Artifact"];
+  # The changing tools that answer the owner or hand work off: they change a
+  # wake, but a question they follow is not acted on.
+  def non_writes: ["AskUserQuestion", "PushNotification", "Agent", "Artifact"];
   def boiler: ["<local-command-", "<command-name>/compact", "<command-name>/reload-skills", "<command-name>/model",
     "This session is being continued", "Base directory for this skill", "[Image:", "<system-reminder>",
     "(Re-invocation of"] as $p | . as $t | any($p[]; . as $q | $t | startswith($q));
@@ -202,7 +203,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
           (if $t.name == "Bash" and $t.bg then .bg[$t.id] = $t.cmd else . end)
           | if ($t.name == "Bash" and (($t.cmd // "") | test(changing_bash))) or ($t.name | IN(changing_tools[]))
             then .w[$cur].changed = true
-              | if $t.name | IN(replies[]) then . else .w[$cur].wrote = true end
+              | if $t.name | IN(non_writes[]) then . else .w[$cur].wrote = true end
             else . end)
     end) | .w;
   . as $all
@@ -214,7 +215,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
   | ($day | strptime("%Y-%m-%d") | mktime) as $d0 | ($d0 + 86400) as $d1
   | ([$led[0].entries[]] + $archive) as $ents
   | def ended: (.settled_at // (if is_open then null else .updated_at end));
-    def epoch: if . == null then null else sub("[.][0-9]+Z$"; "Z") | try fromdateiso8601 catch null end;
+    def epoch: if . == null then null else sub("[.][0-9]+"; "") | fromdateiso8601 end;
     ([$ents[] | select((.launched_at | epoch) as $a | $a != null and $a < $d1)
       | select((ended | epoch) as $e | $e == null or $e >= $d0)] | length) as $open
   | ([$ents[] | select((ended | epoch) as $e | $e != null and $e >= $d0 and $e < $d1)] | length) as $settled
@@ -243,10 +244,10 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
   ' <<<"$slim") || sa_tooling "cannot count the row for $day"
 
 # Replace the day's row, or append it; rows that do not parse are never dropped.
-[ ! -f "$card" ] || jq -e . "$card" >/dev/null 2>&1 || sa_tooling "$card: not JSON lines"
+[ ! -f "$card" ] || jq -s . "$card" >/dev/null 2>&1 || sa_tooling "$card: not JSON lines"
 mkdir -p "$dir" || sa_tooling "cannot create $dir"
 trap 'rm -f "${tmp:-}"' EXIT
 tmp=$(mktemp "$dir/.scorecard.XXXXXX") || sa_tooling "cannot write in $dir"
 { [ -f "$card" ] && jq -c --arg d "$day" 'select(.day != $d)' "$card"; printf '%s\n' "$row"; } > "$tmp" && mv "$tmp" "$card" \
-  || { rm -f "$tmp"; sa_tooling "cannot write $card"; }
+  || sa_tooling "cannot write $card"
 jq -cn --argjson r "$row" --arg f "$card" '{row: $r, file: $f}'

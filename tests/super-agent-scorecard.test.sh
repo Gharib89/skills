@@ -113,6 +113,9 @@ done
 cp "$card" "$tmp/card"; printf 'not json\n' >> "$card"
 check "an unreadable scorecard.jsonl is refused by name and left as it was, exit 2" "2 true" \
   "$(out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 2>/dev/null); echo "$? $(tail -n 1 "$card" | grep -qx 'not json' && echo true)")"
+: > "$card"
+check "an empty scorecard.jsonl takes the row" "0 1" \
+  "$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 >/dev/null; echo "$? $(wc -l < "$card" | tr -d ' ')")"
 mv "$tmp/card" "$card"
 { transcript; u "${day}T12:00:00Z" "can you ping me when #8 lands?"
   a "${day}T12:00:05Z" m4 "$(use 1 0 1)" '[{"type": "tool_use", "name": "PushNotification", "id": "p", "input": {}}]'; } > "$tmp/t2.jsonl"
