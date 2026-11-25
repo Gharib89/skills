@@ -1,6 +1,6 @@
 {
   "needs.alerted_twice": {"max": 0, "slice": 12},
   "questions.with_write": {"max": 0, "slice": 4},
-  "guards.watch.passes": {"max": 0, "slice": 2},
+  "guards.watch.passes": {"max": 0},
   "timer.worst_minutes": {"max": 15, "slice": 3}
 }

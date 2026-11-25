@@ -3,7 +3,7 @@
 # exit. Run it as a background command: it holds no tool call open, and its
 # exit is what wakes the super agent.
 #
-#   watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>]
+#   watch --ledger <file> [--owed] [--interval <s>] [--timeout <s>] [--recheck <s>]
 #         [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>]
 #
 # Polls every open ledger entry, in ledger order, each `--interval` seconds
@@ -55,6 +55,13 @@
 # exit is what wakes the super agent and a stopped one would wake no one. A
 # malformed `notify` is refused before the first poll.
 #
+# `--owed` (the other flags ignored) is the one read-only answer, asked by the watch guard (`watch-guard.sh`)
+# and the wake timer: is a watcher owed? `watcher` when an open entry has been
+# observed and no live watch.sh holds the lock, `reconcile` when open entries
+# exist and none has been observed yet, else `none`. It takes no lock and writes
+# nothing, and counts entries the way the watcher's own start does: a `launching`
+# entry is no open entry here.
+#
 # stdout: {key, thread, event, observed} for a change, `observed` the snapshot
 #         {status, run_count, pending, gate, waiting, rest_at, pr: {number, state[, merged_at, checks, head]}}; {key, thread,
 #         event, detail} for `thread-mismatch`, `thread-unreadable` and
@@ -63,20 +70,22 @@
 #         polled and `unobserved` the open keys it skipped
 #         a watcher already running is {error, running: <pid, or null when
 #         its lock reads empty>}
+#         `--owed`: {owed: watcher|reconcile|none, open: <the open entries counted>}
 #         `event` is one of pr-merged, pr-closed, pending-approval,
 #         run-finished, stall-window, pr-opened, checks-finished,
 #         thread-mismatch, thread-unreadable, pr-unreadable or timeout
-# exit: 0 a change or the timeout · 1 no open entry, none `reconcile` has
+# exit: 0 a change, the timeout or an `--owed` answer · 1 no open entry, none `reconcile` has
 #       observed yet, or a watcher already running · 2 usage, an unreadable
 #       ledger, or a lock it cannot take
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: watch --ledger <file> [--interval <s>] [--timeout <s>] [--recheck <s>] [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>]'
+usage='usage: watch --ledger <file> [--owed] [--interval <s>] [--timeout <s>] [--recheck <s>] [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>]'
 sa_help "$usage" "$@"
-ledger='' fleet='' interval=30 timeout='' recheck=90 window=$sa_stall_window
+ledger='' fleet='' interval=30 timeout='' recheck=90 window=$sa_stall_window owed=false
 while [ $# -gt 0 ]; do
   case $1 in
+    --owed) owed=true; shift ;;
     --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2 ;;
@@ -95,6 +104,28 @@ notify_cmd=''
 if [ -n "$fleet" ]; then
   [ -f "$fleet" ] || sa_tooling "$fleet: no such file"
   sa_notify_read "$fleet"
+fi
+
+# load: the ledger's open, observed entries in $open and the open ones not yet
+# observed in $unobserved, read afresh each poll.
+load() {
+  sa_read "$ledger"
+  # a `launching` entry has no thread to read yet: reconcile lists it
+  open=$(jq -c "$sa_jq_open"'[.entries[] | select(is_open and .stage != "launching")]' <<<"$doc")
+  unobserved=$(jq -c '[.[] | select(.observed == null) | .key]' <<<"$open")
+  open=$(jq -c '[.[] | select(.observed != null)]' <<<"$open")
+}
+
+if $owed; then
+  load
+  pid=$(cat "$ledger.watch" 2>/dev/null)
+  alive=false
+  [ -n "$pid" ] && sa_pid_runs "$pid" '*watch.sh*' && alive=true
+  jq -cn --argjson o "$open" --argjson u "$unobserved" --argjson a "$alive" \
+    '{owed: (if ($o | length) > 0 then (if $a then "none" else "watcher" end)
+             elif ($u | length) > 0 then "reconcile" else "none" end),
+      open: (($o | length) + ($u | length))}'
+  exit 0
 fi
 
 # One watcher per ledger. The pid is written to a temp file and linked to the
@@ -120,15 +151,6 @@ done
 rm -f "$mine"
 trap '[ "$(cat "$lock" 2>/dev/null)" = "$$" ] && rm -f "$lock"' EXIT
 
-# load: the ledger's open, observed entries in $open and the open ones not yet
-# observed in $unobserved, read afresh each poll.
-load() {
-  sa_read "$ledger"
-  # a `launching` entry has no thread to read yet: reconcile lists it
-  open=$(jq -c "$sa_jq_open"'[.entries[] | select(is_open and .stage != "launching")]' <<<"$doc")
-  unobserved=$(jq -c '[.[] | select(.observed == null) | .key]' <<<"$open")
-  open=$(jq -c '[.[] | select(.observed != null)]' <<<"$open")
-}
 load
 [ "$(jq length <<<"$open")" -gt 0 ] || [ "$(jq length <<<"$unobserved")" -gt 0 ] \
   || sa_fail "no open entry in the ledger $ledger"

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # super-agent's `setup` and the super agent folder: a proposal writes nothing and
-# names the missing state guard as a Needs you line, and --write rewrites the
-# folder's generated local settings, whose one hook is the state guard, to the
-# same content on every run.
+# names the missing state guard and watch guard as Needs you lines, and --write
+# rewrites the folder's generated local settings, whose hooks are the state guard
+# (PreToolUse) and the watch guard (Stop), to the same content on every run.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/super-agent-setup-lib.sh
@@ -20,10 +20,15 @@ out=$(P --name laptop)
 check "a proposal writes no folder, and the missing guard is one Needs you row" "absent false 1" \
   "$([ -e "$hc" ] && echo present || echo absent) $(jq .home.written <<<"$out") $(jq '[.home.needs[] | select(test("state guard"))] | length' <<<"$out")"
 out=$(S --write --name laptop)
-check "--write writes the folder's local settings, its one hook the state guard" "true true 1 1 []" \
+check "--write writes the folder's local settings, its PreToolUse hook the state guard" "true true 1 1 []" \
   "$(jq .home.written <<<"$out") $(jq .home.guard <<<"$out") $(jq '.hooks.PreToolUse | length' "$hc") \
 $(jq -r '.hooks.PreToolUse[0].hooks[0].command' "$hc" | grep -c "super-agent/scripts/guard.sh'$") $(jq -c .home.needs <<<"$out")"
+check "the proposal's missing watch guard is its own Needs you row" 1 \
+  "$(jq '[.home.needs[] | select(test("watch guard"))] | length' <<<"$(rm -rf "$XDG_STATE_HOME/super-agent/home"; P --name laptop)")"
+S --write --name laptop >/dev/null
 check "it answers where the folder is" "$XDG_STATE_HOME/super-agent/home" "$(jq -r .home.folder <<<"$out")"
+check "and its Stop hook is the watch guard" "1 1 true" \
+  "$(jq '.hooks.Stop | length' "$hc") $(jq -r '.hooks.Stop[0].hooks[0].command' "$hc" | grep -c "super-agent/scripts/watch-guard.sh'$") $(jq .home.watch_guard <<<"$out")"
 cp "$hc" "$tmp/first.json"; printf '{"x":1}\n' > "$hc"
 S --write --name laptop >/dev/null
 check "a second run rewrites it to the same content" same "$(cmp -s "$hc" "$tmp/first.json" && echo same || echo differs)"

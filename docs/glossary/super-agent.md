@@ -24,6 +24,14 @@ _Avoid_: report (prose written fresh on each wake), summary, dashboard
 The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent; a thread on a linked machine is woken from GitHub alone (its PR opening, its checks finishing, a merge or a close) and read itself only on a wake. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
 _Avoid_: watchdog, poller, monitor
 
+**State guard**:
+The PreToolUse hook (`scripts/guard.sh`) in the super agent folder's generated settings that refuses a hand write to the ledger, fleet or quota file and names the script that updates it. A refusal means an override has no flag yet: the super agent reports it, never works around it.
+_Avoid_: write lock, permission
+
+**Watch guard**:
+The Stop hook (`scripts/watch-guard.sh`) in the same generated settings that refuses the super agent's turn end once while `watch.sh --owed` says a watcher is owed (an open, observed entry and no live watcher, or open entries to reconcile first), naming the open entries and the command to run; the stop after that passes. It logs each block and each unwatched pass to `watch-guard.jsonl` beside the ledger, which the scorecard counts, and allows the stop when it cannot judge. The super agent still starts the watcher itself.
+_Avoid_: watchdog, heartbeat
+
 **Waiting line**:
 The fixed last line, `Waiting on my own background work.`, that ship's run contract, or a `/triage` launch message's contract line, tells a run to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A run's final message is its outcome (the PR URL and the gate state for ship, the triage outcome for triage), never this line.
 _Avoid_: heartbeat, keepalive, status ping

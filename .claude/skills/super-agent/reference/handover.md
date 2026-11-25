@@ -47,7 +47,9 @@ the one push that is not a need. The old thread, in this order:
    a thread.
 
 **When your first message carries a `Handover:` line, you are the
-successor.** Read the bearings file it names, run After a restart or
+successor.** Record your own thread id first, `scripts/ledger.sh --ledger
+<ledger> self`, replacing your predecessor's. Read the bearings file it names,
+run After a restart or
 compaction, then recreate the schedules bound to this thread with no question
 asked (the owner's yes to the morning report covers them): the morning report
 from `scripts/schedules.sh --fleet <fleet> --morning <HH:MM>`, `<HH:MM>` from
