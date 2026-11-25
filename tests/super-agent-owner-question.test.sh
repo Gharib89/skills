@@ -56,6 +56,9 @@ changing=(
   "Bash|bash $s/worktree.sh remove --ledger l k|worktree.sh"
   "Bash|bash $s/ledger.sh --ledger l unneed k|ledger write verb"
   "Bash|bash $s/ledger.sh --ledger l drop k|ledger drop"
+  "Bash|bash $s/ledger.sh --ledger '/tmp/a b/l.json' drop k|ledger drop, single-quoted path with a space"
+  "Bash|bash $s/ledger.sh --ledger /tmp/a\\ b/l.json drop k|ledger drop, escaped path with a space"
+  "Bash|cd x && $s/launch.sh acme/w#7|launch.sh run after a &&"
   "Bash|bash $s/merge.sh --pr 7|merge.sh"
   "Bash|bash $s/cleanup.sh --ledger l|cleanup.sh"
   "Bash|bash $s/intake.sh --fleet f --ledger l|intake.sh"
@@ -82,7 +85,7 @@ done
 rm -f "$log"; F "$(prompt 'why?' p1)" >/dev/null
 for cmd in "bash $s/ledger.sh --ledger l need k --action 'Close 7, or wait for the PR, add a note, set it, drop it?' --reason ask-first" "bash $s/ledger.sh --ledger l need k --action a --reason ask-first" "bash $s/ledger.sh --ledger l list --open" \
   "bash $s/ledger.sh --ledger l get k" "bash $s/launch-check.sh acme/w#7" "bash scripts/check.sh full" "shellcheck $s/observe.sh" \
-  "bash $s/worktree.sh list" "git status" "git log --oneline" "gh issue view 7" "gh api repos/a/b/issues/7" "jq . $led" "bash $s/status.sh --ledger l"; do
+  "bash $s/worktree.sh list" "cat $s/launch.sh" "bash $s/launch.sh --help" "grep -n merge.sh $s/_lib.sh" "git status" "git log --oneline" "gh issue view 7" "gh api repos/a/b/issues/7" "jq . $led" "bash $s/status.sh --ledger l"; do
   O "$(bash_call "$cmd" p1)" >/dev/null
 done
 for t in Read Grep mcp__t3-code__t3_thread_read mcp__t3-code__t3_thread_list; do O "$(tool "$t" p1)" >/dev/null; done
