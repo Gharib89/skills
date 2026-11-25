@@ -1,6 +1,6 @@
 # The owner's needs, a repo's reviewer limit and the owner's overrides on an entry: the
 # arms of `ledger` that `need`, `pushed`, `unneed`, `limit`, `unlimit`, `pause`,
-# `unpause`, `drop` and `reset-stalls` take, sourced by it. They read the
+# `unpause`, `drop`, `reset-stalls` and `self` take, sourced by it. They read the
 # caller's $usage, $ledger and $doc, which `ledger.sh` sets.
 
 # shellcheck disable=SC2154  # usage, ledger, sa_jq_norm and sa_jq_open come from ledger.sh and _lib.sh
@@ -9,6 +9,11 @@ ledger_owner() {
   local cmd=$1 key action reason="" row had repo reviewer now stalls ruling
   shift
   case $cmd in
+  self)
+    key=${1:-${T3CODE_THREAD_ID:-}}
+    [ $# -le 1 ] && [ -n "$key" ] || sa_tooling "$usage"
+    sa_update "$ledger" '.own_thread = $t' --arg t "$key"
+    jq -cn --arg t "$key" '{own_thread: $t}' ;;
   pause|unpause|drop|reset-stalls)
     [ $# -eq 1 ] || sa_tooling "$usage"
     sa_lock "$ledger"; sa_read "$ledger"

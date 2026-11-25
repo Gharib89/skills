@@ -96,8 +96,9 @@ asks what is ready, and it launches nothing. Steps for all three:
 
 ## The loop
 
-Every thread you launch runs the same five steps, whatever its kind: launch,
-record, watch, wake, reconcile. An owner ask that is not routing work (rotating
+Record your own thread first: `scripts/ledger.sh --ledger <ledger> self`.
+Every launched thread runs the same five steps: launch, record, watch, wake,
+reconcile. An owner ask that is not routing work (rotating
 a secret, editing dotfiles) is launched as a `task:<slug>` thread, never done
 inline. A thread that is no ticket's (a grill, a deploy,
 decks, a review: anything the owner asks you to launch) skips `launch.sh`'s
@@ -171,10 +172,11 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    `status.unpushed` need (Escalation format), then start the watcher again
    while an entry is open.
 
-**No turn ends without a watcher running** while the ledger holds an open
-entry. A supervised thread finishing wakes nothing, and neither does its
+A supervised thread finishing wakes nothing, and neither does its
 permission hold; a background shell's exit wakes you about 5 s later, and a
-bound schedule wakes you on time (all measured 2026-11-06).
+bound schedule wakes you on time (all measured 2026-11-06). A block from the
+**watch guard** (a Stop hook) is your own: run the command it names,
+then end the turn.
 
 **Remote entries** (an `environment_id`): on each wake, before reconcile or
 pulse, save their `t3_thread_read`, convert each with `reply.sh` and pass
@@ -327,8 +329,9 @@ repos, to propose it to the owner as a global rule.
 
 ## After a restart or compaction
 
-One fixed step, read from the ledger alone (it holds every entry, the waiting
-list, the rulings and the needs; never rebuild it from the transcript):
+One fixed step, read from the ledger alone (never rebuild it from the
+transcript):
+`scripts/ledger.sh --ledger <ledger> self`, then
 `scripts/ledger.sh --ledger <ledger> list --open`, then `scripts/reconcile.sh`
 with step 5's flags, then start the watcher, then do the summary's rows (Acting
 on the summary), post and push its `status` as step 5 does, and launch its

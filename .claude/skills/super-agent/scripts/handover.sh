@@ -26,7 +26,7 @@
 #
 # stdout: {bearings, skill: {loaded, source, stale}, refreshed, scorecard: {row,
 #         error, review, review_error}, home: {folder, settings, written, guard,
-#         stale, project_id, needs}}: `bearings` the file written, `refreshed`
+#         watch_guard, stale, project_id, needs}}: `bearings` the file written, `refreshed`
 #         true when the refresh ran and exited 0, `scorecard.row` the day counted
 #         (null when it failed, `error` saying why), `review` the weekly review's
 #         rows on the first handover of a week, else null, `review_error` why the
