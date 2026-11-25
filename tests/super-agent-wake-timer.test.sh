@@ -104,6 +104,16 @@ check "a malformed notify: exit 0, the desktop notifier names the fault" "0 noti
 out=$(SA_T3_SEND_RC=1 tick 300)
 check "a later tick, already notified, only waits" "waiting 1" "$(jq -r .action <<<"$out") $(grep -c '^notify-send' "$SA_FAKE/calls")"
 
+# --- a broken state file is refused, never reset into a second wake ------------------
+fresh broken
+sa_thread sa-1 idle 4 0 '' ''
+tick 0 >/dev/null
+printf 'partial' > "$d/wake-timer.state.json"
+out=$(tick 60)
+check "a state file that is no JSON object: no second wake, the desktop notifier names it" \
+  "unjudged 1 1 partial" \
+  "$(jq -r .action <<<"$out") $(sends) $(grep -c '^notify-send.*wake-timer.state.json' "$SA_FAKE/calls") $(cat "$d/wake-timer.state.json")"
+
 # --- the outage log --------------------------------------------------------------
 fresh log
 sa_thread sa-1 idle 4 0 '' ''

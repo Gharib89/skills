@@ -21,7 +21,8 @@
 # command, as it does for a fleet file whose `notify` is malformed, a fault the
 # message names. An outage gets one wake and at most one notify, and closes at
 # the first reconcile at or after its opening, or when no watcher is owed any
-# more. Its state is `wake-timer.state.json` beside the ledger.
+# more. Its state is `wake-timer.state.json` beside the ledger; one that is no
+# JSON object stops the tick with a desktop notice naming it, never a reset.
 #
 # Each outage is logged as JSON lines in `wake-timer.jsonl` beside the ledger:
 # `{at, event}`, `event` `opened`, `wake`, `notify` (with `via` `command` or
@@ -61,8 +62,13 @@ wake_line='Wake timer: no watcher is running. Run pulse and restart the watcher.
 hold=600
 dir=$(dirname "$ledger") now=$(sa_now_s)
 log=$dir/wake-timer.jsonl statef=$dir/wake-timer.state.json
-state=$(jq -c 'if type == "object" then . else {} end' "$statef" 2>/dev/null) || state='{}'
-[ -n "$state" ] || state='{}'
+state='{}'
+# A state file that is no JSON object is refused, never reset: a reset would
+# forget the outage's wake and notify and send them again.
+if [ -e "$statef" ] && ! state=$(jq -ce 'select(type == "object")' "$statef" 2>/dev/null); then
+  notify-send "Super agent" "Super agent: $statef is no JSON object; the wake timer is stopped until it is fixed or removed" >/dev/null 2>&1 </dev/null
+  jq -cn '{owed: null, action: "unjudged"}'; exit 0
+fi
 
 # event <name> [<json fields>]: one log line.
 event() {
@@ -73,7 +79,8 @@ event() {
 put() { state=$(jq -c "$1" <<<"$state"); }
 answer() { # <owed> <action>
   jq -cn --arg o "$1" --arg a "$2" '{owed: (if $o == "" then null else $o end), action: $a}'
-  if [ "$state" = '{}' ]; then rm -f "$statef"; else printf '%s\n' "$state" > "$statef"; fi
+  # Written whole, then renamed, so an interrupted tick leaves the old state.
+  if [ "$state" = '{}' ]; then rm -f "$statef"; else printf '%s\n' "$state" > "$statef.tmp" && mv "$statef.tmp" "$statef"; fi
   exit 0
 }
 open_outage() { [ "$(jq -r '.opened // empty' <<<"$state")" ] || { put ".opened = $now"; event opened; }; }

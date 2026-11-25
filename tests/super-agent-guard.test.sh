@@ -131,6 +131,9 @@ export PATH="$tmp/bin:$PATH"
 out=$(bash "$s/guard.sh" --install)
 check "--install prints the timer's service and timer units and where they go" "1 1 $HOME/.config/systemd/user" \
   "$(jq -r .timer.service <<<"$out" | grep -c "^ExecStart=.*super-agent/scripts/wake-timer.sh") $(jq -r .timer.timer <<<"$out" | grep -c '^OnUnitActiveSec=5min$') $(jq -r .timer.dir <<<"$out")"
+check "and its command names the ledger and fleet of this shell's XDG dirs" \
+  "--ledger '$tmp/st ate/super-agent/ledger.json' --fleet '$tmp/con fig/super-agent/fleet.json'" \
+  "$(XDG_STATE_HOME="$tmp/st ate" XDG_CONFIG_HOME="$tmp/con fig" bash "$s/guard.sh" --install | jq -r .timer.service | sed -n 's/^ExecStart=.*wake-timer.sh. //p')"
 check "and the line that enables it" "systemctl --user daemon-reload && systemctl --user enable --now super-agent-wake.timer" "$(jq -r .timer.enable <<<"$out")"
 check "--status reports a running timer through systemctl" true "$(bash "$s/guard.sh" --status | jq .timer.active)"
 : > "$SA_FAKE/timer-inactive"

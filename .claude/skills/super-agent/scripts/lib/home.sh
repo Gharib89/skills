@@ -29,9 +29,14 @@ sa_watch_guard_entry() { sa_hook_entry watch-guard.sh '' ' || true'; }
 # shell's PATH, since a user unit's own PATH lacks where `t3` usually lives.
 sa_timer_active() { systemctl --user is-active --quiet super-agent-wake.timer >/dev/null 2>&1; }
 sa_timer_units() {
-  local p
+  local p l f
   p=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/wake-timer.sh
-  jq -cn --arg d "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user" --arg x "/usr/bin/env bash $(sa_shq "$p")" --arg path "$PATH" '{dir: $d,
+  # The systemd user manager need not carry this shell's XDG dirs, so the
+  # ledger and fleet paths resolved here go on the command line.
+  l=${XDG_STATE_HOME:-$HOME/.local/state}/super-agent/ledger.json
+  f=${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json
+  jq -cn --arg d "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user" --arg path "$PATH" \
+    --arg x "/usr/bin/env bash $(sa_shq "$p") --ledger $(sa_shq "$l") --fleet $(sa_shq "$f")" '{dir: $d,
     service: "[Unit]\nDescription=Super agent wake timer tick\n\n[Service]\nType=oneshot\nEnvironment=\"PATH=\($path)\"\nExecStart=\($x)\n",
     timer: "[Unit]\nDescription=Wake the super agent when its own turn died\n\n[Timer]\nOnBootSec=5min\nOnUnitActiveSec=5min\n\n[Install]\nWantedBy=timers.target\n",
     enable: "systemctl --user daemon-reload && systemctl --user enable --now super-agent-wake.timer"}'
