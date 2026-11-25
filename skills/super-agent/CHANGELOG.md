@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.45.0 (2026-11-25)
+
+### Features
+
+- **super-agent**: An owner question starts an answer-only turn
+  ([#1418](https://github.com/Gharib89/skills/pull/1418),
+  [`7fecaa5`](https://github.com/Gharib89/skills/commit/7fecaa54ed1eb5c28520d2c7ceb01a85a91de975))
+
+
 ## v0.44.0 (2026-11-25)
 
 ### Features
