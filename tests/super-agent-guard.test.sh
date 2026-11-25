@@ -123,4 +123,17 @@ check "empty user settings are unreadable" true "$(bash "$s/guard.sh" --status |
 printf 'null' > "$HOME/.claude/settings.json"
 check "user settings holding null are unreadable" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
 
+# --- the wake timer: --install prints its unit files, --status reads systemctl ----
+source tests/super-agent-fake.sh
+export SA_FAKE=$tmp/fake
+mkdir -p "$tmp/bin" "$SA_FAKE"; sa_fake_install "$tmp/bin"
+export PATH="$tmp/bin:$PATH"
+out=$(bash "$s/guard.sh" --install)
+check "--install prints the timer's service and timer units and where they go" "1 1 $HOME/.config/systemd/user" \
+  "$(jq -r .timer.service <<<"$out" | grep -c "^ExecStart=.*super-agent/scripts/wake-timer.sh") $(jq -r .timer.timer <<<"$out" | grep -c '^OnUnitActiveSec=5min$') $(jq -r .timer.dir <<<"$out")"
+check "and the line that enables it" "systemctl --user daemon-reload && systemctl --user enable --now super-agent-wake.timer" "$(jq -r .timer.enable <<<"$out")"
+check "--status reports a running timer through systemctl" true "$(bash "$s/guard.sh" --status | jq .timer.active)"
+: > "$SA_FAKE/timer-inactive"
+check "and a stopped one" false "$(bash "$s/guard.sh" --status | jq .timer.active)"
+
 finish

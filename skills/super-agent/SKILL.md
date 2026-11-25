@@ -30,9 +30,7 @@ the one each step runs. A script that reads the ledger takes it by
 unset), your own machine's state directory. A ledger key is `<owner/name>#<n>`,
 or `task:<slug>` for a `task` entry. Reconcile alone moves an entry's `stage`
 and `stalls`: never set `stalls` by hand; the one reset is
-[`reset-stalls`](reference/stall-ladder.md#the-ladder). `notify.sh` is the
-watcher's alarm ([watching](reference/watching.md#the-notify-command)): you
-never run it.
+[`reset-stalls`](reference/stall-ladder.md#the-ladder).
 
 ## Setup
 
@@ -176,7 +174,7 @@ A supervised thread finishing wakes nothing, and neither does its
 permission hold; a background shell's exit wakes you about 5 s later, and a
 bound schedule wakes you on time (all measured 2026-11-06). A block from the
 **watch guard** (a Stop hook) is your own: run the command it names,
-then end the turn.
+then end the turn. A `Wake timer:` line is a backstop wake: run step 4's pulse.
 
 **Remote entries** (an `environment_id`): on each wake, before reconcile or
 pulse, save their `t3_thread_read`, convert each with `reply.sh` and pass

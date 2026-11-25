@@ -47,8 +47,8 @@ sa_now_s() { case ${SA_NOW:-} in ''|*[!0-9]*) date -u +%s ;; *) printf '%s' "$SA
 # sa_notify_read <fleet>: the fleet file's `notify` into $notify_cmd (empty when
 # the file has none) and $notify_delay (seconds, 600 when unset). A notify that
 # is no object holding a non-empty command, or whose delay is not a whole number
-# of seconds, is refused by name: a detached notify has no one to read its error.
-# shellcheck disable=SC2034  # read by watch.sh and notify.sh
+# of seconds, is refused by name.
+# shellcheck disable=SC2034  # read by wake-timer.sh
 sa_notify_read() {
   jq -e '(.notify // null) as $n | $n == null or ($n | type == "object" and (.command | type == "string" and length > 0)
       and ((.delay // 600) | type == "number" and . >= 1 and . == floor))' "$1" >/dev/null 2>&1 \

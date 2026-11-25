@@ -139,6 +139,9 @@ check "a handover writes the folder's settings with the state guard and names th
   "$rc $(jq .home.written <<<"$out") $(jq .home.guard <<<"$out") $(jq -r .home.project_id <<<"$out") $(jq -r .home.folder <<<"$out")"
 check "the guard's hook is the settings file's one entry" 1 "$(jq '.hooks.PreToolUse | length' "$hc")"
 check "a healthy folder adds no Needs you line" 0 "$(grep -c 'Super agent folder\|State guard' "$bear")"
+mkdir -p "$tmp/sysbin"; printf '#!/bin/sh\nexit 3\n' > "$tmp/sysbin/systemctl"; chmod +x "$tmp/sysbin/systemctl"
+check "a wake timer systemctl does not report running is one Needs you line" 1 \
+  "$(PATH="$tmp/sysbin:$PATH" H >/dev/null; grep -c '^- Wake timer: ' "$bear")"
 jq -n '{projects: [{id: "p-other", workspaceRoot: "/repo"}]}' > "$tmp/noproj.json"
 out=$(bash "$s/handover.sh" --ledger "$led" --from th-old --out "$bear" --projects "$tmp/noproj.json"); rc=$?
 check "a missing T3 project for the folder is one Needs you line saying what the owner creates" "0 null 1" \

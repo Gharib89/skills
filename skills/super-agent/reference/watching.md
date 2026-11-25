@@ -35,19 +35,21 @@ lists the fields; this file holds the rules behind them.
 - One watcher runs per ledger: a second start exits 1 with `running`, and the
   first is left alone.
 
-## The notify command
+## The wake timer
 
-Every alarm in the loop is the super agent, so a super agent that stopped (an
-access error, a closed session) wakes nothing. The fleet file's `notify` object
-is the one alarm outside it: `{"command": <shell text>, "delay": <whole seconds
-of 1 or more, 600 when unset>}`. A watcher started with `--fleet <fleet>` that
-exits on an event (any exit but `timeout`) leaves a detached `notify.sh`
-behind. It sleeps the delay, then reads `<ledger>.reconciled`, the epoch second
-of the last reconcile: a stamp at or after the watcher's exit runs nothing, no
-stamp or an older one runs the command once, with `SA_NOTIFY_MESSAGE` set. A
-fleet file with no `notify`, or a watcher started without `--fleet`, notifies
-nothing; a `notify` of the wrong shape is a tooling error at the watcher's
-start.
+A dead turn (a limit stop, an auth error) or a host restart that cancelled the
+watcher wakes nothing in the loop. `wake-timer.sh`, a systemd user timer every
+5 minutes with no model, covers it; its `--help` has the rules:
+
+- While `watch.sh --ledger <ledger> --owed` says a watcher is owed and the
+  super agent's own thread is idle, it sends the thread `Wake timer: no watcher
+  is running. Run pulse and restart the watcher.` A running thread is the watch
+  guard's; a limit stop is held until its reset plus 10 minutes.
+- The fleet file's `notify`, `{"command": <shell text>, "delay": <whole
+  seconds, 600 when unset>}`, runs once per outage, with `SA_NOTIFY_MESSAGE`
+  set: on a failed send, no reconcile within the delay, or a permission request
+  waiting 10 minutes. The desktop notifier stands in when T3 does not answer.
+- `guard.sh --install` prints the unit files; installing them is the owner's.
 
 ## The wake's actions
 

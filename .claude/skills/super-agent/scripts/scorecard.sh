@@ -254,7 +254,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
      alerted: ($pushed | length), alerted_twice: ($pushed | group_by(.) | map(select(length > 1)) | length)},
    guards: (if $logs == {} then null else $logs | map_values(guard) end),
    timer: (if $timer == null then null
-     else [$timer[] | select(.event == "outage" and (.at // "" | startswith($day))) | .minutes] as $m
+     else [$timer[] | select(.event == "closed" and (.at // "" | startswith($day))) | .minutes] as $m
        | {outages: ($m | length), median_minutes: ($m | median), worst_minutes: ($m | max)} end),
    questions: ([$wakes[] | select(.cause == "owner" and (.text | contains("?")))] as $q
      | {asked: ($q | length), with_write: ($q | map(select(.wrote)) | length)}),

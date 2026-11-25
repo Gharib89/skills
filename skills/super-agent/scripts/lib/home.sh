@@ -22,6 +22,21 @@ sa_guard_entry() { sa_hook_entry guard.sh 'Edit|Write|MultiEdit|NotebookEdit|Bas
 # A Stop hook's exit 2 blocks the stop, so a usage error in the watch guard is swallowed.
 sa_watch_guard_entry() { sa_hook_entry watch-guard.sh '' ' || true'; }
 
+# The wake timer's systemd user units, the owner's to install. `sa_timer_active`:
+# systemctl reports the timer running (no systemctl is not running).
+# `sa_timer_units`: {dir, service, timer, enable}, the two unit files' text, the
+# folder they go in and the line that enables them. The service carries this
+# shell's PATH, since a user unit's own PATH lacks where `t3` usually lives.
+sa_timer_active() { systemctl --user is-active --quiet super-agent-wake.timer >/dev/null 2>&1; }
+sa_timer_units() {
+  local p
+  p=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/wake-timer.sh
+  jq -cn --arg d "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user" --arg x "/usr/bin/env bash $(sa_shq "$p")" --arg path "$PATH" '{dir: $d,
+    service: "[Unit]\nDescription=Super agent wake timer tick\n\n[Service]\nType=oneshot\nEnvironment=\"PATH=\($path)\"\nExecStart=\($x)\n",
+    timer: "[Unit]\nDescription=Wake the super agent when its own turn died\n\n[Timer]\nOnBootSec=5min\nOnUnitActiveSec=5min\n\n[Install]\nWantedBy=timers.target\n",
+    enable: "systemctl --user daemon-reload && systemctl --user enable --now super-agent-wake.timer"}'
+}
+
 # `hook_has($ev; $e)`: the settings hold, under event `$ev`, the entry `$e` (its
 # command), for `guard.sh` and `sa_home` alike.
 # shellcheck disable=SC2034  # read by guard.sh
@@ -56,7 +71,8 @@ sa_guard_stale() {
 # every `projects` row of `t3_project_list` (its answer, or the rows of all its pages
 # as one array): `project_id` is the live project whose workspace is the folder, null
 # when none is. `needs` holds one `<key>: <action>` line per thing the owner fixes: a
-# missing guard entry (either), a stale or unreadable user-settings entry, a missing project.
+# missing guard entry (either), a wake timer systemctl does not report running, a
+# stale or unreadable user-settings entry, a missing project.
 # shellcheck disable=SC2034  # home is read by the scripts that call it
 sa_home() {
   local dir settings entry wentry written=false has whas stale pid=null needs='[]'
@@ -68,6 +84,7 @@ sa_home() {
   whas=$(jq --argjson e "$wentry" "$sa_jq_hook_has"'hook_has("Stop"; $e)' "$settings" 2>/dev/null) || whas=false
   [ "$whas" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the watch guard\u0027s Stop hook is missing from \($s): run scripts/setup.sh --write"]' <<<"$needs")
   [ "$has" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the state guard\u0027s hook is missing from \($s): run scripts/setup.sh --write, or scripts/guard.sh --install"]' <<<"$needs")
+  sa_timer_active || needs=$(jq -c --arg d "$(sa_timer_units | jq -r .dir)" '. + ["Wake timer: super-agent-wake.timer is not running: write the unit files scripts/guard.sh --install prints into \($d), then run the enable line it prints"]' <<<"$needs")
   stale=$(sa_guard_stale)
   [ "$stale" = null ] || needs=$(jq -c --argjson st "$stale" '. + (if $st.unreadable then ["State guard: \($st.settings) is no JSON object, so a stale guard entry there cannot be checked: fix the file"]
     else [$st.entries[] | "State guard: remove its stale entry from \($st.settings): \(tojson)"] end)' <<<"$needs")

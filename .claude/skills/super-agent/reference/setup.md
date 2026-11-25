@@ -138,9 +138,9 @@ Each is optional: a fleet file without it keeps the default.
   merge-gate hold no standing waiver or ruling matches. Any other value is a
   tooling error from `launch.sh`, which launches nothing until it is fixed
   ([step-ins](step-ins.md#the-step-ins)).
-- `notify`: `{command, delay}`, the alarm that runs when the watcher exited
-  on an event and no reconcile followed within the delay
-  ([watching](watching.md#the-notify-command) has its shape).
+- `notify`: `{command, delay}`, the alarm the wake timer runs when a wake
+  draws no reconcile within the delay
+  ([watching](watching.md#the-wake-timer) has its shape).
 - `repos.<owner/name>.machine`: pins the repo to one machine key
   ([placement](placement.md#the-rules)). `machines.<m>.slots`: the machine's
   slot count. Edit both with `scripts/fleet.sh`, not by hand.

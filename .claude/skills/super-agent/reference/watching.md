@@ -35,19 +35,30 @@ lists the fields; this file holds the rules behind them.
 - One watcher runs per ledger: a second start exits 1 with `running`, and the
   first is left alone.
 
-## The notify command
+## The wake timer
 
-Every alarm in the loop is the super agent, so a super agent that stopped (an
-access error, a closed session) wakes nothing. The fleet file's `notify` object
-is the one alarm outside it: `{"command": <shell text>, "delay": <whole seconds
-of 1 or more, 600 when unset>}`. A watcher started with `--fleet <fleet>` that
-exits on an event (any exit but `timeout`) leaves a detached `notify.sh`
-behind. It sleeps the delay, then reads `<ledger>.reconciled`, the epoch second
-of the last reconcile: a stamp at or after the watcher's exit runs nothing, no
-stamp or an older one runs the command once, with `SA_NOTIFY_MESSAGE` set. A
-fleet file with no `notify`, or a watcher started without `--fleet`, notifies
-nothing; a `notify` of the wrong shape is a tooling error at the watcher's
-start.
+Every other alarm in the loop is the super agent, so a turn that died (a limit
+stop, an auth error) or a host restart that cancelled the watcher wakes
+nothing. The wake timer is a systemd user timer that runs `wake-timer.sh` every
+5 minutes, with no model. Its `--help` has the rules; in short:
+
+- It acts only while `watch.sh --ledger <ledger> --owed` says a watcher is owed. With the super
+  agent's own thread (`own_thread` in the ledger) idle, it sends the thread one
+  line: `Wake timer: no watcher is running. Run pulse and restart the watcher.`
+- A running thread is the watch guard's. A limit stop is held until its reset
+  plus 10 minutes; a reset it cannot read gets the wake.
+- The fleet file's **notify** command, `{"command": <shell text>, "delay":
+  <whole seconds of 1 or more, 600 when unset>}`, runs once when the send
+  fails, when no reconcile follows the wake within the delay, or when a
+  permission request has waited 10 minutes on the thread, with
+  `SA_NOTIFY_MESSAGE` set. With T3 not answering, or no command, the desktop
+  notifier stands in.
+- An outage, from the first owed tick to the next reconcile, gets one wake and
+  at most one notify, logged as JSON lines in `wake-timer.jsonl` beside the
+  ledger.
+- `guard.sh --install` prints the two unit files and the line that enables
+  them; installing them is the owner's. A timer systemctl does not report
+  running is a `Needs you` row at setup and each handover.
 
 ## The wake's actions
 

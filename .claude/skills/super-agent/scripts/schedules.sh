@@ -15,7 +15,9 @@
 # own T3 project. The prompts
 # carry no path or host: the thread already knows its ledger.
 #
-# The backstop is the wake that runs `pulse.sh` while a watcher lives; hourly,
+# The backstop is the wake that runs `pulse.sh` while a watcher lives, for a
+# remote thread's rest and a stale skill copy; a watcher that died is the wake
+# timer's (`wake-timer.sh`). Hourly,
 # since a faster one found nothing to do and cost context on each wake. It
 # belongs to the loop, not the owner's choices, so no yes is asked for it.
 # Its trigger shape, {type: "interval", everyMs} with everyMs at least 60000, is

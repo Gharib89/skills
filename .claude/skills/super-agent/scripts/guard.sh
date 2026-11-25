@@ -20,11 +20,14 @@
 # other session. `--install` merges one PreToolUse entry and keeps every other key,
 # as a temp file then a rename, and adds nothing when the hook is already there.
 # `--status` also reports `stale`: the guard entries left in `~/.claude/settings.json`
-# by an install from before the folder, each the line to remove there.
+# by an install from before the folder, each the line to remove there. The wake
+# timer's units are the owner's to install: `--install` prints them as `timer`
+# (writing nothing there) and `--status` reports `timer.active` from systemctl.
 #
 # contract: bare-run
-# stdout: hook mode prints nothing; `--install` {settings, installed, changed, entry};
-#         `--status` {settings, installed, entry, stale: {settings, entries, unreadable} or null}
+# stdout: hook mode prints nothing; `--install` {settings, installed, changed, entry,
+#         timer: {dir, service, timer, enable}}; `--status` {settings, installed, entry,
+#         stale: {settings, entries, unreadable} or null, timer: {active}}
 # exit: 0 allowed, installed or status read · 2 a call refused (the message on stderr),
 #       a usage error or a settings file that is not JSON
 set -uo pipefail
@@ -56,9 +59,10 @@ if [ $# -gt 0 ]; then
     has=true changed=true
   fi
   if [ "$mode" = install ]; then
-    jq -cn --arg s "$settings" --argjson i "$has" --argjson c "$changed" --argjson e "$entry" '{settings: $s, installed: $i, changed: $c, entry: $e}'
+    jq -cn --arg s "$settings" --argjson i "$has" --argjson c "$changed" --argjson e "$entry" --argjson t "$(sa_timer_units)" '{settings: $s, installed: $i, changed: $c, entry: $e, timer: $t}'
   else
-    jq -cn --arg s "$settings" --argjson i "$has" --argjson e "$entry" --argjson st "$(sa_guard_stale)" '{settings: $s, installed: $i, entry: $e, stale: $st}'
+    active=false; ! sa_timer_active || active=true
+    jq -cn --arg s "$settings" --argjson i "$has" --argjson e "$entry" --argjson st "$(sa_guard_stale)" --argjson a "$active" '{settings: $s, installed: $i, entry: $e, stale: $st, timer: {active: $a}}'
   fi
   exit 0
 fi

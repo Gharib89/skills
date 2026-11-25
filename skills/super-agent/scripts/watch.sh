@@ -49,11 +49,8 @@
 # the baseline holds the thread `reconcile` read from the reply file on the last
 # wake, so a remote thread's own finish reaches the super agent through the
 # backstop schedule. `--remote` is accepted and unused here.
-# With `--fleet`, a fleet file holding a `notify` command makes each exit on an
-# event (not the timeout) leave a detached `notify.sh` behind: it runs the command
-# once if no reconcile followed within the fleet file's delay, since the watcher's
-# exit is what wakes the super agent and a stopped one would wake no one. A
-# malformed `notify` is refused before the first poll.
+# `--fleet` is accepted and unused here: a super agent that stops answering its
+# wakes is the wake timer's (`wake-timer.sh`).
 #
 # `--owed` (the other flags unused) is the one read-only answer to whether a
 # watcher is owed, asked by the watch guard (`watch-guard.sh`): `watcher` when an
@@ -82,13 +79,13 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 
 usage='usage: watch --ledger <file> [--owed] [--interval <s>] [--timeout <s>] [--recheck <s>] [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>]'
 sa_help "$usage" "$@"
-ledger='' fleet='' interval=30 timeout='' recheck=90 window=$sa_stall_window owed=false
+ledger='' interval=30 timeout='' recheck=90 window=$sa_stall_window owed=false
 while [ $# -gt 0 ]; do
   case $1 in
     --owed) owed=true; shift ;;
     --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
-    --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2 ;;
+    --fleet) sa_flag_value "$usage" "${2:-}"; shift 2 ;;
     --interval) sa_flag_value "$usage" "${2:-}"; interval=$2; shift 2 ;;
     --timeout) sa_flag_value "$usage" "${2:-}"; timeout=$2; shift 2 ;;
     --recheck) sa_flag_value "$usage" "${2:-}"; recheck=$2; shift 2 ;;
@@ -100,11 +97,6 @@ case $interval in ''|0|*[!0-9]*) sa_tooling "$usage" ;; esac
 case $timeout in *[!0-9]*) sa_tooling "$usage" ;; esac
 case $recheck in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
 [ -n "$ledger" ] || sa_tooling "$usage"
-notify_cmd=''
-if [ -n "$fleet" ]; then
-  [ -f "$fleet" ] || sa_tooling "$fleet: no such file"
-  sa_notify_read "$fleet"
-fi
 
 # load: the ledger's open, observed entries in $open and the open ones not yet
 # observed in $unobserved, read afresh each poll.
@@ -195,13 +187,6 @@ stall_window_of() {
        and $now - $since >= $w then "stall-window" else empty end'
 }
 
-# woke: the watcher is about to exit on an event, which wakes the super agent;
-# leave the alarm for the day it does not answer.
-woke() {
-  [ -z "$notify_cmd" ] || setsid -f bash "$(dirname "${BASH_SOURCE[0]}")/notify.sh" --ledger "$ledger" --fleet "$fleet" --since "$(sa_now_s)" \
-    >/dev/null 2>&1 </dev/null
-}
-
 start=$SECONDS
 while :; do
   load
@@ -239,7 +224,6 @@ while :; do
       jq -cn --arg k "$key" --arg t "$thread" --arg e "$obs_kind" --argjson d "$obs_detail" \
         '{key: $k, thread: $t, event: $e, detail: $d}'
     fi
-    woke
     exit 0
   done < <(jq -c '.[]' <<<"$open")
   [ -n "$timeout" ] && [ $((SECONDS - start)) -ge "$timeout" ] && break

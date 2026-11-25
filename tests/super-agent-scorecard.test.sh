@@ -76,8 +76,8 @@ ledger_fixture
 transcript > "$tmp/t.jsonl"
 printf '%s\n' "{\"at\":\"${day}T09:00:00Z\",\"event\":\"block\"}" "{\"at\":\"${day}T09:05:00Z\",\"event\":\"pass\"}" \
   '{"at":"2026-11-18T09:00:00Z","event":"pass"}' > "$dir/watch-guard.jsonl"
-printf '%s\n' "{\"at\":\"${day}T03:00:00Z\",\"event\":\"outage\",\"minutes\":5}" \
-  "{\"at\":\"${day}T04:00:00Z\",\"event\":\"outage\",\"minutes\":20}" > "$dir/wake-timer.jsonl"
+printf '%s\n' "{\"at\":\"${day}T03:00:00Z\",\"event\":\"closed\",\"minutes\":5}" \
+  "{\"at\":\"${day}T04:00:00Z\",\"event\":\"closed\",\"minutes\":20}" > "$dir/wake-timer.jsonl"
 out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9); rc=$?
 check_rc "a row exits 0" 0 "$rc"
 row=$(jq -c .row <<<"$out")

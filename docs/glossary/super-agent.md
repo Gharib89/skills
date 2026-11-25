@@ -32,6 +32,10 @@ _Avoid_: write lock, permission
 The Stop hook (`scripts/watch-guard.sh`) in the same generated settings that refuses the super agent's turn end once while `watch.sh --owed` says a watcher is owed (an open, observed entry and no live watcher, or open entries to reconcile first), naming the open entries and the command to run; the stop after that passes. It logs each block and each unwatched pass to `watch-guard.jsonl` beside the ledger, which the scorecard counts, and allows the stop when it cannot judge. The super agent still starts the watcher itself.
 _Avoid_: watchdog, heartbeat
 
+**Wake timer**:
+The systemd user timer that runs `scripts/wake-timer.sh` every 5 minutes, with no model, on the super agent's machine. While `watch.sh --owed` says a watcher is owed and the super agent's own thread is idle, it sends the thread one fixed wake line, then runs the notify command if no reconcile follows. A running thread is the watch guard's, and a limit stop is held until its reset plus 10 minutes. Its unit files are the owner's to install: `guard.sh --install` prints them, and a missing timer is a `Needs you` row.
+_Avoid_: heartbeat, cron job, backstop (that is the hourly schedule)
+
 **Waiting line**:
 The fixed last line, `Waiting on my own background work.`, that ship's run contract, or a `/triage` launch message's contract line, tells a run to end a turn on when the turn ends only to wait on its own background work (a check, a CI wait, a subagent). The watcher and reconcile read a thread at rest on it as still working until the stall window passes: no `run-finished` event, no stall. A run's final message is its outcome (the PR URL and the gate state for ship, the triage outcome for triage), never this line.
 _Avoid_: heartbeat, keepalive, status ping
@@ -53,7 +57,7 @@ The fleet file's `merge_gate_ruler`: who rules on a merge-gate hold no standing 
 _Avoid_: approver, gatekeeper
 
 **Notify command**:
-The fleet file's `notify` shell command and delay. When the watcher exits on an event and no reconcile follows within the delay, the command runs once, so a super agent that stopped is noticed by something other than itself. A reconcile within the delay runs nothing.
+The fleet file's `notify` shell command and delay, which the wake timer runs once per outage: when its wake line cannot be sent, when no reconcile follows the wake within the delay, or when a permission request has waited 10 minutes on the super agent's thread. So a super agent that cannot recover by itself is noticed by the owner. A reconcile within the delay runs nothing.
 _Avoid_: alert, heartbeat, backstop (that is the schedule that wakes the super agent)
 
 **Parents done**:
