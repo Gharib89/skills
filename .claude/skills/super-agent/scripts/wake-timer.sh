@@ -7,8 +7,9 @@
 #
 #   wake-timer [--ledger <file>] [--fleet <file>]
 #
-# With a watcher owed (`watcher` or `reconcile`) and the thread idle, it opens an
-# outage and sends the thread one fixed line, `$wake_line` below. When the send
+# An outage opens at the first tick that finds a watcher owed (`watcher` or
+# `reconcile`), bar a held limit stop. With the thread idle, it sends the
+# thread one fixed line, `$wake_line` below. When the send
 # fails, or no reconcile stamp (`<ledger>.reconciled`) follows the wake within
 # the fleet file's notify delay (600 s when unset), it runs the fleet file's
 # notify command with `SA_NOTIFY_MESSAGE` set. A running thread is left to the
@@ -16,7 +17,8 @@
 # notified, with no wake. A limit stop is held until its reset plus 600 s; a
 # reset it cannot read falls through to a wake. With T3 not answering, or no
 # notify command or own thread recorded, the desktop notifier (`notify-send`)
-# stands in for the command. An outage gets one wake and at most one notify, and
+# stands in for the command, as it does for a fleet file whose `notify` is
+# malformed, a fault the message names. An outage gets one wake and at most one notify, and
 # closes at the first reconcile at or after its opening, or when no watcher is
 # owed any more. Its state is `wake-timer.state.json` beside the ledger.
 #
@@ -32,8 +34,7 @@
 # stdout: {owed, action}: `owed` the `watch.sh --owed` answer (null when it
 #         failed), `action` one of none, running, held, pending, waiting, wake,
 #         notify or unjudged
-# exit: 0 a tick, whatever it found · 2 usage, or a fleet file whose notify is
-#       malformed
+# exit: 0 a tick, whatever it found · 2 usage
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
@@ -50,7 +51,11 @@ while [ $# -gt 0 ]; do
   shift 2
 done
 notify_cmd='' notify_delay=600
-[ ! -f "$fleet" ] || sa_notify_read "$fleet"
+# A malformed notify must not silence the tick: nobody reads the journal, so the
+# desktop notifier stands in and its message names the fault.
+bad_notify=''
+if [ -f "$fleet" ] && ! (sa_notify_read "$fleet") >/dev/null 2>&1; then bad_notify=" ($fleet: malformed notify)"
+elif [ -f "$fleet" ]; then sa_notify_read "$fleet"; fi
 wake_line='Wake timer: no watcher is running. Run pulse and restart the watcher.'
 hold=600
 dir=$(dirname "$ledger") now=$(sa_now_s)
@@ -73,8 +78,9 @@ answer() { # <owed> <action>
 open_outage() { [ "$(jq -r '.opened // empty' <<<"$state")" ] || { put ".opened = $now"; event opened; }; }
 # alarm <via: command|desktop> <why>: the outage's one notify.
 alarm() {
-  local via=$1 rc=0 msg="Super agent: $2"
-  [ "$(jq -r '.notified // false' <<<"$state")" = false ] || return 0
+  local via=$1 rc=0 msg="Super agent: $2$bad_notify"
+  # already notified: nothing runs, so the tick only waits
+  [ "$(jq -r '.notified // false' <<<"$state")" = false ] || answer "$owed" waiting
   [ -n "$notify_cmd" ] || via=desktop
   if [ "$via" = command ]; then
     SA_NOTIFY_MESSAGE=$msg bash -c "$notify_cmd" >/dev/null 2>&1 </dev/null || rc=$?
@@ -103,6 +109,7 @@ case $owed in
 esac
 
 # overdue: the wake went out a delay ago and no reconcile closed the outage.
+late="no reconcile followed the wake timer's wake within ${notify_delay}s"
 overdue() { local w; w=$(jq -r '.wake_at // empty' <<<"$state"); [ -n "$w" ] && [ $((now - w)) -ge "$notify_delay" ]; }
 
 sa_read "$ledger"
@@ -111,21 +118,20 @@ if [ -z "$own" ]; then open_outage; alarm desktop "a watcher is owed and the led
 if ! sa_observe "$(jq -cn --arg t "$own" '{thread: $t}')"; then
   open_outage; alarm desktop "a watcher is owed and T3 does not answer for thread $own ($obs_kind)"; answer "$owed" notify
 fi
+reset=$(jq -r '.limit_reset // empty' <<<"$obs")
+[ -z "$reset" ] || [ "$now" -ge $((reset + hold)) ] || answer "$owed" held
+open_outage
 
 if [ "$(jq -r .pending <<<"$obs")" -gt 0 ]; then
   since=$(jq -r ".pending_since // $now" <<<"$state"); put ".pending_since = $since"
   [ $((now - since)) -ge "$hold" ] || answer "$owed" pending
-  open_outage; alarm command "a permission request has waited $(((now - since) / 60)) minutes on thread $own"; answer "$owed" notify
+  alarm command "a permission request has waited $(((now - since) / 60)) minutes on thread $own"; answer "$owed" notify
 fi
 put 'del(.pending_since)'
 if [ "$(jq -r .status <<<"$obs")" = running ]; then
-  ! overdue || { alarm command "no reconcile followed the wake timer's wake within ${notify_delay}s"; answer "$owed" notify; }
+  ! overdue || { alarm command "$late"; answer "$owed" notify; }
   answer "$owed" running
 fi
-reset=$(jq -r '.limit_reset // empty' <<<"$obs")
-[ -z "$reset" ] || [ "$now" -ge $((reset + hold)) ] || answer "$owed" held
-
-open_outage
 if [ -z "$(jq -r '.wake_at // empty' <<<"$state")" ]; then
   if t3 thread send "$own" "$wake_line" >/dev/null 2>&1 </dev/null; then
     put ".wake_at = $now"; event wake; answer "$owed" wake
@@ -133,4 +139,4 @@ if [ -z "$(jq -r '.wake_at // empty' <<<"$state")" ]; then
   alarm command "the wake timer could not send its wake line to thread $own"; answer "$owed" notify
 fi
 overdue || answer "$owed" waiting
-alarm command "no reconcile followed the wake timer's wake within ${notify_delay}s"; answer "$owed" notify
+alarm command "$late"; answer "$owed" notify

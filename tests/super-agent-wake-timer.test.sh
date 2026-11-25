@@ -46,7 +46,7 @@ bash "$s/wake-timer.sh" --bogus >/dev/null 2>&1; check_rc "an unknown flag is a 
 fresh running
 sa_thread sa-1 running 4 0 '' ''
 out=$(tick 0; tick 900)
-check "a running thread: no wake, no notify, no outage" "0 0 " "$(sends) $(notified) $(events)"
+check "a running thread: no wake, no notify; the outage opens when owed is first seen" "0 0 opened" "$(sends) $(notified) $(events)"
 check "and the answer says why" running "$(tail -1 <<<"$out" | jq -r .action)"
 
 # --- nothing owed ---------------------------------------------------------------
@@ -94,10 +94,22 @@ sa_thread sa-1 idle 4 0 '' ''
 SA_T3_SEND_RC=1 tick 0 >/dev/null
 check "a failed send: the notify command runs once" 1 "$(notified)"
 
+# --- a malformed notify does not silence the tick ------------------------------
+fresh bad-notify
+sa_thread sa-1 idle 4 0 '' ''
+SA_T3_SEND_RC=1 bash -c 'echo "{\"notify\": 5}" > "$1"' _ "$fleet"
+out=$(SA_T3_SEND_RC=1 tick 0); rc=$?
+check "a malformed notify: exit 0, the desktop notifier names the fault" "0 notify 1" \
+  "$rc $(jq -r .action <<<"$out") $(grep -c '^notify-send.*malformed notify' "$SA_FAKE/calls")"
+out=$(SA_T3_SEND_RC=1 tick 300)
+check "a later tick, already notified, only waits" "waiting 1" "$(jq -r .action <<<"$out") $(grep -c '^notify-send' "$SA_FAKE/calls")"
+
 # --- the outage log --------------------------------------------------------------
 fresh log
 sa_thread sa-1 idle 4 0 '' ''
-tick 0 >/dev/null; tick 600 >/dev/null
+tick 0 >/dev/null; tick 599 >/dev/null
+check "no notify a second before the delay" 0 "$(notified)"
+tick 600 >/dev/null
 printf '%s\n' $((T + 700)) > "$led.reconciled"
 tick 900 >/dev/null
 check "one outage: opened, wake sent, notify run, closed; still owed, the next opens" "opened wake notify closed opened wake" "$(events)"
