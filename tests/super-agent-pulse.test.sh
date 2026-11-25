@@ -57,14 +57,13 @@ check_rc "a pulse exits 0" 0 "$rc"
 check "one JSON object is the whole answer" 1 "$(jq -s length <<<"$out")"
 check "a live watcher with nothing changed is alive and quiet" "true false null" "$(jq -r '[.alive, .changed, (.summary | tostring)] | join(" ")' <<<"$out")"
 check "and it prints end_turn: the backstop wake posts nothing" true "$(jq .end_turn <<<"$out")"
-L need $repo#5 --action "approve the held call" >/dev/null
+L need $repo#5 --action "Approve skills#5 held call" --reason permission-hold --why "the run asks to push" --answer-in https://t3.example/t/5 >/dev/null
 out=$(P --instance claude_small)
 check "pulse passes --instance on to the block" "Super agent on claude_small" "$(jq -r .summary.status.block <<<"$out" | tail -1)"
 check "a changed row is no end_turn" false "$(jq .end_turn <<<"$out")"
-check "an unpushed need is a change, its push named in the summary" 'true ["Gharib89/skills#5"]' "$(jq -r '"\(.changed) \(.summary.status.unpushed | map(.key) | tojson)"' <<<"$out")"
-check "and the summary carries the block to post" "Needs you (1): [skills#5](https://github.com/$repo/issues/5) approve the held call" "$(jq -r .summary.status.block <<<"$out" | head -1)"
-L pushed $repo#5 >/dev/null
-check "once pushed and posted the pulse is quiet again" false "$(P | jq .changed)"
+check "a raised need is a change, named in the summary" 'true ["Gharib89/skills#5"]' "$(jq -r '"\(.changed) \(.summary.status.raised | map(.key) | tojson)"' <<<"$out")"
+check "and the summary carries the block to post" "**Approve [skills#5](https://github.com/$repo/issues/5) held call?**" "$(jq -r .summary.status.block <<<"$out" | head -1)"
+check "once raised and posted the pulse is quiet again" false "$(P | jq .changed)"
 L unneed $repo#5 >/dev/null; R >/dev/null
 stop
 out=$(P)
@@ -119,8 +118,8 @@ fixture
 R >/dev/null
 rm "$SA_FAKE/threads/t-5.json"
 check "an error row is a change" true "$(P | jq .changed)"
-L need "$repo#5" --action "refresh the thread read" >/dev/null
-L pushed "$repo#5" >/dev/null; R >/dev/null # the need pushed and its block posted
+L need "$repo#5" --action "Refresh skills#5 thread read" --reason fault --why "its thread read failed" --option "Refresh it" --option "Leave it" >/dev/null
+R >/dev/null # the need raised and its block posted
 check "an entry's error with its need recorded is not" false "$(P | jq .changed)"
 sa_issue $repo 30 open
 L wait "$repo#31" --reason r >/dev/null

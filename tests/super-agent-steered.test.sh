@@ -71,7 +71,7 @@ R $((t0 + 2100)) >/dev/null
 check "at a merge gate a steered entry has no rest to time: the watcher raises no stall-window" "null timeout" "$(W $((t0 + 2200)))"
 sa_thread th-1 idle 2 0 /wt/1 feat/x-1
 R $((t0 + 2300)) >/dev/null
-L need $key --action "ask" --reason owner-steered >/dev/null
+L need $key --action "Ask widgets#1 watch or take" --reason owner-steered --why w --option Watch --option Take >/dev/null
 check "a recorded need silences the row" 0 "$(R $((t0 + 3000)) | jq '[.escalate[] | select(.reason == "owner-steered")] | length')"
 check "and the watcher's wake: nothing to report" "null timeout" \
   "$(bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 0 --timeout 2 --stall-window 60 | jq -r '"\(.key // "null") \(.event)"')"

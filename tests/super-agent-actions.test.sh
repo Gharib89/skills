@@ -174,15 +174,17 @@ check "a thread holding a permission request is escalated" "$repo#5 permission-h
 check "and the other ticket is not" "$repo#5" "$(jq -r '[.escalate[].key] | join(",")' <<<"$out")"
 check "the row names the thread" t-5 "$(jq -r '.escalate[0].thread' <<<"$out")"
 check "it repeats until the owner's need is recorded" "$repo#5 permission-hold" "$(esc "$(R)")"
-L need "$repo#5" --action "answer the permission dialog" >/dev/null
-check "an open need silences it" "" "$(esc "$(R)")"
-L need "$repo#5" --action "stall at the cap" --reason stall-cap >/dev/null
+jq --arg k "$repo#5" '.needs = [{key: $k, action: "answer the permission dialog"}]' "$led" > "$led.new" && mv "$led.new" "$led"
+check "a need recorded before reason words silences it" "" "$(esc "$(R)")"
+L unneed "$repo#5" >/dev/null
+L need "$repo#5" --action "Restart ${repo#*/}#5 at the cap" --reason stall-cap --why w --option a --option b >/dev/null
 check "a need for another cause leaves a new cause printing" "$repo#5 permission-hold" "$(esc "$(R)")"
-L need "$repo#5" --action "answer the permission dialog" --reason permission-hold >/dev/null
+L need "$repo#5" --action "Approve ${repo#*/}#5 held call" --reason permission-hold --why w --answer-in https://t3.example/t/5 >/dev/null
 check "a need for its own cause silences it" "" "$(esc "$(R)")"
 check "the need keeps its reason" permission-hold "$(L list | jq -r '.needs[0].reason')"
-# A need with no --reason silences every later escalate row of its entry, so
-# every `need` call the skill's prose shows carries one, within its sentence.
+# A need with no --reason is refused (one recorded before reason words silences
+# every later escalate row of its entry), so every `need` call the skill's prose
+# shows carries one, within its sentence.
 bare_needs() { perl -0777 -ne 's/\s+/ /g; while (/((?:ledger\.sh(?: --ledger \S+)? need|[Rr]ecord a need)\b.*?(?:\.(?: |$)|$))/g) { print "$ARGV: $1\n" unless $1 =~ /--reason/ }' "$@"; }
 printf 'Run `ledger.sh --ledger "$l" need k --action a`.\nThen `ledger.sh need`\nwrapped, e.g. `x`. Keep `ledger.sh need --reason r`. Record a\nneed. Record a need with `--reason x`.\n' > "$tmp/needs.md"
 check "the matcher finds a bare call in any --ledger form, across a wrap and in prose" 3 "$(bare_needs "$tmp/needs.md" | wc -l | tr -d ' ')"

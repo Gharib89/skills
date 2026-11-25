@@ -130,14 +130,15 @@ done
 # --- an offer is a need tied to no ledger entry ----------------------------------
 L() { bash "$s/ledger.sh" --ledger "$led" "$@"; }
 key=task:ask-first-close-7
-out=$(L need "$key" --action 'Close acme/widgets#7 as a duplicate?' --reason ask-first)
+offer() { L need "$key" --action 'Close acme/widgets#7 as a duplicate?' --reason ask-first --why "both report one bug" --option "Close it" --option "Leave it open"; }
+out=$(offer)
 check "an offer is recorded with no ledger entry, its reason ask-first" "$key ask-first" "$(jq -r '"\(.need.key) \(.need.reason)"' <<<"$out")"
 check "the ledger holds no entry for it" '[]' "$(L list | jq -c .entries)"
 fleet=$tmp/fleet.json; printf '{"machines":{}}\n' > "$fleet"
-check "it shows under Needs you in the status block" 1 \
-  "$(bash "$s/status.sh" --ledger "$led" 2>/dev/null | jq -r '.block // .status.block // empty' | grep -c "Needs you.*$key")"
+check "it shows as an offer in the status block" 1 \
+  "$(bash "$s/status.sh" --ledger "$led" 2>/dev/null | jq -r '.block // .status.block // empty' | grep -c '^Offer: Close \[acme/widgets#7\]')"
 check "it survives a second record with the same action (one row)" 1 \
-  "$(L need "$key" --action 'Close acme/widgets#7 as a duplicate?' --reason ask-first >/dev/null; L list | jq '.needs | length')"
+  "$(offer >/dev/null; L list | jq '.needs | length')"
 check "the owner's reply clears it" '{"key":"task:ask-first-close-7","removed":true}' "$(L unneed "$key" | jq -c .)"
 check "and the ledger holds none" 0 "$(L list | jq '.needs | length')"
 

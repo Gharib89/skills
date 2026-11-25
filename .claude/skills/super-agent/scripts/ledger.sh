@@ -28,9 +28,11 @@
 #   ledger --ledger <file> scoped [--repo <owner/name>]
 #   ledger --ledger <file> wait <key> --reason <text> [--order <n>] [--after <key>]
 #   ledger --ledger <file> unwait <key>
-#   ledger --ledger <file> need <key> --action <text> [--reason <word>]
-#   ledger --ledger <file> pushed <key>
+#   ledger --ledger <file> need <key> --action <text> --reason <word> --why <clause>
+#          (--option <label>[: <consequence>]... | --answer-in <thread link>)
 #   ledger --ledger <file> unneed <key>
+#   ledger --ledger <file> ack <key> --reason <word>
+#   ledger --ledger <file> answer <reply>
 #   ledger --ledger <file> limit <owner/name> --reviewer <name>
 #   ledger --ledger <file> unlimit <owner/name>
 #   ledger --ledger <file> take <key>
@@ -122,10 +124,23 @@
 # entry of any stage. `reset-stalls` zeroes an open entry's stall count and restarts
 # its stall window, and records a dated ruling naming the key and the count it replaced.
 # A `need` is something only the owner can settle: one row in `needs` per key
-# (the entry, or a waiting ticket), its one action, `since` when and whether its
-# push went out. A repeat with the same action keeps `since` and `pushed`, a new
-# action is a new need. `--reason` names the cause it answers: only that
-# `escalate` row stays silent for it. `pushed` marks the push sent, `unneed` clears the need;
+# (the entry, a waiting ticket, or a `task:` key), printed by `status` as the
+# needs-you message. Its `--reason` word gives its class (`lib/needs.sh`): blocking
+# (a thread or the queue stopped until the owner acts) or an offer; a word the
+# table lacks is refused. The action reads verb, ticket, detail, the ticket its
+# second word (name#n, owner/name#n or task:slug) ending within 30 characters, the
+# whole at most 72; `--why` is one clause; the options are 2 to 4, each a label
+# of at most 5 words before an optional `: <consequence>`, the first the
+# recommended one, or none with `--answer-in`, the link of the thread the need is
+# answered in (a permission hold). A repeat with the same action keeps `since` and
+# the alert and reminder marks `status` set, whatever its reason word; a new action
+# is a new need. Only the escalate row of its reason stays silent for it; a need
+# recorded before reason words were required silences every row of its entry.
+# `unneed` clears the need. `ack` records an acknowledge mark: the escalate row of
+# that reason stays silent with no need, until reconcile sees the entry's stage
+# change, which drops the mark. `answer` reads the owner's reply, `<ticket>
+# <option>` (`88 1`), or a bare `<option>` while exactly one need with options is
+# open, and changes nothing.
 # `status` reads the rows. `--instance` is the T3 provider instance the thread
 # launched on (route's `instance_id`), which `status` names on the Running row. A
 # `limit` records that a repo's hosted reviewer answered a review request with a
@@ -145,16 +160,19 @@
 #         text}], moved: [{date, text, to}]}; `allowed` {allowed: [{date, call, line}]};
 #         `scoped` {scoped: [{date, text, repo}]}; `wait`
 #         {waiting: {key, repo, number, reason, since, order, after}}; `unwait` {key,
-#         removed}; `need` {need: {key, action, since, pushed}}; `pushed`
-#         {need}; `unneed` {key, removed}; `limit` {limit: {repo, reviewer,
+#         removed}; `need` {need: {key, action, reason, class, why, options:
+#         [{label, consequence}], answer_in, since, alerted, reminded}}; `unneed` {key,
+#         removed}; `ack` {ack: {key, reason, stage, since}}; `answer` {key, action,
+#         option, label, consequence}; `limit` {limit: {repo, reviewer,
 #         since}}; `unlimit` {repo, removed}; `take` {key, owner_run}; `tell` {thread, at, ruling};
 #         `drop` {key, removed}; `reset-stalls` {key, stalls, ruling}; `self` {own_thread};
 #         `list` also holds `waiting`,
-#         `needs` and `review_limits`; any failure {error}
+#         `needs`, `acks` and `review_limits`; any failure {error}
 # exit: 0 ok · 1 the key is already in, or not in, the ledger, a thread an entry holds
 #       under another key (`adopt`), `stage`, an
 #       identity field, an entry that ended (`take`, `reset-stalls`), a key `tell` does not
-#       know, a ruling that `pin` or a migration row names
+#       know, an `ack` key the ledger lacks, an `answer` naming no one open need with
+#       options or an option it lacks, a ruling that `pin` or a migration row names
 #       but the ledger lacks, or a second `migrate-rulings` · 2 usage, a value
 #       that is not JSON, an unreadable or wrong-shaped ledger, a write that failed, or
 #       an `adopt --read` whose file is no `t3_thread_read` result or not the thread's first
@@ -164,7 +182,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | adopt (--read <t3_thread_read file> | --thread <id>) [--repo <owner/name>] [--number <n>] [--worktree <path>] [--branch <name>] [--kind ship|triage] [--task <slug>] [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | add --launching <the add flags, less --thread and --worktree> | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | take <key> | tell <key or thread id> | drop <key> | reset-stalls <key> | self [<thread id>]'
+usage='usage: ledger --ledger <file> add (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | adopt (--read <t3_thread_read file> | --thread <id>) [--repo <owner/name>] [--number <n>] [--worktree <path>] [--branch <name>] [--kind ship|triage] [--task <slug>] [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | add --launching <the add flags, less --thread and --worktree> | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> --reason <word> --why <clause> (--option <label>[: <consequence>]... | --answer-in <thread link>) | unneed <key> | ack <key> --reason <word> | answer <reply> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | take <key> | tell <key or thread id> | drop <key> | reset-stalls <key> | self [<thread id>]'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -184,7 +202,7 @@ case $cmd in
     case ${1:-} in --open) open=true; shift ;; esac
     [ $# -eq 0 ] || sa_tooling "$usage"
     sa_read "$ledger"
-    jq -c --arg l "$ledger" --argjson open "$open" --arg today "$(sa_today)" "$sa_jq_open$sa_jq_waiting$sa_jq_live"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings: [.rulings[] | select(live($today))], waiting: waiting_list, needs: (.needs // []), review_limits: (.review_limits // [])}' <<<"$doc" ;;
+    jq -c --arg l "$ledger" --argjson open "$open" --arg today "$(sa_today)" "$sa_jq_open$sa_jq_waiting$sa_jq_live"'{ledger: $l, entries: [.entries[] | select(($open | not) or is_open)], rulings: [.rulings[] | select(live($today))], waiting: waiting_list, needs: (.needs // []), acks: (.acks // []), review_limits: (.review_limits // [])}' <<<"$doc" ;;
   set)
     [ $# -eq 3 ] || sa_tooling "$usage"
     key=$1 field=$2
@@ -206,7 +224,9 @@ case $cmd in
     source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/waiting.sh" && ledger_waiting "$cmd" "$@" ;;
   ruling|allowed|scoped|pin|migrate-rulings)
     source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/rulings.sh" && ledger_rulings "$cmd" "$@" ;;
-  need|pushed|unneed|limit|unlimit|take|tell|drop|reset-stalls|self)
+  need|unneed|ack|answer)
+    source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/needs.sh" && ledger_needs "$cmd" "$@" ;;
+  limit|unlimit|take|tell|drop|reset-stalls|self)
     source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/owner.sh" && ledger_owner "$cmd" "$@" ;;
   *) sa_tooling "$usage" ;;
 esac

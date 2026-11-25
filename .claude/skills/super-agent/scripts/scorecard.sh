@@ -159,7 +159,7 @@ slim=$(for i in ${files[@]+"${!files[@]}"}; do
 done | jq -sc .) || sa_tooling "cannot read the transcripts"
 
 row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')" \
-  --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" --argjson qlog "$qlog" --argjson cglog "$cglog" \
+  --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" --argjson qlog "$qlog" --argjson cglog "$cglog" --argjson nlog "$nlog" \
   --slurpfile led <(printf '%s\n' "$doc") --slurpfile archive <(cat "$ledger.archive.jsonl" 2>/dev/null) "$sa_jq_open$sa_jq_changing"'
   def wsum: reduce .[] as $t ({in: 0, cw: 0, cr: 0, out: 0}; .in += $t.in | .cw += $t.cw | .cr += $t.cr | .out += $t.out);
   def total: .in + .cw + .cr + .out;
@@ -217,8 +217,11 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
   | [$all[] | select(.u | not) | select(.ts // "" | startswith($day))] as $calls
   | [$calls[] | .texts[] | select(length > 0)] as $msgs
   | [$calls[] | .tools[] | select(.name == "Bash") | .cmd // ""] as $cmds
-  | [$cmds[] | capture("ledger\\.sh[^|;&\\n]*?\\spushed\\s+[\"'"'"']?(?<k>[^\\s\"'"'"']+)") | .k] as $pushed
-  | ($day | strptime("%Y-%m-%d") | mktime) as $d0 | ($d0 + 86400) as $d1
+  | ($nlog // []) as $nl
+  | def today($ev): [$nl | to_entries[] | select(.value.event == $ev and (.value.at | startswith($day)))];
+    def again($ev): [today($ev)[] | .key as $i | .value as $x
+      | select(any($nl[:$i][]; .event == $ev and .key == $x.key and .action == $x.action))] | length;
+  ($day | strptime("%Y-%m-%d") | mktime) as $d0 | ($d0 + 86400) as $d1
   | ([$led[0].entries[]] + $archive) as $ents
   | def ended: (.settled_at // (if is_open then null else .updated_at end));
     def epoch: if . == null then null else sub("[.][0-9]+"; "") | fromdateiso8601 end;
@@ -235,7 +238,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
      nothing_changed: ([$msgs[] | select(test($nc; "i"))] | length),
      over_1500: ([$msgs[] | select(length > 1500)] | length), median_chars: ($msgs | map(length) | median)},
    needs: {recorded: ([$cmds[] | select(test("ledger\\.sh[^|;&\\n]*?\\sneed\\s"))] | length),
-     alerted: ($pushed | length), alerted_twice: ($pushed | group_by(.) | map(select(length > 1)) | length)},
+     alerted: (today("alert") | length), alerted_twice: (again("alert") + again("reminder"))},
    guards: (if $logs == {} then null else $logs | map_values(guard) end),
    call_guard: (if $cglog == null then null
      else {refused: ([$cglog[] | select(.event == "refused" and (.at // "" | startswith($day)))] | length),

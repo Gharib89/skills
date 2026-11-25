@@ -162,6 +162,7 @@ sa_min_ship='0.72.0'
 
 source "$(dirname "${BASH_SOURCE[0]}")/lib/skill.sh" || { printf '{"error":"cannot source lib/skill.sh"}\n'; exit 2; }
 source "$(dirname "${BASH_SOURCE[0]}")/lib/changing.sh" || { printf '{"error":"cannot source lib/changing.sh"}\n'; exit 2; }
+source "$(dirname "${BASH_SOURCE[0]}")/lib/needs.sh" || { printf '{"error":"cannot source lib/needs.sh"}\n'; exit 2; }
 source "$(dirname "${BASH_SOURCE[0]}")/lib/home.sh" || { printf '{"error":"cannot source lib/home.sh"}\n'; exit 2; }
 
 # The contract line a triage launch carries (`launch.sh`): the triage skill is upstream,

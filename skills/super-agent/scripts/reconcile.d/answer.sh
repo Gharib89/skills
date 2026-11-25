@@ -16,7 +16,10 @@ reconcile_answer() {
     . as $d |
     def pick($stage; f): [$e[] | select(.stage == $stage and (.owner_run | not)) | f];
     def entries: [$d.entries[]?];
-    def needed($k; $r): [($d.needs // [])[] | select((.key | norm_repo) == ($k | norm_repo) and (.reason == null or .reason == $r))] | length > 0;
+    # A need for the reason of the row, a need recorded before reason words were required, or
+    # an acknowledge mark for the reason (one whose stage lapsed is gone by now) silences it.
+    def needed($k; $r): [($d.needs // [])[] | select((.key | norm_repo) == ($k | norm_repo) and (.reason == null or .reason == $r))]
+      + [($d.acks // [])[] | select((.key | norm_repo) == ($k | norm_repo) and .reason == $r)] | length > 0;
     {ledger: $l, checked: $n,
      entries: [$e[] | {key, from, stage, stalls, observed}],
      launching: [entries[] | select(.stage == "launching") | {key, since: .launched_at}],

@@ -25,12 +25,14 @@ fix):
 
 ```sh
 scripts/ledger.sh --ledger <ledger> need task:ask-first-close-1234 \
-  --action 'Close acme/widgets#1234 as a duplicate?' --reason ask-first
+  --action 'Close acme/widgets#1234 as a duplicate' --reason ask-first \
+  --why 'it reports the same exporter loss as acme/widgets#1201' \
+  --option 'Close it: with a comment linking #1201' --option 'Leave it open'
 ```
 
-It shows in the status block and survives a compaction, and no later wake
-carries it out. The owner's reply is the go: do that option, then `unneed` the
-key.
+It shows in the status block as an offer and survives a compaction, and no
+later wake carries it out. The owner's reply is the go: do that option, then
+`unneed` the key.
 
 ## The two hooks
 

@@ -1,9 +1,10 @@
 # The logs beside the ledger that `scorecard row` counts, read and checked once, sourced by
-# it: the guards' (`<name>-guard.jsonl`), the call guard's, the wake timer's and the question
-# flag's. A log not written yet is null; one with a line that is no JSON is refused by name.
-# They read the caller's $dir and set $logs, $cglog, $timer and $qlog.
+# it: the guards' (`<name>-guard.jsonl`), the call guard's, the wake timer's, the question
+# flag's and the needs' alerts (`status`). A log not written yet is null; one with a line
+# that is no JSON is refused by name. They read the caller's $dir and set $logs, $cglog,
+# $timer, $qlog and $nlog.
 
-# shellcheck disable=SC2154,SC2034  # dir comes from scorecard.sh; logs, cglog, timer and qlog are read there
+# shellcheck disable=SC2154,SC2034  # dir comes from scorecard.sh; logs, cglog, timer, qlog and nlog are read there
 # A guard log is `<name>-guard.jsonl`; its name is the row's key under `guards`.
 logs='{}'
 for g in "$dir"/*-guard.jsonl; do
@@ -16,6 +17,8 @@ for g in "$dir"/*-guard.jsonl; do
 done
 cglog=null
 if [ -f "$dir/call-guard.jsonl" ]; then cglog=$(jq -sc . "$dir/call-guard.jsonl" 2>/dev/null) || sa_tooling "$dir/call-guard.jsonl: not JSON lines"; fi
+nlog=null
+if [ -f "$dir/needs-alerts.jsonl" ]; then nlog=$(jq -sc . "$dir/needs-alerts.jsonl" 2>/dev/null) || sa_tooling "$dir/needs-alerts.jsonl: not JSON lines"; fi
 timer=null
 if [ -f "$dir/wake-timer.jsonl" ]; then timer=$(jq -sc . "$dir/wake-timer.jsonl" 2>/dev/null) || sa_tooling "$dir/wake-timer.jsonl: not JSON lines"; fi
 qlog=null

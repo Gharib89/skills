@@ -83,17 +83,18 @@
 # below): when the ticket reads closed and every sub-issue of the open parent is closed, the
 # parent is listed once, for the super agent to close (reconcile itself closes nothing).
 #
-# Last, it runs `status` over the ledger it wrote (`--quota` and `--instance` go
-# to it) and carries its answer as `status`: the status block's rows that changed
-# since the last block, and the needs whose push has not gone out. The super agent
-# posts `block` as printed and pushes each `unpushed` need: nothing else reports.
+# Last, it runs `status` over the ledger it wrote (`--fleet`, `--quota` and
+# `--instance` go to it) and carries its answer as `status`: the needs-you message
+# and the status block's rows that changed since the last block, and the needs
+# it raised. The super agent
+# posts `block` as printed: nothing else reports.
 #
 # Each run stamps `<ledger>.reconciled` with its epoch second, which the wake timer reads
 # to tell a super agent that answered a wake from one that did not.
 #
 # stdout: {ledger, checked, entries, launching, stalled, settled, closed, at_rest, woke, ready,
 #         dropped, unqueued, parents_done, cleanup, verify, escalate, errors, skill, status}:
-#         `status` is `status`'s answer {block, changed, unpushed}, or {error}
+#         `status` is `status`'s answer {block, changed, raised}, or {error}
 #         when status failed after the write (the rest of the answer stands);
 #         `skill` {loaded, source, stale}: the running super-agent copy's version
 #         against the one on `sa_skill_source`'s default branch, `stale` true when
@@ -134,7 +135,7 @@ sa_help "$usage" "$@"
 ledger='' window=$sa_stall_window fleet='' quota='' reads='' status_flags=()
 while [ $# -gt 0 ]; do
   case $1 in
-    --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2 ;;
+    --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; status_flags+=("$1" "$2"); shift 2 ;;
     --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --reads) sa_flag_value "$usage" "${2:-}"; reads=$2; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;

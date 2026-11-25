@@ -28,10 +28,6 @@ _Avoid_: board, roster (that is drive-session's), wiki, memory
 The ledger's `waiting` rows, in order: the owner's queue. A row is a ticket with no thread yet, either one placement could not place (a machine or the ship cap was in the way) or one the owner queued; it may carry an order and an `--after` blocker, another ticket's key that must merge first, which is the ledger's own and adds no blocking edge on GitHub. Reconcile prints its `ready` rows (blocker merged, repo under its ship cap), drops a row whose issue closed, and the super agent launches the `ready` ones. The owner's word "queue" means this list.
 _Avoid_: backlog, pending list, a queue kept in a scratch file
 
-**Status block**:
-The one report the owner reads, printed by every reconcile from the ledger alone and posted as printed: the rows `Needs you`, `Merged`, `Running` and `Waiting`, an empty row left out, each ticket a link and each task or adopted entry marked as one, ending on the provider instance the super agent itself runs on. A wake that changed no row posts none, and only a new open need sends a push; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
-_Avoid_: report (prose written fresh on each wake), summary, dashboard
-
 **Watcher**:
 The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent; a thread on a linked machine is woken from GitHub alone (its PR opening, its checks finishing, a merge or a close) and read itself only on a wake. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
 _Avoid_: watchdog, poller, monitor

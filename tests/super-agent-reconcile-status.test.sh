@@ -2,7 +2,7 @@
 # super-agent's `reconcile` carries the status block on every answer, over fake
 # `t3` and `gh` on PATH (tests/super-agent-fake.sh): only the rows that changed
 # since the last block, Merged only for merges since then, and each new need
-# listed as unpushed until `ledger pushed` marks it.
+# raised once, by the block that alerts it.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -44,13 +44,11 @@ sa_pr $repo feat/x-6 merged; sa_thread t-6 idle 2 0 /wt/6 feat/x-6
 check "Merged lists only the merges since the last block, and an emptied row says none" \
   "Merged (1): [skills#6]($u/issues/6) PR [7]($u/pull/7)
 Running: none" "$(R | jq -r .status.block)"
-L need $repo#30 --action "approve the scope fork" >/dev/null
+L need $repo#30 --action "Approve skills#30 scope fork" --reason scope --why "the issue allows both" --option "Approve it" --option "Hold it" >/dev/null
 out=$(R)
-check "a new need is listed as unpushed" '["Gharib89/skills#30"]' "$(jq -c '[.status.unpushed[].key]' <<<"$out")"
-check "and its row is carried" "Needs you (1): [skills#30]($u/issues/30) approve the scope fork" "$(jq -r .status.block <<<"$out")"
-check "a reconcile before the push lists it still" '["Gharib89/skills#30"]' "$(R | jq -c '[.status.unpushed[].key]')"
-L pushed $repo#30 >/dev/null
-check "once marked pushed it is no longer listed" '[]' "$(R | jq -c .status.unpushed)"
+check "a new need is raised" '["Gharib89/skills#30"]' "$(jq -c '[.status.raised[].key]' <<<"$out")"
+check "and the needs-you message is carried" "**Approve [skills#30]($u/issues/30) scope fork?**" "$(jq -r .status.block <<<"$out" | head -n 1)"
+check "the next reconcile raises it no more" '[]' "$(R | jq -c .status.raised)"
 jq -cn '{providers: {claude_big: {driver: "claude", buckets: [{id: "week", window: "weekly", remaining: 0.4}]}}}' > "$tmp/q.json"
 L wait $repo#31 --reason r >/dev/null; sa_issue $repo 31 open
 check "--quota reaches status: a posted block ends with its Quota line" "Quota claude_big: weekly 40%, 5 hour unknown" "$(R --quota "$tmp/q.json" | jq -r .status.block | tail -1)"

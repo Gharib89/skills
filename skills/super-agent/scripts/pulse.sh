@@ -53,5 +53,5 @@ jq -cn --argjson s "$summary" --argjson a "$alive" --argjson held "$held" "$sa_j
      | [to_entries[] | select(.key | IN("ledger", "checked", "entries", "at_rest") | not) | .value
         | select(type == "array" and length > 0)] | length > 0) as $lists
   | ($lists or ([$s.entries[] | select(.from != .stage)] | length > 0)
-     or $s.status.block != "" or ($s.status.unpushed | length > 0)) as $c
+     or $s.status.block != "" or (($s.status.raised // []) | length > 0)) as $c
   | {alive: $a, changed: $c, end_turn: ($a and ($c | not)), summary: (if $c then $s else null end), skill: $s.skill}'

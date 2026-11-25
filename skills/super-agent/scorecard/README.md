@@ -36,10 +36,12 @@ week, runs the weekly review, whose rows join the bearings file's Needs you.
   message id. `weighted` is input + 2 x cache write + 0.1 x cache read + 5 x
   output; `nothing_changed_share` is the weighted share spent in wakes that
   changed nothing.
-- **Needs**: `recorded` counts `ledger.sh need` calls, `alerted` the
-  `ledger.sh pushed` marks, `alerted_twice` the needs marked pushed more than
-  once. They come from the transcript, since `unneed` removes a need from the
-  ledger.
+- **Needs**: `recorded` counts `ledger.sh need` calls in the transcript.
+  `alerted` counts the day's `alert` lines in `needs-alerts.jsonl`, the log
+  `status` writes beside the ledger as it raises a need, since `unneed` removes
+  a need from the ledger. `alerted_twice` counts the day's alerts of a key and
+  action already alerted before, plus each reminder past the one a blocking
+  need gets: the target is none beyond that reminder.
 - **Questions**: the day's flagged owner turns, from `question-flag.jsonl`
   (`asked`), and `with_write` those holding a changing call the observe hook
   logged against the prompt's id, `turns` listing each with its calls; `null`

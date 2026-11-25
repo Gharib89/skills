@@ -26,7 +26,7 @@ L add --repo $repo --number 1 --thread th-1 --worktree /wt/1 --branch feat/x-1 >
 sa_thread th-1 idle 1 0 /wt/1 feat/x-1; sa_pr $repo feat/x-1 none; sa_issue $repo 1 open
 
 # --- take clears the entry's needs, and marks it -----------------------------------------
-L need $key --action "ask about the run" >/dev/null
+L need $key --action "Ask widgets#1 about the run" --reason owner-steered --why w --option a --option b >/dev/null
 out=$(L take $key); rc=$?
 check "take answers the mark" "0 true" "$rc $(jq -r .owner_run <<<"$out")"
 check "and the entry's open needs are gone" 0 "$(L list | jq '[.needs[] | select(.key == "acme/widgets#1")] | length')"

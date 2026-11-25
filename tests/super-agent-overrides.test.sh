@@ -110,7 +110,7 @@ rewatch() {
 reset; mkdir -p "$SA_FAKE/threads"
 ship_entry 20 th-20
 R >/dev/null
-LG need $repo#20 --action "ask about the run" >/dev/null
+LG need $repo#20 --action "Ask ${repo#*/}#20 about the run" --reason owner-steered --why w --option a --option b >/dev/null
 out=$(LG take $repo#20); rc=$?
 check "take marks the entry" "0 true" "$rc $(LG get $repo#20 | jq -r .owner_run)"
 check "and clears its open needs" 0 "$(LG list | jq '[.needs[] | select(.key == "acme/widgets#20")] | length')"

@@ -1,0 +1,49 @@
+# A need's class, its needs-you message and its working age, sourced by `_lib.sh`:
+# jq definitions spliced in front of a program after `sa_jq_norm`, so `ledger need`
+# and `status` share one table and one printer.
+# shellcheck disable=SC2034  # read by ledger.d/owner.sh and status.sh
+sa_jq_needs='
+  # The class of a reason word, null for a word not in the table. A blocking need is
+  # one whose thread or queue is stopped until the owner acts; an offer is one
+  # nothing waits on. `ledger need` and `ledger ack` refuse a word the table lacks.
+  def need_classes: {
+    "permission-hold": "blocking", "merge-gate": "blocking", "scope": "blocking", "stall-cap": "blocking",
+    "fault": "blocking", "no-instance": "blocking", "no-owner-skill": "blocking", "no-project": "blocking",
+    "stale-ship": "blocking", "route-ask": "blocking", "owner-steered": "blocking", "triage": "blocking",
+    "daily-offer": "offer", "unqueued": "offer", "parents-done": "offer", "stale-skill": "offer",
+    "pr-closed": "offer", "issue-closed": "offer", "ask-first": "offer", "owner-run": "offer",
+    "verify": "offer", "cleanup": "offer"};
+  def need_class: need_classes[.];
+  # A need recorded before classes (no `class`) reads as blocking, so it is never quieter.
+  def need_blocking: (.class // (.reason // "" | need_class) // "blocking") == "blocking";
+  # The action with its ticket (its second word) as a link: `owner/name#n` links as
+  # written; `name#n` links to the key repo when the names match; anything else stays text.
+  def need_action: .key as $k | (.action | sub("[?]$"; "") | split(" ")) as $w
+    | ($w[1] // "") as $t
+    | (if ($t | test("^[^/#\\s]+/[^/#\\s]+#[0-9]+$")) then $t | sub("#"; "/issues/")
+       elif ($t | test("^[^/#\\s]+#[0-9]+$")) and ($k | test("^[^/#]+/[^/#]+#[0-9]+$"))
+         and ($t | sub("#.*"; "") | norm_repo) == ($k | sub("#.*"; "") | sub("^[^/]*/"; "") | norm_repo)
+       then ($k | sub("#.*"; "")) + "/issues/" + ($t | sub("^.*#"; ""))
+       else null end) as $path
+    | if $path == null then $w | join(" ")
+      else [$w[0], "[\($t)](https://github.com/\($path))"] + $w[2:] | join(" ") end;
+  # One need as the needs-you message prints it: the question (bold when blocking,
+  # behind `Offer:` when not), a `Why:` line, then its options from 1, the first
+  # recommended, or `Answer in [its thread](…).` A need recorded before these fields
+  # prints its action alone.
+  def need_text: (need_action + "?") as $q
+    | [if need_blocking then "**\($q)**" else "Offer: \($q)" end]
+    + (if .why == null then [] else ["Why: " + (.why | if test("[.!?]$") then . else . + "." end)] end)
+    + (if .answer_in != null then ["Answer in [its thread](\(.answer_in))."]
+       else [(.options // []) | to_entries[] | "\(.key + 1). \(.value.label)"
+         + (if .key == 0 then " (recommended)" else "" end)
+         + (if .value.consequence then ": \(.value.consequence)" else "" end)] end)
+    | join("\n");
+  # Every open need in full, blocking first, each set apart by a blank line.
+  def needs_text: [(map(select(need_blocking)) + map(select(need_blocking | not)))[] | need_text] | join("\n\n");
+  # Seconds from epoch $from to epoch $to that fall on a day of $week (weekday numbers,
+  # 0 Sunday) in local time, counted an hour at a time.
+  def working_seconds($from; $to; $week):
+    [range($from; $to; 3600) | . as $h
+      | select($week | index($h | strflocaltime("%w") | tonumber)) | [3600, $to - $h] | min] | add // 0;
+'

@@ -4,7 +4,8 @@
 # this run read T3 and GitHub is kept: each entry field this run changed, unless
 # the entry was rethreaded or replaced meanwhile (its thread or `launched_at`
 # moved); each waiting row it dropped; each key it added to `parents_offered` or
-# `unqueued_offered`. It leaves the written ledger in $doc.
+# `unqueued_offered`; and an acknowledge mark lapses once its entry's stage moved
+# from the one it was given in. It leaves the written ledger in $doc.
 
 # shellcheck disable=SC2154  # read_doc, doc, ledger and sa_jq_norm come from reconcile.sh and _lib.sh
 
@@ -20,6 +21,8 @@ reconcile_write() {
     | if ($gone | length) > 0 then .waiting |= map(select(.key | norm_repo | IN($gone[] | norm_repo) | not)) else . end
     | reduce ("parents_offered", "unqueued_offered") as $f (.;
         (($o[$f] // []) - ($r[$f] // []) - (.[$f] // [])) as $new
-        | if ($new | length) > 0 then .[$f] = ((.[$f] // []) + $new) else . end)' \
+        | if ($new | length) > 0 then .[$f] = ((.[$f] // []) + $new) else . end)
+    # an acknowledge mark lapses once its entry has left the stage it was given in
+    | . as $root | if .acks then .acks |= map(select(. as $a | $root.entries[$a.key].stage == $a.stage)) else . end' \
     --slurpfile read <(printf '%s\n' "$read_doc") --slurpfile ours <(printf '%s\n' "$doc")
 }

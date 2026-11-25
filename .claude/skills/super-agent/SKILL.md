@@ -163,9 +163,8 @@ is step 2's record; then steps 5 and 3
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet> --quota
    <file> --instance <id>` (`<file>` and `<id>` from
    [the status block](reference/status-block.md#every-wake)). Do each action
-   it prints (Acting on the summary), post its `status.block` and push each
-   `status.unpushed` need (Escalation format), then start the watcher again
-   while an entry is open.
+   it prints (Acting on the summary), post its `status.block` (Escalation
+   format), then start the watcher again while an entry is open.
 
 A supervised thread finishing wakes nothing, and neither does its
 permission hold; a background shell's exit wakes you about 5 s later, and a
@@ -207,9 +206,10 @@ prints it again. Per-row steps:
 
 - `cleanup`: a settled or closed entry's threads and worktree to tidy.
 - `verify`: a merged ship PR to check against its issue's acceptance criteria.
-- `escalate`: what only the owner can unblock: record one need per row with
-  `ledger.sh --ledger <ledger> need <key> --action <text> --reason <the row's
-  reason>` (Escalation format), which silences that row only.
+- `escalate`: what only the owner can unblock: record one need per row
+  (Escalation format) with `--reason <the row's reason>`, which silences that
+  row only; a row needing nothing yet takes an
+  [acknowledge mark](reference/status-block.md#an-acknowledge-mark) instead.
 
 The other lists report:
 
@@ -291,18 +291,16 @@ a failure the PR did not cause is never waived, whoever rules**
 ### Escalation format
 
 The owner reads one thing: the **status block**, the `status` every reconcile
-and pulse answer carries, posted as printed and pushed as
-[status-block](reference/status-block.md#every-wake) says; never compose it by
-hand. A need names exactly one action. A pick from fixed options (approve or
-deny a held call, a scope fork) goes out as chat text: the question, numbered
-options with the recommended one first, and the need's push. Never a question
-dialog: it blocks the loop until the owner answers.
-Record each escalation as a need with `ledger.sh --ledger <ledger> need <key>
---action <text> --reason <word>`, the permission hold and the stall at 3
-included
-([a need](reference/status-block.md#a-need)), and the owner's answer as a
-[ruling](reference/status-block.md#a-ruling). A reviewer's usage-limit notice
-is no escalation: record it as
+and pulse answer carries, posted as printed
+([status-block](reference/status-block.md#every-wake)); never compose it by
+hand. It opens with the needs-you message: each open need in full, blocking
+first. Never a question dialog: it blocks the loop. Record each escalation as
+a need with `ledger.sh --ledger <ledger> need <key> --action <text> --reason
+<word> --why <clause> --option <label>...`, the permission hold and the stall
+at 3 included ([a need](reference/status-block.md#a-need)). Resolve the
+owner's `88 1` with `ledger.sh --ledger <ledger> answer '<reply>'` and record
+it as a [ruling](reference/status-block.md#a-ruling). A reviewer's usage-limit
+notice is no escalation: record it as
 [a reviewer usage limit](reference/status-block.md#a-reviewer-usage-limit).
 
 ## An owner question
@@ -334,7 +332,7 @@ transcript):
 `scripts/ledger.sh --ledger <ledger> self`, then
 `scripts/ledger.sh --ledger <ledger> list --open`, then `scripts/reconcile.sh`
 with step 5's flags, then start the watcher, then do the summary's rows (Acting
-on the summary), post and push its `status` as step 5 does, and launch its
+on the summary), post its `status` as step 5 does, and launch its
 `ready` rows; `list`'s
 other `waiting` rows get a place rerun when a machine could have come back.
 Then `list_scheduled_tasks`: a morning report bound here whose prompt is not
