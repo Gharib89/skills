@@ -64,3 +64,8 @@ The scorecard's `questions` counts the flagged owner turns of a day (`asked`)
 and those holding a changing call (`with_write`, baseline 3 of 11, target 0),
 and the weekly review lists each such turn: read it and take its sender from
 `t3_thread_read`.
+
+One untold action in a release puts a refusing version to the owner: a changing
+call in a flagged turn refused until the owner's words are recorded by script.
+None across four weeks puts the observe hook up for deletion; the question flag
+stays, since its reminder is the rule's own cue.

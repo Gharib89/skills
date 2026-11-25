@@ -312,8 +312,8 @@ An **owner question** is an owner message that asks and tells nothing (why,
 what, when, how). It starts an **answer-only turn**: answer first, offer the fix
 as a numbered option recorded as a need (`--reason ask-first`), change nothing.
 A message that asks and tells gets the answer, then exactly the told action;
-"can you launch 1234?" is a request. On a `Question flag:` reminder, or when
-judging an ask, read [owner question](reference/owner-question.md).
+"can you launch 1234?" is a request. A `Question flag:` reminder is your own
+hook's, not the owner's: read [owner question](reference/owner-question.md).
 
 ## Agy jobs
 

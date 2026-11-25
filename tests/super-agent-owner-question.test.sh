@@ -133,8 +133,8 @@ check "and the ledger holds none" 0 "$(L list | jq '.needs | length')"
 check "the scorecard's target for question turns holding a changing call is live, at 0" '{"max":0}' \
   "$(jq -c '."questions.with_write"' skills/super-agent/scorecard/targets.json)"
 
-# --- the release rule is written down where the maintainer reads it ----------------
-check "the release standard holds the refusing-version and four-weeks rule" "1 1" \
-  "$(tr '\n' ' ' < docs/contributing/standards/release.md | grep -c 'puts a refusing version to the owner') $(tr '\n' ' ' < docs/contributing/standards/release.md | grep -c 'four weeks puts the observe hook up for deletion')"
+# --- the release rule is written down in the reference page ----------------
+check "the reference page holds the refusing-version and four-weeks rule" "1 1" \
+  "$(tr '\n' ' ' < skills/super-agent/reference/owner-question.md | grep -c 'puts a refusing version to the owner') $(tr '\n' ' ' < skills/super-agent/reference/owner-question.md | grep -c 'four weeks puts the observe hook up for deletion')"
 
 finish
