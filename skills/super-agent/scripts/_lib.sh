@@ -109,6 +109,11 @@ sa_window_flag() { case $2 in ''|0|*[!0-9]*) sa_tooling "$1" ;; esac; }
 # The filter every script shares for an entry still being followed.
 # shellcheck disable=SC2034  # read by the scripts that source this file
 sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
+# tell_live($now), on a tell's `at`: the owner's tell lets a send through for an hour after it
+# was recorded, to the second. The call guard judges with it and `ledger tell` prunes with it,
+# so the two agree; a time that does not parse is lapsed.
+# shellcheck disable=SC2034  # read by the scripts that source this file
+sa_jq_tell='def tell_live($now): (try (sub("[.][0-9]+Z$"; "Z") | fromdateiso8601) catch null) as $s | $s != null and $now - $s <= 3600;'
 
 # The ledger a 0.45.0 super agent wrote marked a thread the owner took `paused`; 0.46.0
 # calls it `owner_run`. Every reader gets the one name: `sa_read` applies this, and the

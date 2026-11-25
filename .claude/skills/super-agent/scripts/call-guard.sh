@@ -106,13 +106,12 @@ judge() {
   # the told lines of the thread: none for no log, null (every tell spent) for one that cannot be read
   if [ ! -e "$log" ]; then told='[]'
   else told=$(jq -Rsc --arg t "$thread" '[split("\n")[] | fromjson? | select(.event == "told" and .thread == $t) | .tell_at]' "$log" 2>/dev/null) || told=null; fi
-  verdict=$(jq -r --arg t "$thread" --argjson told "$told" --argjson pend "$pending" --argjson now "$(sa_now_s)" "$sa_jq_open"'
-    def secs: sub("[.][0-9]+Z$"; "Z") | fromdateiso8601;
+  verdict=$(jq -r --arg t "$thread" --argjson told "$told" --argjson pend "$pending" --argjson now "$(sa_now_s)" "$sa_jq_open$sa_jq_tell"'
     (if $told == null then null else $told + [$pend[] | select(.thread == $t) | .tell_at] end) as $spent
     # the tells of this thread not yet spent by a told line, recorded in the last hour
     | ([(.tells // [])[] | select(.thread == $t) | .at] | group_by(.)
       | map(.[0] as $a | length - ([$spent[]? | select(. == $a)] | length) | select(. > 0) | [range(.) | $a]) | add // []) as $open
-    | (if $spent == null then [] else [$open[] | select($now - secs <= 3600)] end) as $live
+    | (if $spent == null then [] else [$open[] | select(tell_live($now))] end) as $live
     | ([.entries[] | select(.thread == $t and is_open)] | first) as $e
     | if .own_thread == $t then "allow"
       elif ($live | length) > 0 then "told \($live[0])"

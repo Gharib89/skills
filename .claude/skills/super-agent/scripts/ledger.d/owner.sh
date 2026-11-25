@@ -6,7 +6,7 @@
 # shellcheck disable=SC2154  # usage, ledger, sa_jq_norm and sa_jq_open come from ledger.sh and _lib.sh
 
 ledger_owner() {
-  local cmd=$1 key thread action reason="" row had repo reviewer now stalls ruling
+  local cmd=$1 key thread action reason="" row had repo reviewer now now_s stalls ruling
   shift
   case $cmd in
   self)
@@ -27,9 +27,9 @@ ledger_owner() {
     fi
     now_s=$(sa_now_s); now=$(jq -rn --argjson s "$now_s" '$s | todate')
     ruling=$(sa_ruling_row "$ruling")
-    # A tell lapses an hour after it was recorded (call-guard.sh), so the lapsed ones,
-    # and any whose time does not parse, are dropped here and the list never grows.
-    sa_update "$ledger" '.tells = ([(.tells // [])[] | select((try (.at | fromdateiso8601) catch 0) > $s - 3600)]
+    # the tells that lapsed (`tell_live`, the call guard's own rule) are dropped, so the list
+    # holds the last hour's tells alone
+    sa_update "$ledger" "$sa_jq_tell"'.tells = ([(.tells // [])[] | select(.at | tell_live($s))]
       + [{thread: $t, at: $now}]) | .rulings += [$r]' --arg t "$thread" --arg now "$now" --argjson s "$now_s" --argjson r "$ruling"
     jq -cn --arg t "$thread" --arg now "$now" --argjson r "$ruling" '{thread: $t, at: $now, ruling: $r}' ;;
   take|drop|reset-stalls)
