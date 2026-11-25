@@ -71,12 +71,14 @@ check "and it is on no Running row" 0 "$(jq -r .block <<<"$out" | grep -c '^Runn
 L add --repo $repo --number 3 --thread th-3 --worktree /wt/3 --branch feat/x-3 >/dev/null
 sa_thread th-3 idle 1 0 /wt/3 feat/x-3; sa_pr $repo feat/x-3 none; sa_issue $repo 3 open
 L set $repo#3 paused true >/dev/null
+# The pause date a 0.45.0 ledger holds is the entry's last update before the upgrade.
+paused_at=$(jq -r '.entries["acme/widgets#3"].updated_at' "$led")
 R $((t0 + 10000)) >/dev/null
 sa_thread th-3 idle 2 0 /wt/3 feat/x-3
 out=$(R $((t0 + 20000)))
 check "its run and its rest count no stall, and no row names it" "0 0" \
   "$(jq -r '"\(.stalled | length) \([.escalate[] | select(.key == "acme/widgets#3")] | length)"' <<<"$out")"
-check "it is owner-run now, with its pause date as the start, and no paused mark" "true true false" \
-  "$(L get $repo#3 | jq -r '"\(.owner_run) \(.owner_run_since != null) \(has("paused"))"')"
+check "it is owner-run now, its start the last update before the upgrade, and no paused mark" "true $paused_at false" \
+  "$(L get $repo#3 | jq -r '"\(.owner_run) \(.owner_run_since) \(has("paused"))"')"
 
 finish
