@@ -20,7 +20,7 @@ out=$(P --name laptop)
 check "a proposal writes no folder, and the missing guard is one Needs you row" "absent false 1" \
   "$([ -e "$hc" ] && echo present || echo absent) $(jq .home.written <<<"$out") $(jq '[.home.needs[] | select(test("state guard"))] | length' <<<"$out")"
 out=$(S --write --name laptop)
-check "--write writes the folder's local settings, its PreToolUse hook the state guard" "true true 1 1 []" \
+check "--write writes the folder's local settings, its first PreToolUse hook the state guard" "true true 2 1 []" \
   "$(jq .home.written <<<"$out") $(jq .home.guard <<<"$out") $(jq '.hooks.PreToolUse | length' "$hc") \
 $(jq -r '.hooks.PreToolUse[0].hooks[0].command' "$hc" | grep -c "super-agent/scripts/guard.sh'$") $(jq -c .home.needs <<<"$out")"
 check "the proposal's missing watch guard is its own Needs you row" 1 \
@@ -37,6 +37,13 @@ S --write --name laptop >/dev/null
 check "it answers where the folder is" "$XDG_STATE_HOME/super-agent/home" "$(jq -r .home.folder <<<"$out")"
 check "and its Stop hook is the watch guard" "1 1 true" \
   "$(jq '.hooks.Stop | length' "$hc") $(jq -r '.hooks.Stop[0].hooks[0].command' "$hc" | grep -c "super-agent/scripts/watch-guard.sh' || true$") $(jq .home.watch_guard <<<"$out")"
+check "its other PreToolUse entry is the observe hook and its UserPromptSubmit hook the question flag" "1 1 true true" \
+  "$(jq -r '.hooks.PreToolUse[1].hooks[0].command' "$hc" | grep -c "super-agent/scripts/observe.sh' || true$") \
+$(jq -r '.hooks.UserPromptSubmit[0].hooks[0].command' "$hc" | grep -c "super-agent/scripts/question-flag.sh' || true$") $(jq .home.observe <<<"$out") $(jq .home.question_flag <<<"$out")"
+prop=$(rm -rf "$XDG_STATE_HOME/super-agent/home"; P --name laptop)
+check "the proposal's missing question flag and observe hook are one Needs you row each" "1 1" \
+  "$(jq '[.home.needs[] | select(test("question flag"))] | length' <<<"$prop") $(jq '[.home.needs[] | select(test("observe hook"))] | length' <<<"$prop")"
+S --write --name laptop >/dev/null
 cp "$hc" "$tmp/first.json"; printf '{"x":1}\n' > "$hc"
 S --write --name laptop >/dev/null
 check "a second run rewrites it to the same content" same "$(cmp -s "$hc" "$tmp/first.json" && echo same || echo differs)"

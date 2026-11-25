@@ -27,17 +27,9 @@ set -uo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 state=${XDG_STATE_HOME:-$HOME/.local/state}/super-agent
 ledger=$state/ledger.json fleet=${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json
-# The log's place is known before _lib.sh (which needs jq) is sourced.
-for ((i = 1; i < $#; i++)); do [ "${!i}" = --ledger ] && ledger=${*:i+1:1}; done
-log=$(dirname "$ledger")/watch-guard.jsonl
-
-# log <event> [<why>]: one line, written without jq so a missing jq still leaves one.
-log() {
-  local why=''
-  [ -z "${2:-}" ] || why=",\"why\":\"$2\""
-  { mkdir -p "$(dirname "$log")" && printf '{"at":"%s","event":"%s"%s}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$why" >> "$log"; } 2>/dev/null
-  return 0
-}
+source "$here/lib/hook-log.sh" || exit 0
+log=$(sa_hook_log_file watch-guard "$@")
+log() { sa_hook_log "$log" "$@"; }
 unjudged() { log unjudged "$1"; exit 0; }
 
 command -v jq >/dev/null 2>&1 || unjudged "no jq"

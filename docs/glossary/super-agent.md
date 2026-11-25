@@ -32,6 +32,18 @@ _Avoid_: write lock, permission
 The Stop hook (`scripts/watch-guard.sh`) in the same generated settings that refuses the super agent's turn end once while `watch.sh --owed` says a watcher is owed (an open, observed entry and no live watcher, or open entries to reconcile first), naming the open entries and the command to run; the stop after that passes. It logs each block and each unwatched pass to `watch-guard.jsonl` beside the ledger, which the scorecard counts, and allows the stop when it cannot judge. The super agent still starts the watcher itself.
 _Avoid_: watchdog, heartbeat
 
+**Owner question**:
+Any owner message that asks and tells nothing: why, what, when, how. A message that asks and tells gets the answer first, then exactly the told action, and a request phrased as a question ("can you launch 1234?") is a request. It starts an answer-only turn.
+_Avoid_: owner ask (a request is an ask too), query
+
+**Answer-only turn**:
+The turn an owner question starts: the reply opens with an answer built from the record re-read in that turn, offers the fix as a numbered option recorded as a need with the reason word `ask-first`, and changes nothing. Only read-only calls and the watcher restart run in it, and no reconcile unless the watch guard asks. The owner's reply is the go. The observe hook logs each changing call made in one, and passes it.
+_Avoid_: read-only mode, dry run
+
+**Question flag**:
+The UserPromptSubmit hook (`scripts/question-flag.sh`) in the same generated settings that adds one reminder line to a turn whose prompt holds a `?` and carries no T3 sender prefix, and logs the prompt's id to `question-flag.jsonl` beside the ledger, which the scorecard counts. The super agent still judges question or request, so a misfire costs one ignored line.
+_Avoid_: question detector, answer-only gate (it refuses nothing)
+
 **Wake timer**:
 The systemd user timer that runs `scripts/wake-timer.sh` every 5 minutes, with no model, on the super agent's machine. While `watch.sh --owed` says a watcher is owed and the super agent's own thread is idle, it sends the thread one fixed wake line, then runs the notify command if no reconcile follows. A running thread is the watch guard's, and a limit stop is held until its reset plus 10 minutes. Its unit files are the owner's to install: `guard.sh --install` prints them, and a missing timer is a `Needs you` row.
 _Avoid_: heartbeat, cron job, backstop (that is the hourly schedule)

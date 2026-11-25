@@ -55,3 +55,12 @@ asked (the owner's yes to the morning report covers them): the morning report
 from `scripts/schedules.sh --fleet <fleet> --morning <HH:MM>`, `<HH:MM>` from
 the `Handover:` line, and the backstop as SKILL.md's The loop step 3 says.
 Then post the `status.sh --ledger <file> --digest` block.
+
+## A stale copy
+
+Every pulse and reconcile answer carries `skill` {loaded, source, stale}:
+`stale` true means this running copy is older than the one on `Gharib89/skills`.
+Say so once in chat, naming both versions (no ledger need: no entry is stale):
+the next daily handover above refreshes it. With no morning report
+scheduled, the refresh, `npx skills@1.8.1 add Gharib89/skills --skill
+super-agent --agent claude-code -g -y`, is the owner's to run or approve.

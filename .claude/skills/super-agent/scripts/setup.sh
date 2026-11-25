@@ -79,10 +79,11 @@
 #         fails is `unavailable` with a `reason` in `fleet.providers` (a `cursor` or `grok` one is `unknown`: no usage read exists), not a
 #         warning; `instances` one {instance_id, driver, quota_source, auth,
 #         auth_reason, status} per enabled instance; `home` the super agent folder,
-#         {folder, settings, written, guard, watch_guard, stale, project_id, needs}: --write
-#         rewrites the folder's generated `.claude/settings.local.json` (the state guard's and watch guard's
-#         hooks), `stale` is {settings, entries, unreadable} or null, and
-#         `needs` holds one Needs you line per missing guard entry, stale
+#         {folder, settings, written, guard, watch_guard, question_flag, observe, stale,
+#         project_id, needs}: --write rewrites the folder's generated
+#         `.claude/settings.local.json`, `stale` is
+#         {settings, entries, unreadable} or null, and
+#         `needs` holds one Needs you line per missing hook entry, stale
 #         user-settings entry or unreadable user settings (project_id is null:
 #         setup reads no projects, the handover does)
 # exit: 0 a proposal or a write, failed probes included · 2 usage, a fleet file
