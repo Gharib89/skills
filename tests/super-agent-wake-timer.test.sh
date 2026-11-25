@@ -120,7 +120,10 @@ sa_thread sa-1 idle 4 0 '' ''
 tick 0 >/dev/null; tick 599 >/dev/null
 check "no notify a second before the delay" 0 "$(notified)"
 tick 600 >/dev/null
-printf '%s\n' $((T + 700)) > "$led.reconciled"
+# A real reconcile writes the stamp the tick closes the outage on.
+mkdir -p "$SA_FAKE/gh"; sa_thread t-5 running 1 0 /wt/5 feat/x-5; sa_pr Gharib89/skills feat/x-5 none; sa_issue Gharib89/skills 5 open 2>/dev/null
+SA_NOW=$((T + 700)) bash "$s/reconcile.sh" --ledger "$led" >/dev/null
+check "a reconcile writes the epoch second it ran at" $((T + 700)) "$(cat "$led.reconciled" 2>/dev/null)"
 tick 900 >/dev/null
 check "one outage: opened, wake sent, notify run, closed; still owed, the next opens" "opened wake notify closed opened wake" "$(events)"
 check "closed carries the outage minutes, open to reconcile" 12 "$(jq -r 'select(.event == "closed") | .minutes' "$log")"
