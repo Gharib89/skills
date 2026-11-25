@@ -27,7 +27,15 @@ check "and its id is logged as a flag" '{"event":"flag","prompt_id":"p1"}' "$(jq
 check "the reminder names the need's reason word and the reference" 2 "$(grep -o 'ask-first\|owner-question.md' <<<"$out" | wc -l)"
 rm -f "$log"
 out=$(F "$(prompt 'launch 1234 now' p2)"); rc=$?
-check "an owner-typed prompt without a ? is not flagged" "0  none" "$rc $out $([ -f "$log" ] && echo logged || echo none)"
+check "an owner-typed prompt with no ? and no leading question word is not flagged" "0  none" "$rc $out $([ -f "$log" ] && echo logged || echo none)"
+rm -f "$log"
+for p in 'why is this issue still open' '  What is blocking 1234' 'how many are left' 'Which PR closed it'; do
+  out=$(F "$(prompt "$p" p4)")
+  check "a leading question word flags without a ? (${p:0:20})" 1 "$(grep -c '^Question flag:' <<<"$out")"
+done
+rm -f "$log"
+out=$(F "$(prompt 'whatever, launch 1234' p5)")
+check "a word that only starts with a question word is not flagged" " none" "$out $([ -f "$log" ] && echo logged || echo none)"
 # T3's wording, pinned here so a change shows up as a red test (measured 2026-11-23, #1353)
 agent='[T3 Code: the agent in T3 thread "mcp:launch:abc" sent this message, not the user.] why did it stall?'
 sched='[T3 Code: scheduled task "scheduled-task:1" sent this prompt, not the user typing in this chat.] Backstop: what changed?'

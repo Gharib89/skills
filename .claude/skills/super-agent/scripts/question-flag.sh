@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The question flag: a UserPromptSubmit hook that marks an owner turn which may be
-# an owner question (reference/owner-question.md). A prompt holding a `?` and
-# carrying no T3 sender prefix is flagged: one `{at, event: "flag", prompt_id}`
+# an owner question (reference/owner-question.md). A prompt holding a `?` or
+# opening with why, what, when, where, who, which or how, and carrying no T3
+# sender prefix, is flagged: one `{at, event: "flag", prompt_id}`
 # line goes to `question-flag.jsonl` beside the ledger, where the observe hook
 # joins on the id, and one reminder line goes to the turn on stdout. A prompt T3
 # sent for an agent, a scheduled task or a finished background shell starts with
@@ -40,6 +41,10 @@ id=$(jq -er '.prompt_id | strings | select(length > 0)' <<<"$input" 2>/dev/null)
 prompt=$(jq -er '.prompt | strings' <<<"$input" 2>/dev/null) || unjudged "the hook input has no prompt"
 
 case $prompt in '[T3 Code:'* | '<task-notification>'*) exit 0 ;; esac
-case $prompt in *\?*) ;; *) exit 0 ;; esac
+lead=${prompt#"${prompt%%[![:space:]]*}"}
+shopt -s nocasematch
+case $prompt in *\?*) ;; *)
+  [[ $lead =~ ^(why|what|when|where|who|which|how)([^[:alpha:]]|$) ]] || exit 0 ;;
+esac
 jq -cn --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg id "$id" '{at: $at, event: "flag", prompt_id: $id}' >> "$log" 2>/dev/null || unjudged "cannot write the log"
-printf '%s\n' "Question flag: this prompt holds a ? and no sender prefix, so it may be an owner question. If it asks and tells nothing, open with the answer from the record re-read now, offer the fix as a numbered option recorded as a need (--reason ask-first), and change nothing (reference/owner-question.md)."
+printf '%s\n' "Question flag: this prompt holds a ? or opens with a question word, and has no sender prefix, so it may be an owner question. If it asks and tells nothing, open with the answer from the record re-read now, offer the fix as a numbered option recorded as a need (--reason ask-first), and change nothing (reference/owner-question.md)."

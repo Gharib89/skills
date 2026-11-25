@@ -38,7 +38,8 @@ Both are in the super agent folder's generated settings
 ([setup](setup.md#the-guard-hook)); neither refuses anything.
 
 - **The question flag**, `scripts/question-flag.sh`, a UserPromptSubmit hook. A
-  prompt holding a `?` and carrying no T3 sender prefix is flagged: its
+  prompt holding a `?` or opening with why, what, when, where, who, which or
+  how, and carrying no T3 sender prefix, is flagged: its
   `prompt_id` goes to `question-flag.jsonl` beside the ledger and one reminder
   line to the turn. A prompt T3 sent for an agent, a scheduled task or a
   finished background shell starts with `[T3 Code:` or `<task-notification>`; an

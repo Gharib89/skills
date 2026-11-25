@@ -41,7 +41,7 @@ The turn an owner question starts: the reply opens with an answer built from the
 _Avoid_: read-only mode, dry run
 
 **Question flag**:
-The UserPromptSubmit hook (`scripts/question-flag.sh`) in the same generated settings that adds one reminder line to a turn whose prompt holds a `?` and carries no T3 sender prefix, and logs the prompt's id to `question-flag.jsonl` beside the ledger, which the scorecard counts. The super agent still judges question or request, so a misfire costs one ignored line.
+The UserPromptSubmit hook (`scripts/question-flag.sh`) in the same generated settings that adds one reminder line to a turn whose prompt holds a `?` or opens with why, what, when, where, who, which or how, and carries no T3 sender prefix, and logs the prompt's id to `question-flag.jsonl` beside the ledger, which the scorecard counts. The super agent still judges question or request, so a misfire costs one ignored line.
 _Avoid_: question detector, answer-only gate (it refuses nothing)
 
 **Wake timer**:
