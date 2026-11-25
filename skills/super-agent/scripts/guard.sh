@@ -22,7 +22,8 @@
 # `--status` also reports `stale`: the guard entries left in `~/.claude/settings.json`
 # by an install from before the folder, each the line to remove there. The wake
 # timer's units are the owner's to install: `--install` prints them as `timer`
-# (writing nothing there) and `--status` reports `timer.active` from systemctl.
+# (writing nothing there) and `--status` reports `timer.active` from systemctl,
+# null when systemctl cannot be read.
 #
 # contract: bare-run
 # stdout: hook mode prints nothing; `--install` {settings, installed, changed, entry,
@@ -61,7 +62,7 @@ if [ $# -gt 0 ]; then
   if [ "$mode" = install ]; then
     jq -cn --arg s "$settings" --argjson i "$has" --argjson c "$changed" --argjson e "$entry" --argjson t "$(sa_timer_units)" '{settings: $s, installed: $i, changed: $c, entry: $e, timer: $t}'
   else
-    active=false; ! sa_timer_active || active=true
+    active=$(sa_timer_active)
     jq -cn --arg s "$settings" --argjson i "$has" --argjson e "$entry" --argjson st "$(sa_guard_stale)" --argjson a "$active" '{settings: $s, installed: $i, entry: $e, stale: $st, timer: {active: $a}}'
   fi
   exit 0

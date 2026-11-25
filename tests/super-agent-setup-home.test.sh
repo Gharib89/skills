@@ -29,6 +29,10 @@ check "the proposal's missing watch guard is its own Needs you row" 1 \
 check "a missing wake timer is one Needs you row" 1 \
   "$(S --write --name laptop | jq '[.home.needs[] | select(test("^Wake timer: "))] | length')"
 rm -f "$SA_FAKE/timer-inactive"
+: > "$SA_FAKE/timer-unreadable"
+check "a systemctl that cannot be read is one row saying so, never not running" "1 0" \
+  "$(S --write --name laptop | jq -r '[.home.needs[] | select(test("^Wake timer: "))] | "\(length) \(map(select(test("not running"))) | length)"')"
+rm -f "$SA_FAKE/timer-unreadable"
 S --write --name laptop >/dev/null
 check "it answers where the folder is" "$XDG_STATE_HOME/super-agent/home" "$(jq -r .home.folder <<<"$out")"
 check "and its Stop hook is the watch guard" "1 1 true" \

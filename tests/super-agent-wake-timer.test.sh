@@ -66,6 +66,14 @@ out=$(SA_NOW=$((R + 599)) bash "$s/wake-timer.sh" --ledger "$led" --fleet "$flee
 check "before the reset plus 10 minutes: held, no wake, no outage" "held 0 " "$(jq -r .action <<<"$out") $(sends) $(events)"
 SA_NOW=$((R + 600)) bash "$s/wake-timer.sh" --ledger "$led" --fleet "$fleet" >/dev/null
 check "at the reset plus 10 minutes: one wake" 1 "$(sends)"
+fresh limit-open
+sa_thread sa-1 running 4 0 '' ''
+SA_NOW=$((R - 3600)) bash "$s/wake-timer.sh" --ledger "$led" --fleet "$fleet" >/dev/null
+sa_thread sa-1 idle 4 0 '' '' "You've hit your limit · resets 6:10pm (UTC)" 2026-11-25T10:00:00Z
+SA_NOW=$R bash "$s/wake-timer.sh" --ledger "$led" --fleet "$fleet" >/dev/null
+SA_NOW=$((R + 600)) bash "$s/wake-timer.sh" --ledger "$led" --fleet "$fleet" >/dev/null
+check "an outage open when the hold starts closes there, so the hold is not counted" \
+  "opened closed opened wake 60" "$(events) $(jq -r 'select(.event == "closed") | .minutes' "$log")"
 fresh limit-unread
 sa_thread sa-1 idle 4 0 '' '' "You've hit your limit · resets 6:10pm (Nowhere/Zone)" 2026-11-25T10:00:00Z
 tick 0 >/dev/null

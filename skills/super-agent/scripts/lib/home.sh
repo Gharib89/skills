@@ -23,11 +23,16 @@ sa_guard_entry() { sa_hook_entry guard.sh 'Edit|Write|MultiEdit|NotebookEdit|Bas
 sa_watch_guard_entry() { sa_hook_entry watch-guard.sh '' ' || true'; }
 
 # The wake timer's systemd user units, the owner's to install. `sa_timer_active`:
-# systemctl reports the timer running (no systemctl is not running).
+# true when systemctl reports the timer active, false for any other state (a
+# unit never installed reads `inactive`), null when systemctl printed no state
+# (no systemctl, no user bus): a failed read is no verdict.
 # `sa_timer_units`: {dir, service, timer, enable}, the two unit files' text, the
 # folder they go in and the line that enables them. The service carries this
 # shell's PATH, since a user unit's own PATH lacks where `t3` usually lives.
-sa_timer_active() { systemctl --user is-active --quiet super-agent-wake.timer >/dev/null 2>&1; }
+sa_timer_active() {
+  local s; s=$(systemctl --user is-active super-agent-wake.timer 2>/dev/null)
+  case $s in active) echo true ;; '') echo null ;; *) echo false ;; esac
+}
 sa_timer_units() {
   local p l f
   p=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/wake-timer.sh
@@ -89,7 +94,10 @@ sa_home() {
   whas=$(jq --argjson e "$wentry" "$sa_jq_hook_has"'hook_has("Stop"; $e)' "$settings" 2>/dev/null) || whas=false
   [ "$whas" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the watch guard\u0027s Stop hook is missing from \($s): run scripts/setup.sh --write"]' <<<"$needs")
   [ "$has" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the state guard\u0027s hook is missing from \($s): run scripts/setup.sh --write, or scripts/guard.sh --install"]' <<<"$needs")
-  sa_timer_active || needs=$(jq -c --arg d "$(sa_timer_units | jq -r .dir)" '. + ["Wake timer: super-agent-wake.timer is not running: write the unit files scripts/guard.sh --install prints into \($d), then run the enable line it prints"]' <<<"$needs")
+  case $(sa_timer_active) in
+    false) needs=$(jq -c --arg d "$(sa_timer_units | jq -r .dir)" '. + ["Wake timer: super-agent-wake.timer is not running: write the unit files scripts/guard.sh --install prints into \($d), then run the enable line it prints"]' <<<"$needs") ;;
+    null) needs=$(jq -c '. + ["Wake timer: systemctl --user cannot be read here (no systemctl or no user bus), so whether super-agent-wake.timer runs is unknown"]' <<<"$needs") ;;
+  esac
   stale=$(sa_guard_stale)
   [ "$stale" = null ] || needs=$(jq -c --argjson st "$stale" '. + (if $st.unreadable then ["State guard: \($st.settings) is no JSON object, so a stale guard entry there cannot be checked: fix the file"]
     else [$st.entries[] | "State guard: remove its stale entry from \($st.settings): \(tojson)"] end)' <<<"$needs")

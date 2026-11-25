@@ -15,7 +15,8 @@
 # (600 s when unset), it runs the fleet file's notify command with
 # `SA_NOTIFY_MESSAGE` set. A running thread is left to the watch guard. A
 # permission request pending on the thread for 600 s or more is notified, with
-# no wake. A limit stop is held until its reset plus 600 s; a reset it cannot
+# no wake. A limit stop is held until its reset plus 600 s, closing an outage
+# open when the hold starts, so a hold is never counted; a reset it cannot
 # read falls through to a wake. With T3 not answering, or no notify command or
 # own thread recorded, the desktop notifier (`notify-send`) stands in for the
 # command, as it does for a fleet file whose `notify` is malformed, a fault the
@@ -127,7 +128,11 @@ if ! sa_observe "$(jq -cn --arg t "$own" '{thread: $t}')"; then
   open_outage; alarm desktop "a watcher is owed and T3 does not answer for thread $own ($obs_kind)"; answer "$owed" notify
 fi
 reset=$(jq -r '.limit_reset // empty' <<<"$obs")
-[ -z "$reset" ] || [ "$now" -ge $((reset + hold)) ] || answer "$owed" held
+if [ -n "$reset" ] && [ "$now" -lt $((reset + hold)) ]; then
+  # A held limit stop is never counted: an outage already open closes here.
+  [ "$opened" -eq 0 ] || close "$now"
+  answer "$owed" held
+fi
 open_outage
 
 if [ "$(jq -r .pending <<<"$obs")" -gt 0 ]; then

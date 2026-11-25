@@ -138,5 +138,7 @@ check "and the line that enables it" "systemctl --user daemon-reload && systemct
 check "--status reports a running timer through systemctl" true "$(bash "$s/guard.sh" --status | jq .timer.active)"
 : > "$SA_FAKE/timer-inactive"
 check "and a stopped one" false "$(bash "$s/guard.sh" --status | jq .timer.active)"
+: > "$SA_FAKE/timer-unreadable"
+check "and null when systemctl cannot be read, never a stopped timer" null "$(bash "$s/guard.sh" --status | jq .timer.active)"
 
 finish
