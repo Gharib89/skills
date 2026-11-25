@@ -5,10 +5,11 @@
 # hook input carries and equals the id of the prompt that started the turn (measured
 # 2026-11-23, #1353), so the two hooks share no flag file and the next turn is never
 # flagged. A changing call is on a named list: the T3 calls that launch, send to,
-# interrupt, organize, configure or schedule; the acting scripts (`launch.sh`,
-# `claim.sh`, `worktree.sh remove`, `merge.sh`, `cleanup.sh`, `intake.sh`,
-# `handover.sh`) and `ledger.sh`'s write verbs other than `need`; the `gh` and `git` verbs that write (the patterns
-# `lib/changing.sh` shares with the scorecard); Edit, Write, MultiEdit and
+# interrupt, organize, configure, schedule or delete a schedule; the acting
+# scripts (`launch.sh`, `claim.sh`, `worktree.sh remove`, `merge.sh`, `cleanup.sh`,
+# `intake.sh`, `handover.sh`) and `ledger.sh`'s write verbs other than `need`; the
+# `gh` and `git` verbs that write (the patterns `lib/changing.sh` shares with the
+# scorecard); Edit, Write, MultiEdit and
 # NotebookEdit. A machine check is none. Each one appends `{at, event: "changing",
 # prompt_id, tool, call}` to the log, `call` cut at 300 characters. A hook that
 # cannot judge (no `jq`, input that is no tool call, a call it cannot classify)
