@@ -137,6 +137,29 @@ L need $repo#88 --action "Restart widgets#88 after 3 stalls" --reason stall-cap 
 S --fleet "$tmp/fleet.json" >/dev/null
 SA_NOW=$(at "2026-11-29 02:01")
 check "the fleet file's work week counts" 1 "$(S --fleet "$tmp/fleet.json" | jq '.raised | length')"
+fresh
+SA_NOW=$(at "2026-11-27 20:30")
+L need $repo#88 --action "Restart widgets#88 after 3 stalls" --reason stall-cap --why x --option a --option b >/dev/null
+S >/dev/null
+SA_NOW=$(at "2026-11-28 00:30")
+check "an hour across midnight into a weekend counts only its Friday part" 0 "$(S | jq '.raised | length')"
+SA_NOW=$(at "2026-11-30 00:31")
+check "the rest of the 4 hours falls on Monday" 1 "$(S | jq '.raised | length')"
+
+# --- a need is raised once, and only once its alert is logged ----------------------
+fresh
+SA_NOW=$(at "2026-11-23 09:00")
+L need $repo#88 --action "Restart widgets#88 after 3 stalls" --reason stall-cap --why x --option a --option b >/dev/null
+mkdir "$tmp/needs-alerts.jsonl"
+S >/dev/null 2>&1
+check_rc "an alert log that cannot be written is refused" 2 $?
+rmdir "$tmp/needs-alerts.jsonl"
+check "and the need is raised on the next run" 1 "$(S | jq '.raised | length')"
+fresh
+L need $repo#88 --action "Restart widgets#88 after 3 stalls" --reason stall-cap --why x --option a --option b >/dev/null
+for i in 1 2 3 4; do S > "$tmp/race-$i.json" & done; wait
+check "runs at once raise a need once" 1 "$(cat "$tmp"/race-*.json | jq -s 'map(.raised | length) | add')"
+check "and log it once" 1 "$(wc -l < "$tmp/needs-alerts.jsonl")"
 
 # --- a need 0.46.0 pushed counts as alerted at its since ---------------------------
 fresh

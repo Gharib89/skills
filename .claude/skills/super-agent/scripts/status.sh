@@ -73,7 +73,8 @@ while [ $# -gt 0 ]; do
   shift 2
 done
 [ -n "$ledger" ] || sa_tooling "$usage"
-sa_read "$ledger"
+# Under the lock from the read to the marks, so two runs never raise the same need.
+sa_lock "$ledger"; sa_read "$ledger"
 qdoc=null
 if [ -n "$quota" ]; then
   sa_quota_file "$quota"
@@ -149,17 +150,17 @@ block=$(jq -r --argjson d "$digest" --argjson p "$printed" --argjson q "$qdoc" -
 
 # What the next run compares with. A printed block counts its Merged tickets as
 # listed, so the next block lists only the merges since: the stored rows are the
-# ones left after that. A raised need takes its alert or reminder mark, and a line
-# in the alert log. The ledger was read unlocked, so a need re-recorded meanwhile in
-# another case still matches its raised key.
+# ones left after that. A raised need takes a line in the alert log, then its alert
+# or reminder mark: a log that cannot be written leaves the need unmarked, so the
+# next run raises it again.
 if [ -n "$block" ]; then
   at=$(jq -rn --argjson s "$(sa_now_s)" '$s | todate')
+  jq -c --arg at "$at" '.raised[] | {at: $at, event: (if .reminder then "reminder" else "alert" end), key, action, class}' <<<"$now" \
+    >>"$(dirname "$ledger")/needs-alerts.jsonl" || sa_tooling "$(dirname "$ledger")/needs-alerts.jsonl: cannot append"
   sa_update "$ledger" "$sa_jq_norm"'.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}
     | if ($n.raised | length) > 0 then .needs = [(.needs // [])[] | . as $x
         | ([$n.raised[] | select((.key | norm_repo) == ($x.key | norm_repo) and .action == $x.action)] | first) as $r
         | if $r == null then . elif $r.reminder then .reminded = $at else .alerted = $at end] else . end' --argjson n "$now" --arg at "$at"
-  jq -c --arg at "$at" '.raised[] | {at: $at, event: (if .reminder then "reminder" else "alert" end), key, action, class}' <<<"$now" \
-    >>"$(dirname "$ledger")/needs-alerts.jsonl" || sa_tooling "$(dirname "$ledger")/needs-alerts.jsonl: cannot append"
 fi
 
 jq -cn --arg b "$block" --argjson c "$changed" --argjson r "$(jq -c .raised <<<"$now")" '{block: $b, changed: $c, raised: $r}'

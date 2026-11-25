@@ -46,10 +46,13 @@ sa_jq_needs='
   # Every open need in full, blocking first, each set apart by a blank line.
   def needs_text: [(map(select(need_blocking)) + map(select(need_blocking | not)))[] | need_text] | join("\n\n");
   # Seconds from epoch $from to epoch $to that fall on a day of $week (weekday numbers,
-  # 0 Sunday) in local time, counted an hour at a time.
+  # 0 Sunday) in local time, counted a local day at a time: each span ends at the next
+  # local midnight (an hour off across a daylight-saving change), so no span straddles
+  # two days.
   def working_seconds($from; $to; $week):
-    [range($from; $to; 3600) | . as $h
-      | select($week | index($h | strflocaltime("%w") | tonumber)) | [3600, $to - $h] | min] | add // 0;
+    def day_end: (localtime as $t | . + 86400 - ($t[3] * 3600 + $t[4] * 60 + ($t[5] | floor)));
+    [$from | recurse(day_end; . < $to) | select(. < $to) | . as $s
+      | select($week | index($s | localtime[6])) | ([day_end, $to] | min) - $s] | add // 0;
 '
 
 # sa_work_week <fleet>: the fleet file's `work_week` as JSON (Mon to Fri when it has
