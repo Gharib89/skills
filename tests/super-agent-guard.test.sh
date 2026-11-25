@@ -90,6 +90,7 @@ check "--install keeps the settings file's mode" 600 "$(stat -c %a "$cfg")"
 check_rc "a settings file that is no JSON exits 2" 2 "$(printf 'x' > "$cfg"; bash "$s/guard.sh" --install --settings "$cfg" >/dev/null 2>&1; echo $?)"
 # --- the default settings file is the super agent folder's, never user settings ----
 export HOME=$tmp/u XDG_STATE_HOME=$tmp/state
+unset XDG_CONFIG_HOME # a CI runner sets it; the timer cases check the $HOME/.config default
 hc=$XDG_STATE_HOME/super-agent/home/.claude/settings.local.json
 check "--status reads the super agent folder's local settings by default" "$hc false" \
   "$(bash "$s/guard.sh" --status | jq -r '"\(.settings) \(.installed)"')"
