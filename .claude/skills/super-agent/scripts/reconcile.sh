@@ -78,7 +78,7 @@
 # since the last block, and the needs whose push has not gone out. The super agent
 # posts `block` as printed and pushes each `unpushed` need: nothing else reports.
 #
-# Each run stamps `<ledger>.reconciled` with its epoch second, which `notify` reads
+# Each run stamps `<ledger>.reconciled` with its epoch second, which the wake timer reads
 # to tell a super agent that answered a wake from one that did not.
 #
 # stdout: {ledger, checked, entries, launching, stalled, settled, closed, at_rest, woke, ready,
@@ -255,7 +255,7 @@ if ! { [ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] && [
   reconcile_write
 fi
 sa_archive "$ledger" "$now_s"
-# The stamp `notify` reads: a reconcile ran, so a super agent is answering its wakes.
+# The stamp the wake timer reads: a reconcile ran, so a super agent is answering its wakes.
 printf '%s\n' "$now_s" > "$ledger.reconciled" || sa_tooling "cannot write $ledger.reconciled"
 
 sa_unlock

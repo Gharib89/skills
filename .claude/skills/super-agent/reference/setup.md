@@ -99,8 +99,9 @@ entry an older install left in `~/.claude/settings.json`, the line the owner
 removes there (it would fire in every session); `stale.unreadable` is true
 when that file is no JSON object, so no entry could be checked. Each is also a
 `needs` line in `home`. Run `--install` only when a `needs` line names the
-missing hook: it adds the entry to the folder's file, or to the file
-`--settings` names.
+missing hook or the wake timer: it adds the entry to the folder's file, or to
+the file `--settings` names, and prints the wake timer's unit files and enable
+line.
 
 ## Cursor and Grok
 
@@ -138,9 +139,9 @@ Each is optional: a fleet file without it keeps the default.
   merge-gate hold no standing waiver or ruling matches. Any other value is a
   tooling error from `launch.sh`, which launches nothing until it is fixed
   ([step-ins](step-ins.md#the-step-ins)).
-- `notify`: `{command, delay}`, the alarm that runs when the watcher exited
-  on an event and no reconcile followed within the delay
-  ([watching](watching.md#the-notify-command) has its shape).
+- `notify`: `{command, delay}`, the alarm the wake timer runs when a wake
+  draws no reconcile within the delay
+  ([watching](watching.md#the-wake-timer) has its shape).
 - `repos.<owner/name>.machine`: pins the repo to one machine key
   ([placement](placement.md#the-rules)). `machines.<m>.slots`: the machine's
   slot count. Edit both with `scripts/fleet.sh`, not by hand.

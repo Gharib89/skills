@@ -48,10 +48,13 @@ week, runs the weekly review, whose rows join the bearings file's Needs you.
 
 Each guard writes `<name>-guard.jsonl` beside the ledger, one JSON line per
 event, `{at, event: "block" | "pass"}`; the wake timer writes
-`wake-timer.jsonl`, `{at, event: "outage", minutes}`. A log not written yet is
-`null` in the row, never an error; a log with a line that is not JSON is
-refused by name. A row for a thread with no transcript that loaded this skill is
-refused too, rather than counted as an empty day.
+`wake-timer.jsonl`, one line per outage step, `{at, event: "opened" | "wake" |
+"notify" | "closed"}`; the row's `timer` counts the day's `closed` lines and
+their `minutes`. A limit stop the timer holds until its reset opens no outage
+and closes one already open, so an outage counts only up to the hold. A log
+not written yet is `null` in the row, never an error; a log with a line that is
+not JSON is refused by name. A row for a thread with no transcript that loaded
+this skill is refused too, rather than counted as an empty day.
 
 ## Targets
 

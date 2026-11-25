@@ -90,6 +90,7 @@ check "--install keeps the settings file's mode" 600 "$(stat -c %a "$cfg")"
 check_rc "a settings file that is no JSON exits 2" 2 "$(printf 'x' > "$cfg"; bash "$s/guard.sh" --install --settings "$cfg" >/dev/null 2>&1; echo $?)"
 # --- the default settings file is the super agent folder's, never user settings ----
 export HOME=$tmp/u XDG_STATE_HOME=$tmp/state
+unset XDG_CONFIG_HOME # a CI runner sets it; the timer cases check the $HOME/.config default
 hc=$XDG_STATE_HOME/super-agent/home/.claude/settings.local.json
 check "--status reads the super agent folder's local settings by default" "$hc false" \
   "$(bash "$s/guard.sh" --status | jq -r '"\(.settings) \(.installed)"')"
@@ -122,5 +123,23 @@ check "user settings that are no JSON are unreadable, never no entry" true "$(ba
 check "empty user settings are unreadable" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
 printf 'null' > "$HOME/.claude/settings.json"
 check "user settings holding null are unreadable" true "$(bash "$s/guard.sh" --status | jq .stale.unreadable)"
+
+# --- the wake timer: --install prints its unit files, --status reads systemctl ----
+source tests/super-agent-fake.sh
+export SA_FAKE=$tmp/fake
+mkdir -p "$tmp/bin" "$SA_FAKE"; sa_fake_install "$tmp/bin"
+export PATH="$tmp/bin:$PATH"
+out=$(bash "$s/guard.sh" --install)
+check "--install prints the timer's service and timer units and where they go" "1 1 $HOME/.config/systemd/user" \
+  "$(jq -r .timer.service <<<"$out" | grep -c "^ExecStart=.*super-agent/scripts/wake-timer.sh") $(jq -r .timer.timer <<<"$out" | grep -c '^OnUnitActiveSec=5min$') $(jq -r .timer.dir <<<"$out")"
+check "and its command names the ledger and fleet of this shell's XDG dirs" \
+  "--ledger '$tmp/st ate/super-agent/ledger.json' --fleet '$tmp/con fig/super-agent/fleet.json'" \
+  "$(XDG_STATE_HOME="$tmp/st ate" XDG_CONFIG_HOME="$tmp/con fig" bash "$s/guard.sh" --install | jq -r .timer.service | sed -n 's/^ExecStart=.*wake-timer.sh. //p')"
+check "and the line that enables it" "systemctl --user daemon-reload && systemctl --user enable --now super-agent-wake.timer" "$(jq -r .timer.enable <<<"$out")"
+check "--status reports a running timer through systemctl" true "$(bash "$s/guard.sh" --status | jq .timer.active)"
+: > "$SA_FAKE/timer-inactive"
+check "and a stopped one" false "$(bash "$s/guard.sh" --status | jq .timer.active)"
+: > "$SA_FAKE/timer-unreadable"
+check "and null when systemctl cannot be read, never a stopped timer" null "$(bash "$s/guard.sh" --status | jq .timer.active)"
 
 finish

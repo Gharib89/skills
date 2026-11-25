@@ -25,6 +25,14 @@ check "--write writes the folder's local settings, its PreToolUse hook the state
 $(jq -r '.hooks.PreToolUse[0].hooks[0].command' "$hc" | grep -c "super-agent/scripts/guard.sh'$") $(jq -c .home.needs <<<"$out")"
 check "the proposal's missing watch guard is its own Needs you row" 1 \
   "$(jq '[.home.needs[] | select(test("watch guard"))] | length' <<<"$(rm -rf "$XDG_STATE_HOME/super-agent/home"; P --name laptop)")"
+: > "$SA_FAKE/timer-inactive"
+check "a missing wake timer is one Needs you row" 1 \
+  "$(S --write --name laptop | jq '[.home.needs[] | select(test("^Wake timer: "))] | length')"
+rm -f "$SA_FAKE/timer-inactive"
+: > "$SA_FAKE/timer-unreadable"
+check "a systemctl that cannot be read is one row saying so, never not running" "1 0" \
+  "$(S --write --name laptop | jq -r '[.home.needs[] | select(test("^Wake timer: "))] | "\(length) \(map(select(test("not running"))) | length)"')"
+rm -f "$SA_FAKE/timer-unreadable"
 S --write --name laptop >/dev/null
 check "it answers where the folder is" "$XDG_STATE_HOME/super-agent/home" "$(jq -r .home.folder <<<"$out")"
 check "and its Stop hook is the watch guard" "1 1 true" \

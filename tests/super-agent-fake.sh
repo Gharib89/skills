@@ -10,7 +10,11 @@
 # `threads/<id>.json`, after the multi-line migration warning the real CLI
 # prints on STDOUT (measured on 2026-11-06, so a script has to pick out the
 # JSON line); no file is a thread the server does not know: exit 1.
-# `SA_T3_RC` makes a found thread exit nonzero after its answer. `gh api
+# `SA_T3_RC` makes a found thread exit nonzero after its answer. `t3 thread send
+# <id> <message>` exits 1 for an unknown thread, else `SA_T3_SEND_RC` or `SA_T3_RC`. `notify-send`
+# records its call; `systemctl --user is-active super-agent-wake.timer` prints
+# active until a `timer-inactive` file exists (then `inactive`, exit 3), and
+# with a `timer-unreadable` file prints nothing and exits 1, as with no user bus. `gh api
 # <endpoint>` answers from `gh/<endpoint with every character outside
 # [A-Za-z0-9._-] turned into _>`; no file is a 404, exit 1 with the JSON body
 # on stdout like the real CLI (measured 2026-11-06). A POST to an endpoint
@@ -47,6 +51,10 @@ if [ "$1 $2" = "environment list" ]; then
   warn
   [ -f "$SA_FAKE/environments.json" ] || { echo "environment list failed" >&2; exit 1; }
   cat "$SA_FAKE/environments.json"; exit 0
+fi
+if [ "$1 $2" = "thread send" ]; then
+  [ -f "$SA_FAKE/threads/$3.json" ] || { echo "thread $3 not found" >&2; exit 1; }
+  exit "${SA_T3_SEND_RC:-${SA_T3_RC:-0}}"
 fi
 [ "$1 $2" = "thread show" ] || { echo "fake t3: unsupported: $*" >&2; exit 2; }
 id=$3
@@ -159,7 +167,19 @@ exit "$(cat "$SA_FAKE/provider/$k.rc" 2>/dev/null || echo 0)"
 FAKE
     chmod +x "$1/$p"
   done
-  chmod +x "$1/uptime" "$1/sleep" "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/hostname"
+  cat > "$1/notify-send" <<'FAKE'
+#!/usr/bin/env bash
+printf 'notify-send %s\n' "$*" >> "$SA_FAKE/calls"
+FAKE
+  cat > "$1/systemctl" <<'FAKE'
+#!/usr/bin/env bash
+printf 'systemctl %s\n' "$*" >> "$SA_FAKE/calls"
+[ "$*" = "--user is-active super-agent-wake.timer" ] || exit 1
+[ ! -f "$SA_FAKE/timer-unreadable" ] || { echo 'Failed to connect to bus' >&2; exit 1; }
+[ ! -f "$SA_FAKE/timer-inactive" ] || { echo inactive; exit 3; }
+echo active
+FAKE
+  chmod +x "$1/notify-send" "$1/systemctl" "$1/uptime" "$1/sleep" "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/hostname"
   mkdir -p "$SA_FAKE/threads" "$SA_FAKE/gh" "$SA_FAKE/probe" "$SA_FAKE/provider"
 }
 
