@@ -6,7 +6,8 @@
 
 # adopt_ticket_of_read: the ticket a thread's first user message names, from the read in
 # $read_file: `/ship-run <n>` is a ship, `/triage <n>` a triage. Sets $read_kind and
-# $read_number, both empty for a first message that is neither.
+# $read_number, both empty for a first message that is neither. A `--number` the message
+# does not name is refused.
 adopt_ticket_of_read() {
   local first
   read_kind='' read_number=''
@@ -14,6 +15,7 @@ adopt_ticket_of_read() {
   if [[ $first =~ ^[[:space:]]*/(ship-run|triage)[[:space:]]+([0-9]+) ]]; then
     read_number=${BASH_REMATCH[2]}
     if [ "${BASH_REMATCH[1]}" = triage ]; then read_kind=triage; else read_kind=ship; fi
+    [ -z "$number" ] || [ "$number" = "$read_number" ] || sa_tooling "--number $number is not the ticket the thread's first message names ($read_number)"
   fi
 }
 
@@ -22,7 +24,8 @@ adopt_ticket_of_read() {
 # naming the holder). An owner-run entry stops being owner-run (the mark, the observed
 # baseline and the rest clock go, `resumed` has the next reconcile take the thread's
 # run count as judged), its steered mark is cleared and its `held_since` restarted at
-# `$now`, so the owner's earlier messages are not read as steering it. Answers and
+# `$now`, so the owner's earlier messages are not read as steering it, and its
+# `owner-steered` need is cleared, so the next steer is asked about again. Answers and
 # exits 0; returns 1 when no open entry holds the thread.
 adopt_held() {
   local key named='' num
@@ -31,35 +34,35 @@ adopt_held() {
   if [ -n "$task" ]; then named="task:$task"
   else
     num=$number
-    if [ -z "$num" ] && [ -n "$read_file" ]; then adopt_ticket_of_read; num=$read_number; fi
+    if [ -n "$read_file" ]; then adopt_ticket_of_read; num=${read_number:-$number}; fi
     [ -z "$num" ] || named=$(jq -r --arg k "$key" --arg n "$num" --arg r "$repo" "$sa_jq_norm"'.entries[$k] | if ((.number | tostring) == $n and ($r == "" or (.repo // "" | norm_repo) == ($r | norm_repo))) then $k else "\(.repo // "?")#\($n)" end' <<<"$doc")
   fi
-  [ -z "$named" ] || [ "$named" = "$key" ] || sa_fail "thread $1 is held by $key, not $named: drop that entry first, or leave the ticket out"
-  sa_update "$ledger" '.entries[$k] |= ((if .owner_run == true then .owner_run = false | del(.owner_run_since, .owner_run_reminded)
+  [ -z "$named" ] || [ "$named" = "$key" ] || sa_fail "thread $1 is held by $key, not $named: drop that entry first, or run adopt --thread $1 with no read and no ticket flags"
+  sa_update "$ledger" "$sa_jq_norm"'.entries[$k] |= ((if .owner_run == true then .owner_run = false | del(.owner_run_since, .owner_run_reminded)
       | .observed = null | .rest_since = null | .resumed = true else . end)
-      | .steered = false | .held_since = $now | .updated_at = $now)' --arg k "$key" --arg now "$now"
+      | .steered = false | .held_since = $now | .updated_at = $now)
+    | .needs = ((.needs // []) | map(select(((.key | norm_repo) != ($k | norm_repo)) or .reason != "owner-steered")))' --arg k "$key" --arg now "$now"
   jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$(jq -c --arg k "$key" '.entries[$k]' <<<"$doc")" '{ledger: $l, key: $k, entry: $e, existing: true}'
   exit 0
 }
 
 # adopt_fill: what the add flags left empty, from the thread read in $read_file (the
-# `t3_thread_read` of the thread's first page, `afterPosition: -1`; a read that has an
-# earlier page is refused): the worktree and branch from the thread, and, unless `--task`
-# names a task or `--number` the ticket, the kind and number from the thread's first user
-# message, the repo from `--repo` or else the worktree's `origin` remote when it names
+# `t3_thread_read` of the thread's first page, `afterPosition: -1`, which `ledger_add` has
+# checked): the worktree and branch from the thread, and, unless `--task`
+# names a task, the kind and number from the thread's first user message (`--number` only
+# fills a missing number, and the message's kind wins over `--kind`), the repo from `--repo` or else the worktree's `origin` remote when it names
 # github.com. A thread whose first message is neither a ticket call and no `--task` or
 # `--number` is refused: a task needs its slug. Sets $worktree, $branch, $kind, $number
 # and $repo. The pull request is not read: reconcile finds it by the branch.
 adopt_fill() {
   local url
-  jq -e '(.earlierPosition // null) == null' "$read_file" >/dev/null || sa_tooling "$read_file is not the thread's first page: read it again with afterPosition -1"
   [ -n "$worktree" ] || worktree=$(jq -r '.thread.worktreePath // empty' "$read_file")
   [ -n "$branch" ] || branch=$(jq -r '.thread.branch // empty' "$read_file")
-  if [ -z "$task" ] && [ -z "$number" ]; then
+  if [ -z "$task" ]; then
     adopt_ticket_of_read
-    [ -n "$read_number" ] || sa_tooling "the thread's first message is no /ship-run or /triage call: pass --task <slug>, or --repo and --number (and --kind) for a ticket's thread"
-    [ -n "$kind" ] || kind=$read_kind
-    number=$read_number
+    number=${read_number:-$number}
+    [ -n "$number" ] || sa_tooling "the thread's first message is no /ship-run or /triage call: pass --task <slug>, or --repo and --number (and --kind) for a ticket's thread"
+    kind=${read_kind:-$kind}
   fi
   [ -z "$task" ] || return 0
   if [ -z "$repo" ] && [ -n "$worktree" ]; then
@@ -102,6 +105,7 @@ ledger_add() {
     read_thread=$(jq -er '.thread.threadId | strings | select(length > 0)' "$read_file" 2>/dev/null) || sa_tooling "$read_file: not a t3_thread_read result"
     [ -z "$thread" ] || [ "$thread" = "$read_thread" ] || sa_tooling "--thread $thread is not the thread $read_file read ($read_thread)"
     thread=$read_thread
+    jq -e '(.earlierPosition // null) == null' "$read_file" >/dev/null || sa_tooling "$read_file is not the thread's first page: read it again with afterPosition -1"
   fi
   if $adopted; then
     # the clock starts at adoption, and a thread the ledger holds is the same entry

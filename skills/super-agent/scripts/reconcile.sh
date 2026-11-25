@@ -26,8 +26,9 @@
 # outside its thread is the owner's, newer than its `held_since` (else `launched_at`), is
 # `steered`: its stalls are 0 and no stall counts, so it is in no `stalled` row and gets no
 # nudge, and after the stall window at rest (not at a merge-gate summary) one `owner-steered`
-# escalate row asks "watch or take?", on every reconcile until a need with that reason is
-# recorded, which also quiets `watch`. The author comes from `owner_at`
+# escalate row asks "watch or take?", on every reconcile until a need for the key with that reason, or with none, is
+# recorded (the standard `escalate` silencing), which also quiets `watch`; `watch` wakes
+# once per `--stall-window` after the last such row (`steered_asked_at`). The author comes from `owner_at`
 # in the thread's reply file (`reply.sh`): `<dir>/<thread id>.json` of `--reads` for a local
 # entry, of its `--remote` for a remote one; a thread with no such file keeps its mark.
 # Settling the

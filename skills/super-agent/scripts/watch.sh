@@ -27,8 +27,9 @@
 # escalated, so its window stays quiet, and so does an owner-run or interactive entry's.
 # An owner-run entry (`ledger take`) is read from GitHub alone and wakes only on its PR
 # merging; an owner-run task is not read at all. A steered entry (the owner spoke last)
-# keeps its `stall-window`, the wake on which reconcile lists its `owner-steered` row, until
-# that need is recorded: with the need in the ledger its window is quiet.
+# keeps its `stall-window`, the wake on which reconcile lists its `owner-steered` row, once per
+# window (timed from the later of its rest and `steered_asked_at`, the reconcile that last
+# listed the row) until that need is recorded: with the need in the ledger its window is quiet.
 # A thread that answers with another id or worktree path than the entry holds
 # is `thread-mismatch`; a thread or PR it cannot read is `thread-unreadable` or
 # `pr-unreadable`: a watcher that went quiet on those would be a silent stall.
@@ -184,7 +185,8 @@ change_of() {
 # stamp `rest_since`; a merged entry rests into `run-finished`, bar that one.
 stall_window_of() {
   jq -rn --argjson e "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(sa_now_s)" '
-    ($e.rest_since | if . == null then null else fromdateiso8601 end) as $rs
+    # the window of a steered entry runs from the later of its rest and the wake that last asked
+    ([$e.rest_since, (if $e.steered == true then $e.steered_asked_at else null end)] | map(select(. != null) | fromdateiso8601) | max) as $rs
     | (if $n.waiting then ([$rs, $n.rest_at] | map(select(. != null)) | max)
        elif $n.limit_reset != null then ([$rs, $n.limit_reset] | map(select(. != null)) | max) else $rs end) as $since
     | if $since != null and ($e.owner_run != true) and ($e.interactive != true) and ($e.asked != true) and ($n.pr.state != "merged" or $n.waiting) and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0

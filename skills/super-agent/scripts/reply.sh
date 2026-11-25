@@ -25,7 +25,7 @@
 # too: no file `reconcile` would call `shape` is written, and a read that cannot say
 # whether an older page exists gives no verdict.
 #
-# stdout: {file, thread, status}
+# stdout: {file, thread, status} (the read's `thread.status`, also for `--owner-only`)
 # exit: 0 written · 1 the read cannot give a verdict (last message truncated, or no
 #       assistant message with `hasMore`), nothing written · 2 usage, or a read that is
 #       not a `t3_thread_read` result
@@ -51,26 +51,23 @@ reply=$(jq -c "$sa_jq_thread_shape"'
     ([.items[] | select(.type == "assistant_message")] | sort_by(.position) | last) as $last
     | {thread: (.thread | {threadId, status, runCount, pendingRequestCount, worktreePath, branch, updatedAt}
           | with_entries(select(.value != null))),
-       owner_at: (([.items[] | select(.type == "user_message")] | sort_by(.position) | last) as $u
-         | if $u == null then "unknown" elif $u.createdBy == "user" then ($u.updatedAt // null) else null end),
        messages: (if $last == null then [] else [{role: "assistant", text: ($last.text // "")}] end),
        truncated: ($last.textTruncated == true),
        older: ($last == null and .hasMore == true)}
+    # a page with no user message has no owner_at key: unknown, not null
+    + (([.items[] | select(.type == "user_message")] | sort_by(.position) | last) as $u
+       | if $u == null then {} else {owner_at: (if $u.createdBy == "user" then ($u.updatedAt // null) else null end)} end)
   end' "$read_file" 2>/dev/null)
 [ -n "$reply" ] || sa_tooling "$read_file: not a t3_thread_read result"
-# no user message on the page: no owner_at key
-reply=$(jq -c 'if .owner_at == "unknown" then del(.owner_at) else . end' <<<"$reply")
+status=$(jq -r .thread.status <<<"$reply")
 if $owner_only; then
-  sa_thread_file_ok "$(jq -r .thread.threadId <<<"$reply")" || sa_tooling "a thread id with a slash cannot name a file"
-  reply=$(jq -c '{thread: {threadId: .thread.threadId}} + (if has("owner_at") then {owner_at} else {} end) | . + {truncated: false, older: false}' <<<"$reply")
-fi
-if [ "$(jq -r .truncated <<<"$reply")" = true ]; then
+  reply=$(jq -c '{thread: {threadId: .thread.threadId}} + (if has("owner_at") then {owner_at} else {} end)' <<<"$reply")
+elif [ "$(jq -r .truncated <<<"$reply")" = true ]; then
   sa_fail "the last assistant message is truncated: read the thread again with a larger maxCharsPerItem"
-fi
-if [ "$(jq -r .older <<<"$reply")" = true ]; then
+elif [ "$(jq -r .older <<<"$reply")" = true ]; then
   sa_fail "the page holds no assistant message and hasMore is true: read the thread again with a larger limit"
 fi
 thread=$(jq -r .thread.threadId <<<"$reply")
 sa_thread_file_ok "$thread" || sa_tooling "$thread: a thread id with a slash cannot name a file"
 mkdir -p "$dir" && jq -c 'del(.truncated, .older)' <<<"$reply" > "$dir/$thread.json" || sa_tooling "$dir: cannot write"
-jq -cn --arg f "$dir/$thread.json" --arg t "$thread" --arg s "$(jq -r .thread.status <<<"$reply")" '{file: $f, thread: $t, status: $s}'
+jq -cn --arg f "$dir/$thread.json" --arg t "$thread" --arg s "$status" '{file: $f, thread: $t, status: $s}'

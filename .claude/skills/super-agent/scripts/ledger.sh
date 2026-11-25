@@ -109,12 +109,14 @@
 # dated ruling records it. `adopt --read` is "Watch <thread>": the thread's first page,
 # saved from `t3_thread_read` with `afterPosition: -1`, fills the entry (worktree,
 # branch, and from the first user message `/ship-run <n>` or `/triage <n>` the kind and
-# number, or `--number` for a ticket's thread whose first message is neither; `--task` for any
+# number, or `--number` for a ticket's thread whose first message is neither (a `--number` the message
+# does not name is refused, and the message's kind wins over `--kind`); `--task` for any
 # other thread; the repo from `--repo`, else a github.com origin remote of the worktree;
 # the first `reconcile` finds the PR by the branch) and starts its clock then:
 # `launched_at` and `held_since` are now. An open entry that already holds the thread
-# is the entry returned (`existing` true), no longer owner-run or steered (a `--task`,
-# `--number` or ticket naming another key is refused, exit 1, naming the holder); a ship
+# is the entry returned (`existing` true), no longer owner-run or steered, its `owner-steered`
+# need cleared (a `--task`, `--number` or ticket naming another key is refused, exit 1, naming
+# the holder and the `adopt --thread` step that works); a ship
 # adoption with no claim comment of this super agent's gets one (`claim.sh`, on the
 # entry's `--machine`), its status in the answer's `claim`. `drop` removes an
 # entry of any stage. `reset-stalls` zeroes an open entry's stall count and restarts

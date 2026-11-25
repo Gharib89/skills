@@ -26,9 +26,11 @@ clock (`launched_at`, `held_since`) and posts the claim for a ship thread.
 `adopt` is the launched thread's record step. Then reconcile once (it takes the
 baseline the watcher compares against) and start the watcher, as steps 5 and 3
 of the loop say. A thread the ledger already holds stays one entry: when it was
-owner-run it stops being owner-run, and its owner-steered mark is cleared.
-Naming another key for it (a different `--task`, `--number` or ticket) is
-refused: drop that entry first, or leave the ticket out.
+owner-run it stops being owner-run, and its owner-steered mark and need are
+cleared. Naming another key for it (a different `--task`, `--number` or ticket)
+is refused: drop that entry first, or run `adopt --thread <id>` with no read and
+no ticket flags. A `--number` is only for a first message that names no ticket;
+the first message's kind (ship or triage) wins.
 
 ## I'll take <thread>
 
@@ -84,10 +86,11 @@ newest from outside the thread and newer than `held_since` (else `launched_at`).
 A steered entry counts no stall and gets no nudge; its `Running` row ends `(you
 spoke last)`, and the call guard refuses your sends into it. After the stall
 window at rest, and not at a merge-gate summary, one `owner-steered` escalate
-row asks "watch or take?", until you record its need: answer it as [wake
+row asks "watch or take?" on every reconcile, and the watcher wakes once per
+stall window, until you record its need: answer it as [wake
 actions](wake-actions.md#escalate) says, and record a need (`--reason
 owner-steered`) so the row and the watcher's wake stay quiet. The owner's answer
 decides: "I'll take <thread>" makes it owner-run, "Watch <thread>" watches it
-again. Save each local thread's `t3_thread_read` and convert it with `reply.sh
---dir <reads dir>` before reconcile, as for [remote entries](remote.md). More in
-[the owner steps in](step-ins.md#the-owner-steps-in).
+again and clears that need, so the next steer is asked about afresh. The loop's
+"Thread reads" paragraph in [SKILL.md](../SKILL.md) says how the reads are saved
+and passed. More in [the owner steps in](step-ins.md#the-owner-steps-in).

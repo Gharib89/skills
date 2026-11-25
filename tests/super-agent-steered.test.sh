@@ -62,8 +62,9 @@ check "past the stall window at rest: an owner-steered row, never a nudge" '[{"k
 check "and the row asks watch or take" "at rest after your message: watch or take?" "$(jq -r '.escalate[0].detail' <<<"$out")"
 check "the row prints on every wake until its need is recorded" "1 1" \
   "$(R $((t0 + 1100)) | jq '.escalate | length') $(R $((t0 + 2000)) | jq '.escalate | length')"
-check "the watcher raises the stall-window wake meanwhile" "$key stall-window" \
-  "$(bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 0 --timeout 5 --stall-window 60 | jq -r '"\(.key) \(.event)"')"
+W() { SA_NOW=$1 bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 0 --timeout 2 --stall-window 60 | jq -r '"\(.key // "null") \(.event)"'; }
+check "the watcher stays quiet right after a reconcile asked: one wake per window" "null timeout" "$(W $((t0 + 2010)))"
+check "and raises the stall-window wake once a window has passed since the ask" "$key stall-window" "$(W $((t0 + 2070)))"
 L need $key --action "ask" --reason owner-steered >/dev/null
 check "a recorded need silences the row" 0 "$(R $((t0 + 3000)) | jq '[.escalate[] | select(.reason == "owner-steered")] | length')"
 check "and the watcher's wake: nothing to report" "null timeout" \
@@ -115,6 +116,8 @@ bash "$s/reply.sh" "$tmp/trunc.json" --dir "$tmp/own" >/dev/null 2>&1
 check "a truncated last assistant message is refused for a full reply" 1 "$?"
 out=$(bash "$s/reply.sh" "$tmp/trunc.json" --dir "$tmp/own" --owner-only); rc=$?
 check "--owner-only writes the owner mark from it" "0 2026-11-18T10:00:00.000Z" "$rc $(jq -r .owner_at "$tmp/own/th-1.json")"
+check "and answers the thread's real status, not the string null" "idle" "$(jq -r .status <<<"$out")"
+check "the file holds the thread id and the mark alone" '["owner_at","thread"]' "$(jq -c 'keys' "$tmp/own/th-1.json")"
 
 # --- pulse takes --reads and gives it to reconcile ---------------------------------------------------------
 L set $key steered false >/dev/null; sa_thread th-1 idle 2 0 /wt/1 feat/x-1; sa_stage "$led" $key at-rest

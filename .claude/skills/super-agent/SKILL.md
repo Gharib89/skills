@@ -175,12 +175,12 @@ then end the turn. On a `Wake timer:` line, run step 4's pulse.
 
 **Thread reads**: on each wake, before reconcile or pulse, save each open
 entry's `t3_thread_read` (not an owner-run one's; small: a low `limit`,
-`runLimit: 1`) and convert each with `reply.sh` into one directory. Pass it as
-`--reads <dir>`, which is how a steered entry is found
-([handing over](reference/handing-over.md#owner-steered)); add `--owner-only` to
-`reply.sh` when the read is too small to give a verdict. A remote entry (an
-`environment_id`) passes `--remote` as well ([remote](reference/remote.md)): a
-pulse without it reads its thread as `thread-unreadable`.
+`runLimit: 1`) and convert each with `reply.sh --owner-only --dir <dir>`, one
+directory for all. Pass it as `--reads <dir>`, which is how a steered entry is
+found ([handing over](reference/handing-over.md#owner-steered)). A remote entry
+(an `environment_id`) takes the full `reply.sh`, without `--owner-only`, into
+its `--remote` directory ([remote](reference/remote.md)): a pulse without it
+reads its thread as `thread-unreadable`.
 
 Wait only through the watcher: a `sleep` or a poll in your own turn spends
 context on nothing. Read a thread's messages only in small slices

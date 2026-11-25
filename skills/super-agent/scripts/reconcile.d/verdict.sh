@@ -70,9 +70,10 @@ reconcile_judge() {
           else . end
       end')
   stalls=$(jq -r .stalls <<<"$verdict") stall=$(jq -r '.stall // ""' <<<"$verdict")
-  doc=$(jq -c --arg k "$key" --argjson v "$verdict" --argjson st "$steered" \
+  doc=$(jq -c --arg k "$key" --argjson v "$verdict" --argjson st "$steered" --arg now "$now" \
     '.entries[$k] |= (.stalls = $v.stalls | .rest_since = $v.rest_since | .judged_run = $v.judged_run
-      | if (.steered == true) != $st then .steered = $st else . end)' <<<"$doc")
+      | if (.steered == true) != $st then .steered = $st else . end
+      | if $v.due then .steered_asked_at = $now elif $st | not then del(.steered_asked_at) else . end)' <<<"$doc")
   if [ "$(jq -r .due <<<"$verdict")" = true ]; then
     steered_due=$(jq -c --arg k "$key" --arg t "$(jq -r .thread <<<"$entry")" '. + [{key: $k, thread: $t}]' <<<"$steered_due")
   fi

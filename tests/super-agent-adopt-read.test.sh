@@ -68,7 +68,7 @@ read_of '/ship-run 8'
 out=$(L adopt --read "$tmp/read.json" 2>&1); rc=$?
 check "a read naming another ticket than the holder's is refused, naming the holder" "1 1" "$rc $(grep -q "held by $repo#7" <<<"$out" && echo 1)"
 read_of '/ship-run 7'
-check "so is a --number that is not the holder's" 1 "$(L adopt --read "$tmp/read.json" --repo $repo --number 8 >/dev/null 2>&1; echo $?)"
+check "so is a --number that is not the ticket the first message names" 2 "$(L adopt --read "$tmp/read.json" --repo $repo --number 8 >/dev/null 2>&1; echo $?)"
 check "and a --task for a ticket's thread" 1 "$(L adopt --read "$tmp/read.json" --task other >/dev/null 2>&1; echo $?)"
 check "the holder's own ticket is adopted again" 0 "$(L adopt --read "$tmp/read.json" --repo $repo --number 7 >/dev/null 2>&1; echo $?)"
 
@@ -92,5 +92,25 @@ sa_route "repos/$repo/issues/5/comments" '[]'
 read_of 'please fix the bug'; jq '.thread.threadId = "th-hand"' "$tmp/read.json" > "$tmp/r2" && mv "$tmp/r2" "$tmp/read.json"
 out=$(L adopt --read "$tmp/read.json" --repo $repo --number 5 --kind ship); rc=$?
 check "--repo, --number and --kind adopt it, as the refusal's advice says" "0 $repo#5 ship" "$rc $(jq -r '"\(.key) \(.entry.kind)"' <<<"$out")"
+
+# --- round 2: the refusals are followable, a held thread's read is the first page, the first message names the kind ---
+read_of '/ship-run 8'
+out=$(L adopt --read "$tmp/read.json" 2>&1)
+check "a refusal for a held thread names the step that works: adopt --thread, with no read" 1 "$(grep -q 'adopt --thread th-ext' <<<"$out" && echo 1)"
+check "which does adopt the held thread" "0 $repo#7" "$(o=$(L adopt --thread th-ext); echo "$? $(jq -r .key <<<"$o")")"
+read_of '/ship-run 7'; jq '.earlierPosition = 4' "$tmp/read.json" > "$tmp/r2" && mv "$tmp/r2" "$tmp/read.json"
+check "a read that is not the first page is refused for a thread the ledger holds too" 2 "$(L adopt --read "$tmp/read.json" >/dev/null 2>&1; echo $?)"
+read_of '/triage 21'; jq '.thread.threadId = "th-t21" | .thread.branch = "triage-21"' "$tmp/read.json" > "$tmp/r2" && mv "$tmp/r2" "$tmp/read.json"
+out=$(L adopt --read "$tmp/read.json" --repo $repo --number 21)
+check "--number does not turn a /triage thread into a ship: the first message's kind wins" "$repo#21 triage" "$(jq -r '"\(.key) \(.entry.kind)"' <<<"$out")"
+sa_route "repos/$repo/issues/22/comments" '[]'
+read_of '/ship-run 7'; jq '.thread.threadId = "th-t22"' "$tmp/read.json" > "$tmp/r2" && mv "$tmp/r2" "$tmp/read.json"
+check "and a --number the first message does not name is refused" 2 "$(L adopt --read "$tmp/read.json" --repo $repo --number 22 >/dev/null 2>&1; echo $?)"
+L set $repo#7 steered true >/dev/null
+L need $repo#7 --action "watch or take?" --reason owner-steered >/dev/null
+L need $repo#9 --action "an other need" --reason owner >/dev/null
+read_of '/ship-run 7'
+L adopt --read "$tmp/read.json" >/dev/null
+check "Watch clears the entry's owner-steered need, so the next steer is asked about again" "$repo#9" "$(L list | jq -r '[.needs[].key] | join(",")')"
 
 finish

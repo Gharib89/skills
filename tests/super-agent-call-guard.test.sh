@@ -114,4 +114,34 @@ rm -f "$log"
 check "a deleted log revives a tell inside the hour only: the fresh one passes, the lapsed one does not" "0  2 not-held" \
   "$(verdict "$(tool_call th-8)") $(verdict "$(tool_call th-8)")"
 
+# --- round 2: a refused command spends no tell, and the command word is judged however it is written ---------
+root=$PWD
+L add --repo $repo --number 6 --thread th-o --worktree /wt/6 --branch b6 >/dev/null
+L take $repo#6 >/dev/null
+L tell th-q >/dev/null
+check "a tell is not spent by a command the guard refuses (th-q told, th-o owner-run)" "2 owner-run" \
+  "$(verdict "$(bash_call 't3 thread send th-q a; t3 thread send th-o b')")"
+check "so the same send alone still has its tell" "0 " "$(verdict "$(bash_call 't3 thread send th-q a')")"
+L tell th-r >/dev/null
+check "one tell covers one send in a command: the second is refused, and the refusal spends nothing" "2 not-held" \
+  "$(verdict "$(bash_call 't3 thread send th-r a && t3 thread send th-r b')")"
+check "so one send alone has the tell" "0 " "$(verdict "$(bash_call 't3 thread send th-r a')")"
+for cmd in '\t3 thread send th-o hi' '"t3" thread send th-o hi' "'t3' thread send th-o hi" $'t3 thread send \\\nth-o hi'; do
+  check "a command word written as ${cmd//$'\n'/<newline>} is judged" "2 owner-run" "$(verdict "$(bash_call "$cmd")")"
+done
+mkdir "$tmp/glob" && : > "$tmp/glob/th-o"
+check "a send's arguments are split, never glob-expanded against the hook's directory" "2 not-held" \
+  "$(cd "$tmp/glob" && s=$root/$s verdict "$(bash_call 't3 thread send * hi')")"
+check "a redirect glued to the id is no part of it: a held thread passes" "0 " "$(verdict "$(bash_call 't3 thread send th-1>/dev/null')")"
+check "and an owner-run one is refused for the right reason" "2 owner-run" "$(verdict "$(bash_call 't3 thread send th-o>/dev/null')")"
+n=$(jq -s '[.[] | select(.event == "unjudged")] | length' "$log")
+check "a command that matches a send but yields no id is allowed" "0 " "$(verdict "$(bash_call 'echo th-o | xargs t3 thread send')")"
+check "and logged unjudged" "$((n + 1))" "$(jq -s '[.[] | select(.event == "unjudged")] | length' "$log")"
+check "an MCP send with an empty threadId is allowed and logged unjudged too" "0  $((n + 2))" \
+  "$(verdict "$(tool_call '')") $(jq -s '[.[] | select(.event == "unjudged")] | length' "$log")"
+check "an MCP id is always literal: one that begins with a dollar sign is judged" "2 not-held" "$(verdict "$(tool_call '$X')")"
+jq -c '.tells += [{thread: "th-\"x\\y", at: "not a time"}]' "$led" > "$led.n" && mv "$led.n" "$led"
+check "a send the guard cannot judge, into a quoted id, is allowed" "0 " "$(verdict "$(tool_call 'th-"x\y')")"
+check "and its unjudged line is still JSON, so the scorecard reads the log" "0" "$(jq -s . "$log" >/dev/null 2>&1; echo $?)"
+
 finish

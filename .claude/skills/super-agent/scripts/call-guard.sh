@@ -3,22 +3,27 @@
 # agent has no business in. It judges `mcp__t3-code__t3_thread_send` and
 # `mcp__t3-code__t3_thread_send_attachments` (their `threadId`) and every `t3 thread
 # send <id>` in a Bash command (chained with `;`, `&&`, `||`, `|` or a newline; `t3`
-# may carry a path, `~/.local/bin/t3`), past the flags: `--base-dir`,
-# `--output-schema` and `--log-level` take a value. A send is allowed to the
+# may carry a path, `~/.local/bin/t3`, a backslash or quotes, and a backslash before a
+# newline joins the lines), past the flags: `--base-dir`, `--output-schema` and
+# `--log-level` take a value; a redirect glued to the id is no part of it. A send is allowed to the
 # ledger's `own_thread`, to the thread of an open entry that is neither `owner_run`
 # nor `steered`, and to a thread holding an unspent `tell` (`ledger.sh tell`, the
 # owner's "Tell <thread> X"). Any other is refused, the reason one of `not-held` (no
 # open entry holds the thread), `owner-run` (the owner took it) or `owner-steered`
-# (the owner's message is the newest one from outside it). A refusal exits 2 with the
-# reason on stderr, and appends `{at, event: "refused", reason, thread, tool}` to
-# `call-guard.jsonl` beside the ledger, which the scorecard counts. A told send is
-# allowed and appends `{at, event: "told", thread, tell_at}`: a tell is spent when the
-# log holds a `told` line for it, so the hook never writes the ledger. A tell lapses an
+# (the owner's message is the newest one from outside it). Every send in a
+# command is judged before any is let through; one refused refuses the command (exit 2,
+# the reason on stderr), and appends `{at, event: "refused", reason, thread, tool}` to
+# `call-guard.jsonl` beside the ledger, which the scorecard counts. A command whose sends
+# are all allowed appends `{at, event: "told", thread, tell_at}` per told send: a tell
+# is spent when the log holds a `told` line for it, so the hook never writes the ledger,
+# and a refused command spends none. One tell covers one send, in a command or across
+# them. A tell lapses an
 # hour after it was recorded, so a deleted log revives one only inside that hour, and a
 # log that exists but cannot be read spends every tell (the send is judged without it).
-# A call it cannot judge (no `jq`, input that is no tool call, a call naming no thread
-# or one that is a variable or a substitution, an unreadable ledger) is allowed and
-# logged `unjudged`. A guard rail, not a sandbox: it reads the call's text, so a command
+# A call it cannot judge (no `jq`, input that is no tool call, a send naming no thread
+# (an MCP call with an empty `threadId`, a Bash send with no id after its flags), a Bash id
+# that is a variable or a substitution, an unreadable ledger) is allowed and logged
+# `unjudged`, its `why` fixed text. A guard rail, not a sandbox: it reads the call's text, so a command
 # that builds the send at run time gets past it, and a quoted argument that spells out
 # `t3 thread send <id>` (a commit message, a search pattern) is judged as a send, a
 # known false positive. Written by `setup.sh --write` and every handover into the super
@@ -55,10 +60,13 @@ tool=$(jq -er '.tool_name | strings' <<<"$input" 2>/dev/null) || unjudged "the h
 threads=()
 case $tool in
   mcp__t3-code__t3_thread_send|mcp__t3-code__t3_thread_send_attachments)
-    threads=("$(jq -r '.tool_input.threadId | strings' <<<"$input" 2>/dev/null)") ;;
+    id=$(jq -r '.tool_input.threadId | strings' <<<"$input" 2>/dev/null)
+    [ -z "$id" ] || threads=("$id") ;;
   Bash)
     cmd=$(jq -r '.tool_input.command | strings' <<<"$input" 2>/dev/null)
-    send_re='(^|[[:space:];&|(`"'"'"'])([^[:space:];&|()`"'"'"']*/)?t3[[:space:]]+thread[[:space:]]+send([[:space:]]+|$)'
+    cmd=${cmd//\\$'\n'/ }
+    send_re='(^|[[:space:];&|(`"'"'"'])([^[:space:];&|()`"'"'"']*/)?\\?["'"'"']?t3["'"'"']?[[:space:]]+thread[[:space:]]+send([[:space:]]+|$)'
+    set -f # the words below are split, never expanded against the hook's directory
     while [[ $cmd =~ $send_re ]]; do
       cmd=${cmd#*"${BASH_REMATCH[0]}"}
       id='' skip=false
@@ -70,9 +78,10 @@ case $tool in
           *) id=$w; break ;;
         esac
       done
-      id=${id#[\"\']} id=${id%%[\"\';&|)]*}
-      if [ -n "$id" ]; then threads+=("$id"); fi
-    done ;;
+      id=${id#[\"\']} id=${id%%[\"\';&|)<>]*}
+      if [ -n "$id" ]; then threads+=("$id"); else sa_hook_log "$log" unjudged "a send names no thread"; fi
+    done
+    set +f ;;
   *) exit 0 ;;
 esac
 [ ${#threads[@]} -gt 0 ] || { [ "$tool" = Bash ] && exit 0; unjudged "the call names no thread"; }
@@ -82,30 +91,35 @@ if [ -f "$ledger" ]; then
   [ -n "$doc" ] || unjudged "the ledger is unreadable"
 else doc='{"entries":{}}'; fi
 
+# Each told send of this command, as {thread, tell_at}: held back until the whole command is
+# allowed, and counted as spent against the later sends of the command.
+pending='[]' told_lines=()
 # judge <thread>: exit 0 allowed, 2 refused (its message on stderr)
 judge() {
   local thread=$1 told verdict at reason why
   # the told lines of the thread: none for no log, null (every tell spent) for one that cannot be read
   if [ ! -e "$log" ]; then told='[]'
   else told=$(jq -Rsc --arg t "$thread" '[split("\n")[] | fromjson? | select(.event == "told" and .thread == $t) | .tell_at]' "$log" 2>/dev/null) || told=null; fi
-  verdict=$(jq -r --arg t "$thread" --argjson told "$told" --argjson now "$(sa_now_s)" "$sa_jq_open"'
+  verdict=$(jq -r --arg t "$thread" --argjson told "$told" --argjson pend "$pending" --argjson now "$(sa_now_s)" "$sa_jq_open"'
     def secs: sub("[.][0-9]+Z$"; "Z") | fromdateiso8601;
+    (if $told == null then null else $told + [$pend[] | select(.thread == $t) | .tell_at] end) as $spent
     # the tells of this thread not yet spent by a told line, recorded in the last hour
-    ([(.tells // [])[] | select(.thread == $t) | .at] | group_by(.)
-      | map(.[0] as $a | length - ([$told[]? | select(. == $a)] | length) | select(. > 0) | [range(.) | $a]) | add // []) as $open
-    | (if $told == null then [] else [$open[] | select($now - secs <= 3600)] end) as $live
+    | ([(.tells // [])[] | select(.thread == $t) | .at] | group_by(.)
+      | map(.[0] as $a | length - ([$spent[]? | select(. == $a)] | length) | select(. > 0) | [range(.) | $a]) | add // []) as $open
+    | (if $spent == null then [] else [$open[] | select($now - secs <= 3600)] end) as $live
     | ([.entries[] | select(.thread == $t and is_open)] | first) as $e
     | if .own_thread == $t then "allow"
       elif ($live | length) > 0 then "told \($live[0])"
       elif $e == null then "refuse not-held"
       elif $e.owner_run == true then "refuse owner-run"
       elif $e.steered == true then "refuse owner-steered"
-      else "allow" end' <<<"$doc" 2>/dev/null) || { sa_hook_log "$log" unjudged "cannot judge a send into $thread"; return 0; }
+      else "allow" end' <<<"$doc" 2>/dev/null) || { sa_hook_log "$log" unjudged "cannot judge a send"; return 0; }
   at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   case $verdict in
     allow) return 0 ;;
     told*)
-      jq -cn --arg at "$at" --arg t "$thread" --arg ta "${verdict#told }" '{at: $at, event: "told", thread: $t, tell_at: $ta}' >> "$log" 2>/dev/null
+      pending=$(jq -c --arg t "$thread" --arg ta "${verdict#told }" '. + [{thread: $t, tell_at: $ta}]' <<<"$pending")
+      told_lines+=("$(jq -cn --arg at "$at" --arg t "$thread" --arg ta "${verdict#told }" '{at: $at, event: "told", thread: $t, tell_at: $ta}')")
       return 0 ;;
     refuse*)
       reason=${verdict#refuse }
@@ -118,14 +132,14 @@ judge() {
       printf 'Refused (%s): %s. Send nothing into it. Only the owner can allow one send, with "Tell <thread> X" (then run scripts/ledger.sh --ledger <ledger> tell <key or thread id> and send once); never allow it yourself.\n' "$reason" "$why" >&2
       return 2 ;;
   esac
-  sa_hook_log "$log" unjudged "cannot judge a send into $thread"
+  sa_hook_log "$log" unjudged "cannot judge a send"
 }
 
 refused=0
 for thread in "${threads[@]}"; do
-  case $thread in
-    ''|\$*|\`*|\\*|\<*) sa_hook_log "$log" unjudged "a thread id that is no literal, so not judged" ;;
-    *) judge "$thread" || refused=2 ;;
-  esac
+  # a Bash id spelled as a variable, substitution, escape or redirect is no literal; an MCP id always is
+  if [ "$tool" = Bash ] && [[ $thread == [\$\`\\\<]* ]]; then sa_hook_log "$log" unjudged "a thread id that is no literal, so not judged"
+  else judge "$thread" || refused=2; fi
 done
+if [ "$refused" = 0 ] && [ ${#told_lines[@]} -gt 0 ]; then printf '%s\n' "${told_lines[@]}" >> "$log" 2>/dev/null; fi
 exit $refused
