@@ -71,10 +71,12 @@ as landed, or the owner says it is back.
 Record one when you escalate:
 
 ```sh
-ledger.sh --ledger <ledger> need <key> --action '<verb> <ticket> <detail>' \
-  --reason <word> --why '<clause>' \
-  --option '<label>: <consequence>' --option '<label>[: <consequence>]'...
+ledger.sh --ledger <ledger> need <key> --action <question> --reason <word> \
+  --why <clause> --option <option> --option <option>...
 ```
+
+The question reads `<verb> <ticket> <detail>`, and an option
+`<label>: <consequence>` or a bare `<label>`.
 
 `<key>` is the entry (or the waiting ticket); the action is the question without
 its `?`, its second word the ticket (`name#n`, `owner/name#n` or `task:slug`),
