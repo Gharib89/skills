@@ -79,8 +79,8 @@
 #         fails is `unavailable` with a `reason` in `fleet.providers` (a `cursor` or `grok` one is `unknown`: no usage read exists), not a
 #         warning; `instances` one {instance_id, driver, quota_source, auth,
 #         auth_reason, status} per enabled instance; `home` the super agent folder,
-#         {folder, settings, written, guard, watch_guard, question_flag, observe, stale,
-#         project_id, needs}: --write rewrites the folder's generated
+#         {folder, settings, written, guard, call_guard, watch_guard, question_flag, observe,
+#         stale, project_id, needs}: --write rewrites the folder's generated
 #         `.claude/settings.local.json`, `stale` is
 #         {settings, entries, unreadable} or null, and
 #         `needs` holds one Needs you line per missing hook entry, stale

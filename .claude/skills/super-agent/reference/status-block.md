@@ -14,8 +14,11 @@ fields); never compose it or rewrite it. Pass them `--instance <id>` with this
 thread's provider instance, read once per session from `t3 thread show
 $T3CODE_THREAD_ID --json` (`.thread.providerInstanceId`); without it the block
 has no `Super agent on` line. The rows are `Needs you`, `Merged`, `Running`,
-`Waiting` and `Reviewer limit`, one line each, `Needs you` first; each ticket is
-a link, and a `Running` ticket names the provider instance it launched on. A
+`Yours`, `Waiting` and `Reviewer limit`, one line each, `Needs you` first; each
+ticket is a link, and a `Running` ticket names the provider instance it launched
+on and ends `(you spoke last)` when the owner's message is the newest from
+outside its thread. `Yours` lists the entries the owner took ("I'll take"),
+each with its pull request's state and how long it has been the owner's. A
 `task` entry (a thread that is no ticket's) reads `task:<slug> (task)`, and an
 adopted entry of either kind adds `(adopted)`. A posted block ends with one
 `Quota <instance>` line per provider instance, its weekly and 5 hour remaining

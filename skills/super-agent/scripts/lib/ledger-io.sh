@@ -19,6 +19,8 @@ sa_pid_runs() {
 # sa_read <ledger>: the ledger's JSON in $doc, an empty one for a file not yet
 # written. A file that is not JSON or has the wrong shape is refused by name,
 # since valid JSON of the wrong shape fails at its first use, far from the file.
+# An entry a 0.45.0 super agent marked `paused` reads as `owner_run` (`sa_jq_migrate`),
+# and the next write stores it so.
 # It sets a variable rather than printing, so a refusal's JSON reaches stdout
 # and not a command substitution.
 # shellcheck disable=SC2034  # doc is read by the scripts that call it
@@ -33,7 +35,8 @@ sa_read() {
     || sa_tooling "$1: every ruling needs a date that is a calendar day, YYYY-MM-DD"
   jq -e "$day"'all(.rulings[]; (.expires == null or (.expires | day)) and (.pinned | IN(null, true, false)))' "$1" >/dev/null \
     || sa_tooling "$1: a ruling may carry only an expires that is a calendar day and pinned that is true or false"
-  doc=$(cat "$1")
+  # shellcheck disable=SC2154  # sa_jq_migrate is set in _lib.sh, which sources this file
+  doc=$(jq -c "$sa_jq_migrate" "$1") || sa_tooling "$1: cannot read"
 }
 
 # sa_write <ledger> <json>: a temp file beside the ledger, then a rename, so a

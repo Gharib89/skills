@@ -43,12 +43,12 @@ refused "a sed -i on the ledger" "$(bash_call "sed -i s/a/b/ $st/ledger.json")" 
 refused "a write after a chained command" "$(bash_call "cd /tmp && echo x > $st/quota.json")" 'quota.sh --fleet'
 
 # --- the scripts' own writes, and reads, pass -----------------------------------
-passes "ledger.sh pause" "$(bash_call "bash $s/ledger.sh --ledger $st/ledger.json pause acme/widgets#7")"
+passes "ledger.sh take" "$(bash_call "bash $s/ledger.sh --ledger $st/ledger.json take acme/widgets#7")"
 passes "fleet.sh pin" "$(bash_call "$s/fleet.sh --fleet ~/.config/super-agent/fleet.json pin acme/widgets box")"
 passes "quota.sh --save" "$(bash_call "$s/quota.sh --fleet ~/.config/super-agent/fleet.json --save $st/quota.json --wake 1")"
 refused "a cp onto the ledger" "$(bash_call "cp /tmp/new.json $st/ledger.json")" 'ledger.sh'
 passes "a backup copy of the ledger" "$(bash_call "cp $st/ledger.json /tmp/ledger.bak")"
-passes "a script call chained before an unrelated rm" "$(bash_call "bash $s/ledger.sh --ledger $st/ledger.json pause x; rm /tmp/foo")"
+passes "a script call chained before an unrelated rm" "$(bash_call "bash $s/ledger.sh --ledger $st/ledger.json take x; rm /tmp/foo")"
 passes "a ledger.sh ruling whose text names rm and mv" "$(bash_call "bash $s/ledger.sh --ledger $st/ledger.json ruling 'may rm build output' --allow 'rm -rf build'; bash $s/ledger.sh --ledger $st/ledger.json need k --action 'mv the fixture'")"
 refused "a mutating command after an env assignment and sudo" "$(bash_call "FOO=1 sudo rm $st/ledger.json")" 'ledger.sh'
 passes "a read through jq" "$(bash_call "jq .entries $st/ledger.json > /tmp/out.json")"

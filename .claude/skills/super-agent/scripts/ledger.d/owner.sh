@@ -1,12 +1,12 @@
 # The owner's needs, a repo's reviewer limit and the owner's overrides on an entry: the
-# arms of `ledger` that `need`, `pushed`, `unneed`, `limit`, `unlimit`, `pause`,
-# `unpause`, `drop`, `reset-stalls` and `self` take, sourced by it. They read the
+# arms of `ledger` that `need`, `pushed`, `unneed`, `limit`, `unlimit`, `take`,
+# `tell`, `drop`, `reset-stalls` and `self` take, sourced by it. They read the
 # caller's $usage, $ledger and $doc, which `ledger.sh` sets.
 
-# shellcheck disable=SC2154  # usage, ledger, sa_jq_norm and sa_jq_open come from ledger.sh and _lib.sh
+# shellcheck disable=SC2154  # usage, ledger, sa_jq_norm, sa_jq_open and sa_jq_tell come from ledger.sh and _lib.sh
 
 ledger_owner() {
-  local cmd=$1 key action reason="" row had repo reviewer now stalls ruling
+  local cmd=$1 key thread action reason="" row had repo reviewer now now_s stalls ruling
   shift
   case $cmd in
   self)
@@ -14,24 +14,37 @@ ledger_owner() {
     [ $# -le 1 ] && [ -n "$key" ] || sa_tooling "$usage"
     sa_update "$ledger" '.own_thread = $t' --arg t "$key"
     jq -cn --arg t "$key" '{own_thread: $t}' ;;
-  pause|unpause|drop|reset-stalls)
+  tell)
+    [ $# -eq 1 ] || sa_tooling "$usage"
+    sa_lock "$ledger"; sa_read "$ledger"
+    key=$(sa_key "$doc" "$1")
+    # a key names its entry's thread; anything else is a thread id the ledger need not hold
+    thread=$(jq -r --arg k "$key" '.entries[$k].thread // empty' <<<"$doc")
+    if [ -n "$thread" ]; then ruling="Owner tell: one send into $key's thread $thread."
+    else
+      case $1 in *#*|task:*) sa_fail "$1 is not in the ledger, or has no thread yet" ;; esac
+      thread=$1 ruling="Owner tell: one send into thread $thread."
+    fi
+    now_s=$(sa_now_s); now=$(jq -rn --argjson s "$now_s" '$s | todate')
+    ruling=$(sa_ruling_row "$ruling")
+    # the tells that lapsed (`tell_live`, the call guard's own rule) are dropped, so the list
+    # holds the last hour's tells alone
+    sa_update "$ledger" "$sa_jq_tell"'.tells = ([(.tells // [])[] | select(.at | tell_live($s))]
+      + [{thread: $t, at: $now}]) | .rulings += [$r]' --arg t "$thread" --arg now "$now" --argjson s "$now_s" --argjson r "$ruling"
+    jq -cn --arg t "$thread" --arg now "$now" --argjson r "$ruling" '{thread: $t, at: $now, ruling: $r}' ;;
+  take|drop|reset-stalls)
     [ $# -eq 1 ] || sa_tooling "$usage"
     sa_lock "$ledger"; sa_read "$ledger"
     key=$(sa_key "$doc" "$1")
     jq -e --arg k "$key" '.entries[$k]' <<<"$doc" >/dev/null || sa_fail "$1 is not in the ledger"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     case $cmd in
-    pause)
-      jq -e --arg k "$key" "$sa_jq_open"'.entries[$k] | is_open' <<<"$doc" >/dev/null || sa_fail "$key has ended: nothing to pause"
-      sa_update "$ledger" '.entries[$k] |= (.paused = true | .updated_at = $now)' --arg k "$key" --arg now "$now"
-      jq -cn --arg k "$key" '{key: $k, paused: true}' ;;
-    unpause)
-      jq -e --arg k "$key" "$sa_jq_open"'.entries[$k] | .paused == true and is_open' <<<"$doc" >/dev/null || sa_fail "$key is not a paused open entry: nothing to give back"
-      # watching restarts from the thread as it is now: `resumed` has the next
-      # reconcile take its run count as already judged
-      sa_update "$ledger" '.entries[$k] |= (.paused = false | .observed = null | .rest_since = null | .resumed = true | .updated_at = $now)' \
-        --arg k "$key" --arg now "$now"
-      jq -cn --arg k "$key" '{key: $k, paused: false}' ;;
+    take)
+      jq -e --arg k "$key" "$sa_jq_open"'.entries[$k] | is_open' <<<"$doc" >/dev/null || sa_fail "$key has ended: nothing to take"
+      # the owner's now: its open needs are cleared, since nothing is the super agent's to ask about
+      sa_update "$ledger" "$sa_jq_norm"'.entries[$k] |= (.owner_run = true | .owner_run_since = $now | .owner_run_reminded = false | .steered = false | .updated_at = $now)
+        | .needs = ((.needs // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' --arg k "$key" --arg now "$now"
+      jq -cn --arg k "$key" '{key: $k, owner_run: true}' ;;
     drop)
       sa_update "$ledger" 'del(.entries[$k])' --arg k "$key"
       jq -cn --arg k "$key" '{key: $k, removed: true}' ;;

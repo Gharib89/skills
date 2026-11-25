@@ -112,6 +112,21 @@ for log in watch-guard.jsonl wake-timer.jsonl question-flag.jsonl; do
   rm -f "$dir/$log"
 done
 
+# --- the call guard's log is a count of refusals, never a guard that blocks nothing (#1381) --------
+printf '%s\n' "{\"at\":\"${day}T09:00:00Z\",\"event\":\"refused\",\"reason\":\"owner-run\",\"thread\":\"t1\",\"tool\":\"Bash\"}" \
+  "{\"at\":\"${day}T09:30:00Z\",\"event\":\"refused\",\"reason\":\"not-held\",\"thread\":\"t2\",\"tool\":\"Bash\"}" \
+  "{\"at\":\"${day}T10:00:00Z\",\"event\":\"told\",\"thread\":\"t1\",\"tell_at\":\"${day}T09:45:00Z\"}" \
+  '{"at":"2026-11-18T09:00:00Z","event":"refused","reason":"owner-run","thread":"t1","tool":"Bash"}' > "$dir/call-guard.jsonl"
+out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9); rc=$?
+check "call_guard: the day's refusals and told sends, from call-guard.jsonl" "0 {\"refused\":2,\"told\":1}" "$rc $(jq -c .row.call_guard <<<"$out")"
+check "and the log is not read as a guard's blocks and passes" null "$(jq -c .row.guards <<<"$out")"
+rm -f "$dir/call-guard.jsonl"
+check "no call-guard log: call_guard is absent in the row" null "$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 | jq -c .row.call_guard)"
+printf '{"at":"x"}\n{"at":' > "$dir/call-guard.jsonl"
+check "a call-guard.jsonl with a malformed line is refused by name, exit 2" "2 $dir/call-guard.jsonl: not JSON lines" \
+  "$(out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 2>/dev/null); echo "$? $(jq -r .error <<<"$out")")"
+rm -f "$dir/call-guard.jsonl"
+
 # --- refusals and edges ----------------------------------------------------------
 for f in --day --week; do
   check "$x: $f with no value answers its usage line, exit 2" 2 "$(timeout 5 bash "$sc" row --ledger "$led" "$f" >/dev/null 2>&1; echo $?)"
@@ -242,5 +257,12 @@ check "a target that is no {max} is refused, exit 2" 2 \
 for d in 02 03 04 05 06 07 08; do rowfor "2026-11-$d" 0 10; done > "$card"
 check "--week reviews the week given" '{"from":"2026-11-02","to":"2026-11-08"} 7' \
   "$(V --week 2026-11-02 | jq -r '"\(.week | tojson) \(.days)"')"
+
+# the review sums a week's refusals and raises no row for them
+week 0 | jq -c 'if .day == "2026-11-10" then .call_guard = {refused: 2, told: 0} elif .day == "2026-11-13" then .call_guard = {refused: 3, told: 1} else .call_guard = {refused: 0, told: 0} end' > "$card"
+check "the review counts the week's call guard refusals" '{"refused":5}' "$(V | jq -c .call_guard)"
+check "and raises no row for them" '[]' "$(V | jq -c .needs)"
+week 0 | jq -c 'del(.call_guard)' > "$card"
+check "a week of rows with no call_guard counts 0" '{"refused":0}' "$(V | jq -c .call_guard)"
 
 finish

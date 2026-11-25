@@ -104,8 +104,10 @@ claim, route and place, and takes `t3_thread_launch` directly; step 2 then
 records it with `launch.sh record --ledger <ledger> --task <slug> --thread <id>`
 (`--branch` and `--repo` when it opens a PR you should wake on; on a linked
 machine `--machine <key>` with `--environment`, and `--worktree`). A thread the
-owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
-<slug>`, or `--repo` and `--number` for a ticket's thread), then the same steps.
+owner asks you to watch that you did not launch ("Watch <thread>") is
+`ledger.sh --ledger <ledger> adopt --read <file>` of its `t3_thread_read`, which
+is step 2's record; then steps 5 and 3
+([handing over](reference/handing-over.md)).
 
 1. **Launch.** The owner names a ticket as `<owner/name>#<n>`. Run
    `scripts/launch.sh <owner/name>#<n> --fleet <fleet> --ledger <ledger> --quota
@@ -171,13 +173,14 @@ bound schedule wakes you on time (all measured 2026-11-06). A block from the
 **watch guard** (a Stop hook) is your own: run the command it names,
 then end the turn. On a `Wake timer:` line, run step 4's pulse.
 
-**Remote entries** (an `environment_id`): on each wake, before reconcile or
-pulse, save their `t3_thread_read`, convert each with `reply.sh` and pass
-`--remote` ([remote](reference/remote.md)); a pulse without it reads their
-threads as `thread-unreadable`.
-
-**The owner steps into a supervised thread**: its entry stays in the ledger and
-watched ([step-ins](reference/step-ins.md#the-owner-steps-in)).
+**Thread reads**: on each wake, before reconcile or pulse, save each open
+entry's `t3_thread_read` (not an owner-run one's; small: a low `limit`,
+`runLimit: 1`) and convert each with `reply.sh --owner-only --dir <dir>`, one
+directory for all. Pass it as `--reads <dir>`, which is how a steered entry is
+found ([handing over](reference/handing-over.md#owner-steered)). A remote entry
+(an `environment_id`) takes the full `reply.sh`, without `--owner-only`, into
+its `--remote` directory ([remote](reference/remote.md)): a pulse without it
+reads its thread as `thread-unreadable`.
 
 Wait only through the watcher: a `sleep` or a poll in your own turn spends
 context on nothing. Read a thread's messages only in small slices
@@ -236,7 +239,8 @@ The other lists report:
 Each override the owner gives has a flag; never edit the ledger, fleet or quota
 file by hand to stand in for one (a hook refuses it).
 
-Each `<thread>` below is the entry's ledger key.
+Each `<thread>` below is the entry's ledger key; for "Watch" and "Tell" it is
+any thread the owner names, by its id.
 
 - "Go past the quota": `launch.sh ... --owner-go`. When no instance passes the
   5 hour floor and the weekly reserve, route skips both, and `record` writes a
@@ -249,15 +253,10 @@ Each `<thread>` below is the entry's ledger key.
   and it leaves only on `drop`. A grill thread you record as a task takes
   `--interactive` the same way: `launch.sh record --task <slug> --thread <id>
   --ledger <ledger> --interactive`.
-- "Take <thread>": `ledger.sh --ledger <ledger> pause <key>`. The entry is
-  **paused**: it keeps its slot, gets no step-in, and is read from GitHub alone;
-  a ticket's settles when its PR merges or its issue closes, with no cleanup
-  (the thread and worktree are the owner's).
-- "Give back <thread>": `unpause <key>`, then reconcile: watching restarts from
-  the thread's state now.
-- "Drop <thread>": `drop <key>` removes the entry, leaving its claim and
-  worktree to the owner. An interactive task leaves no other way, and a paused
-  task stays until it is dropped or given back.
+- "Watch <thread>", "I'll take <thread>", "Drop <thread>", "Tell <thread> X":
+  echo the phrase in one line, then run it
+  ([handing over](reference/handing-over.md)). The call guard refuses a send
+  into a thread the ledger does not hold or the owner runs or steers.
 - "Reset its stalls": `reset-stalls <key>`, which records a ruling.
 
 ## Escalation

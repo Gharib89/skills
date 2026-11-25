@@ -19,6 +19,10 @@ sa_hook_entry() {
 }
 # The state guard's PreToolUse entry and the watch guard's Stop entry.
 sa_guard_entry() { sa_hook_entry guard.sh 'Edit|Write|MultiEdit|NotebookEdit|Bash'; }
+# The call guard's PreToolUse entry. Its exit 2 is the refusal, so, like the state
+# guard's, it is not swallowed: a send into a thread that is not the super agent's
+# is what it exists to stop.
+sa_call_guard_entry() { sa_hook_entry call-guard.sh 'mcp__t3-code__t3_thread_send|mcp__t3-code__t3_thread_send_attachments|Bash'; }
 # A Stop hook's exit 2 blocks the stop, so a usage error in the watch guard is swallowed.
 sa_watch_guard_entry() { sa_hook_entry watch-guard.sh '' ' || true'; }
 # The owner-question hooks: the question flag (UserPromptSubmit) and the observe hook
@@ -78,29 +82,32 @@ sa_guard_stale() {
 }
 
 # sa_home <write: true|false> [<projects file>]: the folder's JSON in $home,
-# {folder, settings, written, guard, watch_guard, question_flag, observe, stale, project_id,
-# needs}. With write true the generated settings are rewritten whole (every hook the super
-# agent owns: the state guard, the watch guard, the question flag and the observe hook), so
-# a run reproduces the same file and a hand edit there is lost. `guard`, `watch_guard`,
-# `question_flag` and `observe` say whether the file holds this copy's entry for each. The projects file is
+# {folder, settings, written, guard, call_guard, watch_guard, question_flag, observe, stale,
+# project_id, needs}. With write true the generated settings are rewritten whole (every hook
+# the super agent owns: the state guard, the call guard, the watch guard, the question flag
+# and the observe hook), so a run reproduces the same file and a hand edit there is lost.
+# `guard`, `call_guard`, `watch_guard`, `question_flag` and `observe` say whether the file
+# holds this copy's entry for each. The projects file is
 # every `projects` row of `t3_project_list` (its answer, or the rows of all its pages
 # as one array): `project_id` is the live project whose workspace is the folder, null
 # when none is. `needs` holds one `<key>: <action>` line per thing the owner fixes: a
-# missing hook entry (any of the four), a wake timer systemctl does not report running, a
+# missing hook entry (any of the five), a wake timer systemctl does not report running, a
 # stale or unreadable user-settings entry, a missing project.
 # shellcheck disable=SC2034  # home is read by the scripts that call it
 sa_home() {
-  local dir settings entry wentry qentry oentry written=false has whas qhas ohas stale pid=null needs='[]'
+  local dir settings entry wentry qentry oentry centry written=false has whas qhas ohas chas stale pid=null needs='[]'
   dir=$(sa_home_dir) settings=$(sa_home_settings) entry=$(sa_guard_entry) wentry=$(sa_watch_guard_entry)
-  qentry=$(sa_question_flag_entry) oentry=$(sa_observe_entry)
+  qentry=$(sa_question_flag_entry) oentry=$(sa_observe_entry) centry=$(sa_call_guard_entry)
   # The bare write exits on a failure, so it runs in a subshell: a failure is a need,
   # its reason left on stderr.
-  if [ "$1" = true ] && (sa_write "$settings" "$(jq -cn --argjson e "$entry" --argjson w "$wentry" --argjson q "$qentry" --argjson o "$oentry" \
-    '{hooks: {PreToolUse: [$e, $o], UserPromptSubmit: [$q], Stop: [$w]}}')") >/dev/null; then written=true; fi
+  if [ "$1" = true ] && (sa_write "$settings" "$(jq -cn --argjson e "$entry" --argjson w "$wentry" --argjson q "$qentry" --argjson o "$oentry" --argjson c "$centry" \
+    '{hooks: {PreToolUse: [$e, $o, $c], UserPromptSubmit: [$q], Stop: [$w]}}')") >/dev/null; then written=true; fi
   has=$(jq --argjson e "$entry" "$sa_jq_hook_has"'hook_has("PreToolUse"; $e)' "$settings" 2>/dev/null) || has=false
   whas=$(jq --argjson e "$wentry" "$sa_jq_hook_has"'hook_has("Stop"; $e)' "$settings" 2>/dev/null) || whas=false
   qhas=$(jq --argjson e "$qentry" "$sa_jq_hook_has"'hook_has("UserPromptSubmit"; $e)' "$settings" 2>/dev/null) || qhas=false
   ohas=$(jq --argjson e "$oentry" "$sa_jq_hook_has"'hook_has("PreToolUse"; $e)' "$settings" 2>/dev/null) || ohas=false
+  chas=$(jq --argjson e "$centry" "$sa_jq_hook_has"'hook_has("PreToolUse"; $e)' "$settings" 2>/dev/null) || chas=false
+  [ "$chas" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the call guard\u0027s PreToolUse entry is missing from \($s): run scripts/setup.sh --write"]' <<<"$needs")
   [ "$qhas" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the question flag\u0027s UserPromptSubmit hook is missing from \($s): run scripts/setup.sh --write"]' <<<"$needs")
   [ "$ohas" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the observe hook\u0027s PreToolUse entry is missing from \($s): run scripts/setup.sh --write"]' <<<"$needs")
   [ "$whas" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the watch guard\u0027s Stop hook is missing from \($s): run scripts/setup.sh --write"]' <<<"$needs")
@@ -118,6 +125,6 @@ sa_home() {
       and .deletedAt == null and .archivedAt == null) | .id) // null' "$2") || sa_tooling "$2: a project row cannot be read"
     [ "$pid" != null ] || needs=$(jq -c --arg d "$dir" '. + ["Super agent folder: no T3 project has \($d) as its workspace: create one there once, in full access, and the next handover moves the super agent into it"]' <<<"$needs")
   fi
-  home=$(jq -cn --arg d "$dir" --arg s "$settings" --argjson w "$written" --argjson g "$has" --argjson wg "$whas" --argjson qf "$qhas" --argjson ob "$ohas" --argjson st "$stale" --argjson p "$pid" --argjson n "$needs" \
-    '{folder: $d, settings: $s, written: $w, guard: $g, watch_guard: $wg, question_flag: $qf, observe: $ob, stale: $st, project_id: $p, needs: $n}')
+  home=$(jq -cn --arg d "$dir" --arg s "$settings" --argjson w "$written" --argjson g "$has" --argjson cg "$chas" --argjson wg "$whas" --argjson qf "$qhas" --argjson ob "$ohas" --argjson st "$stale" --argjson p "$pid" --argjson n "$needs" \
+    '{folder: $d, settings: $s, written: $w, guard: $g, call_guard: $cg, watch_guard: $wg, question_flag: $qf, observe: $ob, stale: $st, project_id: $p, needs: $n}')
 }

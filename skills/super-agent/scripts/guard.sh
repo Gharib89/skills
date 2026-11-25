@@ -76,7 +76,7 @@ state='super-agent/(ledger|fleet|quota[^[:space:]/"'"'"']*)\.json'
 refuse() { # <protected file text>
   local how
   case $1 in
-    *super-agent/ledger.json*) how='scripts/ledger.sh --ledger <ledger> <subcommand> (pause, unpause, drop, ...; see its --help)' ;;
+    *super-agent/ledger.json*) how='scripts/ledger.sh --ledger <ledger> <subcommand> (take, tell, drop, ...; see its --help)' ;;
     *super-agent/fleet.json*) how='scripts/fleet.sh --fleet <fleet> pin|unpin|slots, or scripts/setup.sh --write' ;;
     *) how='scripts/quota.sh --fleet <fleet> --save <file> --wake <id>' ;;
   esac

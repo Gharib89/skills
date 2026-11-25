@@ -11,6 +11,10 @@
 #          [--model <id>] [--effort <level>] [--area <path>]... [--interactive]
 #   ledger --ledger <file> add --launching <the add flags, less --thread and --worktree>
 #   ledger --ledger <file> adopt <the same flags as add>
+#   ledger --ledger <file> adopt --read <t3_thread_read file> [--thread <id>] [--task <slug>] [--repo <owner/name>]
+#          [--number <n>] [--worktree <path>] [--branch <name>] [--kind ship|triage] [--machine <name>]
+#          [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]...
+#          [--interactive]
 #   ledger --ledger <file> get <key>
 #   ledger --ledger <file> list [--open]
 #   ledger --ledger <file> set <key> <field> <json>
@@ -29,8 +33,8 @@
 #   ledger --ledger <file> unneed <key>
 #   ledger --ledger <file> limit <owner/name> --reviewer <name>
 #   ledger --ledger <file> unlimit <owner/name>
-#   ledger --ledger <file> pause <key>
-#   ledger --ledger <file> unpause <key>
+#   ledger --ledger <file> take <key>
+#   ledger --ledger <file> tell <key or thread id>
 #   ledger --ledger <file> drop <key>
 #   ledger --ledger <file> reset-stalls <key>
 #   ledger --ledger <file> self [<thread id>]
@@ -91,13 +95,30 @@
 # watcher and `reconcile` treat it like a launched one. `--interactive` marks a task
 # whose skill waits on the owner by design (a grill): `reconcile` counts it no stall
 # and does not settle it on its rest, so it leaves on `drop`.
-# `pause` is the owner taking an open entry's thread ("take <key>"): a `paused` entry
-# keeps its stage, so it still takes its machine's slot, and `reconcile` and `watch`
-# count it no stall and raise no step-in for it; a paused ticket entry settles on its
-# PR merging or its issue closing, read from GitHub alone, with no cleanup owed, and a
-# paused task stays until `drop` or `unpause`. `unpause` gives a paused entry back: the
-# mark and the `observed` baseline go, so the next `reconcile` watches from the
-# thread's state then, its runs since the pause counting no stall. `drop` removes an
+# `take` is the owner taking an open entry's thread ("I'll take <thread>"): the entry
+# is `owner_run` and its open needs are cleared. It keeps its stage, so it still takes
+# its machine's slot, and `reconcile` and `watch` count it no stall and raise no step-in
+# for it; a ticket's entry settles on its PR merging or its issue closing, read from
+# GitHub alone, with no cleanup owed, and a task's stays until `drop` or a second
+# `adopt` of its thread, which ends the mark: it and the `observed` baseline go, so the
+# next `reconcile` watches from the thread's state then, its runs since the take
+# counting no stall. A ledger from 0.45.0 holds `paused: true` for `owner_run` and reads
+# as `owner_run`. `reconcile` lists one `owner-run` escalate row after 3 days.
+# `tell` is the owner's "Tell <thread> X": one send into that entry's thread (or a
+# thread id the ledger need not hold) gets past the call guard (`call-guard.sh`), and a
+# dated ruling records it; recording one drops the tells past their hour. `adopt --read` is "Watch <thread>": the thread's first page,
+# saved from `t3_thread_read` with `afterPosition: -1`, fills the entry (worktree,
+# branch, and from the first user message `/ship-run <n>` or `/triage <n>` the kind and
+# number, or `--number` for a ticket's thread whose first message is neither (a `--number` the message
+# does not name is refused, and the message's kind wins over `--kind`); `--task` for any
+# other thread; the repo from `--repo`, else a github.com origin remote of the worktree;
+# the first `reconcile` finds the PR by the branch) and starts its clock then:
+# `launched_at` and `held_since` are now. An open entry that already holds the thread
+# is the entry returned (`existing` true), no longer owner-run or steered, its `owner-steered`
+# need cleared (a `--task`, `--number` or ticket naming another key is refused, exit 1, naming
+# the holder and the `adopt --thread` step that works); a ship
+# adoption with no claim comment of this super agent's gets one (`claim.sh`, on the
+# entry's `--machine`), its status in the answer's `claim`. `drop` removes an
 # entry of any stage. `reset-stalls` zeroes an open entry's stall count and restarts
 # its stall window, and records a dated ruling naming the key and the count it replaced.
 # A `need` is something only the owner can settle: one row in `needs` per key
@@ -115,7 +136,8 @@
 # the row is open. `unlimit` clears it once a later run records that reviewer as
 # landed, or the owner says so.
 #
-# stdout: `add` {ledger, key, entry}; `get` the entry; `list` {ledger, entries,
+# stdout: `add` {ledger, key, entry}, `adopt` also {existing: true} for a thread an entry already held
+#         and {claim} for a ship adoption; `get` the entry; `list` {ledger, entries,
 #         rulings}, `entries` an array of entries (`--open` leaves out settled
 #         and closed ones); `set` {key, field, value}; `rethread` {ledger, key, entry}; `ruling` {ruling:
 #         {date, text, allow, repo, expires, pinned}}; `pin` {pinned:
@@ -125,20 +147,24 @@
 #         {waiting: {key, repo, number, reason, since, order, after}}; `unwait` {key,
 #         removed}; `need` {need: {key, action, since, pushed}}; `pushed`
 #         {need}; `unneed` {key, removed}; `limit` {limit: {repo, reviewer,
-#         since}}; `unlimit` {repo, removed}; `pause` and `unpause` {key, paused};
+#         since}}; `unlimit` {repo, removed}; `take` {key, owner_run}; `tell` {thread, at, ruling};
 #         `drop` {key, removed}; `reset-stalls` {key, stalls, ruling}; `self` {own_thread};
 #         `list` also holds `waiting`,
 #         `needs` and `review_limits`; any failure {error}
-# exit: 0 ok · 1 the key is already in, or not in, the ledger, `stage`, an
-#       identity field, an entry that ended (`pause`, `reset-stalls`) or is not
-#       paused and open (`unpause`), a ruling that `pin` or a migration row names
+# exit: 0 ok · 1 the key is already in, or not in, the ledger, a thread an entry holds
+#       under another key (`adopt`), `stage`, an
+#       identity field, an entry that ended (`take`, `reset-stalls`), a key `tell` does not
+#       know, a ruling that `pin` or a migration row names
 #       but the ledger lacks, or a second `migrate-rulings` · 2 usage, a value
-#       that is not JSON, an unreadable or wrong-shaped ledger, or a write that
-#       failed
+#       that is not JSON, an unreadable or wrong-shaped ledger, a write that failed, or
+#       an `adopt --read` whose file is no `t3_thread_read` result or not the thread's first
+#       page, whose first message is no ticket call (with no `--task` or `--number`) or names
+#       another ticket than `--number`, whose
+#       repo is unknown, or whose claim failed (the own thread unknown: run `self` first)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add|adopt (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | add --launching <the add flags, less --thread and --worktree> | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | pause <key> | unpause <key> | drop <key> | reset-stalls <key> | self [<thread id>]'
+usage='usage: ledger --ledger <file> add (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | adopt (--read <t3_thread_read file> | --thread <id>) [--repo <owner/name>] [--number <n>] [--worktree <path>] [--branch <name>] [--kind ship|triage] [--task <slug>] [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | add --launching <the add flags, less --thread and --worktree> | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> [--reason <word>] | pushed <key> | unneed <key> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | take <key> | tell <key or thread id> | drop <key> | reset-stalls <key> | self [<thread id>]'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2
@@ -146,66 +172,7 @@ cmd=${1:-}; [ $# -gt 0 ] && shift
 
 case $cmd in
   add|adopt)
-    repo='' number='' thread='' worktree='' branch='' machine='' environment='' instance='' model='' effort='' areas='[]' kind='' task='' adopted=false
-    interactive=false launching=false
-    [ "$cmd" != adopt ] || adopted=true
-    while [ $# -gt 0 ]; do
-      case $1 in
-        --interactive) interactive=true; shift; continue ;;
-        --launching) [ "$cmd" = add ] || sa_tooling "$usage"; launching=true; shift; continue ;;
-        --area) sa_flag_value "$usage" "${2:-}"; areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas") ;;
-        --repo) sa_flag_value "$usage" "${2:-}"; repo=$2 ;;
-        --number) sa_flag_value "$usage" "${2:-}"; number=$2 ;;
-        --thread) sa_flag_value "$usage" "${2:-}"; thread=$2 ;;
-        --worktree) sa_flag_value "$usage" "${2:-}"; worktree=$2 ;;
-        --branch) sa_flag_value "$usage" "${2:-}"; branch=$2 ;;
-        --machine) sa_flag_value "$usage" "${2:-}"; machine=$2 ;;
-        --environment) sa_flag_value "$usage" "${2:-}"; environment=$2 ;;
-        --instance) sa_flag_value "$usage" "${2:-}"; instance=$2 ;;
-        --kind) sa_flag_value "$usage" "${2:-}"; case $2 in ship|triage) kind=$2 ;; *) sa_tooling "$usage" ;; esac ;;
-        --task) sa_flag_value "$usage" "${2:-}"; case $2 in *[!A-Za-z0-9._-]*) sa_tooling "$usage" ;; esac; task=$2 ;;
-        --model) sa_flag_value "$usage" "${2:-}"; model=$2 ;;
-        --effort) sa_flag_value "$usage" "${2:-}"; effort=$2 ;;
-        *) sa_tooling "$usage" ;;
-      esac
-      shift 2
-    done
-    # a launching entry has no thread yet, and every other has one
-    if $launching; then [ -z "$thread$worktree" ] || sa_tooling "$usage"; else [ -n "$thread" ] || sa_tooling "$usage"; fi
-    # a task on a linked machine counts against that machine's slots, so it names it
-    [ -z "$task" ] || [ -z "$environment" ] || [ -n "$machine" ] || sa_tooling "$usage"
-    machine=${machine:-local}
-    if [ -n "$task" ]; then
-      # a task is no ticket: no number, and --kind would name an owner skill it does not run
-      [ -z "$kind$number" ] || sa_tooling "$usage"
-      kind=task key="task:$task"
-    else
-      # only a task runs a skill that waits on the owner
-      ! $interactive || sa_tooling "$usage"
-      kind=${kind:-ship}
-      case $number in ''|*[!0-9]*) sa_tooling "$usage" ;; esac
-      [ -n "$repo" ] && { [ -n "$worktree" ] || $launching; } && [ -n "$branch" ] || sa_tooling "$usage"
-      key="$repo#$number"
-    fi
-    sa_lock "$ledger"; sa_read "$ledger"
-    old=$(sa_key "$doc" "$key")
-    jq -e --arg k "$old" '.entries[$k] and (.entries[$k].stage | IN("settled", "closed", "launching") | not)' <<<"$doc" >/dev/null && sa_fail "$key is already in the ledger"
-    now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "${number:-null}" --arg t "$thread" \
-      --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg env "$environment" --arg inst "$instance" --arg model "$model" \
-      --arg effort "$effort" --arg now "$now" --argjson areas "$areas" --arg kind "$kind" --argjson adopted "$adopted" --arg task "$task" --argjson ia "$interactive" \
-      --argjson launching "$launching" \
-      '{key: $k, repo: (if $repo == "" then null else $repo end), number: (if $task == "" then $n else null end),
-        thread: (if $launching then null else $t end), worktree: (if $launching then null else $w end), branch: $b, machine: $m, areas: $areas, kind: $kind, adopted: $adopted,
-        environment_id: (if $env == "" then null else $env end),
-        instance_id: (if $inst == "" then null else $inst end),
-        model: (if $model == "" then null else $model end),
-        effort: (if $effort == "" then null else $effort end),
-        stage: (if $launching then "launching" else "launched" end), stalls: 0, observed: null, launched_at: $now, updated_at: $now}
-        + (if $ia then {interactive: true} else {} end)')
-    sa_update "$ledger" "$sa_jq_norm"'del(.entries[$old]) | .entries[$k] = $e | .waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' \
-      --arg k "$key" --arg old "$old" --argjson e "$entry"
-    jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$entry" '{ledger: $l, key: $k, entry: $e}' ;;
+    source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/add.sh" && ledger_add "$@" ;;
   get)
     [ $# -eq 1 ] || sa_tooling "$usage"
     sa_read "$ledger"
@@ -239,7 +206,7 @@ case $cmd in
     source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/waiting.sh" && ledger_waiting "$cmd" "$@" ;;
   ruling|allowed|scoped|pin|migrate-rulings)
     source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/rulings.sh" && ledger_rulings "$cmd" "$@" ;;
-  need|pushed|unneed|limit|unlimit|pause|unpause|drop|reset-stalls|self)
+  need|pushed|unneed|limit|unlimit|take|tell|drop|reset-stalls|self)
     source "$(dirname "${BASH_SOURCE[0]}")/ledger.d/owner.sh" && ledger_owner "$cmd" "$@" ;;
   *) sa_tooling "$usage" ;;
 esac

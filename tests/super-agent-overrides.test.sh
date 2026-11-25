@@ -2,8 +2,9 @@
 # super-agent's owner overrides (#1279), driven through the command lines over the
 # fake `t3` and `gh` (tests/super-agent-fake.sh): `launch --owner-go` past the floors
 # and the reserve, `launch --skill <name>` and the interactive entry it records, the
-# ledger's `pause`, `unpause`, `drop` and `reset-stalls`, and what reconcile, watch,
-# placement and the status block do with a paused entry.
+# ledger's `take`, `drop` and `reset-stalls`, the second `adopt` that watches an owner-run
+# entry again, and what reconcile, watch, placement and the status block do with an
+# owner-run entry (#1381).
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -98,67 +99,76 @@ out=$(bash "$s/launch.sh" record --task grill-plan --thread th-gp --ledger "$led
 check "record --task --interactive records an interactive task" "0 true" "$rc $(LG get task:grill-plan | jq -r .interactive)"
 check "a ticket entry cannot be interactive" 2 "$(LG add --repo $repo --number 40 --thread th-40 --worktree /wt/40 --branch b --machine home --interactive >/dev/null 2>&1; echo $?)"
 
-# --- a paused entry: no stall, no nudge row, still a slot --------------------------------
+# rewatch <number> <thread> <worktree> <branch>: "Watch <thread>" of a thread the ledger holds
+rewatch() {
+  jq -cn --arg n "$1" --arg t "$2" --arg w "$3" --arg b "$4" '{thread: {threadId: $t, worktreePath: $w, branch: $b},
+    items: [{position: 1, type: "user_message", createdBy: "agent", text: "/ship-run \($n)", updatedAt: "2026-11-01T10:00:00.000Z"}], hasMore: false}' > "$tmp/watch.json"
+  LG adopt --read "$tmp/watch.json" --repo $repo
+}
+
+# --- an owner-run entry: no stall, no nudge row, still a slot ------------------------------
 reset; mkdir -p "$SA_FAKE/threads"
 ship_entry 20 th-20
 R >/dev/null
-out=$(LG pause $repo#20); rc=$?
-check "pause marks the entry" "0 true" "$rc $(LG get $repo#20 | jq -r .paused)"
-check "pause of a key not in the ledger exits 1" 1 "$(LG pause $repo#99 >/dev/null 2>&1; echo $?)"
+LG need $repo#20 --action "ask about the run" >/dev/null
+out=$(LG take $repo#20); rc=$?
+check "take marks the entry" "0 true" "$rc $(LG get $repo#20 | jq -r .owner_run)"
+check "and clears its open needs" 0 "$(LG list | jq '[.needs[] | select(.key == "acme/widgets#20")] | length')"
+check "take of a key not in the ledger exits 1" 1 "$(LG take $repo#99 >/dev/null 2>&1; echo $?)"
 LG set $repo#20 rest_since '"2020-01-01T00:00:00Z"' >/dev/null
 sa_thread th-20 idle 4 1 /wt/20 feat/x-20
 out=$(R)
-check "a paused entry counts no stall and holds no nudge or escalate row" "0 0 0 0" \
+check "an owner-run entry counts no stall and holds no nudge or escalate row" "0 0 0 0" \
   "$(jq -r '[(.stalled | length), (.escalate | length), (.at_rest | length), (.settled | length)] | map(tostring) | join(" ")' <<<"$out")"
 check "its count stays 0" 0 "$(LG get $repo#20 | jq -r .stalls)"
 out=$(bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 0 --timeout 2 --stall-window 1)
 check "the watcher wakes on nothing for it" timeout "$(jq -r .event <<<"$out")"
 out=$(bash "$s/status.sh" --ledger "$led" --digest)
-check "the Running row marks it paused" 1 "$(jq -r .block <<<"$out" | grep -c 'widgets#20.*(paused)')"
+check "the Yours row lists it, and the Running row does not" "1 0" "$(jq -r .block <<<"$out" | grep -c '^Yours (1): .*widgets#20') $(jq -r .block <<<"$out" | grep '^Running' | grep -c 'widgets#20')"
 jq '.machines.home.slots = 1 | .machines.home.reserve = 0' "$fleet" > "$tmp/fleet1.json"
 issue 21 "widgets: next" ready-for-agent S
 out=$(bash "$s/launch.sh" "$repo#21" --fleet "$tmp/fleet1.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --exclude box)
 check "it still takes its machine's slot" waiting "$(jq -r .reason <<<"$out")"
 
-# --- unpause restarts watching from the thread's current state ---------------------------
-out=$(LG unpause $repo#20); rc=$?
-check "unpause clears the mark and the baseline" "0 false null" "$rc $(LG get $repo#20 | jq -r '[(.paused | tostring), (.observed | tostring)] | join(" ")')"
+# --- a second adopt watches it again, from the thread's current state ---------------------------
+out=$(rewatch 20 th-20 /wt/20 feat/x-20); rc=$?
+check "Watch <thread> is the same entry, no longer owner-run, its baseline cleared" "0 true false null 1" "$rc $(jq -r .existing <<<"$out") $(LG get $repo#20 | jq -r '[(.owner_run | tostring), (.observed | tostring)] | join(" ")') $(LG list | jq '.entries | length')"
 sa_thread th-20 idle 6 0 /wt/20 feat/x-20
 R >/dev/null; out=$(R)
-check "the owner's runs count no stall after the give-back" "0 0" "$(jq -r '[(.stalled | length)] | map(tostring) | join(" ")' <<<"$out") $(LG get $repo#20 | jq -r .stalls)"
+check "the owner's runs count no stall after Watch <thread>" "0 0" "$(jq -r '[(.stalled | length)] | map(tostring) | join(" ")' <<<"$out") $(LG get $repo#20 | jq -r .stalls)"
 sa_thread th-20 idle 7 0 /wt/20 feat/x-20
-check "a run after the give-back counts as before" 1 "$(R | jq '.stalled | length')"
+check "a run after Watch <thread> counts as before" 1 "$(R | jq '.stalled | length')"
 
-# --- a paused ticket settles on GitHub alone; a paused task stays until drop -------------
-LG pause $repo#20 >/dev/null
+# --- an owner-run ticket settles on GitHub alone; an owner-run task stays until drop ---------
+LG take $repo#20 >/dev/null
 rm -f "$SA_FAKE/threads/th-20.json"
 sa_pr $repo feat/x-20 merged
 out=$(R)
-check "a paused entry whose PR merged settles, its thread unread" "settled 0" \
+check "an owner-run entry whose PR merged settles, its thread unread" "settled 0" \
   "$(LG get $repo#20 | jq -r .stage) $(jq '.errors | length' <<<"$out")"
 check "with no cleanup owed" "0 0 null" "$(jq -r '[(.cleanup | length), (.settled | length)] | map(tostring) | join(" ")' <<<"$out") $(LG get $repo#20 | jq -r '.cleanup_owed | tostring')"
-ship_entry 22 th-22; R >/dev/null; LG pause $repo#22 >/dev/null
+ship_entry 22 th-22; R >/dev/null; LG take $repo#22 >/dev/null
 sa_issue $repo 22 closed
 R >/dev/null
-check "a paused entry whose issue closed settles with no cleanup owed" "settled null" "$(LG get $repo#22 | jq -r '"\(.stage) \(.cleanup_owed | tostring)"')"
-check "unpause of a paused entry that ended exits 1, its baseline kept" "1 false" \
-  "$(LG unpause $repo#22 >/dev/null 2>&1; echo $?) $(LG get $repo#22 | jq -r '.observed == null')"
+check "an owner-run entry whose issue closed settles with no cleanup owed" "settled null" "$(LG get $repo#22 | jq -r '"\(.stage) \(.cleanup_owed | tostring)"')"
+check "take of an entry that ended exits 1, its baseline kept" "1 false" \
+  "$(LG take $repo#22 >/dev/null 2>&1; echo $?) $(LG get $repo#22 | jq -r '.observed == null')"
 LG add --repo $repo --number 25 --kind triage --thread th-25 --worktree /wt/25 --branch triage/x-25 --machine home >/dev/null
 sa_thread th-25 idle 1 0 /wt/25 triage/x-25; sa_pr $repo triage/x-25 none; sa_issue $repo 25 open needs-triage
-R >/dev/null; LG pause $repo#25 >/dev/null; sa_issue $repo 25 open ready-for-agent; R >/dev/null
-check "a paused triage entry whose labels drop while its issue stays open keeps its stage" at-rest "$(LG get $repo#25 | jq -r .stage)"
+R >/dev/null; LG take $repo#25 >/dev/null; sa_issue $repo 25 open ready-for-agent; R >/dev/null
+check "an owner-run triage entry whose labels drop while its issue stays open keeps its stage" at-rest "$(LG get $repo#25 | jq -r .stage)"
 LG add --repo $repo --number 23 --kind triage --thread th-23 --worktree /wt/23 --branch triage/x-23 --machine home >/dev/null
 sa_thread th-23 idle 1 0 /wt/23 triage/x-23; sa_pr $repo triage/x-23 none; sa_issue $repo 23 open needs-triage
-R >/dev/null; LG pause $repo#23 >/dev/null; sa_issue $repo 23 closed; R >/dev/null
+R >/dev/null; LG take $repo#23 >/dev/null; sa_issue $repo 23 closed; R >/dev/null
 sa_thread th-23 idle 3 0 /wt/23 triage/x-23
-check "a paused triage entry that settled is not read again" "settled 0" "$(LG get $repo#23 | jq -r .stage) $(R | jq '.woke | length')"
+check "an owner-run triage entry that settled is not read again" "settled 0" "$(LG get $repo#23 | jq -r .stage) $(R | jq '.woke | length')"
 LG add --task deploy --thread th-d --worktree /wt/d --machine home >/dev/null
 sa_thread th-d running 1 0 /wt/d x; R >/dev/null
-LG pause task:deploy >/dev/null
+LG take task:deploy >/dev/null
 sa_thread th-d idle 1 0 /wt/d x
 R >/dev/null
-check "a paused task at rest stays open" running "$(LG get task:deploy | jq -r .stage)"
-check "the Running row marks a paused task too" 1 "$(bash "$s/status.sh" --ledger "$led" --digest | jq -r .block | grep -c 'task:deploy.*(paused)')"
+check "an owner-run task at rest stays open" running "$(LG get task:deploy | jq -r .stage)"
+check "the Yours row lists an owner-run task too" 1 "$(bash "$s/status.sh" --ledger "$led" --digest | jq -r .block | grep -c '^Yours.*task:deploy (task)')"
 out=$(LG drop task:deploy); rc=$?
 check "drop removes it" "0 true" "$rc $(jq -r .removed <<<"$out")"
 check "and the ledger no longer holds it" 1 "$(LG get task:deploy >/dev/null 2>&1; echo $?)"
@@ -174,8 +184,10 @@ check "and leaves a ruling naming the key and the old count" 1 \
   "$(LG list | jq '[.rulings[] | select((.text | contains("acme/widgets#30")) and (.text | contains("3")) and (.text | contains("reset-stalls")))] | length')"
 check "reset-stalls of a key not in the ledger exits 1" 1 "$(LG reset-stalls $repo#98 >/dev/null 2>&1; echo $?)"
 ship_entry 31 th-31; R >/dev/null
-check "unpause of an entry not paused exits 1, its baseline kept" "1 false" \
-  "$(LG unpause $repo#31 >/dev/null 2>&1; echo $?) $(LG get $repo#31 | jq -r '.observed == null')"
+out=$(rewatch 31 th-31 /wt/31 feat/x-31)
+check "a second adopt of an entry that was never taken answers the existing entry" true "$(jq -r '.existing | tostring' <<<"$out")"
+check "and leaves the ledger one entry for the thread" 1 "$(LG list | jq '[.entries[] | select(.thread == "th-31")] | length')"
+check "and its baseline kept" false "$(LG get $repo#31 | jq -r '.observed == null')"
 sa_pr $repo feat/x-30 merged; R >/dev/null
 check "reset-stalls of an entry that ended exits 1" "settled 1" "$(LG get $repo#30 | jq -r .stage) $(LG reset-stalls $repo#30 >/dev/null 2>&1; echo $?)"
 

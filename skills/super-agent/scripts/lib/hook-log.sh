@@ -1,4 +1,4 @@
-# The hooks' log, sourced by watch-guard.sh and the owner-question hooks before
+# The hooks' log, sourced by watch-guard.sh, call-guard.sh and the owner-question hooks before
 # `_lib.sh`, since a hook must still leave a line when `jq` is missing.
 
 # sa_hook_log_file <name> "$@": `<name>.jsonl` beside the ledger, the ledger being
