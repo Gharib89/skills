@@ -40,14 +40,22 @@ week, runs the weekly review, whose rows join the bearings file's Needs you.
   `ledger.sh pushed` marks, `alerted_twice` the needs marked pushed more than
   once. They come from the transcript, since `unneed` removes a need from the
   ledger.
-- **Questions**: owner wakes whose text holds a `?`; `with_write` those whose
-  wake made a changing call other than a reply or hand-off (`AskUserQuestion`,
-  `PushNotification`, `Agent`, `Artifact`).
+- **Questions**: the day's flagged owner turns, from `question-flag.jsonl`
+  (`asked`), and `with_write` those holding a changing call the observe hook
+  logged against the prompt's id, `turns` listing each with its calls; `null`
+  with no log. The review lists each such turn. Which calls change something is
+  `lib/changing.sh` and `observe.sh`'s list
+  ([owner question](../reference/owner-question.md)); a recorded need is not
+  one.
 
 ## Logs
 
-Each guard writes `<name>-guard.jsonl` beside the ledger, one JSON line per
-event, `{at, event: "block" | "pass"}`; the wake timer writes
+The question flag and the observe hook write `question-flag.jsonl`, one line per
+flagged prompt `{at, event: "flag", prompt_id}`, per changing call in its turn
+`{at, event: "changing", prompt_id, tool, call}`, and per input they could not
+judge `{at, event: "unjudged", why}`; a line that is not JSON is refused by
+name. Each guard writes `<name>-guard.jsonl` beside the ledger, one JSON line
+per event, `{at, event: "block" | "pass"}`; the wake timer writes
 `wake-timer.jsonl`, one line per outage step, `{at, event: "opened" | "wake" |
 "notify" | "closed"}`; the row's `timer` counts the day's `closed` lines and
 their `minutes`. A limit stop the timer holds until its reset opens no outage

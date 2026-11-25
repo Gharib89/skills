@@ -21,6 +21,11 @@ sa_hook_entry() {
 sa_guard_entry() { sa_hook_entry guard.sh 'Edit|Write|MultiEdit|NotebookEdit|Bash'; }
 # A Stop hook's exit 2 blocks the stop, so a usage error in the watch guard is swallowed.
 sa_watch_guard_entry() { sa_hook_entry watch-guard.sh '' ' || true'; }
+# The owner-question hooks: the question flag (UserPromptSubmit) and the observe hook
+# (PreToolUse, every tool). Their exit 2 erases the prompt or refuses the call, so a
+# usage error is swallowed too.
+sa_question_flag_entry() { sa_hook_entry question-flag.sh '' ' || true'; }
+sa_observe_entry() { sa_hook_entry observe.sh '' ' || true'; }
 
 # The wake timer's systemd user units, the owner's to install. `sa_timer_active`:
 # true when systemctl reports the timer active, false for any other state (a
@@ -73,25 +78,31 @@ sa_guard_stale() {
 }
 
 # sa_home <write: true|false> [<projects file>]: the folder's JSON in $home,
-# {folder, settings, written, guard, watch_guard, stale, project_id, needs}. With write true the
-# generated settings are rewritten whole (every hook the super agent owns: the state
-# guard and the watch guard), so a run reproduces the same file and a hand edit there is lost.
-# `guard` and `watch_guard` say whether the file holds this copy's state guard and
-# watch guard entries. The projects file is
+# {folder, settings, written, guard, watch_guard, question_flag, observe, stale, project_id,
+# needs}. With write true the generated settings are rewritten whole (every hook the super
+# agent owns: the state guard, the watch guard, the question flag and the observe hook), so
+# a run reproduces the same file and a hand edit there is lost. `guard`, `watch_guard`,
+# `question_flag` and `observe` say whether the file holds this copy's entry for each. The projects file is
 # every `projects` row of `t3_project_list` (its answer, or the rows of all its pages
 # as one array): `project_id` is the live project whose workspace is the folder, null
 # when none is. `needs` holds one `<key>: <action>` line per thing the owner fixes: a
-# missing guard entry (either), a wake timer systemctl does not report running, a
+# missing hook entry (any of the four), a wake timer systemctl does not report running, a
 # stale or unreadable user-settings entry, a missing project.
 # shellcheck disable=SC2034  # home is read by the scripts that call it
 sa_home() {
-  local dir settings entry wentry written=false has whas stale pid=null needs='[]'
+  local dir settings entry wentry qentry oentry written=false has whas qhas ohas stale pid=null needs='[]'
   dir=$(sa_home_dir) settings=$(sa_home_settings) entry=$(sa_guard_entry) wentry=$(sa_watch_guard_entry)
+  qentry=$(sa_question_flag_entry) oentry=$(sa_observe_entry)
   # The bare write exits on a failure, so it runs in a subshell: a failure is a need,
   # its reason left on stderr.
-  if [ "$1" = true ] && (sa_write "$settings" "$(jq -cn --argjson e "$entry" --argjson w "$wentry" '{hooks: {PreToolUse: [$e], Stop: [$w]}}')") >/dev/null; then written=true; fi
+  if [ "$1" = true ] && (sa_write "$settings" "$(jq -cn --argjson e "$entry" --argjson w "$wentry" --argjson q "$qentry" --argjson o "$oentry" \
+    '{hooks: {PreToolUse: [$e, $o], UserPromptSubmit: [$q], Stop: [$w]}}')") >/dev/null; then written=true; fi
   has=$(jq --argjson e "$entry" "$sa_jq_hook_has"'hook_has("PreToolUse"; $e)' "$settings" 2>/dev/null) || has=false
   whas=$(jq --argjson e "$wentry" "$sa_jq_hook_has"'hook_has("Stop"; $e)' "$settings" 2>/dev/null) || whas=false
+  qhas=$(jq --argjson e "$qentry" "$sa_jq_hook_has"'hook_has("UserPromptSubmit"; $e)' "$settings" 2>/dev/null) || qhas=false
+  ohas=$(jq --argjson e "$oentry" "$sa_jq_hook_has"'hook_has("PreToolUse"; $e)' "$settings" 2>/dev/null) || ohas=false
+  [ "$qhas" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the question flag\u0027s UserPromptSubmit hook is missing from \($s): run scripts/setup.sh --write"]' <<<"$needs")
+  [ "$ohas" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the observe hook\u0027s PreToolUse entry is missing from \($s): run scripts/setup.sh --write"]' <<<"$needs")
   [ "$whas" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the watch guard\u0027s Stop hook is missing from \($s): run scripts/setup.sh --write"]' <<<"$needs")
   [ "$has" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the state guard\u0027s hook is missing from \($s): run scripts/setup.sh --write, or scripts/guard.sh --install"]' <<<"$needs")
   case $(sa_timer_active) in
@@ -107,6 +118,6 @@ sa_home() {
       and .deletedAt == null and .archivedAt == null) | .id) // null' "$2") || sa_tooling "$2: a project row cannot be read"
     [ "$pid" != null ] || needs=$(jq -c --arg d "$dir" '. + ["Super agent folder: no T3 project has \($d) as its workspace: create one there once, in full access, and the next handover moves the super agent into it"]' <<<"$needs")
   fi
-  home=$(jq -cn --arg d "$dir" --arg s "$settings" --argjson w "$written" --argjson g "$has" --argjson wg "$whas" --argjson st "$stale" --argjson p "$pid" --argjson n "$needs" \
-    '{folder: $d, settings: $s, written: $w, guard: $g, watch_guard: $wg, stale: $st, project_id: $p, needs: $n}')
+  home=$(jq -cn --arg d "$dir" --arg s "$settings" --argjson w "$written" --argjson g "$has" --argjson wg "$whas" --argjson qf "$qhas" --argjson ob "$ohas" --argjson st "$stale" --argjson p "$pid" --argjson n "$needs" \
+    '{folder: $d, settings: $s, written: $w, guard: $g, watch_guard: $wg, question_flag: $qf, observe: $ob, stale: $st, project_id: $p, needs: $n}')
 }

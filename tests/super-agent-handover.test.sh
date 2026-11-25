@@ -137,7 +137,7 @@ seed; rm -rf "$XDG_STATE_HOME/super-agent/home"
 out=$(H); rc=$?
 check "a handover writes the folder's settings with the state guard and names the folder's project" "0 true true p-home $folder" \
   "$rc $(jq .home.written <<<"$out") $(jq .home.guard <<<"$out") $(jq -r .home.project_id <<<"$out") $(jq -r .home.folder <<<"$out")"
-check "the guard's hook is the settings file's one entry" 1 "$(jq '.hooks.PreToolUse | length' "$hc")"
+check "the settings file's PreToolUse entries are the guard and the observe hook" 2 "$(jq '.hooks.PreToolUse | length' "$hc")"
 check "a healthy folder adds no Needs you line" 0 "$(grep -c 'Super agent folder\|State guard' "$bear")"
 mkdir -p "$tmp/sysbin"; printf '#!/bin/sh\necho inactive\nexit 3\n' > "$tmp/sysbin/systemctl"; chmod +x "$tmp/sysbin/systemctl"
 check "a wake timer systemctl does not report running is one Needs you line" 1 \

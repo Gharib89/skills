@@ -91,7 +91,8 @@ if [ "$cmd" = review ]; then
                   | ($from - (15 - 7 * $k) * 86400 | strftime("%Y-%m-%d")) as $b
                   | any($in[]; .day >= $a and .day <= $b); .)
               and ([$in[] | .guards[$g].blocks] | add // 0) == 0)
-          | "Scorecard: the \($g) guard blocked nothing for four weeks; delete it?"])}' <<<"$rows" 2>"$dir/.scorecard-review.err" \
+          | "Scorecard: the \($g) guard blocked nothing for four weeks; delete it?"]
+        + [$days[] | .questions.turns[]? | "Scorecard: the owner question at \(.at) (prompt \(.prompt_id)) held a changing call: \(.calls | map(.tool) | unique | join(", ")); read the turn and take its sender from t3_thread_read."])}' <<<"$rows" 2>"$dir/.scorecard-review.err" \
     || { e=$(sed -n 's/^jq: error ([^)]*): //p' "$dir/.scorecard-review.err" | head -n 1); rm -f "$dir/.scorecard-review.err"; sa_tooling "review failed: ${e:-jq error}"; }
   rm -f "$dir/.scorecard-review.err"
   exit 0
@@ -141,6 +142,14 @@ for g in "$dir"/*-guard.jsonl; do
 done
 timer=null
 if [ -f "$dir/wake-timer.jsonl" ]; then timer=$(jq -sc . "$dir/wake-timer.jsonl" 2>/dev/null) || sa_tooling "$dir/wake-timer.jsonl: not JSON lines"; fi
+qlog=null
+if [ -f "$dir/question-flag.jsonl" ]; then qlog=$(jq -sc . "$dir/question-flag.jsonl" 2>/dev/null) || sa_tooling "$dir/question-flag.jsonl: not JSON lines"
+  bad=$(jq -r 'map(select((type == "object" and (.at | type) == "string" and (.event | type) == "string"
+      and (if .event == "flag" then (.prompt_id | type) == "string"
+        elif .event == "changing" then (.prompt_id | type) == "string" and (.tool | type) == "string"
+        else true end)) | not)) | length' <<<"$qlog")
+  [ "$bad" = 0 ] || sa_tooling "$dir/question-flag.jsonl: $bad record(s) lack a string at and event, or a flag or changing record lacks its prompt_id or tool"
+fi
 
 # One slim record per transcript entry, file by file in order, so a 30 MB
 # transcript is never held whole: a user entry's text (null for a tool result),
@@ -165,30 +174,22 @@ slim=$(for i in ${files[@]+"${!files[@]}"}; do
 done | jq -sc .) || sa_tooling "cannot read the transcripts"
 
 row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')" \
-  --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" \
-  --slurpfile led <(printf '%s\n' "$doc") --slurpfile archive <(cat "$ledger.archive.jsonl" 2>/dev/null) "$sa_jq_open"'
+  --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" --argjson qlog "$qlog" \
+  --slurpfile led <(printf '%s\n' "$doc") --slurpfile archive <(cat "$ledger.archive.jsonl" 2>/dev/null) "$sa_jq_open$sa_jq_changing"'
   def wsum: reduce .[] as $t ({in: 0, cw: 0, cr: 0, out: 0}; .in += $t.in | .cw += $t.cw | .cr += $t.cr | .out += $t.out);
   def total: .in + .cw + .cr + .out;
   def weighted: .in + 2 * .cw + 0.1 * .cr + 5 * .out;
   def median: sort | length as $n | if $n == 0 then null elif $n % 2 == 1 then .[($n - 1) / 2]
     else (.[$n / 2 - 1] + .[$n / 2]) / 2 end;
   def per($n): if $n > 0 then (. / $n * 100 | round) / 100 else null end;
-  def ledger_write: "ledger\\.sh[^|;&\\n]*?\\s(add|adopt|set|rethread|ruling|pin|migrate-rulings|wait|unwait|need|pushed|unneed|limit|unlimit|pause|unpause|drop|reset-stalls)\\b";
-  # Every ledger.sh subcommand that writes, and every script or tool that changes
-  # state: one this list misses counts as changing nothing.
-  def changing_bash: [ledger_write, "launch\\.sh", "claim\\.sh", "worktree\\.sh[^|;&\\n]*\\sremove", "merge\\.sh",
-    "cleanup\\.sh", "reply\\.sh", "intake\\.sh", "handover\\.sh",
-    "\\bgh\\s+(issue|pr)\\s+(edit|close|comment|create|reopen|merge|review|ready)",
-    "\\bgh\\s+api\\b[^|;&\\n]*(-X|--method)\\s*(POST|PATCH|PUT|DELETE)", "\\bgh\\s+api\\b[^|;&\\n]*\\s-[fF]\\s",
-    "\\bgit\\s+(commit|push|merge|worktree\\s+(add|remove)|branch\\s+-[dD])", "\\bt3\\s+thread\\s+(send|launch|interrupt)",
-    "chezmoi\\s+apply", "npx\\s+skills"] | join("|");
+  # Every script or tool that changes state (`lib/changing.sh` holds the ledger and
+  # host patterns): one this list misses counts as changing nothing.
+  def changing_bash: [ledger_write(ledger_verbs), "reply\\.sh"] + acting_scripts + host_writes
+    + ["chezmoi\\s+apply", "npx\\s+skills"] | join("|");
   def changing_tools: ["mcp__t3-code__t3_thread_launch", "mcp__t3-code__t3_thread_send", "mcp__t3-code__t3_thread_organize",
     "AskUserQuestion", "PushNotification", "mcp__t3-code__t3_thread_interrupt", "mcp__t3-code__t3_thread_configure",
     "mcp__t3-code__schedule_task", "mcp__t3-code__delete_scheduled_task", "mcp__t3-code__delegate_task",
     "mcp__t3-code__link_pull_request", "Write", "Edit", "Agent", "Artifact"];
-  # The changing tools that answer the owner or hand work off: they change a
-  # wake, but a question they follow is not acted on.
-  def non_writes: ["AskUserQuestion", "PushNotification", "Agent", "Artifact"];
   def boiler: ["<local-command-", "<command-name>/compact", "<command-name>/reload-skills", "<command-name>/model",
     "This session is being continued", "Base directory for this skill", "[Image:", "<system-reminder>",
     "(Re-invocation of"] as $p | . as $t | any($p[]; . as $q | $t | startswith($q));
@@ -215,7 +216,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
     if $e.u then ($e.text // "" | sub("^\\s+"; "")) as $t
       | if $e.text == null or $e.skip or ($t | boiler) then .
       else .bg as $bg | .w += [{ts: $e.ts, cause: ($t | cause($bg; $e.origin)), text: $t,
-        tok: {in: 0, cw: 0, cr: 0, out: 0}, api: 0, changed: false, wrote: false}] end
+        tok: {in: 0, cw: 0, cr: 0, out: 0}, api: 0, changed: false}] end
     elif (.w | length) == 0 then .
     else (.w | length - 1) as $cur | .seen[$e.id] as $prev | ($prev.w // $cur) as $own
       | (if $prev then .w[$own].tok |= with_entries(.value -= $prev.use[.key]) else .w[$cur].api += 1 end)
@@ -224,9 +225,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
       | reduce $e.tools[] as $t (.;
           (if $t.name == "Bash" and $t.bg then .bg[$t.id] = $t.cmd else . end)
           | if ($t.name == "Bash" and (($t.cmd // "") | test(changing_bash))) or ($t.name | IN(changing_tools[]))
-            then .w[$cur].changed = true
-              | if $t.name | IN(non_writes[]) then . else .w[$cur].wrote = true end
-            else . end)
+            then .w[$cur].changed = true else . end)
     end) | .w;
   . as $all
   | [group_by(.f)[] | wakes[]] | map(select(.api > 0 and (.ts // "" | startswith($day)))) as $wakes
@@ -256,8 +255,12 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
    timer: (if $timer == null then null
      else [$timer[] | select(.event == "closed" and (.at // "" | startswith($day))) | .minutes] as $m
        | {outages: ($m | length), median_minutes: ($m | median), worst_minutes: ($m | max)} end),
-   questions: ([$wakes[] | select(.cause == "owner" and (.text | contains("?")))] as $q
-     | {asked: ($q | length), with_write: ($q | map(select(.wrote)) | length)}),
+   questions: (if $qlog == null then null
+     else [$qlog[] | select(.event == "changing")] as $ch
+       | [$qlog[] | select(.event == "flag" and (.at // "" | startswith($day)))] as $fl
+       | ($fl | map(. as $f | {prompt_id, at, calls: [$ch[] | select(.prompt_id == $f.prompt_id) | {tool, call}]})
+           | map(select(.calls | length > 0))) as $turns
+       | {asked: ($fl | length), with_write: ($turns | length), turns: $turns} end),
    wakes: {count: ($wakes | length), per_open: ($wakes | length | per($open)),
      by_cause: ($wakes | group_by(.cause) | map({key: .[0].cause, value: length}) | from_entries),
      changed_nothing: ($wakes | map(select(.changed | not)) | length)},

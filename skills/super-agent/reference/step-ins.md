@@ -5,6 +5,7 @@
 - [The launch message](#the-launch-message)
 - [Sending the launch](#sending-the-launch)
 - [The step-ins](#the-step-ins)
+- [The owner steps in](#the-owner-steps-in)
 
 A supervised thread hears from you through its **launch message**, then only
 through a **step-in** when it reaches one of five situations. Nothing else is
@@ -88,3 +89,9 @@ ones:
 
 The run acts on a step-in and writes none of it into its PR body, except a
 waiver that passed the gate, which the body names.
+
+## The owner steps in
+
+A message of the owner's in a supervised thread leaves its entry in the ledger
+and watched: never unwatch, settle or rethread it for that. Record a need
+(`--reason owner`) when the thread ends needing them.

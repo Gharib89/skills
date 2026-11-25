@@ -90,7 +90,7 @@ check "messages: count, per open entry, nothing changed, over 1,500 characters, 
 check "needs: recorded, alerted, alerted more than once" '{"recorded":1,"alerted":2,"alerted_twice":1}' "$(jq -c .needs <<<"$row")"
 check "guards: the day's blocks and passes, by guard" '{"watch":{"blocks":1,"passes":1}}' "$(jq -c .guards <<<"$row")"
 check "timer: the day's outages, median and worst minutes" '{"outages":2,"median_minutes":12.5,"worst_minutes":20}' "$(jq -c .timer <<<"$row")"
-check "questions: owner questions, and those followed by a write in the same turn" '{"asked":1,"with_write":1}' "$(jq -c .questions <<<"$row")"
+check "questions: null with no question-flag log, never a count from the transcript" null "$(jq -c .questions <<<"$row")"
 check "wakes: count, per open entry, by cause, and those that changed nothing" \
   '{"count":3,"per_open":1.5,"by_cause":{"backstop":1,"owner":1,"watcher":1},"changed_nothing":1}' "$(jq -c .wakes <<<"$row")"
 check "tokens: once per API call, weighted, per open entry, and the no-change share" \
@@ -105,7 +105,7 @@ rm -f "$dir/watch-guard.jsonl" "$dir/wake-timer.jsonl"
 out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9); rc=$?
 check "no guard or timer log: exit 0, both absent, the rest still counted" "0 null null 3" \
   "$rc $(jq -c .row.guards <<<"$out") $(jq -c .row.timer <<<"$out") $(jq .row.messages.count <<<"$out")"
-for log in watch-guard.jsonl wake-timer.jsonl; do
+for log in watch-guard.jsonl wake-timer.jsonl question-flag.jsonl; do
   printf '{"at":"2026-11-19T09:00:00Z","event":"block"}\n{"at":"2026-11-19T09:' > "$dir/$log"
   check "a $log with a malformed line is refused by name, exit 2" "2 $dir/$log: not JSON lines" \
     "$(out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 2>/dev/null); echo "$? $(jq -r .error <<<"$out")")"
@@ -123,10 +123,27 @@ check "an unreadable scorecard.jsonl is refused by name and left as it was, exit
 check "an empty scorecard.jsonl takes the row" "0 1" \
   "$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 >/dev/null; echo "$? $(wc -l < "$card" | tr -d ' ')")"
 mv "$tmp/card" "$card"
-{ transcript; u "${day}T12:00:00Z" "can you ping me when #8 lands?"
-  a "${day}T12:00:05Z" m4 "$(use 1 0 1)" '[{"type": "tool_use", "name": "PushNotification", "id": "p", "input": {}}]'; } > "$tmp/t2.jsonl"
-check "a question answered only by a reply or hand-off has no write" '{"asked":2,"with_write":1}' \
-  "$(R --day "$day" --transcript "$tmp/t2.jsonl" --version 9.9.9 | jq -c .row.questions)"
+# the question flag's log: a flagged turn counts, one holding a changing call is listed
+cat > "$dir/question-flag.jsonl" <<JSONL
+{"at":"${day}T10:00:00Z","event":"flag","prompt_id":"p1"}
+{"at":"${day}T10:00:03Z","event":"changing","prompt_id":"p1","tool":"Bash","call":"gh issue close 7"}
+{"at":"${day}T10:00:04Z","event":"changing","prompt_id":"p1","tool":"Edit","call":"/a"}
+{"at":"${day}T11:00:00Z","event":"flag","prompt_id":"p2"}
+{"at":"${day}T11:00:01Z","event":"unjudged","why":"no jq"}
+{"at":"2026-11-18T09:00:00Z","event":"flag","prompt_id":"p0"}
+{"at":"2026-11-18T09:00:01Z","event":"changing","prompt_id":"p0","tool":"Edit","call":"/b"}
+JSONL
+check "questions: the day's flagged turns, and those holding a changing call, each listed" \
+  '{"asked":2,"with_write":1,"turns":[{"prompt_id":"p1","at":"2026-11-19T10:00:00Z","calls":[{"tool":"Bash","call":"gh issue close 7"},{"tool":"Edit","call":"/a"}]}]}' \
+  "$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 | jq -c .row.questions)"
+cp "$dir/question-flag.jsonl" "$tmp/q.good"
+for bad in '{"at":"2026-11-19T10:00:00Z","event":"flag"}' '{"at":"2026-11-19T10:00:00Z","event":"changing","prompt_id":"p1"}' '{"event":"flag","prompt_id":"p1"}' '[1]'; do
+  printf '%s\n' "$bad" >> "$dir/question-flag.jsonl"
+  out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 2>&1 >/dev/null); rc=$?
+  check_rc "questions: a malformed record ($bad) refuses with exit 2" 2 "$rc"
+  check "and the refusal names the log" 1 "$(grep -c 'question-flag.jsonl: 1 record' <<<"$out")"
+  cp "$tmp/q.good" "$dir/question-flag.jsonl"
+done
 jq '.entries["acme/widgets#7"].launched_at = "2026-11-18T09:00:00.250Z"' "$led" > "$tmp/l" && cp "$tmp/l" "$led"
 check "a time with fractional seconds is read, not a failed row" 2 \
   "$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 | jq .row.workload.open)"
@@ -195,6 +212,10 @@ week 2 > "$card"
 check "a number that missed its target is one row naming it (a number with no target raises none)" \
   '["Scorecard: needs.alerted_twice missed its target of 0 on 1 of 7 days (worst 2)."]' "$(V | jq -c .needs)"
 jq -n '{"needs.alerted_twice": {max: 0, slice: 12}}' > "$tmp/pending.json"
+week 0 | jq -c 'if .day == "2026-11-12" then .questions = {asked: 1, with_write: 1, turns: [{prompt_id: "p9", at: "2026-11-12T10:00:00Z", calls: [{tool: "Edit", call: "/a"}, {tool: "Edit", call: "/b"}]}]} else . end' > "$card"
+check "the review lists each owner question turn that held a changing call" \
+  '["Scorecard: the owner question at 2026-11-12T10:00:00Z (prompt p9) held a changing call: Edit; read the turn and take its sender from t3_thread_read."]' "$(V | jq -c .needs)"
+week 2 > "$card"
 check "a target still tagged with its slice raises no row" '[]' \
   "$(SA_NOW=$(jq -n '"2026-11-18T08:00:00Z" | fromdateiso8601') bash "$sc" review --ledger "$led" --targets "$tmp/pending.json" | jq -c .needs)"
 { for d in 19 20 21 22 23 24 25 26 27 28 29 30; do rowfor "2026-10-$d" 0 10 0; done

@@ -155,13 +155,8 @@ owner asks you to watch that you did not launch is `ledger.sh adopt` (`--task
    (`alive` true, `changed` false) ends the turn: it posts nothing, and reads
    nothing else; `alive` false starts
    the watcher; `changed` true makes its `summary` the answer step 5 acts on.
-   **A stale copy.** Every pulse and reconcile answer carries `skill`
-   {loaded, source, stale}: `stale` true means this running copy is older than
-   the one on `Gharib89/skills`. Say so once in chat, naming both
-   versions (no ledger need: no entry is stale): the next
-   [daily handover](#daily-handover) refreshes it. With no morning report
-   scheduled, the refresh, `npx skills@1.8.1 add Gharib89/skills --skill
-   super-agent --agent claude-code -g -y`, is the owner's to run or approve.
+   **A stale copy** (`skill.stale` true in a pulse or reconcile answer): say so
+   once in chat ([handover](reference/handover.md#a-stale-copy)).
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet> --quota
    <file> --instance <id>` (`<file>` and `<id>` from
@@ -181,9 +176,8 @@ pulse, save their `t3_thread_read`, convert each with `reply.sh` and pass
 `--remote` ([remote](reference/remote.md)); a pulse without it reads their
 threads as `thread-unreadable`.
 
-**The owner steps into a supervised thread.** A message of theirs there leaves
-its entry in the ledger and watched: never unwatch, settle or rethread it for
-that. Record a need (`--reason owner`) when the thread ends needing them.
+**The owner steps into a supervised thread**: its entry stays in the ledger and
+watched ([step-ins](reference/step-ins.md#the-owner-steps-in)).
 
 Wait only through the watcher: a `sleep` or a poll in your own turn spends
 context on nothing. Read a thread's messages only in small slices
@@ -311,6 +305,15 @@ included
 [ruling](reference/status-block.md#a-ruling). A reviewer's usage-limit notice
 is no escalation: record it as
 [a reviewer usage limit](reference/status-block.md#a-reviewer-usage-limit).
+
+## An owner question
+
+An **owner question** is an owner message that asks and tells nothing (why,
+what, when, how). It starts an **answer-only turn**: answer first, offer the fix
+as a numbered option recorded as a need (`--reason ask-first`), change nothing.
+A message that asks and tells gets the answer, then exactly the told action;
+"can you launch 1234?" is a request. A `Question flag:` reminder is your own
+hook's, not the owner's: read [owner question](reference/owner-question.md).
 
 ## Agy jobs
 
