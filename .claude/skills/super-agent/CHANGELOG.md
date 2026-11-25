@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.44.0 (2026-11-25)
+
+### Features
+
+- **super-agent**: A wake timer wakes the super agent when its own turn died
+  ([#1417](https://github.com/Gharib89/skills/pull/1417),
+  [`403b6f3`](https://github.com/Gharib89/skills/commit/403b6f3c5e7ec335bc959bc7ed3985555ae67564))
+
+
 ## v0.43.0 (2026-11-25)
 
 ### Features
