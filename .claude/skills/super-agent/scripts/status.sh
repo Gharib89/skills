@@ -34,7 +34,7 @@
 # `alerted` yet, and status sets it. A blocking need alerted 4 working hours ago
 # (hours on the fleet file's `work_week` days in local time, Mon to Fri without
 # --fleet) is raised once more: status sets its `reminded` and the needs print
-# again; never a third time. Each alert and reminder is a line in
+# again; never a third time. A need 0.46.0 pushed counts as alerted at its `since`. Each alert and reminder is a line in
 # `needs-alerts.jsonl` beside the ledger, {at, event: alert|reminder, key, action,
 # class}, which the scorecard counts.
 #
@@ -112,8 +112,7 @@ now=$(jq -c --argjson now "$(sa_now_s)" --argjson week "$week" "$sa_jq_norm$sa_j
       + row("Waiting"; [waiting_list[] | .key | keylink]; ", ")
       + row("Reviewer limit"; [(.review_limits // [])[] | "\(.repo) merging on the fallback reviewer only (\(.reviewer) hit its usage limit at \(.since))"]; "; ")),
      merged_keys: [$merged[].key],
-     # A need 0.46.0 pushed (`pushed: true`, no `alerted`) counts as alerted at its `since`.
-     raised: [(.needs // [])[] | (.alerted // (if .pushed == true then .since else null end)) as $al
+     raised: [(.needs // [])[] | need_alerted as $al
        | if $al == null then raise(false)
          elif need_blocking and .reminded == null
            and working_seconds($al | sub("[.][0-9]+Z$"; "Z") | fromdateiso8601; $now; $week) >= 4 * 3600 then raise(true)
@@ -150,12 +149,13 @@ block=$(jq -r --argjson d "$digest" --argjson p "$printed" --argjson q "$qdoc" -
 # What the next run compares with. A printed block counts its Merged tickets as
 # listed, so the next block lists only the merges since: the stored rows are the
 # ones left after that. A raised need takes its alert or reminder mark, and a line
-# in the alert log.
+# in the alert log. `raised` is read from the needs this write marks, so its keys match
+# them as written.
 if [ -n "$block" ]; then
   at=$(jq -rn --argjson s "$(sa_now_s)" '$s | todate')
-  sa_update "$ledger" "$sa_jq_norm"'.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}
+  sa_update "$ledger" '.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}
     | if ($n.raised | length) > 0 then .needs = [(.needs // [])[] | . as $x
-        | ([$n.raised[] | select((.key | norm_repo) == ($x.key | norm_repo) and .action == $x.action)] | first) as $r
+        | ([$n.raised[] | select(.key == $x.key and .action == $x.action)] | first) as $r
         | if $r == null then . elif $r.reminder then .reminded = $at else .alerted = $at end] else . end' --argjson n "$now" --arg at "$at"
   jq -c --arg at "$at" '.raised[] | {at: $at, event: (if .reminder then "reminder" else "alert" end), key, action, class}' <<<"$now" \
     >>"$(dirname "$ledger")/needs-alerts.jsonl" || sa_tooling "$(dirname "$ledger")/needs-alerts.jsonl: cannot append"

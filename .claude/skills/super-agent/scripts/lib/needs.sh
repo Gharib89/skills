@@ -14,6 +14,9 @@ sa_jq_needs='
     "pr-closed": "offer", "issue-closed": "offer", "ask-first": "offer", "owner-run": "offer",
     "verify": "offer", "cleanup": "offer"};
   def need_class: need_classes[.];
+  # When the owner was first told of a need: its alert mark, or for a need 0.46.0
+  # pushed (`pushed: true`, no `alerted`) its `since`.
+  def need_alerted: .alerted // (if .pushed == true then .since else null end);
   # A need recorded before classes (no `class`) reads as blocking, so it is never quieter.
   def need_blocking: (.class // (.reason // "" | need_class) // "blocking") == "blocking";
   # The ticket the action of a need names: its second word.

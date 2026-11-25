@@ -59,11 +59,11 @@ ledger_needs() {
     # A repeat of an open need's action keeps its time and its alert and reminder marks,
     # whatever its reason word: the owner was told of that action once.
     row=$(jq -cn --arg k "$key" --arg a "$action" --arg r "$reason" --arg c "$class" --arg why "$why" --arg in "$answer_in" --arg now "$now" \
-      --argjson opts "$(printf '%s\n' ${options[@]+"${options[@]}"} | jq -Rc 'select(length > 0) | index(": ") as $i | if $i == null then {label: ., consequence: null} else {label: .[:$i], consequence: .[$i + 2:]} end' | jq -sc .)" \
+      --argjson opts "$(printf '%s\n' ${options[@]+"${options[@]}"} | jq -Rc 'select(length > 0) | capture("^(?<label>.*?): (?<consequence>.*)$") // {label: ., consequence: null}' | jq -sc .)" \
       --argjson old "$(jq -c --arg k "$key" "$sa_jq_norm"'(.needs // []) | map(select((.key | norm_repo) == ($k | norm_repo))) | first // null' <<<"$doc")" \
-      '{key: $k, action: $a, reason: $r, class: $c, why: $why, options: $opts, answer_in: (if $in == "" then null else $in end),
+      "$sa_jq_norm$sa_jq_needs"'{key: $k, action: $a, reason: $r, class: $c, why: $why, options: $opts, answer_in: (if $in == "" then null else $in end),
         since: $now, alerted: null, reminded: null}
-       + (if $old != null and $old.action == $a then {since: $old.since, alerted: ($old.alerted // (if $old.pushed == true then $old.since else null end)), reminded: ($old.reminded // null)} else {} end)')
+       + (if $old != null and $old.action == $a then {since: $old.since, alerted: ($old | need_alerted), reminded: ($old.reminded // null)} else {} end)')
     sa_update "$ledger" "$sa_jq_norm"'.needs = ((.needs // []) | map(select((.key | norm_repo) != ($k | norm_repo))) + [$n])' --arg k "$key" --argjson n "$row"
     jq -cn --argjson n "$row" '{need: $n}' ;;
   unneed)
@@ -83,11 +83,14 @@ ledger_needs() {
     stage=$(jq -r .stage <<<"$entry")
     now=$(jq -rn --argjson s "$(sa_now_s)" '$s | todate')
     row=$(jq -cn --arg k "$key" --arg r "$reason" --arg s "$stage" --arg now "$now" '{key: $k, reason: $r, stage: $s, since: $now}')
-    sa_update "$ledger" "$sa_jq_norm"'.acks = ([(.acks // [])[] | select((.key | norm_repo) != ($k | norm_repo) or .reason != $r)] + [$a])' --arg k "$key" --arg r "$reason" --argjson a "$row"
+    # Both keys come from sa_key, so they match as written.
+    sa_update "$ledger" '.acks = ([(.acks // [])[] | select(.key != $k or .reason != $r)] + [$a])' --arg k "$key" --arg r "$reason" --argjson a "$row"
     jq -cn --argjson a "$row" '{ack: $a}' ;;
   answer)
     [ $# -eq 1 ] || sa_tooling "$usage"
     sa_read "$ledger"
+    jq -e '(.needs // []) | type == "array" and all(type == "object" and ((.options // []) | type) == "array")' <<<"$doc" >/dev/null \
+      || sa_tooling "$ledger: needs are not the shape answer reads"
     # `<ticket> <option>` or a bare `<option>`; the ticket is a number, name#n, owner/name#n
     # or task:slug, matched against the need's key and the ticket its action names.
     text=$(jq -c --arg t "$1" "$sa_jq_norm$sa_jq_needs"'
@@ -103,7 +106,6 @@ ledger_needs() {
         | if $o < 1 or $o > ($n.options | length) then error("\($n.key) has options 1 to \($n.options | length)")
           else {key: $n.key, action: $n.action, option: $o, label: $n.options[$o - 1].label, consequence: $n.options[$o - 1].consequence} end end)
         // {error: "\($t): not a reply to an open need, <ticket> <option>"}) catch {error: .}' <<<"$doc")
-    [ -n "$text" ] || sa_tooling "$ledger: needs are not the shape answer reads"
     jq -e 'has("error")' <<<"$text" >/dev/null && sa_fail "$(jq -r .error <<<"$text")"
     printf '%s\n' "$text" ;;
   esac

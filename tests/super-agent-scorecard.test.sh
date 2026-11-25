@@ -79,10 +79,11 @@ printf '%s\n' "{\"at\":\"${day}T09:00:00Z\",\"event\":\"block\"}" "{\"at\":\"${d
   '{"at":"2026-11-18T09:00:00Z","event":"pass"}' > "$dir/watch-guard.jsonl"
 printf '%s\n' "{\"at\":\"${day}T03:00:00Z\",\"event\":\"closed\",\"minutes\":5}" \
   "{\"at\":\"${day}T04:00:00Z\",\"event\":\"closed\",\"minutes\":20}" > "$dir/wake-timer.jsonl"
-# the needs' alert log: #7 alerted the day before and again today, #9 alerted
+# the needs' alert log: #7 alerted the day before and again today (its key in
+# another case), #9 alerted
 # today and reminded twice, the second reminder one past its one
 al() { printf '{"at":"%s","event":"%s","key":"acme/widgets#%s","action":"%s","class":"blocking"}\n' "$@"; }
-{ al 2026-11-18T09:00:00Z alert 7 "Merge widgets#7"; al "${day}T09:00:00Z" alert 7 "Merge widgets#7"
+{ al 2026-11-18T09:00:00Z alert 7 "Merge widgets#7"; al "${day}T09:00:00Z" alert 7 "Merge widgets#7" | sed 's|acme/widgets|ACME/Widgets|'
   al "${day}T09:00:00Z" alert 9 "Fix widgets#9"; al "${day}T13:00:00Z" reminder 9 "Fix widgets#9"
   al "${day}T14:00:00Z" reminder 9 "Fix widgets#9"; } > "$dir/needs-alerts.jsonl"
 out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9); rc=$?

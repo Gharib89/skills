@@ -102,8 +102,8 @@ raised once more, and never again. Repeating `need` with the same action keeps
 its time and both marks, whatever its reason word, so a re-escalation is never
 raised twice. Each alert and reminder is logged in `needs-alerts.jsonl` beside
 the ledger, which the scorecard counts. A need 0.46.0 recorded and pushed
-counts as alerted at its `since`; it prints as its action alone, so `unneed`
-it and record it again with `--why` and options.
+counts as alerted at its `since`; it prints as its action alone, so record it
+again with `--why` and options: the same action keeps its marks.
 
 Clear it with `ledger.sh --ledger <ledger> unneed <key>` once the owner has
 answered, its ticket settles, or its stall resets, since nothing else clears

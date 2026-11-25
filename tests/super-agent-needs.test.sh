@@ -145,6 +145,10 @@ jq '.needs = [{key: "acme/widgets#88", action: "Restart widgets#88 after 3 stall
 check "a pushed need is not alerted again" 0 "$(S | jq '.raised | length')"
 SA_NOW=$(at "2026-11-23 13:01")
 check "and is reminded 4 working hours after its since" "true" "$(S | jq -r '.raised[0].reminder')"
+fresh
+jq '.needs = [{key: "acme/widgets#88", action: "Restart widgets#88 after 3 stalls", reason: "stall-cap", since: "2026-11-23T09:00:00Z", pushed: true}]' "$led" > "$led.new" && mv "$led.new" "$led"
+L need $repo#88 --action "Restart widgets#88 after 3 stalls" --reason stall-cap --why x --option a --option b >/dev/null
+check "recorded again with the same action, it keeps the push as its alert mark" "2026-11-23T09:00:00Z" "$(L list | jq -r '.needs[0].alerted')"
 
 # --- the acknowledge mark ----------------------------------------------------------
 fresh
@@ -174,15 +178,24 @@ fresh
 need88 >/dev/null
 check "a bare number is accepted with exactly one need with options" "$repo#88 1 Relaunch on Opus" "$(L answer 1 | jq -r '"\(.key) \(.option) \(.label)"')"
 offer41 >/dev/null
-L answer 1 >/dev/null 2>&1
+out=$(L answer 1 2>/dev/null)
 check_rc "a bare number is refused with two needs with options" 1 $?
+check "the refusal says to name the ticket" true "$(jq -r '.error | contains("answer <ticket> <option>")' <<<"$out")"
 check "88 1 resolves to that need's option" "$repo#88 1 Relaunch on Opus a fresh thread with the failure quoted" \
   "$(L answer "88 1" | jq -r '"\(.key) \(.option) \(.label) \(.consequence)"')"
 check "41 2 resolves to the offer's second option" "$repo#41 2 Leave it open" "$(L answer "41 2" | jq -r '"\(.key) \(.option) \(.label)"')"
-L answer "88 4" >/dev/null 2>&1
+out=$(L answer "88 4" 2>/dev/null)
 check_rc "an option the need lacks is refused" 1 $?
-L answer "77 1" >/dev/null 2>&1
+check "the refusal names the options it has" "$repo#88 has options 1 to 3" "$(jq -r .error <<<"$out")"
+out=$(L answer "77 1" 2>/dev/null)
 check_rc "a number no need holds is refused" 1 $?
+check "the refusal counts the needs it names" "77 names 0 open needs with options; name the ticket as owner/name#n" "$(jq -r .error <<<"$out")"
+out=$(L answer "nonsense" 2>/dev/null)
+check_rc "a reply that is no ticket and option is refused" 1 $?
+check "the refusal quotes it" "nonsense: not a reply to an open need, <ticket> <option>" "$(jq -r .error <<<"$out")"
+jq '.needs = "x"' "$led" > "$led.bad"
+bash "$s/ledger.sh" --ledger "$led.bad" answer 1 >/dev/null 2>&1
+check_rc "needs of the wrong shape are a tooling refusal" 2 $?
 L need $repo#90 --action "Approve widgets#90 held git push" --reason permission-hold --why w --answer-in https://t3.example/t/90 >/dev/null
 L unneed $repo#41 >/dev/null
 check "a need answered in its own thread does not count against a bare number" "$repo#88" "$(L answer 2 | jq -r .key)"
