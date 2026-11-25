@@ -21,9 +21,9 @@
 # own thread recorded, the desktop notifier (`notify-send`) stands in for the
 # command, as it does for a fleet file whose `notify` is malformed, a fault the
 # message names. An outage gets one wake and at most one notify, and closes at
-# the first reconcile at or after its opening, or when no watcher is owed any
-# more. Its state is `wake-timer.state.json` beside the ledger; one that is no
-# JSON object stops the tick with a desktop notice naming it, never a reset.
+# the first reconcile at or after its opening, when no watcher is owed any
+# more, or when a limit stop is held. Its state is `wake-timer.state.json`
+# beside the ledger; one that is no JSON object stops the tick with a desktop notice naming it, never a reset.
 #
 # Each outage is logged as JSON lines in `wake-timer.jsonl` beside the ledger:
 # `{at, event}`, `event` `opened`, `wake`, `notify` (with `via` `command` or
