@@ -55,8 +55,8 @@
 # exit is what wakes the super agent and a stopped one would wake no one. A
 # malformed `notify` is refused before the first poll.
 #
-# `--owed` (the other flags ignored) is the one read-only answer, asked by the watch guard (`watch-guard.sh`)
-# and the wake timer: is a watcher owed? `watcher` when an open entry has been
+# `--owed` (the other flags unused) is the one read-only answer, asked by the watch
+# guard (`watch-guard.sh`), so any later caller shares its test: is a watcher owed? `watcher` when an open entry has been
 # observed and no live watch.sh holds the lock, `reconcile` when open entries
 # exist and none has been observed yet, else `none`. It takes no lock and writes
 # nothing, and counts entries the way the watcher's own start does: a `launching`

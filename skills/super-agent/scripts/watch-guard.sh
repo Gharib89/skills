@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # The watch guard: a Stop hook that refuses the super agent's turn end once while
-# a watcher is owed. It asks `watch.sh --owed`, the one answer the wake timer
-# asks too. With a watcher owed (`watcher`, or `reconcile` first) it blocks the
+# a watcher is owed. It asks `watch.sh --owed`, the one test for it. With a watcher owed (`watcher`, or `reconcile` first) it blocks the
 # stop and names the open entries and the exact command to run; the stop that
 # follows (the hook input's `stop_hook_active` true) passes. The super agent
 # still starts the watcher itself, so a missing hook leaves the loop working.
@@ -52,7 +51,8 @@ while [ $# -gt 0 ]; do
   shift 2
 done
 input=$(cat)
-active=$(jq -r '.stop_hook_active == true' <<<"$input" 2>/dev/null) || unjudged "the hook input is not JSON"
+active=$(jq -r 'if type == "object" then .stop_hook_active == true else error("not an object") end' <<<"$input" 2>/dev/null) || unjudged "the hook input is not JSON"
+[ -n "$active" ] || unjudged "the hook input is empty"
 answer=$(bash "$here/watch.sh" --ledger "$ledger" --owed 2>/dev/null) || unjudged "watch.sh --owed failed"
 owed=$(jq -r '.owed // empty' <<<"$answer" 2>/dev/null)
 open=$(jq -r '.open // empty' <<<"$answer" 2>/dev/null)
@@ -63,10 +63,9 @@ case $owed in
 esac
 if [ "$active" = true ]; then log pass; exit 0; fi
 
-q() { printf "'%s'" "${1//\'/\'\\\'\'}"; }
-watcher="bash $(q "$here/watch.sh") --ledger $(q "$ledger") --fleet $(q "$fleet") --timeout 7000"
+watcher="bash $(sa_shq "$here/watch.sh") --ledger $(sa_shq "$ledger") --fleet $(sa_shq "$fleet") --timeout 7000"
 if [ "$owed" = reconcile ]; then
-  what="$open open entries have no observed state yet. Run \`bash $(q "$here/reconcile.sh") --ledger $(q "$ledger") --fleet $(q "$fleet")\`, then start the watcher with \`$watcher\`"
+  what="$open open entries have no observed state yet. Run \`bash $(sa_shq "$here/reconcile.sh") --ledger $(sa_shq "$ledger") --fleet $(sa_shq "$fleet")\`, then start the watcher with \`$watcher\` (each remote entry also takes reconcile's \`--remote <environment id>=<dir>\`, as SKILL.md says)"
 else
   what="$open open entries and no watcher is running. Start it with \`$watcher\`"
 fi

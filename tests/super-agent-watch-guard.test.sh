@@ -97,6 +97,11 @@ check "that line is JSON with a time" true "$(jq -s 'all(.[]; (.at | type) == "s
 rm -f "$log"
 out=$(bash "$s/watch-guard.sh" --ledger "$tmp/missing-dir/x/ledger.json" --fleet "$fleet" <<<"$stop"); rc=$?
 check "a ledger that does not exist is nothing owed, not a fault" "0 " "$rc $out"
+check "and writes no log line" none "$([ -f "$log" ] && echo present || echo none)"
+rm -f "$log"
+out=$(H ""); rc=$?
+check "an empty hook input allows the stop" "0 " "$rc $out"
+check "and is logged as unjudged, not judged not-active" 1 "$(grep -c unjudged "$log")"
 
 # --- the scorecard counts them: the target for unwatched passes is live (no slice tag) ---
 check "the scorecard's target for unwatched passes is live, at 0" '{"max":0}' \

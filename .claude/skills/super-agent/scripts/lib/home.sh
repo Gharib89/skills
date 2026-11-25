@@ -6,21 +6,22 @@
 sa_home_dir() { printf '%s/super-agent/home' "${XDG_STATE_HOME:-$HOME/.local/state}"; }
 sa_home_settings() { printf '%s/.claude/settings.local.json' "$(sa_home_dir)"; }
 
+# sa_shq <text>: the text single-quoted for a shell, each ' in it written '\''.
+sa_shq() { local q="'\\''"; printf "'%s'" "${1//\'/$q}"; }
+
 # sa_guard_entry: the state guard's PreToolUse entry for this copy of guard.sh.
-# The path is single-quoted with each ' in it written '\'' so any path stays one word.
 sa_guard_entry() {
-  local p q="'\\''"
+  local p
   p=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/guard.sh
-  jq -cn --arg c "bash '${p//\'/$q}'" \
+  jq -cn --arg c "bash $(sa_shq "$p")" \
     '{matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash", hooks: [{type: "command", command: $c}]}'
 }
 
-# sa_watch_guard_entry: the watch guard's Stop entry for this copy of watch-guard.sh,
-# quoted the way sa_guard_entry quotes its path.
+# sa_watch_guard_entry: the watch guard's Stop entry for this copy of watch-guard.sh.
 sa_watch_guard_entry() {
-  local p q="'\\''"
+  local p
   p=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/watch-guard.sh
-  jq -cn --arg c "bash '${p//\'/$q}'" '{hooks: [{type: "command", command: $c}]}'
+  jq -cn --arg c "bash $(sa_shq "$p")" '{hooks: [{type: "command", command: $c}]}'
 }
 
 # `guard_has($e)`: the settings hold the state guard entry `$e` (its command), for
