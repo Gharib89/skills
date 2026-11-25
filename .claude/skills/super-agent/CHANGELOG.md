@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.46.0 (2026-11-25)
+
+### Features
+
+- **super-agent**: Watch, I'll take and drop, and a call guard that refuses a send into a thread the
+  owner holds ([#1420](https://github.com/Gharib89/skills/pull/1420),
+  [`e2455ee`](https://github.com/Gharib89/skills/commit/e2455ee4381fdac356856f48c0ab50951c04c808))
+
+
 ## v0.45.0 (2026-11-25)
 
 ### Features
