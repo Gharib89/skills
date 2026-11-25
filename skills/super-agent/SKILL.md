@@ -59,7 +59,7 @@ picks, which `launch.sh` runs for you:
    M the second, L and XL the third.
 3. When route's `ask` is true, launch answers `ask`: escalate first, then rerun
    launch with `--wanted yes` or `--wanted no`
-   ([routing](reference/routing.md)); `no_instance` goes to Needs you.
+   ([routing](reference/routing.md)); `no_instance` is a need (`no-instance`).
 
 ## Placement
 
@@ -264,8 +264,8 @@ any thread the owner names, by its id.
 The owner decides these, and you decide everything else:
 
 - a permission hold on a supervised thread: you cannot approve one
-  (`t3_pending_request` cannot), so name the thread, the held call and your
-  recommendation;
+  (`t3_pending_request` cannot), so its need (`--reason permission-hold`) is
+  answered in its thread, your recommendation its why;
 - a merge-gate hold no standing waiver or ruling matches, when
   the fleet file's `merge_gate_ruler` is `owner` (its default);
 - a design or scope fork the supervised thread cannot settle;
@@ -295,12 +295,11 @@ and pulse answer carries, posted as printed
 ([status-block](reference/status-block.md#every-wake)); never compose it by
 hand. It opens with the needs-you message: each open need in full, blocking
 first. Never a question dialog: it blocks the loop. Record each escalation as
-a need with `ledger.sh --ledger <ledger> need <key> --action <text> --reason
-<word> --why <clause> --option <label>...`, the permission hold and the stall
-at 3 included ([a need](reference/status-block.md#a-need)). Resolve the
-owner's `88 1` with `ledger.sh --ledger <ledger> answer '<reply>'` and record
-it as a [ruling](reference/status-block.md#a-ruling). A reviewer's usage-limit
-notice is no escalation: record it as
+[a need](reference/status-block.md#a-need), the permission hold and the stall
+at 3 included, and post its block at once. Read the owner's `88 1` with
+`ledger.sh --ledger <ledger> answer '<reply>'`, do that option, record it as a
+[ruling](reference/status-block.md#a-ruling) and `unneed` the key. A
+reviewer's usage-limit notice is no escalation: record it as
 [a reviewer usage limit](reference/status-block.md#a-reviewer-usage-limit).
 
 ## An owner question

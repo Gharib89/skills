@@ -80,7 +80,7 @@ check "the next run raises nothing and changes no row" 'false []' "$(S | jq -r '
 check "a digest keeps the needs first" "**Pick [skills#681]($u/issues/681) backfill or forward-only?**" "$(S --digest | jq -r '.block | split("\n")[0]')"
 L unneed Gharib89/skills#681 >/dev/null
 out=$(S)
-check "clearing the needs reports the change, saying none" "true Needs you: none" "$(jq -r .changed <<<"$out") $(jq -r .block <<<"$out")"
+check "clearing the needs reports the change, saying none" "true Nothing needs you now." "$(jq -r .changed <<<"$out") $(jq -r .block <<<"$out")"
 check "and a digest leaves them out" 0 "$(S --digest | jq -r .block | grep -c '^Needs')"
 
 # --- a ledger status never reads GitHub, and a settled triage entry is no merge -

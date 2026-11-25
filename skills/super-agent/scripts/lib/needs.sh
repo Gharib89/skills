@@ -1,7 +1,7 @@
 # A need's class, its needs-you message and its working age, sourced by `_lib.sh`:
 # jq definitions spliced in front of a program after `sa_jq_norm`, so `ledger need`
 # and `status` share one table and one printer.
-# shellcheck disable=SC2034  # read by ledger.d/owner.sh and status.sh
+# shellcheck disable=SC2034  # read by ledger.d/needs.sh and status.sh
 sa_jq_needs='
   # The class of a reason word, null for a word not in the table. A blocking need is
   # one whose thread or queue is stopped until the owner acts; an offer is one
@@ -16,10 +16,11 @@ sa_jq_needs='
   def need_class: need_classes[.];
   # A need recorded before classes (no `class`) reads as blocking, so it is never quieter.
   def need_blocking: (.class // (.reason // "" | need_class) // "blocking") == "blocking";
+  # The ticket the action of a need names: its second word.
+  def need_ticket: .action | sub("[?]$"; "") | split(" ")[1] // "";
   # The action with its ticket (its second word) as a link: `owner/name#n` links as
   # written; `name#n` links to the key repo when the names match; anything else stays text.
-  def need_action: .key as $k | (.action | sub("[?]$"; "") | split(" ")) as $w
-    | ($w[1] // "") as $t
+  def need_action: .key as $k | need_ticket as $t | (.action | sub("[?]$"; "") | split(" ")) as $w
     | (if ($t | test("^[^/#\\s]+/[^/#\\s]+#[0-9]+$")) then $t | sub("#"; "/issues/")
        elif ($t | test("^[^/#\\s]+#[0-9]+$")) and ($k | test("^[^/#]+/[^/#]+#[0-9]+$"))
          and ($t | sub("#.*"; "") | norm_repo) == ($k | sub("#.*"; "") | sub("^[^/]*/"; "") | norm_repo)
@@ -47,3 +48,11 @@ sa_jq_needs='
     [range($from; $to; 3600) | . as $h
       | select($week | index($h | strflocaltime("%w") | tonumber)) | [3600, $to - $h] | min] | add // 0;
 '
+
+# sa_work_week <fleet>: the fleet file's `work_week` as JSON (Mon to Fri when it has
+# none), or a refusal naming the file. `status` and `schedules` read it.
+sa_work_week() {
+  jq -ec '(if .work_week == null then [1,2,3,4,5] else .work_week end)
+    | select(type == "array" and length > 0 and length == (unique | length) and all(type == "number" and . >= 0 and . <= 6 and . == floor))' "$1" 2>/dev/null \
+    || sa_tooling "$1: not JSON, or work_week is not a non-empty list of distinct weekday numbers 0 to 6"
+}

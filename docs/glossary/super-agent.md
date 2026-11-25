@@ -53,7 +53,7 @@ The UserPromptSubmit hook (`scripts/question-flag.sh`) in the same generated set
 _Avoid_: question detector, answer-only gate (it refuses nothing)
 
 **Wake timer**:
-The systemd user timer that runs `scripts/wake-timer.sh` every 5 minutes, with no model, on the super agent's machine. While `watch.sh --owed` says a watcher is owed and the super agent's own thread is idle, it sends the thread one fixed wake line, then runs the notify command if no reconcile follows. A running thread is the watch guard's, and a limit stop is held until its reset plus 10 minutes. Its unit files are the owner's to install: `guard.sh --install` prints them, and a missing timer is a `Needs you` row.
+The systemd user timer that runs `scripts/wake-timer.sh` every 5 minutes, with no model, on the super agent's machine. While `watch.sh --owed` says a watcher is owed and the super agent's own thread is idle, it sends the thread one fixed wake line, then runs the notify command if no reconcile follows. A running thread is the watch guard's, and a limit stop is held until its reset plus 10 minutes. Its unit files are the owner's to install: `guard.sh --install` prints them, and a missing timer is a `needs` line in `home`.
 _Avoid_: heartbeat, cron job, backstop (that is the hourly schedule)
 
 **Waiting line**:
@@ -149,7 +149,7 @@ The Markdown file `handover.sh` writes from the ledger for the successor: the pr
 _Avoid_: handoff notes, state dump
 
 **Scorecard**:
-The daily row `scorecard.sh` counts from the ledger, the guard and timer logs and the super agent's own transcript (workload, messages, needs, questions, wakes and tokens), stamped with the skill version that ran the day, and the weekly review that raises one Needs you row per number over its target. A new super-agent version is judged by these counts, not by a model's reading.
+The daily row `scorecard.sh` counts from the ledger, the guard and timer logs and the super agent's own transcript (workload, messages, needs, questions, wakes and tokens), stamped with the skill version that ran the day, and the weekly review that adds one line to the bearings file's Needs you list per number over its target. A new super-agent version is judged by these counts, not by a model's reading.
 _Avoid_: metrics, dashboard, report card
 
 **Replay case**:

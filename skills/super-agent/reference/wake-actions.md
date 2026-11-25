@@ -56,8 +56,9 @@ Only the owner can unblock it. Record one need per row with `ledger.sh need`
 (SKILL.md, Escalation format), adding `--reason <the row's reason>`: it silences
 that row only, so a later cause on the entry still prints. By `reason`:
 
-- `permission-hold` (`detail` the held requests): name the thread, the held call
-  and your recommendation; a held thread is not a stall.
+- `permission-hold` (`detail` the held requests): `--answer-in` the thread's
+  link, the held call in the action, your recommendation in `--why`; a held
+  thread is not a stall.
 - `fault` (`detail` the error kind): see [stall ladder](stall-ladder.md#errors);
   start the watcher again after escalating.
 - `stall-cap`: the entry is at rest at 3 stalls. A `stalled` row may print on

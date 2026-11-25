@@ -29,7 +29,8 @@ runs on.
 
 ## Every wake
 
-Reconcile (or pulse) with `--quota <file> --instance <id>`, `<file>` the
+Reconcile (or pulse) with `--fleet <fleet> --quota <file> --instance <id>`
+(the fleet file's `work_week` sets the reminder clock), `<file>` the
 latest saved quota read (Routing: `quota.sh --fleet <fleet> --save <file> --wake
 <wake-id>`) and `<id>` this thread's provider instance. `launch.sh record`
 answers a `status` of its own, from its baseline reconcile: post it the same
@@ -37,14 +38,15 @@ way. Every `status` answer:
 
 - `block` holds the needs-you message when the needs changed or one is raised,
   then only the rows that changed since the last posted block, a row that
-  emptied reading `<row>: none` (needs that emptied, `Needs you: none`), and
-  `Merged` lists only the merges since that block. Post it as printed, in chat:
-  nothing is pushed. Empty: post nothing, no prose either. A merge, a launch,
-  a change to the waiting list and every need reach the owner this way.
+  emptied reading `<row>: none` (needs that emptied, `Nothing needs you now.`),
+  and `Merged` lists only the merges since that block. Post it as printed, in
+  chat. Empty: post nothing, no prose either. A merge, a launch, a change to the
+  waiting list and every need reach the owner this way.
 - `raised` lists the needs this block alerts: a need not alerted before, and a
   blocking need's one reminder. Nothing to do with it; the block carries them.
-  A need you record after this wake's reconcile reaches the owner with the
-  next block, or run `status.sh --ledger <ledger>` and post its block at once.
+  A need you record after this wake's reconcile is in no block yet: run
+  `status.sh --ledger <ledger> --fleet <fleet> --quota <file> --instance <id>`
+  and post its `block` at once.
 - The owner answers in chat, `88 1` (ticket and option) or a bare `1` while one
   need with options is open: `ledger.sh --ledger <ledger> answer '<reply>'`
   names the need and the option, or exits 1 when the reply names none or
@@ -74,30 +76,34 @@ ledger.sh --ledger <ledger> need <key> --action '<verb> <ticket> <detail>' \
   --option '<label>: <consequence>' --option '<label>[: <consequence>]'...
 ```
 
-`<key>` is the entry (or the waiting ticket); the action is the question
-without its `?`, its second word the ticket (`name#n`, `owner/name#n` or
-`task:slug`), the verb and ticket within its first 30 characters and the whole
-within 72. `<word>` is the `escalate` row's `reason`, or for a need no row
-raised a word naming its cause (`verify`, `merge-gate`, `cleanup`). Give 2 to
-4 options, the recommended one first, each label at most 5 words; a held call
-the owner answers in its own thread takes `--answer-in <thread link>` and no
-options. `ledger need` refuses a need the message could not print, and a reason
-word it does not know: its refusal lists the words.
+`<key>` is the entry (or the waiting ticket); the action is the question without
+its `?`, its second word the ticket (`name#n`, `owner/name#n` or `task:slug`),
+the verb and ticket within its first 30 characters and the whole within 72.
+`<word>` is the `escalate` row's `reason`, or for a need no row raised a word
+naming its cause (`verify`, `merge-gate`, `cleanup`). Give 2 to 4 options, the
+recommended one first, each label at most 5 words, the label ending at the first
+`: `; a held call the owner answers in its own thread takes
+`--answer-in <thread link>` and no options, your recommendation in `--why`.
+`ledger need` refuses a need the message could not print, and a reason word it
+does not know: its refusal lists the words.
 
 The reason word sets the need's class. A **blocking need** is one whose thread
 or the queue is stopped until the owner acts (`permission-hold`, `merge-gate`,
-`scope`, `stall-cap`, `fault`, `no-instance` and the like); it prints bold,
-before the offers. An **offer** is one nothing waits on (`daily-offer`,
-`unqueued`, `parents-done`, `stale-skill`, `pr-closed`, `issue-closed`,
-`ask-first`); it prints behind `Offer:`. Each need prints at most 6 lines, its
-options numbered from 1.
+`scope`, `stall-cap`, `fault`, `no-instance`, `no-owner-skill`, `no-project`,
+`stale-ship`, `route-ask`, `owner-steered`, `triage`); it prints bold, before
+the offers. An **offer** is one nothing waits on (`daily-offer`, `unqueued`,
+`parents-done`, `stale-skill`, `pr-closed`, `issue-closed`, `ask-first`,
+`owner-run`, `verify`, `cleanup`); it prints behind `Offer:`. Each need prints
+at most 6 lines, its options numbered from 1.
 
 The block that first prints a need sets its alert mark. A blocking need still
 open 4 working hours later (hours on the fleet file's `work_week` days) is
 raised once more, and never again. Repeating `need` with the same action keeps
 its time and both marks, whatever its reason word, so a re-escalation is never
 raised twice. Each alert and reminder is logged in `needs-alerts.jsonl` beside
-the ledger, which the scorecard counts.
+the ledger, which the scorecard counts. A need 0.46.0 recorded and pushed
+counts as alerted at its `since`; it prints as its action alone, so `unneed`
+it and record it again with `--why` and options.
 
 Clear it with `ledger.sh --ledger <ledger> unneed <key>` once the owner has
 answered, its ticket settles, or its stall resets, since nothing else clears

@@ -160,7 +160,7 @@ done | jq -sc .) || sa_tooling "cannot read the transcripts"
 
 row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')" \
   --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" --argjson qlog "$qlog" --argjson cglog "$cglog" --argjson nlog "$nlog" \
-  --slurpfile led <(printf '%s\n' "$doc") --slurpfile archive <(cat "$ledger.archive.jsonl" 2>/dev/null) "$sa_jq_open$sa_jq_changing"'
+  --slurpfile led <(printf '%s\n' "$doc") --slurpfile archive <(cat "$ledger.archive.jsonl" 2>/dev/null) "$sa_jq_norm$sa_jq_open$sa_jq_changing"'
   def wsum: reduce .[] as $t ({in: 0, cw: 0, cr: 0, out: 0}; .in += $t.in | .cw += $t.cw | .cr += $t.cr | .out += $t.out);
   def total: .in + .cw + .cr + .out;
   def weighted: .in + 2 * .cw + 0.1 * .cr + 5 * .out;
@@ -218,9 +218,9 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
   | [$calls[] | .texts[] | select(length > 0)] as $msgs
   | [$calls[] | .tools[] | select(.name == "Bash") | .cmd // ""] as $cmds
   | ($nlog // []) as $nl
-  | def today($ev): [$nl | to_entries[] | select(.value.event == $ev and (.value.at | startswith($day)))];
+  | def today($ev): [$nl | to_entries[] | select(.value.event == $ev and (.value.at // "" | startswith($day)))];
     def again($ev): [today($ev)[] | .key as $i | .value as $x
-      | select(any($nl[:$i][]; .event == $ev and .key == $x.key and .action == $x.action))] | length;
+      | select(any($nl[:$i][]; .event == $ev and (.key | norm_repo) == ($x.key | norm_repo) and .action == $x.action))] | length;
   ($day | strptime("%Y-%m-%d") | mktime) as $d0 | ($d0 + 86400) as $d1
   | ([$led[0].entries[]] + $archive) as $ents
   | def ended: (.settled_at // (if is_open then null else .updated_at end));

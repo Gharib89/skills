@@ -98,8 +98,12 @@ out=$(S | jq -r .block)
 check "a changed need set prints the needs again" "**Restart" "$(head -n 1 <<<"$out" | cut -d' ' -f1)"
 check "and no offer is left" 0 "$(grep -c '^Offer:' <<<"$out")"
 L unneed $repo#88 >/dev/null; L unneed $repo#90 >/dev/null
-check "emptied needs read Needs you: none" "Needs you: none" "$(S | jq -r .block)"
+check "emptied needs read Nothing needs you now." "Nothing needs you now." "$(S | jq -r .block)"
 L need $repo#88 --action "Restart widgets#88 after 3 stalls" --reason stall-cap --why "x" --option a --option b >/dev/null
+L need $repo#88 --action "Restart widgets#88 after 3 stalls" --reason stall-cap --why x \
+  --option "Retry at 10:30: after the deploy" --option b >/dev/null
+check "an option's label ends at its first ': '" "Retry at 10:30|after the deploy" \
+  "$(L list | jq -r '.needs[0].options[0] | "\(.label)|\(.consequence)"')"
 check "a digest prints the needs in full, not a row" 0 "$(S --digest | jq -r .block | grep -c '^Needs you')"
 
 # --- a blocking need open past 4 working hours is raised once more -----------------
@@ -133,6 +137,14 @@ L need $repo#88 --action "Restart widgets#88 after 3 stalls" --reason stall-cap 
 S --fleet "$tmp/fleet.json" >/dev/null
 SA_NOW=$(at "2026-11-29 02:01")
 check "the fleet file's work week counts" 1 "$(S --fleet "$tmp/fleet.json" | jq '.raised | length')"
+
+# --- a need 0.46.0 pushed counts as alerted at its since ---------------------------
+fresh
+SA_NOW=$(at "2026-11-23 09:00")
+jq '.needs = [{key: "acme/widgets#88", action: "Restart widgets#88 after 3 stalls", reason: "stall-cap", since: "2026-11-23T09:00:00Z", pushed: true}]' "$led" > "$led.new" && mv "$led.new" "$led"
+check "a pushed need is not alerted again" 0 "$(S | jq '.raised | length')"
+SA_NOW=$(at "2026-11-23 13:01")
+check "and is reminded 4 working hours after its since" "true" "$(S | jq -r '.raised[0].reminder')"
 
 # --- the acknowledge mark ----------------------------------------------------------
 fresh

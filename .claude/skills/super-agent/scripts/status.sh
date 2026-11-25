@@ -24,7 +24,7 @@
 # link. The ledger keeps the rows of the last block it printed (`status`), so a
 # run knows whether any row changed since. A plain run (`reconcile` makes one on
 # every wake) prints only the rows that changed, a row that emptied as
-# `<row>: none` (needs that emptied as `Needs you: none`), and a run with nothing
+# `<row>: none` (needs that emptied as `Nothing needs you now.`), and a run with nothing
 # changed prints none; `--digest` prints
 # every row whatever changed (the owner's "status", the morning report, an
 # emptied waiting list). Any printed block counts its Merged tickets as listed,
@@ -80,8 +80,7 @@ if [ -n "$quota" ]; then
 fi
 week='[1,2,3,4,5]'
 if [ -n "$fleet" ]; then
-  week=$(jq -ec '(if .work_week == null then [1,2,3,4,5] else .work_week end) | select(type == "array" and length > 0 and all(type == "number" and . >= 0 and . <= 6 and . == floor))' "$fleet" 2>/dev/null) \
-    || sa_tooling "$fleet: not JSON, or work_week is not a list of weekday numbers 0 to 6"
+  week=$(sa_work_week "$fleet") || { printf '%s\n' "$week"; exit 2; }
 fi
 
 # The rows as the ledger holds them now: {rows: {"Needs you" (the needs-you message),
@@ -113,10 +112,12 @@ now=$(jq -c --argjson now "$(sa_now_s)" --argjson week "$week" "$sa_jq_norm$sa_j
       + row("Waiting"; [waiting_list[] | .key | keylink]; ", ")
       + row("Reviewer limit"; [(.review_limits // [])[] | "\(.repo) merging on the fallback reviewer only (\(.reviewer) hit its usage limit at \(.since))"]; "; ")),
      merged_keys: [$merged[].key],
-     raised: [(.needs // [])[] | if .alerted == null then raise(false)
-       elif need_blocking and .reminded == null
-         and working_seconds(.alerted | sub("[.][0-9]+Z$"; "Z") | fromdateiso8601; $now; $week) >= 4 * 3600 then raise(true)
-       else empty end]}' <<<"$doc") \
+     # A need 0.46.0 pushed (`pushed: true`, no `alerted`) counts as alerted at its `since`.
+     raised: [(.needs // [])[] | (.alerted // (if .pushed == true then .since else null end)) as $al
+       | if $al == null then raise(false)
+         elif need_blocking and .reminded == null
+           and working_seconds($al | sub("[.][0-9]+Z$"; "Z") | fromdateiso8601; $now; $week) >= 4 * 3600 then raise(true)
+         else empty end]}' <<<"$doc") \
   && [ -n "$now" ] || sa_tooling "$ledger: needs, waiting and entries are not the shapes status reads"
 
 printed=$(jq -ec '(.status // {}) as $s | if ($s | type) == "object" and (($s.merged_ack // []) | type) == "array" then $s.rows // {} else error end' <<<"$doc") \
@@ -132,7 +133,7 @@ block=$(jq -r --argjson d "$digest" --argjson p "$printed" --argjson q "$qdoc" -
   | $now.rows["Needs you"] as $nt
   | [if $d or ($now.raised | length) > 0 then $nt // empty
      elif $nt == $p["Needs you"] then empty
-     else $nt // "Needs you: none" end] as $needs
+     else $nt // "Nothing needs you now." end] as $needs
   | [("Merged", "Running", "Yours", "Waiting", "Reviewer limit") as $n
       | if $d then $now.rows[$n] // empty
         elif $now.rows[$n] == $p[$n] then empty
@@ -152,9 +153,9 @@ block=$(jq -r --argjson d "$digest" --argjson p "$printed" --argjson q "$qdoc" -
 # in the alert log.
 if [ -n "$block" ]; then
   at=$(jq -rn --argjson s "$(sa_now_s)" '$s | todate')
-  sa_update "$ledger" '.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}
+  sa_update "$ledger" "$sa_jq_norm"'.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}
     | if ($n.raised | length) > 0 then .needs = [(.needs // [])[] | . as $x
-        | ([$n.raised[] | select(.key == $x.key and .action == $x.action)] | first) as $r
+        | ([$n.raised[] | select((.key | norm_repo) == ($x.key | norm_repo) and .action == $x.action)] | first) as $r
         | if $r == null then . elif $r.reminder then .reminded = $at else .alerted = $at end] else . end' --argjson n "$now" --arg at "$at"
   jq -c --arg at "$at" '.raised[] | {at: $at, event: (if .reminder then "reminder" else "alert" end), key, action, class}' <<<"$now" \
     >>"$(dirname "$ledger")/needs-alerts.jsonl" || sa_tooling "$(dirname "$ledger")/needs-alerts.jsonl: cannot append"
