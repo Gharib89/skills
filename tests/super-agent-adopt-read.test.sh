@@ -68,7 +68,8 @@ read_of '/ship-run 8'
 out=$(L adopt --read "$tmp/read.json" 2>&1); rc=$?
 check "a read naming another ticket than the holder's is refused, naming the holder" "1 1" "$rc $(grep -q "held by $repo#7" <<<"$out" && echo 1)"
 read_of '/ship-run 7'
-check "so is a --number that is not the ticket the first message names" 2 "$(L adopt --read "$tmp/read.json" --repo $repo --number 8 >/dev/null 2>&1; echo $?)"
+out=$(L adopt --read "$tmp/read.json" --repo $repo --number 8 2>&1); rc=$?
+check "so is a --number that is not the ticket the first message names" "2 1" "$rc $(grep -q -- '--number 8 is not the ticket' <<<"$out" && echo 1)"
 check "and a --task for a ticket's thread" 1 "$(L adopt --read "$tmp/read.json" --task other >/dev/null 2>&1; echo $?)"
 check "the holder's own ticket is adopted again" 0 "$(L adopt --read "$tmp/read.json" --repo $repo --number 7 >/dev/null 2>&1; echo $?)"
 
@@ -85,7 +86,8 @@ check "a plain https github.com origin, with a trailing slash, names the repo" "
 
 # --- the read must be the thread's first page ----------------------------------------------------------------
 read_of '/ship-run 12'; jq '.thread.threadId = "th-later" | .earlierPosition = 4' "$tmp/read.json" > "$tmp/r2" && mv "$tmp/r2" "$tmp/read.json"
-check "a read with an earlier page is refused" 2 "$(L adopt --read "$tmp/read.json" >/dev/null 2>&1; echo $?)"
+out=$(L adopt --read "$tmp/read.json" 2>&1); rc=$?
+check "a read with an earlier page is refused" "2 1" "$rc $(grep -q "is not the thread's first page" <<<"$out" && echo 1)"
 
 # --- a ticket's thread started without a /ship-run call: --number stands in for the first message ---------------
 sa_route "repos/$repo/issues/5/comments" '[]'
@@ -99,13 +101,15 @@ out=$(L adopt --read "$tmp/read.json" 2>&1)
 check "a refusal for a held thread names the step that works: adopt --thread, with no read" 1 "$(grep -q 'adopt --thread th-ext' <<<"$out" && echo 1)"
 check "which does adopt the held thread" "0 $repo#7" "$(o=$(L adopt --thread th-ext); echo "$? $(jq -r .key <<<"$o")")"
 read_of '/ship-run 7'; jq '.earlierPosition = 4' "$tmp/read.json" > "$tmp/r2" && mv "$tmp/r2" "$tmp/read.json"
-check "a read that is not the first page is refused for a thread the ledger holds too" 2 "$(L adopt --read "$tmp/read.json" >/dev/null 2>&1; echo $?)"
+out=$(L adopt --read "$tmp/read.json" 2>&1); rc=$?
+check "a read that is not the first page is refused for a thread the ledger holds too" "2 1" "$rc $(grep -q "is not the thread's first page" <<<"$out" && echo 1)"
 read_of '/triage 21'; jq '.thread.threadId = "th-t21" | .thread.branch = "triage-21"' "$tmp/read.json" > "$tmp/r2" && mv "$tmp/r2" "$tmp/read.json"
 out=$(L adopt --read "$tmp/read.json" --repo $repo --number 21)
 check "--number does not turn a /triage thread into a ship: the first message's kind wins" "$repo#21 triage" "$(jq -r '"\(.key) \(.entry.kind)"' <<<"$out")"
 sa_route "repos/$repo/issues/22/comments" '[]'
 read_of '/ship-run 7'; jq '.thread.threadId = "th-t22"' "$tmp/read.json" > "$tmp/r2" && mv "$tmp/r2" "$tmp/read.json"
-check "and a --number the first message does not name is refused" 2 "$(L adopt --read "$tmp/read.json" --repo $repo --number 22 >/dev/null 2>&1; echo $?)"
+out=$(L adopt --read "$tmp/read.json" --repo $repo --number 22 2>&1); rc=$?
+check "and a --number the first message does not name is refused" "2 1" "$rc $(grep -q -- '--number 22 is not the ticket' <<<"$out" && echo 1)"
 L set $repo#7 steered true >/dev/null
 L need $repo#7 --action "watch or take?" --reason owner-steered >/dev/null
 L need $repo#9 --action "an other need" --reason owner >/dev/null

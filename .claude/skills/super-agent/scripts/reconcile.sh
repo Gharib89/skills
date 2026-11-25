@@ -28,7 +28,7 @@
 # nudge, and after the stall window at rest (not at a merge-gate summary) one `owner-steered`
 # escalate row asks "watch or take?", on every reconcile until a need for the key with that reason, or with none, is
 # recorded (the standard `escalate` silencing), which also quiets `watch`; `watch` wakes
-# once per `--stall-window` after the last such row (`steered_asked_at`). The author comes from `owner_at`
+# once per `--stall-window` after the last reconcile that found it due (`steered_asked_at`). The author comes from `owner_at`
 # in the thread's reply file (`reply.sh`): `<dir>/<thread id>.json` of `--reads` for a local
 # entry, of its `--remote` for a remote one; a thread with no such file keeps its mark.
 # Settling the

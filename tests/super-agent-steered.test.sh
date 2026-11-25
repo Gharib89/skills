@@ -63,8 +63,14 @@ check "and the row asks watch or take" "at rest after your message: watch or tak
 check "the row prints on every wake until its need is recorded" "1 1" \
   "$(R $((t0 + 1100)) | jq '.escalate | length') $(R $((t0 + 2000)) | jq '.escalate | length')"
 W() { SA_NOW=$1 bash "$s/watch.sh" --ledger "$led" --interval 1 --recheck 0 --timeout 2 --stall-window 60 | jq -r '"\(.key // "null") \(.event)"'; }
-check "the watcher stays quiet right after a reconcile asked: one wake per window" "null timeout" "$(W $((t0 + 2010)))"
-check "and raises the stall-window wake once a window has passed since the ask" "$key stall-window" "$(W $((t0 + 2070)))"
+check "the watcher stays quiet right after a reconcile asked, up to the last second of the window" "null timeout" "$(W $((t0 + 2000)))"
+check "so a window gives one wake: quiet at 59 seconds after the ask" "null timeout" "$(W $((t0 + 2059)))"
+check "and the stall-window wake comes at 60 seconds after it" "$key stall-window" "$(W $((t0 + 2060)))"
+sa_thread th-1 idle 2 0 /wt/1 feat/x-1 "$(printf 'ship 0.68.0\nUnmet criteria: none')"
+R $((t0 + 2100)) >/dev/null
+check "at a merge gate a steered entry has no rest to time: the watcher raises no stall-window" "null timeout" "$(W $((t0 + 2200)))"
+sa_thread th-1 idle 2 0 /wt/1 feat/x-1
+R $((t0 + 2300)) >/dev/null
 L need $key --action "ask" --reason owner-steered >/dev/null
 check "a recorded need silences the row" 0 "$(R $((t0 + 3000)) | jq '[.escalate[] | select(.reason == "owner-steered")] | length')"
 check "and the watcher's wake: nothing to report" "null timeout" \

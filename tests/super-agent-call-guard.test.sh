@@ -134,6 +134,10 @@ check "a send's arguments are split, never glob-expanded against the hook's dire
   "$(cd "$tmp/glob" && s=$root/$s verdict "$(bash_call 't3 thread send * hi')")"
 check "a redirect glued to the id is no part of it: a held thread passes" "0 " "$(verdict "$(bash_call 't3 thread send th-1>/dev/null')")"
 check "and an owner-run one is refused for the right reason" "2 owner-run" "$(verdict "$(bash_call 't3 thread send th-o>/dev/null')")"
+for cmd in 't3 thread send >/dev/null th-o hi' 't3 thread send > out th-o hi' 't3 thread send <msg.txt th-o' 't3 thread send 2>/dev/null th-o hi' 't3 thread send 2>&1 th-o' 't3 thread send &> out th-o'; do
+  check "a redirect before the id ($cmd) is no id: the send is judged on th-o" "2 owner-run" "$(verdict "$(bash_call "$cmd")")"
+done
+check "a backtick glued to the id is no part of it: a held thread passes" "0 " "$(verdict "$(bash_call 'echo `t3 thread send th-1`')")"
 n=$(jq -s '[.[] | select(.event == "unjudged")] | length' "$log")
 check "a command that matches a send but yields no id is allowed" "0 " "$(verdict "$(bash_call 'echo th-o | xargs t3 thread send')")"
 check "and logged unjudged" "$((n + 1))" "$(jq -s '[.[] | select(.event == "unjudged")] | length' "$log")"

@@ -158,7 +158,8 @@
 #       but the ledger lacks, or a second `migrate-rulings` · 2 usage, a value
 #       that is not JSON, an unreadable or wrong-shaped ledger, a write that failed, or
 #       an `adopt --read` whose file is no `t3_thread_read` result or not the thread's first
-#       page, whose first message is no ticket call (with no `--task` or `--number`), whose
+#       page, whose first message is no ticket call (with no `--task` or `--number`) or names
+#       another ticket than `--number`, whose
 #       repo is unknown, or whose claim failed (the own thread unknown: run `self` first)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
