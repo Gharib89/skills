@@ -83,13 +83,12 @@ ledger_needs() {
     stage=$(jq -r .stage <<<"$entry")
     now=$(jq -rn --argjson s "$(sa_now_s)" '$s | todate')
     row=$(jq -cn --arg k "$key" --arg r "$reason" --arg s "$stage" --arg now "$now" '{key: $k, reason: $r, stage: $s, since: $now}')
-    # Both keys come from sa_key, so they match as written.
-    sa_update "$ledger" '.acks = ([(.acks // [])[] | select(.key != $k or .reason != $r)] + [$a])' --arg k "$key" --arg r "$reason" --argjson a "$row"
+    sa_update "$ledger" "$sa_jq_norm"'.acks = ([(.acks // [])[] | select((.key | norm_repo) != ($k | norm_repo) or .reason != $r)] + [$a])' --arg k "$key" --arg r "$reason" --argjson a "$row"
     jq -cn --argjson a "$row" '{ack: $a}' ;;
   answer)
     [ $# -eq 1 ] || sa_tooling "$usage"
     sa_read "$ledger"
-    jq -e '(.needs // []) | type == "array" and all(type == "object" and ((.options // []) | type) == "array")' <<<"$doc" >/dev/null \
+    jq -e '(.needs // []) | type == "array" and all(type == "object" and (.key | type) == "string" and (.action | type) == "string" and ((.options // []) | type) == "array")' <<<"$doc" >/dev/null \
       || sa_tooling "$ledger: needs are not the shape answer reads"
     # `<ticket> <option>` or a bare `<option>`; the ticket is a number, name#n, owner/name#n
     # or task:slug, matched against the need's key and the ticket its action names.
@@ -106,6 +105,7 @@ ledger_needs() {
         | if $o < 1 or $o > ($n.options | length) then error("\($n.key) has options 1 to \($n.options | length)")
           else {key: $n.key, action: $n.action, option: $o, label: $n.options[$o - 1].label, consequence: $n.options[$o - 1].consequence} end end)
         // {error: "\($t): not a reply to an open need, <ticket> <option>"}) catch {error: .}' <<<"$doc")
+    [ -n "$text" ] || sa_tooling "answer: jq failed reading $ledger"
     jq -e 'has("error")' <<<"$text" >/dev/null && sa_fail "$(jq -r .error <<<"$text")"
     printf '%s\n' "$text" ;;
   esac

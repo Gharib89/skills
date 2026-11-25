@@ -196,6 +196,9 @@ check "the refusal quotes it" "nonsense: not a reply to an open need, <ticket> <
 jq '.needs = "x"' "$led" > "$led.bad"
 bash "$s/ledger.sh" --ledger "$led.bad" answer 1 >/dev/null 2>&1
 check_rc "needs of the wrong shape are a tooling refusal" 2 $?
+jq '.needs = [{key: 5, action: "x", options: [{label: "a"}]}]' "$led" > "$led.bad"
+bash "$s/ledger.sh" --ledger "$led.bad" answer 1 >/dev/null 2>&1
+check_rc "a need whose key is no string is a tooling refusal" 2 $?
 L need $repo#90 --action "Approve widgets#90 held git push" --reason permission-hold --why w --answer-in https://t3.example/t/90 >/dev/null
 L unneed $repo#41 >/dev/null
 check "a need answered in its own thread does not count against a bare number" "$repo#88" "$(L answer 2 | jq -r .key)"
