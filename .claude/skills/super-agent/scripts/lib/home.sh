@@ -9,16 +9,18 @@ sa_home_settings() { printf '%s/.claude/settings.local.json' "$(sa_home_dir)"; }
 # sa_shq <text>: the text single-quoted for a shell, each ' in it written '\''.
 sa_shq() { local q="'\\''"; printf "'%s'" "${1//\'/$q}"; }
 
-# sa_hook_entry <script> [<matcher>]: this copy's <script> as a hook entry.
+# sa_hook_entry <script> [<matcher> [<suffix>]]: this copy's <script> as a hook entry,
+# its command followed by <suffix>.
 sa_hook_entry() {
   local p
   p=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/$1
-  jq -cn --arg c "bash $(sa_shq "$p")" --arg m "${2:-}" \
+  jq -cn --arg c "bash $(sa_shq "$p")${3:-}" --arg m "${2:-}" \
     '(if $m != "" then {matcher: $m} else {} end) + {hooks: [{type: "command", command: $c}]}'
 }
 # The state guard's PreToolUse entry and the watch guard's Stop entry.
 sa_guard_entry() { sa_hook_entry guard.sh 'Edit|Write|MultiEdit|NotebookEdit|Bash'; }
-sa_watch_guard_entry() { sa_hook_entry watch-guard.sh; }
+# A Stop hook's exit 2 blocks the stop, so a usage error in the watch guard is swallowed.
+sa_watch_guard_entry() { sa_hook_entry watch-guard.sh '' ' || true'; }
 
 # `hook_has($ev; $e)`: the settings hold, under event `$ev`, the entry `$e` (its
 # command), for `guard.sh` and `sa_home` alike.

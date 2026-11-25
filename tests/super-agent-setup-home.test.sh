@@ -28,7 +28,7 @@ check "the proposal's missing watch guard is its own Needs you row" 1 \
 S --write --name laptop >/dev/null
 check "it answers where the folder is" "$XDG_STATE_HOME/super-agent/home" "$(jq -r .home.folder <<<"$out")"
 check "and its Stop hook is the watch guard" "1 1 true" \
-  "$(jq '.hooks.Stop | length' "$hc") $(jq -r '.hooks.Stop[0].hooks[0].command' "$hc" | grep -c "super-agent/scripts/watch-guard.sh'$") $(jq .home.watch_guard <<<"$out")"
+  "$(jq '.hooks.Stop | length' "$hc") $(jq -r '.hooks.Stop[0].hooks[0].command' "$hc" | grep -c "super-agent/scripts/watch-guard.sh' || true$") $(jq .home.watch_guard <<<"$out")"
 cp "$hc" "$tmp/first.json"; printf '{"x":1}\n' > "$hc"
 S --write --name laptop >/dev/null
 check "a second run rewrites it to the same content" same "$(cmp -s "$hc" "$tmp/first.json" && echo same || echo differs)"

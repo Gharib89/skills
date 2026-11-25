@@ -87,8 +87,9 @@ redirection or an `mv`) and names the script to use, and its Stop entry is the
 watch guard, `scripts/watch-guard.sh`, which refuses a turn end once while
 `watch.sh --ledger <ledger> --owed` says a watcher is owed and names the
 command to run (it logs each block and pass to `watch-guard.jsonl` beside the
-ledger). The file is generated whole, so a hand edit there is lost on the next
-rewrite. A refusal means an
+ledger). Its command ends `|| true`, since a Stop hook's exit 2 blocks the
+stop and the guard's usage error must never do that. The file is generated
+whole, so a hand edit there is lost on the next rewrite. A refusal means an
 override has no flag yet: report it to the owner, never work around it. Only
 the pinned thread runs in that folder, so the hook reaches no other session.
 

@@ -105,9 +105,8 @@ for partial in '{}' '{"stop_hook_active":"false"}'; do
   rm -f "$log"; out=$(H "$partial"); rc=$?
   check "a hook input with no boolean stop_hook_active ($partial) allows the stop, logged unjudged" "0  1" "$rc $out $(grep -c unjudged "$log")"
 done
-rm -f "$log"; bash "$s/watch-guard.sh" --ledger "$led" --bogus <<<"$stop" >/dev/null 2>&1; rc=$?
-check_rc "a bad flag allows the stop, not exit 2" 0 "$rc"
-check "and is logged unjudged" 1 "$(grep -c unjudged "$log")"
+check "the generated Stop entry swallows a usage error's exit 2" 1 \
+  "$(bash -c 'source "$1/_lib.sh"; sa_watch_guard_entry' _ "$PWD/$s" | jq -r '.hooks[0].command' | grep -c ' || true$')"
 rm -f "$log"
 out=$(H ""); rc=$?
 check "an empty hook input allows the stop" "0 " "$rc $out"

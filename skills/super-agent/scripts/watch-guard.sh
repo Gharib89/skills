@@ -20,9 +20,9 @@
 #
 # contract: bare-run
 # stdout: a block prints {decision: "block", reason}; anything else prints nothing
-#         (a usage error prints its error JSON, which carries no decision)
-# exit: 0 the stop is allowed, or blocked by the decision on stdout; always 0 (a
-#       usage error is logged unjudged), since a Stop hook's exit 2 blocks the stop
+# exit: 0 the stop is allowed, or blocked by the decision on stdout · 2 a usage
+#       error, which the generated entry swallows (`|| true`): a Stop hook's exit
+#       2 blocks the stop
 set -uo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 state=${XDG_STATE_HOME:-$HOME/.local/state}/super-agent
@@ -39,8 +39,6 @@ log() {
   return 0
 }
 unjudged() { log unjudged "$1"; exit 0; }
-# A usage error exits 2, which a Stop hook reads as a block with no way out.
-trap '[ $? -ne 2 ] || unjudged "a usage error"' EXIT
 
 command -v jq >/dev/null 2>&1 || unjudged "no jq"
 source "$here/_lib.sh" || unjudged "cannot source _lib.sh"
