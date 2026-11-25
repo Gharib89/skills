@@ -24,9 +24,10 @@
 # `reconcile` stamped its `rest_since` (the later of that and `rest_at`, for a
 # thread waiting on the waiting line, or `limit_reset`, the reset a usage-limit stop names, for
 # a thread stopped on one: T3 resumes it then, so it raises no `run-finished` either); an entry already at 3 stalls is
-# escalated, so its window stays quiet, and so does a paused or interactive entry's.
-# A paused entry (`ledger pause`) is read from GitHub alone and wakes only on its PR
-# merging; a paused task is not read at all.
+# escalated, so its window stays quiet, and so does an owner-run or interactive entry's.
+# An owner-run entry (`ledger take`) is read from GitHub alone and wakes only on its PR
+# merging; an owner-run task is not read at all. A steered entry (the owner spoke last)
+# keeps its `stall-window`: the wake it raises is how reconcile lists its one need.
 # A thread that answers with another id or worktree path than the entry holds
 # is `thread-mismatch`; a thread or PR it cannot read is `thread-unreadable` or
 # `pr-unreadable`: a watcher that went quiet on those would be a silent stall.
@@ -183,7 +184,7 @@ stall_window_of() {
     ($e.rest_since | if . == null then null else fromdateiso8601 end) as $rs
     | (if $n.waiting then ([$rs, $n.rest_at] | map(select(. != null)) | max)
        elif $n.limit_reset != null then ([$rs, $n.limit_reset] | map(select(. != null)) | max) else $rs end) as $since
-    | if $since != null and ($e.paused != true) and ($e.interactive != true) and ($n.pr.state != "merged" or $n.waiting) and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
+    | if $since != null and ($e.owner_run != true) and ($e.interactive != true) and ($n.pr.state != "merged" or $n.waiting) and ($e.stalls // 0) < 3 and $n.status != "running" and $n.pending == 0
        and $now - $since >= $w then "stall-window" else empty end'
 }
 
@@ -193,15 +194,15 @@ while :; do
   while IFS= read -r entry; do
     key=$(jq -r .key <<<"$entry") thread=$(jq -r .thread <<<"$entry")
     read_ok=false event=''
-    paused=$(jq -r '.paused == true' <<<"$entry")
-    # a paused task's thread is the owner's until `drop`: nothing to read
-    [ "$paused" = true ] && [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ] && continue
-    if [ "$paused" = true ] || [ -n "$(jq -r '.environment_id // empty' <<<"$entry")" ]; then
-      # remote or paused: GitHub only, over the thread fields of the last reconcile; a
-      # paused thread is the owner's, so only its PR merging wakes
+    owner_run=$(jq -r '.owner_run == true' <<<"$entry")
+    # an owner-run task's thread is the owner's until `drop`: nothing to read
+    [ "$owner_run" = true ] && [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ] && continue
+    if [ "$owner_run" = true ] || [ -n "$(jq -r '.environment_id // empty' <<<"$entry")" ]; then
+      # remote or owner-run: GitHub only, over the thread fields of the last reconcile; an
+      # owner-run thread is the owner's, so only its PR merging wakes
       if sa_pr_of "$entry"; then
         read_ok=true obs=$(jq -c --argjson pr "$pr_obs" '.observed + {pr: $pr}' <<<"$entry")
-        if [ "$paused" = true ]; then
+        if [ "$owner_run" = true ]; then
           event=$(jq -rn --argjson e "$entry" --argjson n "$obs" 'if $n.pr.state == "merged" and $e.observed.pr.state != "merged" then "pr-merged" else empty end')
         else event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs"); fi
       fi

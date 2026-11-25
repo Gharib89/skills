@@ -88,7 +88,12 @@ watch guard, `scripts/watch-guard.sh`, which refuses a turn end once while
 `watch.sh --ledger <ledger> --owed` says a watcher is owed and names the
 command to run (it logs each block and pass to `watch-guard.jsonl` beside the
 ledger). Its command ends `|| true`, since a Stop hook's exit 2 blocks the
-stop and the guard's usage error must never do that. Two more entries serve
+stop and the guard's usage error must never do that. A third PreToolUse entry
+is the call guard, `scripts/call-guard.sh`, which refuses a send into a thread
+the ledger does not hold or the owner runs or steers
+([handing over](handing-over.md#the-call-guard)); unlike the others its
+command does not end `|| true`, since its exit 2 is the refusal, and it logs
+to `call-guard.jsonl`. Two more entries serve
 [an owner question](owner-question.md): the question flag,
 `scripts/question-flag.sh` (UserPromptSubmit), and the observe hook,
 `scripts/observe.sh` (a second PreToolUse entry, every tool); both end `|| true`

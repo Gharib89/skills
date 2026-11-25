@@ -10,8 +10,10 @@
 # needs, each its one action), `Merged` (a ship entry whose PR merged and that no
 # digest has listed yet), `Running` (an open entry, read as at its merge gate, in
 # review, launched, running or at rest; a `task` entry reads `task:<slug> (task)`
-# and an adopted one adds `(adopted)`; a paused entry (`ledger pause`) is listed in any
-# open stage and ends with `(paused)`), `Waiting` (the waiting list, in its
+# and an adopted one adds `(adopted)`; a steered entry, one whose newest message from
+# outside its thread is the owner's, ends with `(you spoke last)`), `Yours` (an
+# owner-run entry, `ledger take`, in any open stage, out of `Running`: its link, its pull
+# request's state and how many days the owner has had it), `Waiting` (the waiting list, in its
 # order), `Reviewer limit` (a repo whose hosted reviewer hit its usage limit: its
 # batch is merging on the fallback reviewer only, until `ledger unlimit`). A
 # Running ticket names the provider instance it launched on, where the ledger holds one.
@@ -66,7 +68,7 @@ fi
 
 # The rows as the ledger holds them now: {rows: {needs, merged, running, waiting}
 # (a row absent when empty), merged_keys, unpushed}.
-now=$(jq -c "$sa_jq_norm$sa_jq_waiting$sa_jq_open"'
+now=$(jq -c --argjson now "$(sa_now_s)" "$sa_jq_norm$sa_jq_waiting$sa_jq_open"'
   def short: sub("^[^/]*/"; "");
   def link($repo; $n): "[\($repo | short)#\($n)](https://github.com/\($repo)/issues/\($n))";
   def keylink: if startswith("task:") then . else link(sub("#.*$"; ""); sub("^.*#"; "")) end;
@@ -81,8 +83,12 @@ now=$(jq -c "$sa_jq_norm$sa_jq_waiting$sa_jq_open"'
       and (.key as $k | $ack | map(norm_repo) | index($k | norm_repo) | not))] as $merged
   | {rows: (row("Needs you"; [(.needs // [])[] | "\(.key | keylink) \(.action)"]; "; ")
       + row("Merged"; [$merged[] | "\(link(.repo; .number))" + (if .observed.pr.number then " PR [\(.observed.pr.number)](https://github.com/\(.repo)/pull/\(.observed.pr.number))" else "" end)]; ", ")
-      + row("Running"; [.entries[] | select((.stage | IN("launched", "running", "at-rest")) or (.paused == true and is_open))
-          | "\(tlabel) \(state)" + (if .instance_id then " on \(.instance_id)" else "" end) + (if .paused == true then " (paused)" else "" end)]; ", ")
+      + row("Running"; [.entries[] | select((.stage | IN("launched", "running", "at-rest")) and (.owner_run != true))
+          | "\(tlabel) \(state)" + (if .instance_id then " on \(.instance_id)" else "" end) + (if .steered == true then " (you spoke last)" else "" end)]; ", ")
+      + row("Yours"; [.entries[] | select(.owner_run == true and is_open)
+          | "\(tlabel) \(if .observed.pr.state == "open" then "PR open" elif .observed.pr.state == "merged" then "PR merged" elif .observed.pr.state == "closed" then "PR closed" else "no PR" end), yours for \(
+            (((.owner_run_since // .updated_at) | sub("[.][0-9]+Z$"; "Z") | fromdateiso8601) as $s | (($now - $s) / 86400 | floor)) as $d
+            | if $d < 1 then "under a day" elif $d == 1 then "1 day" else "\($d) days" end)"]; ", ")
       + row("Waiting"; [waiting_list[] | .key | keylink]; ", ")
       + row("Reviewer limit"; [(.review_limits // [])[] | "\(.repo) merging on the fallback reviewer only (\(.reviewer) hit its usage limit at \(.since))"]; "; ")),
      merged_keys: [$merged[].key],
@@ -99,7 +105,7 @@ block=$(jq -r --argjson d "$digest" --argjson p "$printed" --argjson q "$qdoc" -
   def pct: if . == null then "unknown" else "\((. * 100) | round)%" end;
   def bucket($p; $w): [$p.buckets[]? | select(if $w == "5h" then .window == "5h" else .window == "weekly" and (if $p.driver == "claude" then .id == "week" elif $p.driver == "pi" then ((.group // "") | startswith("Claude")) else true end) end)] | first | .remaining;
   . as $now
-  | [("Needs you", "Merged", "Running", "Waiting", "Reviewer limit") as $n
+  | [("Needs you", "Merged", "Running", "Yours", "Waiting", "Reviewer limit") as $n
       | if $d then $now.rows[$n] // empty
         elif $now.rows[$n] == $p[$n] then empty
         elif $now.rows[$n] != null then $now.rows[$n]

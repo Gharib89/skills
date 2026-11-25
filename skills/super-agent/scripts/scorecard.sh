@@ -26,7 +26,8 @@
 # `../scorecard/README.md`.
 #
 # stdout: `row` {row, file}: the row and the file it went to · `review` {week:
-#         {from, to}, days, needs: [text]}: the rows read, one line per row to raise
+#         {from, to}, days, call_guard: {refused}, needs: [text]}: the rows read, the
+#         week's call guard refusals, one line per row to raise
 # exit: 0 answered · 2 usage, an unreadable ledger, no thread id, no transcript
 #       for it, an unread version, a malformed transcript, log, targets or
 #       pattern file, a week missing some day's row, or a file that could not
@@ -78,7 +79,8 @@ if [ "$cmd" = review ]; then
     | ([range(7) | $from + . * 86400 | strftime("%Y-%m-%d")] - [$days[].day]) as $missing
     # A week with no row at all predates the scorecard: nothing to review.
     | if $missing != [] and $days != [] then error("week \($w): no row for \($missing | join(", ")); count it with row --day") else . end
-    | {week: {from: $w, to: $to}, days: ($days | length), needs: (
+    | {week: {from: $w, to: $to}, days: ($days | length),
+       call_guard: {refused: ([$days[] | .call_guard.refused? // 0] | add // 0)}, needs: (
         [$t[0] | to_entries[] | select(.value.slice == null) | .key as $k | .value.max as $max
           | [$days[] | at($k) | select(type == "number" and . > $max)] as $over
           | select($over | length > 0)
@@ -132,24 +134,7 @@ patterns=$(jq -Rsr 'split("\n") | map(select(length > 0 and (startswith("#") | n
   || sa_tooling "$data/nothing-changed.txt: no pattern, or one that is no regex"
 [ ! -f "$ledger.archive.jsonl" ] || jq -s . "$ledger.archive.jsonl" >/dev/null 2>&1 || sa_tooling "$ledger.archive.jsonl: not JSON lines"
 
-# A guard log is `<name>-guard.jsonl`; its name is the row's key under `guards`.
-logs='{}'
-for g in "$dir"/*-guard.jsonl; do
-  [ -f "$g" ] || continue
-  n=$(basename "$g" -guard.jsonl)
-  e=$(jq -sc . "$g" 2>/dev/null) || sa_tooling "$g: not JSON lines"
-  logs=$(jq -c --arg n "$n" --argjson e "$e" '.[$n] = $e' <<<"$logs")
-done
-timer=null
-if [ -f "$dir/wake-timer.jsonl" ]; then timer=$(jq -sc . "$dir/wake-timer.jsonl" 2>/dev/null) || sa_tooling "$dir/wake-timer.jsonl: not JSON lines"; fi
-qlog=null
-if [ -f "$dir/question-flag.jsonl" ]; then qlog=$(jq -sc . "$dir/question-flag.jsonl" 2>/dev/null) || sa_tooling "$dir/question-flag.jsonl: not JSON lines"
-  bad=$(jq -r 'map(select((type == "object" and (.at | type) == "string" and (.event | type) == "string"
-      and (if .event == "flag" then (.prompt_id | type) == "string"
-        elif .event == "changing" then (.prompt_id | type) == "string" and (.tool | type) == "string"
-        else true end)) | not)) | length' <<<"$qlog")
-  [ "$bad" = 0 ] || sa_tooling "$dir/question-flag.jsonl: $bad record(s) lack a string at and event, or a flag or changing record lacks its prompt_id or tool"
-fi
+source "$(dirname "${BASH_SOURCE[0]}")/scorecard.d/logs.sh" || sa_tooling "cannot source scorecard.d/logs.sh"
 
 # One slim record per transcript entry, file by file in order, so a 30 MB
 # transcript is never held whole: a user entry's text (null for a tool result),
@@ -174,7 +159,7 @@ slim=$(for i in ${files[@]+"${!files[@]}"}; do
 done | jq -sc .) || sa_tooling "cannot read the transcripts"
 
 row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')" \
-  --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" --argjson qlog "$qlog" \
+  --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" --argjson qlog "$qlog" --argjson cglog "$cglog" \
   --slurpfile led <(printf '%s\n' "$doc") --slurpfile archive <(cat "$ledger.archive.jsonl" 2>/dev/null) "$sa_jq_open$sa_jq_changing"'
   def wsum: reduce .[] as $t ({in: 0, cw: 0, cr: 0, out: 0}; .in += $t.in | .cw += $t.cw | .cr += $t.cr | .out += $t.out);
   def total: .in + .cw + .cr + .out;
@@ -252,6 +237,9 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
    needs: {recorded: ([$cmds[] | select(test("ledger\\.sh[^|;&\\n]*?\\sneed\\s"))] | length),
      alerted: ($pushed | length), alerted_twice: ($pushed | group_by(.) | map(select(length > 1)) | length)},
    guards: (if $logs == {} then null else $logs | map_values(guard) end),
+   call_guard: (if $cglog == null then null
+     else {refused: ([$cglog[] | select(.event == "refused" and (.at // "" | startswith($day)))] | length),
+       told: ([$cglog[] | select(.event == "told" and (.at // "" | startswith($day)))] | length)} end),
    timer: (if $timer == null then null
      else [$timer[] | select(.event == "closed" and (.at // "" | startswith($day))) | .minutes] as $m
        | {outages: ($m | length), median_minutes: ($m | median), worst_minutes: ($m | max)} end),

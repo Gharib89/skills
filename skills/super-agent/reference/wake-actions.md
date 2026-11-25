@@ -65,6 +65,11 @@ that row only, so a later cause on the entry still prints. By `reason`:
   judge it does not apply, then record the need.
 - `pr-closed`, `issue-closed`: the ticket ended without a merge; name the
   reason. The row stays until the entry's `cleanup_owed` is cleared.
+- `owner-steered`: the owner spoke last in the thread and it has rested a
+  window; ask the owner "watch or take?" and send nothing into it
+  ([handing over](handing-over.md#owner-steered)).
+- `owner-run`: the owner took the thread 3 days ago; ask "watch or drop?". It
+  prints once.
 
 ## Merge-gate holds
 

@@ -3,7 +3,7 @@
 # the super agent judges from one JSON answer and not from child transcripts.
 #
 #   reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]...
-#             [--fleet <file>] [--quota <file>] [--instance <id>]
+#             [--reads <dir>] [--fleet <file>] [--quota <file>] [--instance <id>]
 #
 # Looks at every open entry's thread and PR (the same look `watch` takes),
 # writes it into the entry as `observed`, the baseline the next `watch`
@@ -18,10 +18,18 @@
 # `running` and is named in `woke`. A `--kind task` entry has no ticket: it is
 # `running` while its thread runs and `settled` once the thread has run and is at
 # rest, whatever any issue or PR says, unless it is `interactive` (it waits on the
-# owner: never settled on rest, no stall). A `paused` entry counts no stall and owes
-# no cleanup: a ticket's is read from GitHub alone and settles on a merged PR or a
-# closed issue, a task's is not read. `resumed` (give-back) takes the thread's run
-# count as judged. Settling the
+# owner: never settled on rest, no stall). An `owner_run` entry (`ledger take`) counts no
+# stall and owes no cleanup: a ticket's is read from GitHub alone and settles on a merged
+# PR or a closed issue, a task's is not read; after 3 days one `owner-run` escalate row
+# asks "watch or drop?", listed once (`owner_run_reminded`). `resumed` (a second `adopt`
+# of the thread) takes the thread's run count as judged. An entry whose newest message from
+# outside its thread is the owner's, newer than its `held_since` (else `launched_at`), is
+# `steered`: its stalls are 0 and no stall counts, so it is in no `stalled` row and gets no
+# nudge, and after the stall window at rest one `owner-steered` escalate row asks "watch or
+# take?" (again each window until a need is recorded). The author comes from `owner_at`
+# in the thread's reply file (`reply.sh`): `<dir>/<thread id>.json` of `--reads` for a local
+# entry, of its `--remote` for a remote one; a thread with no such file keeps its mark.
+# Settling the
 # thread in T3 is the super agent's act, on each entry `settled` names, and it
 # never archives. It keeps each entry's stall count: +1 for a stall (a run that
 # completed with no merged PR and no merge-gate summary, counted once per run,
@@ -106,7 +114,9 @@
 #         entry only the owner can unblock and with no open need for its reason: `permission-hold`
 #         (detail the pending count), `fault` (detail the error kind), `stall-cap` (an
 #         entry at rest at 3 stalls), `pr-closed` or `issue-closed` (until its cleanup is
-#         done); `at_rest` one {key, thread}; `woke` one {key, thread, kind} per settled
+#         done), `owner-steered` (at rest past the window after the owner's message),
+#         `owner-run` (once, 3 days after the owner took the entry, whatever its needs);
+#         `at_rest` one {key, thread}; `woke` one {key, thread, kind} per settled
 #         triage entry reopened now; `errors` one {key, kind, detail}, `kind`
 #         `thread-unreadable`, `thread-mismatch`, `pr-unreadable`,
 #         `issue-unreadable` (a waiting row's issue or its blocker's too), or
@@ -116,13 +126,15 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]... [--fleet <file>] [--quota <file>] [--instance <id>]'
+usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]... [--reads <dir>] [--fleet <file>] [--quota <file>] [--instance <id>]'
 sa_help "$usage" "$@"
-ledger='' window=$sa_stall_window fleet='' quota='' status_flags=()
+# shellcheck disable=SC2034  # reads is read by reconcile.d/verdict.sh
+ledger='' window=$sa_stall_window fleet='' quota='' reads='' status_flags=()
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2 ;;
     --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
+    --reads) sa_flag_value "$usage" "${2:-}"; reads=$2; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
     --quota|--instance) sa_flag_value "$usage" "${2:-}"; status_flags+=("$1" "$2"); [ "$1" = --instance ] || quota=$2; shift 2 ;;
     --stall-window) sa_flag_value "$usage" "${2:-}"; sa_window_flag "$usage" "$2"; window=$2; shift 2 ;;
@@ -144,20 +156,22 @@ read_doc=$doc
 # A batch is running while an entry is open: it began when the earliest of them launched.
 batch_since=$(jq -r "$sa_jq_open"'[.entries[] | select(is_open) | .launched_at] | min // empty' <<<"$doc")
 now_s=$(sa_now_s) now=$(date -u -d "@$now_s" +%Y-%m-%dT%H:%M:%SZ)
-checked=0 entries='[]' errors='[]' stalled='[]'
+checked=0 entries='[]' errors='[]' stalled='[]' reminders='[]' steered_due='[]'
+source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/verdict.sh" || sa_tooling "cannot source reconcile.d/verdict.sh"
 fail() { # <kind> <detail>: record the error of the entry in $key
   errors=$(jq -c --arg k "$key" --arg kind "$1" --argjson d "$2" '. + [{key: $k, kind: $kind, detail: $d}]' <<<"$errors")
   doc=$(jq -c --arg k "$key" --arg kind "$1" '.entries[$k].error = $kind' <<<"$doc")
 }
 while IFS= read -r entry; do
   key=$(jq -r .key <<<"$entry")
-  paused=$(jq -r '.paused == true' <<<"$entry") interactive=$(jq -r '.interactive == true' <<<"$entry")
-  # a paused task's thread is the owner's until `drop`: nothing to read
-  [ "$paused" = true ] && [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ] && continue
+  owner_run=$(jq -r '.owner_run == true' <<<"$entry") interactive=$(jq -r '.interactive == true' <<<"$entry")
+  [ "$owner_run" != true ] || reconcile_owner_run_reminder "$entry"
+  # an owner-run task's thread is the owner's until `drop`: nothing to read
+  [ "$owner_run" = true ] && [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ] && continue
   checked=$((checked + 1))
   stage='' reason=''
-  if [ "$paused" = true ]; then
-    # a paused ticket's thread is the owner's: its end is read from GitHub alone
+  if [ "$owner_run" = true ]; then
+    # an owner-run ticket's thread is the owner's: its end is read from GitHub alone
     active=false
     if ! sa_pr_of "$entry"; then fail "$obs_kind" "$obs_detail"; continue; fi
     obs=$(jq -c --argjson pr "$pr_obs" '(.observed // {}) + {pr: $pr}' <<<"$entry")
@@ -190,41 +204,19 @@ while IFS= read -r entry; do
         else stage=at-rest; fi ;;
     esac
   fi
-  # a paused ticket ends on a merged PR or a closed issue, and otherwise keeps its stage
-  if [ "$paused" = true ]; then
+  # an owner-run ticket ends on a merged PR or a closed issue, and otherwise keeps its stage
+  if [ "$owner_run" = true ]; then
     if [ "$(jq -r .pr.state <<<"$obs")" = merged ] || [ "$reason" = issue-closed ]; then stage=settled; else stage=$(jq -r .stage <<<"$entry"); fi
     reason=''
   fi
   stall='' stalls=$(jq -r '.stalls // 0' <<<"$entry")
-  # no stall is counted for a paused entry, nor for an interactive one (it waits on the owner)
-  case $paused$interactive:$stage in falsefalse:running|falsefalse:at-rest)
-    verdict=$(jq -cn --argjson e "$entry" --argjson n "$obs" --arg now "$now" --argjson w "$window" --argjson active "$active" '
-      def down: if . > 0 then . - 1 else 0 end;
-      ($now | fromdateiso8601) as $t
-      | {stalls: ($e.stalls // 0), rest_since: $e.rest_since, judged_run: ($e.judged_run // 0), stall: null}
-      | if $e.observed == null then (if $e.resumed == true then .judged_run = $n.run_count else . end)
-        else
-          (if $e.observed.pr.state == "none" and $n.pr.state == "open" then .stalls |= down else . end)
-          | if $active or $n.pending > 0 then .rest_since = null
-            elif $n.gate then
-              (if $n.run_count > .judged_run then .stalls |= down | .judged_run = $n.run_count else . end) | .rest_since = null
-            elif .stalls >= 3 then .judged_run = $n.run_count
-            elif $n.run_count > .judged_run then
-              .stalls += 1 | .judged_run = $n.run_count | .rest_since = $now | .stall = "run-completed"
-            elif .rest_since == null then .rest_since = $now
-            elif $t - (.rest_since | fromdateiso8601) >= $w then
-              .stalls += 1 | .rest_since = $now | .stall = "stall-window"
-            else . end
-        end')
-    stalls=$(jq -r .stalls <<<"$verdict") stall=$(jq -r '.stall // ""' <<<"$verdict")
-    doc=$(jq -c --arg k "$key" --argjson v "$verdict" \
-      '.entries[$k] |= (.stalls = $v.stalls | .rest_since = $v.rest_since | .judged_run = $v.judged_run)' <<<"$doc") ;;
-  esac
+  # no stall is counted for an owner-run entry, nor for an interactive one (it waits on the owner)
+  case $owner_run$interactive:$stage in falsefalse:running|falsefalse:at-rest) reconcile_judge ;; esac
   # an end owes the super agent its cleanup, and a merged ship PR a criteria check;
   # each stays owed until the super agent clears it (`ledger set <key> <field> false`)
   doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
     '.entries[$k] |= (.stage = $s | .observed = $o | .error = null | .updated_at = $now | del(.resumed)
-      | if $s == "settled" or $s == "closed" then .settled_at = $now | if .paused != true then .cleanup_owed = true else . end else . end
+      | if $s == "settled" or $s == "closed" then .settled_at = $now | if .owner_run != true then .cleanup_owed = true else . end else . end
       | if (.kind // "ship") == "ship" and ($s == "merged" or $s == "settled") and $o.pr.state == "merged" and .verify_owed == null
         then .verify_owed = true else . end)' <<<"$doc")
   if [ -n "$stall" ]; then
@@ -232,7 +224,7 @@ while IFS= read -r entry; do
       '. + [{key: $k, thread: $t, stalls: $n, reason: $r}]' <<<"$stalled")
   fi
   entries=$(jq -c --argjson e "$entry" --arg s "$stage" --arg r "$reason" --argjson o "$obs" --argjson n "$stalls" \
-    '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, kind: ($e.kind // "ship"), from: $e.stage, stage: $s, reason: $r, stalls: $n, observed: $o, paused: ($e.paused == true)}]' <<<"$entries")
+    '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, kind: ($e.kind // "ship"), from: $e.stage, stage: $s, reason: $r, stalls: $n, observed: $o, owner_run: ($e.owner_run == true)}]' <<<"$entries")
 done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open and .stage != "launching")' <<<"$doc")
 # A triage entry settled within the last sa_settled_days is read again (reconcile.d/woke.sh).
 woke='[]'
@@ -250,7 +242,7 @@ reconcile_waiting
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/parents.sh" || sa_tooling "cannot source reconcile.d/parents.sh"
 parents_done='[]' parents_changed=0
 reconcile_parents
-if ! { [ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] && [ "$dropped" = '[]' ] && [ "$parents_changed" -eq 0 ]; }; then
+if ! { [ "$checked" -eq 0 ] && [ "$woke" = '[]' ] && [ "$unqueued" = '[]' ] && [ "$dropped" = '[]' ] && [ "$parents_changed" -eq 0 ] && [ "$reminders" = '[]' ]; }; then
   source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/write.sh" || sa_tooling "cannot source reconcile.d/write.sh"
   reconcile_write
 fi

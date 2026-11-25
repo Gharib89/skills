@@ -55,7 +55,12 @@ flagged prompt `{at, event: "flag", prompt_id}`, per changing call in its turn
 `{at, event: "changing", prompt_id, tool, call}`, and per input they could not
 judge `{at, event: "unjudged", why}`; a line that is not JSON is refused by
 name. Each guard writes `<name>-guard.jsonl` beside the ledger, one JSON line
-per event, `{at, event: "block" | "pass"}`; the wake timer writes
+per event, `{at, event: "block" | "pass"}`, except the call guard, whose
+`call-guard.jsonl` holds `{at, event: "refused", reason, thread, tool}` per
+refused send and `{at, event: "told", thread, tell_at}` per send the owner's
+`tell` let through: the row's `call_guard` counts the day's `refused` and `told`
+lines, and the review's `call_guard.refused` sums them over the week (it is no
+guard that "blocks nothing", so no row is raised for it); the wake timer writes
 `wake-timer.jsonl`, one line per outage step, `{at, event: "opened" | "wake" |
 "notify" | "closed"}`; the row's `timer` counts the day's `closed` lines and
 their `minutes`. A limit stop the timer holds until its reset opens no outage

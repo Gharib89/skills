@@ -15,3 +15,6 @@ here in the same diff. A cell holds no `|`.
 | 0.25.0 | launch-brief.md | step-ins.md |
 | 0.26.0 | briefed | scoped |
 | 0.44.0 | notify.sh | wake-timer.sh |
+| 0.46.0 | paused | owner-run |
+| 0.46.0 | unpause | adopt |
+| 0.46.0 | give back | Watch <thread> |

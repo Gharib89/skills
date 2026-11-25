@@ -20,7 +20,7 @@ out=$(P --name laptop)
 check "a proposal writes no folder, and the missing guard is one Needs you row" "absent false 1" \
   "$([ -e "$hc" ] && echo present || echo absent) $(jq .home.written <<<"$out") $(jq '[.home.needs[] | select(test("state guard"))] | length' <<<"$out")"
 out=$(S --write --name laptop)
-check "--write writes the folder's local settings, its first PreToolUse hook the state guard" "true true 2 1 []" \
+check "--write writes the folder's local settings, its first PreToolUse hook the state guard" "true true 3 1 []" \
   "$(jq .home.written <<<"$out") $(jq .home.guard <<<"$out") $(jq '.hooks.PreToolUse | length' "$hc") \
 $(jq -r '.hooks.PreToolUse[0].hooks[0].command' "$hc" | grep -c "super-agent/scripts/guard.sh'$") $(jq -c .home.needs <<<"$out")"
 check "the proposal's missing watch guard is its own Needs you row" 1 \
@@ -44,6 +44,11 @@ prop=$(rm -rf "$XDG_STATE_HOME/super-agent/home"; P --name laptop)
 check "the proposal's missing question flag and observe hook are one Needs you row each" "1 1" \
   "$(jq '[.home.needs[] | select(test("question flag"))] | length' <<<"$prop") $(jq '[.home.needs[] | select(test("observe hook"))] | length' <<<"$prop")"
 S --write --name laptop >/dev/null
+out=$(S --write --name laptop)
+check "its third PreToolUse entry is the call guard, which refuses with exit 2 and so ends no || true" "1 1 true" \
+  "$(jq -r '.hooks.PreToolUse[2].hooks[0].command' "$hc" | grep -c "super-agent/scripts/call-guard.sh'$") \
+$(jq -r '.hooks.PreToolUse[2].matcher' "$hc" | grep -c 't3_thread_send_attachments|Bash$') $(jq .home.call_guard <<<"$out")"
+check "the proposal's missing call guard is one Needs you row" 1 "$(jq '[.home.needs[] | select(test("call guard"))] | length' <<<"$prop")"
 cp "$hc" "$tmp/first.json"; printf '{"x":1}\n' > "$hc"
 S --write --name laptop >/dev/null
 check "a second run rewrites it to the same content" same "$(cmp -s "$hc" "$tmp/first.json" && echo same || echo differs)"
