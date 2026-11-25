@@ -52,7 +52,7 @@ while [ $# -gt 0 ]; do
   shift 2
 done
 input=$(cat)
-active=$(jq -r 'if type == "object" then .stop_hook_active == true else error("not an object") end' <<<"$input" 2>/dev/null) || unjudged "the hook input is not a JSON object"
+active=$(jq -r 'if type == "object" and (.stop_hook_active | type) == "boolean" then .stop_hook_active else error("no boolean stop_hook_active") end' <<<"$input" 2>/dev/null) || unjudged "the hook input is not a JSON object with a boolean stop_hook_active"
 [ -n "$active" ] || unjudged "the hook input is empty"
 answer=$(bash "$here/watch.sh" --ledger "$ledger" --owed 2>/dev/null) || unjudged "watch.sh --owed failed"
 owed=$(jq -r '.owed // empty' <<<"$answer" 2>/dev/null)
