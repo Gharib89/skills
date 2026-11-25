@@ -42,26 +42,24 @@ Both are in the super agent folder's generated settings
   `prompt_id` goes to `question-flag.jsonl` beside the ledger and one reminder
   line to the turn. A prompt T3 sent for an agent, a scheduled task or a
   finished background shell starts with `[T3 Code:` or `<task-notification>`; an
-  owner-typed one has no prefix (measured 2026-11-23, #1353). You still judge
-  question or request: a misfire costs one ignored line.
+  owner-typed one has no prefix (measured against live hook input). You still
+  judge question or request: a misfire costs one ignored line.
 - **The observe hook**, `scripts/observe.sh`, a PreToolUse hook. Every tool call
   carries the `prompt_id` of the prompt that started its turn, so the hook logs
   each changing call whose id the flag logged, and passes it. The next turn has
   a new id, so it is not flagged, and no flag file is shared.
 
 A **changing call** is on a named list: the T3 calls that launch, send to,
-interrupt or schedule; `launch.sh`, `claim.sh`, `worktree.sh` and `ledger.sh`'s
-write verbs other than `need`; the `gh` and `git` verbs that write; Edit, Write,
-MultiEdit and NotebookEdit. A machine check is none. A call missing from the
-list goes uncounted, the limit the state guard admits to as well. A hook that
-cannot judge allows the call and logs `unjudged`.
+interrupt, organize, configure or schedule; the acting scripts (`launch.sh`,
+`claim.sh`, `worktree.sh remove`, `merge.sh`, `cleanup.sh`, `intake.sh`,
+`handover.sh`) and `ledger.sh`'s write verbs other than `need`; the `gh` and
+`git` verbs that write; Edit, Write, MultiEdit and NotebookEdit. A machine check
+is none. A call missing from the list goes uncounted, as with the state guard. A
+hook that cannot judge allows the call and logs `unjudged`.
 
 ## The number
 
 The scorecard's `questions` counts the flagged owner turns of a day (`asked`)
 and those holding a changing call (`with_write`, baseline 3 of 11, target 0),
 and the weekly review lists each such turn: read it and take its sender from
-`t3_thread_read`. One untold action in a release puts a refusing version to the
-owner: a changing call in a flagged turn refused until the owner's words are
-recorded by script. None across four weeks puts the observe hook up for
-deletion; the question flag stays, since the reminder is the rule's own cue.
+`t3_thread_read`.

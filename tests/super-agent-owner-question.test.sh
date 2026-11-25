@@ -48,6 +48,12 @@ changing=(
   "Bash|bash $s/worktree.sh remove --ledger l k|worktree.sh"
   "Bash|bash $s/ledger.sh --ledger l unneed k|ledger write verb"
   "Bash|bash $s/ledger.sh --ledger l drop k|ledger drop"
+  "Bash|bash $s/merge.sh --pr 7|merge.sh"
+  "Bash|bash $s/cleanup.sh --ledger l|cleanup.sh"
+  "Bash|bash $s/intake.sh --fleet f --ledger l|intake.sh"
+  "Bash|bash $s/handover.sh --ledger l|handover.sh"
+  "mcp__t3-code__t3_thread_organize||T3 organize"
+  "mcp__t3-code__delete_scheduled_task||T3 delete schedule"
   "Edit||Edit"
   "Write||Write"
   "mcp__t3-code__t3_thread_launch||T3 launch"
@@ -65,7 +71,7 @@ done
 rm -f "$log"; F "$(prompt 'why?' p1)" >/dev/null
 for cmd in "bash $s/ledger.sh --ledger l need k --action a --reason ask-first" "bash $s/ledger.sh --ledger l list --open" \
   "bash $s/ledger.sh --ledger l get k" "bash $s/launch-check.sh acme/w#7" "bash scripts/check.sh full" "shellcheck $s/observe.sh" \
-  "git status" "git log --oneline" "gh issue view 7" "gh api repos/a/b/issues/7" "jq . $led" "bash $s/status.sh --ledger l"; do
+  "bash $s/worktree.sh list" "git status" "git log --oneline" "gh issue view 7" "gh api repos/a/b/issues/7" "jq . $led" "bash $s/status.sh --ledger l"; do
   O "$(bash_call "$cmd" p1)" >/dev/null
 done
 for t in Read Grep mcp__t3-code__t3_thread_read mcp__t3-code__t3_thread_list; do O "$(tool "$t" p1)" >/dev/null; done
@@ -124,5 +130,9 @@ check "and the ledger holds none" 0 "$(L list | jq '.needs | length')"
 # --- the scorecard counts them: the target is live, at 0 ---------------------------
 check "the scorecard's target for question turns holding a changing call is live, at 0" '{"max":0}' \
   "$(jq -c '."questions.with_write"' skills/super-agent/scorecard/targets.json)"
+
+# --- the release rule is written down where the maintainer reads it ----------------
+check "the release standard holds the refusing-version and four-weeks rule" "1 1" \
+  "$(grep -c 'puts a refusing version to the$' docs/contributing/standards/release.md) $(grep -c 'four weeks puts the observe hook up for deletion' docs/contributing/standards/release.md)"
 
 finish

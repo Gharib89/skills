@@ -197,3 +197,13 @@ The `derived-copies` gate fails until each `skills/<name>/` has its lock entry,
 derived copy, release configuration, both places in the release workflow and
 its `.gitattributes` line; `scripts/pin-check.sh` holds the fourth site's pinned
 lines to the lock.
+
+## The super agent's observe hook
+
+The observe hook logs a changing call made in a flagged owner-question turn
+and never refuses it. One untold action in a release (a flagged turn holding a
+changing call that the owner was not told of) puts a refusing version to the
+owner: that call refused until the owner's words are recorded by script. No
+such action across four weeks puts the observe hook up for deletion; the
+question flag stays, since its reminder is the rule's own cue. The count is the
+scorecard's `questions.with_write`, target 0.
