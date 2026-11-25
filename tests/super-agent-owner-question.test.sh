@@ -56,6 +56,7 @@ changing=(
   "mcp__t3-code__delete_scheduled_task||T3 delete schedule"
   "Bash|bash $s/ledger.sh --ledger l self t-1|ledger self"
   "mcp__t3-code__link_pull_request||T3 link a PR"
+  "Bash|t3 thread send t-1 hello|t3 CLI send"
   "Edit||Edit"
   "Write||Write"
   "mcp__t3-code__t3_thread_launch||T3 launch"
@@ -71,7 +72,7 @@ for row in "${changing[@]}"; do
   check "and is logged against the prompt's id" "flag changing p1 $t" "$(events) $(jq -r 'select(.event == "changing") | "\(.prompt_id) \(.tool)"' "$log")"
 done
 rm -f "$log"; F "$(prompt 'why?' p1)" >/dev/null
-for cmd in "bash $s/ledger.sh --ledger l need k --action a --reason ask-first" "bash $s/ledger.sh --ledger l list --open" \
+for cmd in "bash $s/ledger.sh --ledger l need k --action 'Close 7, or wait for the PR, add a note, set it, drop it?' --reason ask-first" "bash $s/ledger.sh --ledger l need k --action a --reason ask-first" "bash $s/ledger.sh --ledger l list --open" \
   "bash $s/ledger.sh --ledger l get k" "bash $s/launch-check.sh acme/w#7" "bash scripts/check.sh full" "shellcheck $s/observe.sh" \
   "bash $s/worktree.sh list" "git status" "git log --oneline" "gh issue view 7" "gh api repos/a/b/issues/7" "jq . $led" "bash $s/status.sh --ledger l"; do
   O "$(bash_call "$cmd" p1)" >/dev/null

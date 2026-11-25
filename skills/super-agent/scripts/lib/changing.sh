@@ -6,7 +6,9 @@ sa_jq_changing='
   # Every `ledger.sh` subcommand that writes.
   def ledger_verbs: ["add", "adopt", "set", "rethread", "ruling", "pin", "migrate-rulings", "wait", "unwait", "need",
     "pushed", "unneed", "limit", "unlimit", "pause", "unpause", "drop", "reset-stalls", "self"];
-  def ledger_write($verbs): "ledger\\.sh[^|;&\\n]*?\\s(\($verbs | join("|")))\\b";
+  # The verb sits right after `ledger.sh` and its `--ledger <file>`, so a verb word inside the
+  # `--action` text of a need does not match.
+  def ledger_write($verbs): "ledger\\.sh(\\s+--ledger\\s+(\"[^\"]*\"|\\S+))?\\s+(\($verbs | join("|")))\\b";
   # The scripts that act: the ones that launch, claim, remove, merge, clean up, take
   # in or hand over (`worktree.sh` counts only its `remove` verb).
   def acting_scripts: ["launch\\.sh", "claim\\.sh", "worktree\\.sh[^|;&\\n]*\\sremove", "merge\\.sh", "cleanup\\.sh",
@@ -14,5 +16,6 @@ sa_jq_changing='
   # The `gh` and `git` calls that write.
   def host_writes: ["\\bgh\\s+(issue|pr)\\s+(edit|close|comment|create|reopen|merge|review|ready)",
     "\\bgh\\s+api\\b[^|;&\\n]*(-X|--method)\\s*(POST|PATCH|PUT|DELETE)", "\\bgh\\s+api\\b[^|;&\\n]*\\s-[fF]\\s",
-    "\\bgit\\s+(commit|push|merge|worktree\\s+(add|remove)|branch\\s+-[dD])"];
+    "\\bgit\\s+(commit|push|merge|worktree\\s+(add|remove)|branch\\s+-[dD])",
+    "\\bt3\\s+thread\\s+(send|launch|interrupt)"];
 '

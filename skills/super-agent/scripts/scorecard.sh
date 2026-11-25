@@ -185,7 +185,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
   # Every script or tool that changes state (`lib/changing.sh` holds the ledger and
   # host patterns): one this list misses counts as changing nothing.
   def changing_bash: [ledger_write(ledger_verbs), "reply\\.sh"] + acting_scripts + host_writes
-    + ["\\bt3\\s+thread\\s+(send|launch|interrupt)", "chezmoi\\s+apply", "npx\\s+skills"] | join("|");
+    + ["chezmoi\\s+apply", "npx\\s+skills"] | join("|");
   def changing_tools: ["mcp__t3-code__t3_thread_launch", "mcp__t3-code__t3_thread_send", "mcp__t3-code__t3_thread_organize",
     "AskUserQuestion", "PushNotification", "mcp__t3-code__t3_thread_interrupt", "mcp__t3-code__t3_thread_configure",
     "mcp__t3-code__schedule_task", "mcp__t3-code__delete_scheduled_task", "mcp__t3-code__delegate_task",
