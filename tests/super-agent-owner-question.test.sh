@@ -54,6 +54,8 @@ changing=(
   "Bash|bash $s/handover.sh --ledger l|handover.sh"
   "mcp__t3-code__t3_thread_organize||T3 organize"
   "mcp__t3-code__delete_scheduled_task||T3 delete schedule"
+  "Bash|bash $s/ledger.sh --ledger l self t-1|ledger self"
+  "mcp__t3-code__link_pull_request||T3 link a PR"
   "Edit||Edit"
   "Write||Write"
   "mcp__t3-code__t3_thread_launch||T3 launch"

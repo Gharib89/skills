@@ -5,7 +5,7 @@
 sa_jq_changing='
   # Every `ledger.sh` subcommand that writes.
   def ledger_verbs: ["add", "adopt", "set", "rethread", "ruling", "pin", "migrate-rulings", "wait", "unwait", "need",
-    "pushed", "unneed", "limit", "unlimit", "pause", "unpause", "drop", "reset-stalls"];
+    "pushed", "unneed", "limit", "unlimit", "pause", "unpause", "drop", "reset-stalls", "self"];
   def ledger_write($verbs): "ledger\\.sh[^|;&\\n]*?\\s(\($verbs | join("|")))\\b";
   # The scripts that act: the ones that launch, claim, remove, merge, clean up, take
   # in or hand over (`worktree.sh` counts only its `remove` verb).

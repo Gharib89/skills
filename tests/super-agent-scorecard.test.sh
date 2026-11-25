@@ -136,6 +136,14 @@ JSONL
 check "questions: the day's flagged turns, and those holding a changing call, each listed" \
   '{"asked":2,"with_write":1,"turns":[{"prompt_id":"p1","at":"2026-11-19T10:00:00Z","calls":[{"tool":"Bash","call":"gh issue close 7"},{"tool":"Edit","call":"/a"}]}]}' \
   "$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 | jq -c .row.questions)"
+cp "$dir/question-flag.jsonl" "$tmp/q.good"
+for bad in '{"at":"2026-11-19T10:00:00Z","event":"flag"}' '{"at":"2026-11-19T10:00:00Z","event":"changing","prompt_id":"p1"}' '{"event":"flag","prompt_id":"p1"}' '[1]'; do
+  printf '%s\n' "$bad" >> "$dir/question-flag.jsonl"
+  out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 2>&1 >/dev/null); rc=$?
+  check_rc "questions: a malformed record ($bad) refuses with exit 2" 2 "$rc"
+  check "and the refusal names the log" 1 "$(grep -c 'question-flag.jsonl: 1 record' <<<"$out")"
+  cp "$tmp/q.good" "$dir/question-flag.jsonl"
+done
 jq '.entries["acme/widgets#7"].launched_at = "2026-11-18T09:00:00.250Z"' "$led" > "$tmp/l" && cp "$tmp/l" "$led"
 check "a time with fractional seconds is read, not a failed row" 2 \
   "$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 | jq .row.workload.open)"

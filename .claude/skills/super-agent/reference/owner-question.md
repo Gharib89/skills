@@ -50,8 +50,8 @@ Both are in the super agent folder's generated settings
   a new id, so it is not flagged, and no flag file is shared.
 
 A **changing call** is on a named list: the T3 calls that launch, send to,
-interrupt, organize, configure, schedule or delete a schedule; the acting
-scripts (`launch.sh`, `claim.sh`, `worktree.sh remove`, `merge.sh`,
+interrupt, organize, configure, schedule, delete a schedule or link a PR; the
+acting scripts (`launch.sh`, `claim.sh`, `worktree.sh remove`, `merge.sh`,
 `cleanup.sh`, `intake.sh`, `handover.sh`) and `ledger.sh`'s write verbs other
 than `need`; the `gh` and `git` verbs that write; Edit, Write, MultiEdit and
 NotebookEdit. A machine check is none. A call missing from the list goes

@@ -143,7 +143,13 @@ done
 timer=null
 if [ -f "$dir/wake-timer.jsonl" ]; then timer=$(jq -sc . "$dir/wake-timer.jsonl" 2>/dev/null) || sa_tooling "$dir/wake-timer.jsonl: not JSON lines"; fi
 qlog=null
-if [ -f "$dir/question-flag.jsonl" ]; then qlog=$(jq -sc . "$dir/question-flag.jsonl" 2>/dev/null) || sa_tooling "$dir/question-flag.jsonl: not JSON lines"; fi
+if [ -f "$dir/question-flag.jsonl" ]; then qlog=$(jq -sc . "$dir/question-flag.jsonl" 2>/dev/null) || sa_tooling "$dir/question-flag.jsonl: not JSON lines"
+  bad=$(jq -r 'map(select((type == "object" and (.at | type) == "string" and (.event | type) == "string"
+      and (if .event == "flag" then (.prompt_id | type) == "string"
+        elif .event == "changing" then (.prompt_id | type) == "string" and (.tool | type) == "string"
+        else true end)) | not)) | length' <<<"$qlog")
+  [ "$bad" = 0 ] || sa_tooling "$dir/question-flag.jsonl: $bad record(s) lack a string at and event, or a flag or changing record lacks its prompt_id or tool"
+fi
 
 # One slim record per transcript entry, file by file in order, so a 30 MB
 # transcript is never held whole: a user entry's text (null for a tool result),
