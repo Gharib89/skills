@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.43.0 (2026-11-25)
+
+### Features
+
+- **super-agent**: A watch guard refuses a turn end while a watcher is owed
+  ([#1414](https://github.com/Gharib89/skills/pull/1414),
+  [`8d24feb`](https://github.com/Gharib89/skills/commit/8d24feb681746dbbe617b7a904b11c75af89062c))
+
+
 ## v0.42.0 (2026-11-24)
 
 ### Features
