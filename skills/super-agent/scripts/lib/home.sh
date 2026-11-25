@@ -9,26 +9,21 @@ sa_home_settings() { printf '%s/.claude/settings.local.json' "$(sa_home_dir)"; }
 # sa_shq <text>: the text single-quoted for a shell, each ' in it written '\''.
 sa_shq() { local q="'\\''"; printf "'%s'" "${1//\'/$q}"; }
 
-# sa_guard_entry: the state guard's PreToolUse entry for this copy of guard.sh.
-sa_guard_entry() {
+# sa_hook_entry <script> [<matcher>]: this copy's <script> as a hook entry.
+sa_hook_entry() {
   local p
-  p=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/guard.sh
-  jq -cn --arg c "bash $(sa_shq "$p")" \
-    '{matcher: "Edit|Write|MultiEdit|NotebookEdit|Bash", hooks: [{type: "command", command: $c}]}'
+  p=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/$1
+  jq -cn --arg c "bash $(sa_shq "$p")" --arg m "${2:-}" \
+    '(if $m != "" then {matcher: $m} else {} end) + {hooks: [{type: "command", command: $c}]}'
 }
+# The state guard's PreToolUse entry and the watch guard's Stop entry.
+sa_guard_entry() { sa_hook_entry guard.sh 'Edit|Write|MultiEdit|NotebookEdit|Bash'; }
+sa_watch_guard_entry() { sa_hook_entry watch-guard.sh; }
 
-# sa_watch_guard_entry: the watch guard's Stop entry for this copy of watch-guard.sh.
-sa_watch_guard_entry() {
-  local p
-  p=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/watch-guard.sh
-  jq -cn --arg c "bash $(sa_shq "$p")" '{hooks: [{type: "command", command: $c}]}'
-}
-
-# `guard_has($e)`: the settings hold the state guard entry `$e` (its command), for
-# `guard.sh` and `sa_home` alike; `stop_has($e)` the same for the watch guard's Stop entry.
+# `hook_has($ev; $e)`: the settings hold, under event `$ev`, the entry `$e` (its
+# command), for `guard.sh` and `sa_home` alike.
 # shellcheck disable=SC2034  # read by guard.sh
-sa_jq_guard_has='def guard_has($e): any((.hooks.PreToolUse // [])[]?; any(.hooks[]?; .command == $e.hooks[0].command));
-  def stop_has($e): any((.hooks.Stop // [])[]?; any(.hooks[]?; .command == $e.hooks[0].command));'
+sa_jq_hook_has='def hook_has($ev; $e): any((.hooks[$ev] // [])[]?; any(.hooks[]?; .command == $e.hooks[0].command));'
 
 # `project_rows`: the project rows of a saved `t3_project_list` answer, or of a bare
 # array of rows joined from all its pages.
@@ -67,8 +62,8 @@ sa_home() {
   # The bare write exits on a failure, so it runs in a subshell: a failure is a need,
   # its reason left on stderr.
   if [ "$1" = true ] && (sa_write "$settings" "$(jq -cn --argjson e "$entry" --argjson w "$wentry" '{hooks: {PreToolUse: [$e], Stop: [$w]}}')") >/dev/null; then written=true; fi
-  has=$(jq --argjson e "$entry" "$sa_jq_guard_has"'guard_has($e)' "$settings" 2>/dev/null) || has=false
-  whas=$(jq --argjson e "$wentry" "$sa_jq_guard_has"'stop_has($e)' "$settings" 2>/dev/null) || whas=false
+  has=$(jq --argjson e "$entry" "$sa_jq_hook_has"'hook_has("PreToolUse"; $e)' "$settings" 2>/dev/null) || has=false
+  whas=$(jq --argjson e "$wentry" "$sa_jq_hook_has"'hook_has("Stop"; $e)' "$settings" 2>/dev/null) || whas=false
   [ "$whas" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the watch guard\u0027s Stop hook is missing from \($s): run scripts/setup.sh --write"]' <<<"$needs")
   [ "$has" = true ] || needs=$(jq -c --arg s "$settings" '. + ["Super agent folder: the state guard\u0027s hook is missing from \($s): run scripts/setup.sh --write, or scripts/guard.sh --install"]' <<<"$needs")
   stale=$(sa_guard_stale)

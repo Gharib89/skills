@@ -21,4 +21,10 @@ entries=$(L list | jq -c .entries); L self th-third >/dev/null
 check "it leaves the entries alone" "$entries" "$(L list | jq -c .entries)"
 check_rc "self with no id and no T3CODE_THREAD_ID exits 2" 2 "$(env -u T3CODE_THREAD_ID bash "$s/ledger.sh" --ledger "$led" self >/dev/null 2>&1; echo $?)"
 
+# the prose that makes the loop start and the restart step call it
+flat=$(tr '\n' ' ' < skills/super-agent/SKILL.md | tr -s ' ')
+check "SKILL.md has the loop start record it" 1 \
+  "$(grep -c 'Record your own thread first: `scripts/ledger.sh --ledger <ledger> self`' <<<"$flat")"
+check "and the restart step" 1 "$(grep -c 'scripts/ledger.sh --ledger <ledger> self`, then' <<<"$flat")"
+
 finish

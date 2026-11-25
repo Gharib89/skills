@@ -45,7 +45,7 @@ if [ $# -gt 0 ]; then
   jq -e 'type == "object"' <<<"$cur" >/dev/null 2>&1 || sa_tooling "$settings is not a JSON object"
   jq -e '(.hooks // {}) | type == "object"' <<<"$cur" >/dev/null || sa_tooling "$settings: .hooks must be an object"
   jq -e '(.hooks.PreToolUse // []) | type == "array"' <<<"$cur" >/dev/null || sa_tooling "$settings: .hooks.PreToolUse must be an array"
-  has=$(jq --argjson e "$entry" "$sa_jq_guard_has"'guard_has($e)' <<<"$cur") \
+  has=$(jq --argjson e "$entry" "$sa_jq_hook_has"'hook_has("PreToolUse"; $e)' <<<"$cur") \
     || sa_tooling "cannot read the hooks in $settings"
   changed=false
   if [ "$mode" = install ] && [ "$has" = false ]; then

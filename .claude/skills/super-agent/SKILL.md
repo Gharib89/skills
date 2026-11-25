@@ -96,8 +96,9 @@ asks what is ready, and it launches nothing. Steps for all three:
 
 ## The loop
 
-Every thread you launch runs the same five steps, whatever its kind: launch,
-record, watch, wake, reconcile. An owner ask that is not routing work (rotating
+Record your own thread first: `scripts/ledger.sh --ledger <ledger> self`.
+Every launched thread runs the same five steps: launch, record, watch, wake,
+reconcile. An owner ask that is not routing work (rotating
 a secret, editing dotfiles) is launched as a `task:<slug>` thread, never done
 inline. A thread that is no ticket's (a grill, a deploy,
 decks, a review: anything the owner asks you to launch) skips `launch.sh`'s
@@ -328,8 +329,8 @@ repos, to propose it to the owner as a global rule.
 
 ## After a restart or compaction
 
-One fixed step, read from the ledger alone (it holds every entry, the waiting
-list, the rulings and the needs; never rebuild it from the transcript):
+One fixed step, read from the ledger alone (never rebuild it from the
+transcript):
 `scripts/ledger.sh --ledger <ledger> self`, then
 `scripts/ledger.sh --ledger <ledger> list --open`, then `scripts/reconcile.sh`
 with step 5's flags, then start the watcher, then do the summary's rows (Acting
