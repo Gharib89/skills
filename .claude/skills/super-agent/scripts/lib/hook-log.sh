@@ -13,8 +13,8 @@ sa_hook_log_file() {
 # sa_hook_log <file> <event> [<why>]: one `{at, event, why}` line, written without
 # `jq`; <why> is fixed text, never a quote. A failed write is no failure.
 sa_hook_log() {
-  local why=''
+  local why='' f=$1
   [ -z "${3:-}" ] || why=",\"why\":\"$3\""
-  { mkdir -p "$(dirname "$1")" && printf '{"at":"%s","event":"%s"%s}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$2" "$why" >> "$1"; } 2>/dev/null
+  { mkdir -p "$(dirname "$f")" && printf '{"at":"%s","event":"%s"%s}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$2" "$why" >> "$f"; } 2>/dev/null
   return 0
 }

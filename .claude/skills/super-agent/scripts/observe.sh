@@ -30,7 +30,13 @@ command -v jq >/dev/null 2>&1 || unjudged "no jq"
 source "$here/_lib.sh" || unjudged "cannot source _lib.sh"
 usage='usage: observe [--ledger <file>]'
 sa_help "$usage" "$@"
-if [ $# -gt 0 ]; then [ "$1" = --ledger ] && [ $# -eq 2 ] || sa_tooling "$usage"; fi
+while [ $# -gt 0 ]; do
+  case $1 in
+    --ledger) sa_flag_value "$usage" "${2:-}" ;;
+    *) sa_tooling "$usage" ;;
+  esac
+  shift 2
+done
 input=$(cat)
 head=$(jq -er 'if type == "object" and (.prompt_id | type) == "string" and (.tool_name | type) == "string" then "\(.prompt_id) \(.tool_name)" else error("no prompt_id and tool_name") end' <<<"$input" 2>/dev/null) \
   || unjudged "the hook input is no tool call with a prompt_id"
