@@ -58,9 +58,9 @@
 # `--owed` (the other flags unused) is the one read-only answer to whether a
 # watcher is owed, asked by the watch guard (`watch-guard.sh`): `watcher` when an
 # open entry has been observed and no live watch.sh holds the lock, `reconcile`
-# when open entries exist and none has been observed yet, else `none`. It takes no lock and writes
-# nothing, and counts entries the way the watcher's own start does: a `launching`
-# entry is no open entry here.
+# when open entries exist and none has been observed yet, else `none`. It takes
+# no lock and writes nothing, and counts entries the way the watcher's own start
+# does: a `launching` entry is no open entry here.
 #
 # stdout: {key, thread, event, observed} for a change, `observed` the snapshot
 #         {status, run_count, pending, gate, waiting, rest_at, pr: {number, state[, merged_at, checks, head]}}; {key, thread,
