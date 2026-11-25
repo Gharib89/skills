@@ -33,7 +33,7 @@ reconcile_answer() {
        | {key, thread, worktree, kind: (.kind // "ship"), stage, environment_id: (.environment_id // null)}],
      verify: [entries[] | select((.kind // "ship") == "ship" and .verify_owed == true and (.stage == "merged" or .stage == "settled"))
        | {key, repo, number, pr: .observed.pr.number, stage}],
-     escalate: [entries[]
+     escalate: ([entries[]
        | (if .stage == "settled" or .owner_run == true then null
           elif .stage == "closed" then
             (if .cleanup_owed == true then {reason: (if .observed.pr.state == "closed" then "pr-closed" else "issue-closed" end), detail: null} else null end)
@@ -43,6 +43,6 @@ reconcile_answer() {
           elif .stage == "at-rest" and (.stalls // 0) >= 3 then {reason: "stall-cap", detail: .stalls}
           else null end) as $r
        | select($r != null and (needed(.key; $r.reason) | not)) | {key, thread, reason: $r.reason, detail: $r.detail}]
-       + $rem,
+       + $rem),
      errors: $errs, skill: $sk, status: $status}' <<<"$doc"
 }
