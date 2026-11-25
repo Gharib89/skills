@@ -148,4 +148,10 @@ jq -c '.tells += [{thread: "th-\"x\\y", at: "not a time"}]' "$led" > "$led.n" &&
 check "a send the guard cannot judge, into a quoted id, is allowed" "0 " "$(verdict "$(tool_call 'th-"x\y')")"
 check "and its unjudged line is still JSON, so the scorecard reads the log" "0" "$(jq -s . "$log" >/dev/null 2>&1; echo $?)"
 
+# --- a tell drops the tells that lapsed, so the list holds the last hour's alone (#1381 review) --------
+later=$(jq '[.tells[].at | try fromdateiso8601 catch empty] | max + 7200' "$led")  # two hours past the newest tell
+SA_NOW=$later L tell th-8 >/dev/null
+check "a tell two hours on leaves only itself in the ledger's tells, the unparseable one dropped too" \
+  "th-8 $(jq -rn --argjson s "$later" '$s | todate')" "$(jq -r '.tells | map("\(.thread) \(.at)") | join(",")' "$led")"
+
 finish

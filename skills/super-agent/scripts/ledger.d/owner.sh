@@ -25,9 +25,12 @@ ledger_owner() {
       case $1 in *#*|task:*) sa_fail "$1 is not in the ledger, or has no thread yet" ;; esac
       thread=$1 ruling="Owner tell: one send into thread $thread."
     fi
-    now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    now_s=$(sa_now_s); now=$(jq -rn --argjson s "$now_s" '$s | todate')
     ruling=$(sa_ruling_row "$ruling")
-    sa_update "$ledger" '.tells = ((.tells // []) + [{thread: $t, at: $now}]) | .rulings += [$r]' --arg t "$thread" --arg now "$now" --argjson r "$ruling"
+    # A tell lapses an hour after it was recorded (call-guard.sh), so the lapsed ones,
+    # and any whose time does not parse, are dropped here and the list never grows.
+    sa_update "$ledger" '.tells = ([(.tells // [])[] | select((try (.at | fromdateiso8601) catch 0) > $s - 3600)]
+      + [{thread: $t, at: $now}]) | .rulings += [$r]' --arg t "$thread" --arg now "$now" --argjson s "$now_s" --argjson r "$ruling"
     jq -cn --arg t "$thread" --arg now "$now" --argjson r "$ruling" '{thread: $t, at: $now, ruling: $r}' ;;
   take|drop|reset-stalls)
     [ $# -eq 1 ] || sa_tooling "$usage"

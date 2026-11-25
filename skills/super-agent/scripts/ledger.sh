@@ -106,7 +106,7 @@
 # as `owner_run`. `reconcile` lists one `owner-run` escalate row after 3 days.
 # `tell` is the owner's "Tell <thread> X": one send into that entry's thread (or a
 # thread id the ledger need not hold) gets past the call guard (`call-guard.sh`), and a
-# dated ruling records it. `adopt --read` is "Watch <thread>": the thread's first page,
+# dated ruling records it; recording one drops the tells past their hour. `adopt --read` is "Watch <thread>": the thread's first page,
 # saved from `t3_thread_read` with `afterPosition: -1`, fills the entry (worktree,
 # branch, and from the first user message `/ship-run <n>` or `/triage <n>` the kind and
 # number, or `--number` for a ticket's thread whose first message is neither (a `--number` the message
