@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # The watch guard: a Stop hook that refuses the super agent's turn end once while
-# a watcher is owed. It asks `watch.sh --owed`, the one test for it. With a watcher owed (`watcher`, or `reconcile` first) it blocks the
+# a watcher is owed. It asks `watch.sh --owed`, the one test of whether a watcher
+# is owed. With a watcher owed (`watcher`, or `reconcile` first) it blocks the
 # stop and names the open entries and the exact command to run; the stop that
 # follows (the hook input's `stop_hook_active` true) passes. The super agent
 # still starts the watcher itself, so a missing hook leaves the loop working.
@@ -51,7 +52,7 @@ while [ $# -gt 0 ]; do
   shift 2
 done
 input=$(cat)
-active=$(jq -r 'if type == "object" then .stop_hook_active == true else error("not an object") end' <<<"$input" 2>/dev/null) || unjudged "the hook input is not JSON"
+active=$(jq -r 'if type == "object" then .stop_hook_active == true else error("not an object") end' <<<"$input" 2>/dev/null) || unjudged "the hook input is not a JSON object"
 [ -n "$active" ] || unjudged "the hook input is empty"
 answer=$(bash "$here/watch.sh" --ledger "$ledger" --owed 2>/dev/null) || unjudged "watch.sh --owed failed"
 owed=$(jq -r '.owed // empty' <<<"$answer" 2>/dev/null)
