@@ -133,6 +133,6 @@ check "the scorecard's target for question turns holding a changing call is live
 
 # --- the release rule is written down where the maintainer reads it ----------------
 check "the release standard holds the refusing-version and four-weeks rule" "1 1" \
-  "$(grep -c 'refusing' docs/contributing/standards/release.md) $(grep -c 'four weeks puts the observe hook up for deletion' docs/contributing/standards/release.md)"
+  "$(tr '\n' ' ' < docs/contributing/standards/release.md | grep -c 'puts a refusing version to the owner') $(tr '\n' ' ' < docs/contributing/standards/release.md | grep -c 'four weeks puts the observe hook up for deletion')"
 
 finish
