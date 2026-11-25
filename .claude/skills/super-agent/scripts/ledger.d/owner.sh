@@ -3,7 +3,7 @@
 # `tell`, `drop`, `reset-stalls` and `self` take, sourced by it. They read the
 # caller's $usage, $ledger and $doc, which `ledger.sh` sets.
 
-# shellcheck disable=SC2154  # usage, ledger, sa_jq_norm and sa_jq_open come from ledger.sh and _lib.sh
+# shellcheck disable=SC2154  # usage, ledger, sa_jq_norm, sa_jq_open and sa_jq_tell come from ledger.sh and _lib.sh
 
 ledger_owner() {
   local cmd=$1 key thread action reason="" row had repo reviewer now now_s stalls ruling

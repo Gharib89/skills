@@ -147,6 +147,12 @@ check "an MCP id is always literal: one that begins with a dollar sign is judged
 jq -c '.tells += [{thread: "th-\"x\\y", at: "not a time"}]' "$led" > "$led.n" && mv "$led.n" "$led"
 check "a tell whose time does not parse lets nothing through: a send into a quoted id is judged" "2 not-held" "$(verdict "$(tool_call 'th-"x\y')")"
 check "and its refused line is still JSON, so the scorecard reads the log" "0" "$(jq -s . "$log" >/dev/null 2>&1; echo $?)"
+cp "$led" "$led.keep"; jq -c '.tells = "oops"' "$led.keep" > "$led"
+n=$(jq -s '[.[] | select(.event == "unjudged" and .why == "cannot judge a send")] | length' "$log")
+check "a send the guard cannot judge (tells no list), into a quoted id, is allowed" "0 " "$(verdict "$(tool_call 'th-"x\y')")"
+check "and logged unjudged with fixed text, the log still JSON" "$((n + 1)) 0" \
+  "$(jq -s '[.[] | select(.event == "unjudged" and .why == "cannot judge a send")] | length' "$log") $(jq -s . "$log" >/dev/null 2>&1; echo $?)"
+mv "$led.keep" "$led"
 
 # --- a tell drops the tells that lapsed, so the list holds the last hour's alone (#1381 review) --------
 later=$(jq '[.tells[].at | try fromdateiso8601 catch empty] | max + 7200' "$led")  # two hours past the newest tell
@@ -157,15 +163,18 @@ check "a tell two hours on leaves only itself in the ledger's tells, the unparse
 # --- the hour is one rule: the guard honours and the prune keeps a tell exactly an hour old ----------
 t=$((later + 100000))
 SA_NOW=$t L tell th-h >/dev/null; SA_NOW=$t L tell th-h >/dev/null
-check "a tell exactly an hour old still lets a send through" "0 " "$(SA_NOW=$((t + 3600)) verdict "$(tool_call th-h)")"
+check "a tell exactly an hour old still lets a send through, logged told" "0  $(jq -rn --argjson s "$t" '$s | todate')" \
+  "$(SA_NOW=$((t + 3600)) verdict "$(tool_call th-h)") $(jq -r 'select(.event == "told" and .thread == "th-h") | .tell_at' "$log" | tail -1)"
 check "a second later the other tell has lapsed: refused" "2 not-held" "$(SA_NOW=$((t + 3601)) verdict "$(tool_call th-h)")"
 SA_NOW=$((t + 3600)) L tell th-k >/dev/null
 check "a tell recorded an hour after them keeps both" 2 "$(jq '[.tells[] | select(.thread == "th-h")] | length' "$led")"
 SA_NOW=$((t + 3601)) L tell th-k >/dev/null
 check "a tell recorded a second later drops them" 0 "$(jq '[.tells[] | select(.thread == "th-h")] | length' "$led")"
-jq -c --arg a "$(jq -rn --argjson s "$((t + 3601))" '$s | todate | sub("Z$"; ".500Z")')" '.tells += [{thread: "th-f", at: $a}]' "$led" > "$led.n" && mv "$led.n" "$led"
+frac=$(jq -rn --argjson s "$((t + 3601))" '$s | todate | sub("Z$"; ".500Z")')
+jq -c --arg a "$frac" '.tells += [{thread: "th-f", at: $a}]' "$led" > "$led.n" && mv "$led.n" "$led"
 SA_NOW=$((t + 3602)) L tell th-k >/dev/null
 check "a tell whose time carries a fraction is kept by the prune, as the guard honours it" 1 "$(jq '[.tells[] | select(.thread == "th-f")] | length' "$led")"
-check "and lets a send through" "0 " "$(SA_NOW=$((t + 3602)) verdict "$(tool_call th-f)")"
+check "and lets a send through, logged told naming it" "0  $frac" \
+  "$(SA_NOW=$((t + 3602)) verdict "$(tool_call th-f)") $(jq -r 'select(.event == "told" and .thread == "th-f") | .tell_at' "$log")"
 
 finish

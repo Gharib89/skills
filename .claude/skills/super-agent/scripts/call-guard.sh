@@ -20,7 +20,8 @@
 # is spent when the log holds a `told` line for it, so the hook never writes the ledger,
 # and a refused command spends none. One tell covers one send, in a command or across
 # them; two sends whose hooks run at the same time can share it, since the log is not
-# locked. A tell lapses an hour after it was recorded, so a deleted log revives one only inside that hour, and a
+# locked. A tell lapses an hour after it was recorded (one whose time does not parse has
+# lapsed: `tell_live` in _lib.sh, the rule `ledger tell` prunes by), so a deleted log revives one only inside that hour, and a
 # log that exists but cannot be read spends every tell (the send is judged without it).
 # A call it cannot judge (no `jq`, input that is no tool call, a send naming no thread
 # (an MCP call with an empty `threadId`, a Bash send with no word after its flags and
