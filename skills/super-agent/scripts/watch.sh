@@ -116,11 +116,19 @@ load() {
   open=$(jq -c '[.[] | select(.observed != null)]' <<<"$open")
 }
 
+# watcher_alive <lock>: the lock exists and reads empty (an unknown answer is no
+# proof of a dead watcher) or holds the pid of a live watch.sh.
+watcher_alive() {
+  [ -e "$1" ] || return 1
+  local p
+  p=$(cat "$1" 2>/dev/null)
+  [ -z "$p" ] || sa_pid_runs "$p" '*watch.sh*'
+}
+
 if $owed; then
   load
-  pid=$(cat "$ledger.watch" 2>/dev/null)
   alive=false
-  [ -n "$pid" ] && sa_pid_runs "$pid" '*watch.sh*' && alive=true
+  ! watcher_alive "$ledger.watch" || alive=true
   jq -cn --argjson o "$open" --argjson u "$unobserved" --argjson a "$alive" \
     '{owed: (if ($o | length) > 0 then (if $a then "none" else "watcher" end)
              elif ($u | length) > 0 then "reconcile" else "none" end),
@@ -141,7 +149,7 @@ printf '%s\n' "$$" > "$mine"
 for try in 1 2; do
   if ln "$mine" "$lock" 2>/dev/null; then break; fi
   pid=$(cat "$lock" 2>/dev/null)
-  if [ -z "$pid" ] || sa_pid_runs "$pid" '*watch.sh*'; then
+  if watcher_alive "$lock"; then
     jq -cn --arg p "$pid" '{error: "a watcher already runs on this ledger", running: (if $p == "" then null else ($p | tonumber) end)}'
     printf 'a watcher already runs on this ledger (pid %s)\n' "${pid:-unknown}" >&2; exit 1
   fi
