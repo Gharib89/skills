@@ -58,7 +58,7 @@ _Avoid_: approver, gatekeeper
 
 **Notify command**:
 The fleet file's `notify` shell command and delay, which the wake timer runs once per outage: when its wake line cannot be sent, when no reconcile follows the wake within the delay, or when a permission request has waited 10 minutes on the super agent's thread. So a super agent that cannot recover by itself is noticed by the owner. A reconcile within the delay runs nothing.
-_Avoid_: alert, heartbeat, backstop (that is the schedule that wakes the super agent)
+_Avoid_: alert, heartbeat, backstop (that is the hourly schedule that wakes the super agent)
 
 **Parents done**:
 Reconcile's `parents_done` list: an open parent issue (a spec) whose sub-issues are all closed, offered to the owner once. The super agent closes the parent only on the owner's word.

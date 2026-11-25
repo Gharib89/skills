@@ -9,18 +9,19 @@
 #
 # An outage opens at the first tick that finds a watcher owed (`watcher` or
 # `reconcile`), bar a held limit stop. With the thread idle, it sends the
-# thread one fixed line, `$wake_line` below. When the send
-# fails, or no reconcile stamp (`<ledger>.reconciled`) follows the wake within
-# the fleet file's notify delay (600 s when unset), it runs the fleet file's
-# notify command with `SA_NOTIFY_MESSAGE` set. A running thread is left to the
-# watch guard. A permission request pending on the thread for 600 s or more is
-# notified, with no wake. A limit stop is held until its reset plus 600 s; a
-# reset it cannot read falls through to a wake. With T3 not answering, or no
-# notify command or own thread recorded, the desktop notifier (`notify-send`)
-# stands in for the command, as it does for a fleet file whose `notify` is
-# malformed, a fault the message names. An outage gets one wake and at most one notify, and
-# closes at the first reconcile at or after its opening, or when no watcher is
-# owed any more. Its state is `wake-timer.state.json` beside the ledger.
+# thread one fixed line, `Wake timer: no watcher is running. Run pulse and
+# restart the watcher.` When the send fails, or no reconcile stamp
+# (`<ledger>.reconciled`) follows the wake within the fleet file's notify delay
+# (600 s when unset), it runs the fleet file's notify command with
+# `SA_NOTIFY_MESSAGE` set. A running thread is left to the watch guard. A
+# permission request pending on the thread for 600 s or more is notified, with
+# no wake. A limit stop is held until its reset plus 600 s; a reset it cannot
+# read falls through to a wake. With T3 not answering, or no notify command or
+# own thread recorded, the desktop notifier (`notify-send`) stands in for the
+# command, as it does for a fleet file whose `notify` is malformed, a fault the
+# message names. An outage gets one wake and at most one notify, and closes at
+# the first reconcile at or after its opening, or when no watcher is owed any
+# more. Its state is `wake-timer.state.json` beside the ledger.
 #
 # Each outage is logged as JSON lines in `wake-timer.jsonl` beside the ledger:
 # `{at, event}`, `event` `opened`, `wake`, `notify` (with `via` `command` or

@@ -99,8 +99,9 @@ entry an older install left in `~/.claude/settings.json`, the line the owner
 removes there (it would fire in every session); `stale.unreadable` is true
 when that file is no JSON object, so no entry could be checked. Each is also a
 `needs` line in `home`. Run `--install` only when a `needs` line names the
-missing hook: it adds the entry to the folder's file, or to the file
-`--settings` names.
+missing hook or the wake timer: it adds the entry to the folder's file, or to
+the file `--settings` names, and prints the wake timer's unit files and enable
+line.
 
 ## Cursor and Grok
 
