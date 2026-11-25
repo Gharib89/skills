@@ -77,4 +77,41 @@ err=$(bash "$s/call-guard.sh" --ledger "$tmp/bad.json" <<<"$(tool_call th-2)" 2>
 check "a ledger that is not JSON is allowed too" "0 " "$rc $err"
 check "a hook usage error is exit 2, not a swallowed one" 2 "$(bash "$s/call-guard.sh" --bogus </dev/null >/dev/null 2>&1; echo $?)"
 
+# --- a ledger a 0.45.0 super agent wrote: `paused` is owner-run (#1381 review) ----------------------
+L add --repo $repo --number 5 --thread th-5 --worktree /wt/5 --branch b5 >/dev/null
+L set $repo#5 paused true >/dev/null
+check "an entry a 0.45.0 super agent paused is owner-run to the guard" "2 owner-run" "$(verdict "$(tool_call th-5)")"
+
+# --- every send in a command, whatever path and flags it carries ----------------------------------------
+check "an absolute path to t3 is judged" "2 owner-run" "$(verdict "$(bash_call '/home/x/.local/bin/t3 thread send th-2 hi')")"
+# shellcheck disable=SC2088  # the literal `~` is the case: the guard accepts a home-relative path
+check "so is a home-relative one" "2 owner-run" "$(verdict "$(bash_call '~/.local/bin/t3 thread send th-2 hi')")"
+for sep in ';' '&&' '||' '|' $'\n'; do
+  check "a refused send behind an allowed one after '${sep//$'\n'/newline}' is refused" "2 owner-run" \
+    "$(verdict "$(bash_call "t3 thread send th-1 a $sep t3 thread send th-2 b")")"
+done
+for flag in '--base-dir /x' '--output-schema s.json' '--log-level debug'; do
+  check "the value of $flag is no thread" "0 " "$(verdict "$(bash_call "t3 thread send $flag th-1 hi")")"
+done
+check "a quoted argument spelling out a send is judged as one (a known false positive)" "2 owner-run" \
+  "$(verdict "$(bash_call 'git commit -m "docs: t3 thread send th-2 example"')")"
+n=$(jq -s '[.[] | select(.event == "unjudged")] | length' "$log")
+for id in '"$T"' '$T' '`id`' '\'; do
+  check "a thread id of $id is not judged" "0 " "$(verdict "$(bash_call "t3 thread send $id hi")")"
+done
+check "each is logged unjudged" "$((n + 4))" "$(jq -s '[.[] | select(.event == "unjudged")] | length' "$log")"
+
+# --- a tell is not revived by a log the guard cannot read, and lapses in an hour ---------------------------
+L tell th-7 >/dev/null
+mv "$log" "$log.keep"; mkdir "$log"
+check "a log that exists but cannot be read spends every tell" "2 not-held" "$(verdict "$(tool_call th-7)")"
+rmdir "$log"; mv "$log.keep" "$log"
+check "read again, the tell is live and spent by one send" "0  2 not-held" "$(verdict "$(tool_call th-7)") $(verdict "$(tool_call th-7)")"
+jq -c '.tells += [{thread: "th-8", at: "2026-01-01T00:00:00Z"}]' "$led" > "$led.n" && mv "$led.n" "$led"
+check "a tell older than an hour has lapsed" "2 not-held" "$(verdict "$(tool_call th-8)")"
+L tell th-8 >/dev/null
+rm -f "$log"
+check "a deleted log revives a tell inside the hour only: the fresh one passes, the lapsed one does not" "0  2 not-held" \
+  "$(verdict "$(tool_call th-8)") $(verdict "$(tool_call th-8)")"
+
 finish

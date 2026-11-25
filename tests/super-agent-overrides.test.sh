@@ -2,8 +2,8 @@
 # super-agent's owner overrides (#1279), driven through the command lines over the
 # fake `t3` and `gh` (tests/super-agent-fake.sh): `launch --owner-go` past the floors
 # and the reserve, `launch --skill <name>` and the interactive entry it records, the
-# ledger's `take`, `drop` and `reset-stalls`, the second `adopt` that gives an owner-run
-# entry back, and what reconcile, watch, placement and the status block do with an
+# ledger's `take`, `drop` and `reset-stalls`, the second `adopt` that watches an owner-run
+# entry again, and what reconcile, watch, placement and the status block do with an
 # owner-run entry (#1381).
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
@@ -99,11 +99,11 @@ out=$(bash "$s/launch.sh" record --task grill-plan --thread th-gp --ledger "$led
 check "record --task --interactive records an interactive task" "0 true" "$rc $(LG get task:grill-plan | jq -r .interactive)"
 check "a ticket entry cannot be interactive" 2 "$(LG add --repo $repo --number 40 --thread th-40 --worktree /wt/40 --branch b --machine home --interactive >/dev/null 2>&1; echo $?)"
 
-# give_back <key> <thread> <worktree> <branch>: "Watch <thread>" of a thread the ledger holds
-give_back() {
-  jq -cn --arg t "$2" --arg w "$3" --arg b "$4" '{thread: {threadId: $t, worktreePath: $w, branch: $b, pullRequests: []},
-    items: [{position: 1, type: "user_message", createdBy: "agent", text: "/ship-run 20", updatedAt: "2026-11-01T10:00:00.000Z"}], hasMore: false}' > "$tmp/give.json"
-  LG adopt --read "$tmp/give.json" --repo $repo
+# rewatch <number> <thread> <worktree> <branch>: "Watch <thread>" of a thread the ledger holds
+rewatch() {
+  jq -cn --arg n "$1" --arg t "$2" --arg w "$3" --arg b "$4" '{thread: {threadId: $t, worktreePath: $w, branch: $b},
+    items: [{position: 1, type: "user_message", createdBy: "agent", text: "/ship-run \($n)", updatedAt: "2026-11-01T10:00:00.000Z"}], hasMore: false}' > "$tmp/watch.json"
+  LG adopt --read "$tmp/watch.json" --repo $repo
 }
 
 # --- an owner-run entry: no stall, no nudge row, still a slot ------------------------------
@@ -130,14 +130,14 @@ issue 21 "widgets: next" ready-for-agent S
 out=$(bash "$s/launch.sh" "$repo#21" --fleet "$tmp/fleet1.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --exclude box)
 check "it still takes its machine's slot" waiting "$(jq -r .reason <<<"$out")"
 
-# --- a second adopt gives it back, and watching restarts from the thread's current state ---
-out=$(give_back $repo#20 th-20 /wt/20 feat/x-20); rc=$?
-check "the give-back is the same entry, no longer owner-run, its baseline cleared" "0 true false null 1" "$rc $(jq -r .existing <<<"$out") $(LG get $repo#20 | jq -r '[(.owner_run | tostring), (.observed | tostring)] | join(" ")') $(LG list | jq '.entries | length')"
+# --- a second adopt watches it again, from the thread's current state ---------------------------
+out=$(rewatch 20 th-20 /wt/20 feat/x-20); rc=$?
+check "Watch <thread> is the same entry, no longer owner-run, its baseline cleared" "0 true false null 1" "$rc $(jq -r .existing <<<"$out") $(LG get $repo#20 | jq -r '[(.owner_run | tostring), (.observed | tostring)] | join(" ")') $(LG list | jq '.entries | length')"
 sa_thread th-20 idle 6 0 /wt/20 feat/x-20
 R >/dev/null; out=$(R)
-check "the owner's runs count no stall after the give-back" "0 0" "$(jq -r '[(.stalled | length)] | map(tostring) | join(" ")' <<<"$out") $(LG get $repo#20 | jq -r .stalls)"
+check "the owner's runs count no stall after Watch <thread>" "0 0" "$(jq -r '[(.stalled | length)] | map(tostring) | join(" ")' <<<"$out") $(LG get $repo#20 | jq -r .stalls)"
 sa_thread th-20 idle 7 0 /wt/20 feat/x-20
-check "a run after the give-back counts as before" 1 "$(R | jq '.stalled | length')"
+check "a run after Watch <thread> counts as before" 1 "$(R | jq '.stalled | length')"
 
 # --- an owner-run ticket settles on GitHub alone; an owner-run task stays until drop ---------
 LG take $repo#20 >/dev/null
@@ -184,8 +184,10 @@ check "and leaves a ruling naming the key and the old count" 1 \
   "$(LG list | jq '[.rulings[] | select((.text | contains("acme/widgets#30")) and (.text | contains("3")) and (.text | contains("reset-stalls")))] | length')"
 check "reset-stalls of a key not in the ledger exits 1" 1 "$(LG reset-stalls $repo#98 >/dev/null 2>&1; echo $?)"
 ship_entry 31 th-31; R >/dev/null
-check "a second adopt of an entry that was never taken leaves it one entry, its baseline kept" "1 true" \
-  "$(LG list | jq '[.entries[] | select(.thread == "th-31")] | length') $(give_back $repo#31 th-31 /wt/31 feat/x-31 | jq -r '.existing | tostring')"
+out=$(rewatch 31 th-31 /wt/31 feat/x-31)
+check "a second adopt of an entry that was never taken answers the existing entry" true "$(jq -r '.existing | tostring' <<<"$out")"
+check "and leaves the ledger one entry for the thread" 1 "$(LG list | jq '[.entries[] | select(.thread == "th-31")] | length')"
+check "and its baseline kept" false "$(LG get $repo#31 | jq -r '.observed == null')"
 sa_pr $repo feat/x-30 merged; R >/dev/null
 check "reset-stalls of an entry that ended exits 1" "settled 1" "$(LG get $repo#30 | jq -r .stage) $(LG reset-stalls $repo#30 >/dev/null 2>&1; echo $?)"
 

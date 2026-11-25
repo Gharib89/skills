@@ -93,9 +93,6 @@ waiver that passed the gate, which the body names.
 ## The owner steps in
 
 A message of the owner's in a supervised thread leaves its entry in the ledger:
-never unwatch, settle or rethread it for that. Reconcile marks the entry
-**owner-steered** and the call guard refuses your sends into it: no step-in, no
-nudge, no stall. After the stall window at rest one `owner-steered` row asks the
-owner "watch or take?". "I'll take <thread>" makes it **owner-run** and "Watch
-<thread>" hands it back ([handing over](handing-over.md)). Record a need
-(`--reason owner`) when the thread ends needing them.
+never unwatch, settle or rethread it for that. The entry is **owner-steered**;
+what that changes, and the owner's answers, are in
+[handing over](handing-over.md#owner-steered).

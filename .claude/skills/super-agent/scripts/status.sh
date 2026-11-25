@@ -66,7 +66,7 @@ if [ -n "$quota" ]; then
   qdoc=$(cat "$quota")
 fi
 
-# The rows as the ledger holds them now: {rows: {needs, merged, running, waiting}
+# The rows as the ledger holds them now: {rows: {needs, merged, running, yours, waiting}
 # (a row absent when empty), merged_keys, unpushed}.
 now=$(jq -c --argjson now "$(sa_now_s)" "$sa_jq_norm$sa_jq_waiting$sa_jq_open"'
   def short: sub("^[^/]*/"; "");

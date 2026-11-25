@@ -58,16 +58,17 @@ name. Each guard writes `<name>-guard.jsonl` beside the ledger, one JSON line
 per event, `{at, event: "block" | "pass"}`, except the call guard, whose
 `call-guard.jsonl` holds `{at, event: "refused", reason, thread, tool}` per
 refused send and `{at, event: "told", thread, tell_at}` per send the owner's
-`tell` let through: the row's `call_guard` counts the day's `refused` and `told`
-lines, and the review's `call_guard.refused` sums them over the week (it is no
-guard that "blocks nothing", so no row is raised for it); the wake timer writes
-`wake-timer.jsonl`, one line per outage step, `{at, event: "opened" | "wake" |
-"notify" | "closed"}`; the row's `timer` counts the day's `closed` lines and
-their `minutes`. A limit stop the timer holds until its reset opens no outage
-and closes one already open, so an outage counts only up to the hold. A log
-not written yet is `null` in the row, never an error; a log with a line that is
-not JSON is refused by name. A row for a thread with no transcript that loaded
-this skill is refused too, rather than counted as an empty day.
+`tell` let through, and `{at, event: "unjudged", why}` per send it could not
+judge (nothing counts these). The row's `call_guard` counts the day's `refused`
+and `told` lines, and the review's `call_guard.refused` sums the days' `refused`
+counts. It has no target, so it raises no row (Targets, below); the wake timer
+writes `wake-timer.jsonl`, one line per outage step, `{at, event: "opened" |
+"wake" | "notify" | "closed"}`; the row's `timer` counts the day's `closed`
+lines and their `minutes`. A limit stop the timer holds until its reset opens no
+outage and closes one already open, so an outage counts only up to the hold. A
+log not written yet is `null` in the row, never an error; a log with a line that
+is not JSON is refused by name. A row for a thread with no transcript that
+loaded this skill is refused too, rather than counted as an empty day.
 
 ## Targets
 

@@ -2,18 +2,39 @@
 # thread read behind "Watch <thread>", sourced by it. They read the caller's $usage,
 # $ledger, $cmd and $doc, which `ledger.sh` sets.
 
-# shellcheck disable=SC2154,SC2034  # usage, ledger, cmd and doc come from ledger.sh and _lib.sh; the add flags are set in ledger_add and read by adopt_fill; $adopted_pr is read in the entry
+# shellcheck disable=SC2154,SC2034  # usage, ledger, cmd and doc come from ledger.sh and _lib.sh; the add flags are set in ledger_add and read by adopt_fill; read_kind and read_number are read by adopt_held and adopt_fill
+
+# adopt_ticket_of_read: the ticket a thread's first user message names, from the read in
+# $read_file: `/ship-run <n>` is a ship, `/triage <n>` a triage. Sets $read_kind and
+# $read_number, both empty for a first message that is neither.
+adopt_ticket_of_read() {
+  local first
+  read_kind='' read_number=''
+  first=$(jq -r '[.items[]? | select(.type == "user_message")] | sort_by(.position) | first | .text // ""' "$read_file")
+  if [[ $first =~ ^[[:space:]]*/(ship-run|triage)[[:space:]]+([0-9]+) ]]; then
+    read_number=${BASH_REMATCH[2]}
+    if [ "${BASH_REMATCH[1]}" = triage ]; then read_kind=triage; else read_kind=ship; fi
+  fi
+}
 
 # adopt_held <thread>: when an open entry already holds the thread, the entry is that
-# one: no second row. It is given back when owner-run (the mark, the observed
+# one: no second row, and a flag or a read naming another ticket is refused (exit 1,
+# naming the holder). An owner-run entry stops being owner-run (the mark, the observed
 # baseline and the rest clock go, `resumed` has the next reconcile take the thread's
 # run count as judged), its steered mark is cleared and its `held_since` restarted at
 # `$now`, so the owner's earlier messages are not read as steering it. Answers and
 # exits 0; returns 1 when no open entry holds the thread.
 adopt_held() {
-  local key
+  local key named='' num
   key=$(jq -r --arg t "$1" "$sa_jq_open"'first(.entries[] | select(.thread == $t and is_open) | .key) // empty' <<<"$doc")
   [ -n "$key" ] || return 1
+  if [ -n "$task" ]; then named="task:$task"
+  else
+    num=$number
+    if [ -z "$num" ] && [ -n "$read_file" ]; then adopt_ticket_of_read; num=$read_number; fi
+    [ -z "$num" ] || named=$(jq -r --arg k "$key" --arg n "$num" --arg r "$repo" "$sa_jq_norm"'.entries[$k] | if ((.number | tostring) == $n and ($r == "" or (.repo // "" | norm_repo) == ($r | norm_repo))) then $k else "\(.repo // "?")#\($n)" end' <<<"$doc")
+  fi
+  [ -z "$named" ] || [ "$named" = "$key" ] || sa_fail "thread $1 is held by $key, not $named: drop that entry first, or leave the ticket out"
   sa_update "$ledger" '.entries[$k] |= ((if .owner_run == true then .owner_run = false | del(.owner_run_since, .owner_run_reminded)
       | .observed = null | .rest_since = null | .resumed = true else . end)
       | .steered = false | .held_since = $now | .updated_at = $now)' --arg k "$key" --arg now "$now"
@@ -22,36 +43,36 @@ adopt_held() {
 }
 
 # adopt_fill: what the add flags left empty, from the thread read in $read_file (the
-# `t3_thread_read` of the thread's first page, `afterPosition: -1`): the worktree and
-# branch from the thread, the first pull request row, and, unless `--task` names a
-# task, the kind and number from the thread's first user message (`/ship-run <n>` is
-# a ship, `/triage <n>` a triage), the repo from `--repo` or else the worktree's
-# `origin` remote. A thread whose first message is neither and no `--task` is refused:
-# a task needs its slug. Sets $worktree, $branch, $kind, $number, $repo and $adopted_pr.
+# `t3_thread_read` of the thread's first page, `afterPosition: -1`; a read that has an
+# earlier page is refused): the worktree and branch from the thread, and, unless `--task`
+# names a task or `--number` the ticket, the kind and number from the thread's first user
+# message, the repo from `--repo` or else the worktree's `origin` remote when it names
+# github.com. A thread whose first message is neither a ticket call and no `--task` or
+# `--number` is refused: a task needs its slug. Sets $worktree, $branch, $kind, $number
+# and $repo. The pull request is not read: reconcile finds it by the branch.
 adopt_fill() {
-  local first url
+  local url
+  jq -e '(.earlierPosition // null) == null' "$read_file" >/dev/null || sa_tooling "$read_file is not the thread's first page: read it again with afterPosition -1"
   [ -n "$worktree" ] || worktree=$(jq -r '.thread.worktreePath // empty' "$read_file")
   [ -n "$branch" ] || branch=$(jq -r '.thread.branch // empty' "$read_file")
-  adopted_pr=$(jq -c '(.thread.pullRequests // [])[0] // null' "$read_file")
-  [ -z "$task" ] || return 0
-  first=$(jq -r '[.items[]? | select(.type == "user_message")] | sort_by(.position) | first | .text // ""' "$read_file")
-  if [[ $first =~ ^[[:space:]]*/(ship-run|triage)[[:space:]]+([0-9]+) ]]; then
-    [ -n "$kind" ] || { [ "${BASH_REMATCH[1]}" = triage ] && kind=triage || kind=ship; }
-    [ -n "$number" ] || number=${BASH_REMATCH[2]}
-  else
-    sa_tooling "the thread's first message is no /ship-run or /triage call: pass --task <slug>, or --repo, --number and --kind for a ticket's thread"
+  if [ -z "$task" ] && [ -z "$number" ]; then
+    adopt_ticket_of_read
+    [ -n "$read_number" ] || sa_tooling "the thread's first message is no /ship-run or /triage call: pass --task <slug>, or --repo and --number (and --kind) for a ticket's thread"
+    [ -n "$kind" ] || kind=$read_kind
+    number=$read_number
   fi
+  [ -z "$task" ] || return 0
   if [ -z "$repo" ] && [ -n "$worktree" ]; then
     url=$(git -C "$worktree" remote get-url origin 2>/dev/null)
-    repo=$(sed -E 's#^(git@|ssh://git@|https?://)[^/:]*[:/]##; s#\.git$##' <<<"$url")
-    case $repo in */*) ;; *) repo='' ;; esac
+    url=${url%/}; url=${url%.git}
+    if [[ $url =~ ^(git@github\.com:|(ssh|https)://(git@)?github\.com/)([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)$ ]]; then repo=${BASH_REMATCH[4]}; fi
   fi
-  [ -n "$repo" ] || sa_tooling "the repo is unknown: pass --repo <owner/name> (the worktree has no origin remote to read it from here)"
+  [ -n "$repo" ] || sa_tooling "the repo is unknown: pass --repo <owner/name> (the worktree has no github.com origin remote to read it from here)"
 }
 
 ledger_add() {
   repo='' number='' thread='' worktree='' branch='' machine='' environment='' instance='' model='' effort='' areas='[]' kind='' task='' adopted=false
-  interactive=false launching=false read_file='' adopted_pr=null
+  interactive=false launching=false read_file=''
   [ "$cmd" != adopt ] || adopted=true
   while [ $# -gt 0 ]; do
     case $1 in
@@ -120,7 +141,7 @@ ledger_add() {
   entry=$(jq -cn --arg k "$key" --arg repo "$repo" --argjson n "${number:-null}" --arg t "$thread" \
     --arg w "$worktree" --arg b "$branch" --arg m "$machine" --arg env "$environment" --arg inst "$instance" --arg model "$model" \
     --arg effort "$effort" --arg now "$now" --argjson areas "$areas" --arg kind "$kind" --argjson adopted "$adopted" --arg task "$task" --argjson ia "$interactive" \
-    --argjson launching "$launching" --argjson pr "$adopted_pr" \
+    --argjson launching "$launching" \
     '{key: $k, repo: (if $repo == "" then null else $repo end), number: (if $task == "" then $n else null end),
       thread: (if $launching then null else $t end), worktree: (if $launching then null else $w end), branch: $b, machine: $m, areas: $areas, kind: $kind, adopted: $adopted,
       environment_id: (if $env == "" then null else $env end),
@@ -129,7 +150,7 @@ ledger_add() {
       effort: (if $effort == "" then null else $effort end),
       stage: (if $launching then "launching" else "launched" end), stalls: 0, observed: null, launched_at: $now, updated_at: $now}
       + (if $ia then {interactive: true} else {} end)
-      + (if $adopted then {held_since: $now} else {} end) + (if $pr != null then {adopted_pr: $pr} else {} end)')
+      + (if $adopted then {held_since: $now} else {} end)')
   sa_update "$ledger" "$sa_jq_norm"'del(.entries[$old]) | .entries[$k] = $e | .waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' \
     --arg k "$key" --arg old "$old" --argjson e "$entry"
   jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$entry" --argjson c "$claim" '{ledger: $l, key: $k, entry: $e} + (if $c == null then {} else {claim: $c} end)'

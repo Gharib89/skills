@@ -110,6 +110,12 @@ sa_window_flag() { case $2 in ''|0|*[!0-9]*) sa_tooling "$1" ;; esac; }
 # shellcheck disable=SC2034  # read by the scripts that source this file
 sa_jq_open='def is_open: .stage != "settled" and .stage != "closed";'
 
+# The ledger a 0.45.0 super agent wrote marked a thread the owner took `paused`; 0.46.0
+# calls it `owner_run`. Every reader gets the one name: `sa_read` applies this, and the
+# call guard, which reads the file itself, too. `owner_run_since` is the entry's last update.
+# shellcheck disable=SC2034  # read by the scripts that source _lib.sh
+sa_jq_migrate='.entries |= map_values(if .paused == true then .owner_run = true | .owner_run_since = (.owner_run_since // .updated_at) | del(.paused) else del(.paused) end)'
+
 # The one normaliser of each kind, as jq defs a script prepends to its filter.
 # `norm_repo` is for an `owner/name` and for a ledger key `owner/name#n`: the host
 # treats owner and name as case-insensitive, and the number has no case. `norm_path`

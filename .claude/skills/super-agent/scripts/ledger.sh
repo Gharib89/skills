@@ -11,8 +11,10 @@
 #          [--model <id>] [--effort <level>] [--area <path>]... [--interactive]
 #   ledger --ledger <file> add --launching <the add flags, less --thread and --worktree>
 #   ledger --ledger <file> adopt <the same flags as add>
-#   ledger --ledger <file> adopt --read <t3_thread_read file> [--task <slug>] [--repo <owner/name>] [--number <n>]
-#          [--kind ship|triage] [--machine <name>] [--environment <id>] [--instance <id>]
+#   ledger --ledger <file> adopt --read <t3_thread_read file> [--thread <id>] [--task <slug>] [--repo <owner/name>]
+#          [--number <n>] [--worktree <path>] [--branch <name>] [--kind ship|triage] [--machine <name>]
+#          [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]...
+#          [--interactive]
 #   ledger --ledger <file> get <key>
 #   ledger --ledger <file> list [--open]
 #   ledger --ledger <file> set <key> <field> <json>
@@ -98,20 +100,23 @@
 # its machine's slot, and `reconcile` and `watch` count it no stall and raise no step-in
 # for it; a ticket's entry settles on its PR merging or its issue closing, read from
 # GitHub alone, with no cleanup owed, and a task's stays until `drop` or a second
-# `adopt` of its thread, which gives it back: the mark and the `observed` baseline go,
-# so the next `reconcile` watches from the thread's state then, its runs since the
-# take counting no stall. `reconcile` lists one `owner-run` escalate row after 3 days.
+# `adopt` of its thread, which ends the mark: it and the `observed` baseline go, so the
+# next `reconcile` watches from the thread's state then, its runs since the take
+# counting no stall. A ledger from 0.45.0 holds `paused: true` for `owner_run` and reads
+# as `owner_run`. `reconcile` lists one `owner-run` escalate row after 3 days.
 # `tell` is the owner's "Tell <thread> X": one send into that entry's thread (or a
 # thread id the ledger need not hold) gets past the call guard (`call-guard.sh`), and a
 # dated ruling records it. `adopt --read` is "Watch <thread>": the thread's first page,
 # saved from `t3_thread_read` with `afterPosition: -1`, fills the entry (worktree,
-# branch, first pull request, and from the first user message `/ship-run <n>` or
-# `/triage <n>` the kind and number; `--task` for any other thread; the repo from
-# `--repo`, else the worktree's origin remote) and starts its clock then:
+# branch, and from the first user message `/ship-run <n>` or `/triage <n>` the kind and
+# number, or `--number` for a ticket's thread whose first message is neither; `--task` for any
+# other thread; the repo from `--repo`, else a github.com origin remote of the worktree;
+# the first `reconcile` finds the PR by the branch) and starts its clock then:
 # `launched_at` and `held_since` are now. An open entry that already holds the thread
-# is the entry returned (`existing` true), given back when owner-run and no longer
-# steered; a ship adoption with no claim comment of this super agent's gets one
-# (`claim.sh`, on the entry's `--machine`). `drop` removes an
+# is the entry returned (`existing` true), no longer owner-run or steered (a `--task`,
+# `--number` or ticket naming another key is refused, exit 1, naming the holder); a ship
+# adoption with no claim comment of this super agent's gets one (`claim.sh`, on the
+# entry's `--machine`), its status in the answer's `claim`. `drop` removes an
 # entry of any stage. `reset-stalls` zeroes an open entry's stall count and restarts
 # its stall window, and records a dated ruling naming the key and the count it replaced.
 # A `need` is something only the owner can settle: one row in `needs` per key
@@ -129,7 +134,8 @@
 # the row is open. `unlimit` clears it once a later run records that reviewer as
 # landed, or the owner says so.
 #
-# stdout: `add` {ledger, key, entry}, `adopt` also {existing: true} for a thread an entry already held; `get` the entry; `list` {ledger, entries,
+# stdout: `add` {ledger, key, entry}, `adopt` also {existing: true} for a thread an entry already held
+#         and {claim} for a ship adoption; `get` the entry; `list` {ledger, entries,
 #         rulings}, `entries` an array of entries (`--open` leaves out settled
 #         and closed ones); `set` {key, field, value}; `rethread` {ledger, key, entry}; `ruling` {ruling:
 #         {date, text, allow, repo, expires, pinned}}; `pin` {pinned:
@@ -143,12 +149,15 @@
 #         `drop` {key, removed}; `reset-stalls` {key, stalls, ruling}; `self` {own_thread};
 #         `list` also holds `waiting`,
 #         `needs` and `review_limits`; any failure {error}
-# exit: 0 ok · 1 the key is already in, or not in, the ledger, `stage`, an
+# exit: 0 ok · 1 the key is already in, or not in, the ledger, a thread an entry holds
+#       under another key (`adopt`), `stage`, an
 #       identity field, an entry that ended (`take`, `reset-stalls`), a key `tell` does not
 #       know, a ruling that `pin` or a migration row names
 #       but the ledger lacks, or a second `migrate-rulings` · 2 usage, a value
-#       that is not JSON, an unreadable or wrong-shaped ledger, or a write that
-#       failed
+#       that is not JSON, an unreadable or wrong-shaped ledger, a write that failed, or
+#       an `adopt --read` whose file is no `t3_thread_read` result or not the thread's first
+#       page, whose first message is no ticket call (with no `--task` or `--number`), whose
+#       repo is unknown, or whose claim failed (the own thread unknown: run `self` first)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 

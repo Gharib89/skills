@@ -105,8 +105,9 @@ records it with `launch.sh record --ledger <ledger> --task <slug> --thread <id>`
 (`--branch` and `--repo` when it opens a PR you should wake on; on a linked
 machine `--machine <key>` with `--environment`, and `--worktree`). A thread the
 owner asks you to watch that you did not launch ("Watch <thread>") is
-`ledger.sh --ledger <ledger> adopt --read <file>` of its `t3_thread_read`
-([handing over](reference/handing-over.md)), then the same steps.
+`ledger.sh --ledger <ledger> adopt --read <file>` of its `t3_thread_read`, which
+is step 2's record; then steps 5 and 3
+([handing over](reference/handing-over.md)).
 
 1. **Launch.** The owner names a ticket as `<owner/name>#<n>`. Run
    `scripts/launch.sh <owner/name>#<n> --fleet <fleet> --ledger <ledger> --quota
@@ -172,10 +173,14 @@ bound schedule wakes you on time (all measured 2026-11-06). A block from the
 **watch guard** (a Stop hook) is your own: run the command it names,
 then end the turn. On a `Wake timer:` line, run step 4's pulse.
 
-**Remote entries** (an `environment_id`): on each wake, before reconcile or
-pulse, save their `t3_thread_read`, convert each with `reply.sh` and pass
-`--remote` ([remote](reference/remote.md)); a pulse without it reads their
-threads as `thread-unreadable`.
+**Thread reads**: on each wake, before reconcile or pulse, save each open
+entry's `t3_thread_read` (not an owner-run one's; small: a low `limit`,
+`runLimit: 1`) and convert each with `reply.sh` into one directory. Pass it as
+`--reads <dir>`, which is how a steered entry is found
+([handing over](reference/handing-over.md#owner-steered)); add `--owner-only` to
+`reply.sh` when the read is too small to give a verdict. A remote entry (an
+`environment_id`) passes `--remote` as well ([remote](reference/remote.md)): a
+pulse without it reads its thread as `thread-unreadable`.
 
 Wait only through the watcher: a `sleep` or a poll in your own turn spends
 context on nothing. Read a thread's messages only in small slices
@@ -234,7 +239,8 @@ The other lists report:
 Each override the owner gives has a flag; never edit the ledger, fleet or quota
 file by hand to stand in for one (a hook refuses it).
 
-Each `<thread>` below is the entry's ledger key.
+Each `<thread>` below is the entry's ledger key; for "Watch" and "Tell" it is
+any thread the owner names, by its id.
 
 - "Go past the quota": `launch.sh ... --owner-go`. When no instance passes the
   5 hour floor and the weekly reserve, route skips both, and `record` writes a

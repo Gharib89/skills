@@ -67,4 +67,16 @@ check "Yours names the entry, its PR state and how long it has been the owner's 
   'Yours (1): [widgets#2](https://github.com/acme/widgets/issues/2) no PR, yours for 3 days' "$(jq -r .block <<<"$out" | grep '^Yours')"
 check "and it is on no Running row" 0 "$(jq -r .block <<<"$out" | grep -c '^Running')"
 
+# --- an entry a 0.45.0 super agent paused reads as owner-run (#1381 review) -------------------------------------
+L add --repo $repo --number 3 --thread th-3 --worktree /wt/3 --branch feat/x-3 >/dev/null
+sa_thread th-3 idle 1 0 /wt/3 feat/x-3; sa_pr $repo feat/x-3 none; sa_issue $repo 3 open
+L set $repo#3 paused true >/dev/null
+R $((t0 + 10000)) >/dev/null
+sa_thread th-3 idle 2 0 /wt/3 feat/x-3
+out=$(R $((t0 + 20000)))
+check "its run and its rest count no stall, and no row names it" "0 0" \
+  "$(jq -r '"\(.stalled | length) \([.escalate[] | select(.key == "acme/widgets#3")] | length)"' <<<"$out")"
+check "it is owner-run now, with its pause date as the start, and no paused mark" "true true false" \
+  "$(L get $repo#3 | jq -r '"\(.owner_run) \(.owner_run_since != null) \(has("paused"))"')"
+
 finish
