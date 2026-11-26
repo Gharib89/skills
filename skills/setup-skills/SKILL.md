@@ -145,7 +145,7 @@ Write every confirmed file. Then run ship's preflight against the new profile:
 
 Report its `reasons`; a `profile invalid:` reason on a reviewer block is shown to the human as a proposed edit and rewritten once they confirm. The issueless call raises none of its own, so the list should be empty; any `profile missing`, `profile invalid`, `skill missing`, `skill off pin`, `skills lock unreadable` or `composes pin invalid` reason is yours to fix before finishing, the last by re-running the refresh line, since it means the installed `ship-run` copy is malformed. A `skill missing` or `skill off pin` reason names a composed skill step 1 left uninstalled or off its pin and carries the line that installs it: run that line. A `skills lock unreadable` reason comes before any install line: the skills CLI rewrites a lock it cannot parse holding only the new entry, so repair its JSON first.
 
-Ship calls `merge` by the relative path an allow rule matches, so tell them to add `Bash(.claude/skills/ship-run/scripts/merge.sh:*)` under `permissions.allow` in the repo's `.claude/settings.local.json`; without the rule auto mode may refuse the merge.
+Ship calls `merge` and `gate admit` by the relative path an allow rule matches, so tell them to add `Bash(.claude/skills/ship-run/scripts/merge.sh:*)` and `Bash(.claude/skills/ship-run/scripts/run-file.sh gate admit:*)` under `permissions.allow` in the repo's `.claude/settings.local.json`; without the rules auto mode may refuse the merge, and ship's preflight warns.
 
 ### 7. Done
 
