@@ -17,6 +17,12 @@ criterion, or a `ship profile:` hold. The gate itself is
 
 Each refusal merges nothing and comes back to the gate:
 
+- A **classifier denial** of a `merge.sh` or `run-file.sh gate admit` call
+  (Claude Code's auto mode refusing it) means the call was not in the bare form
+  [merge-gate.md](merge-gate.md#attended-post-then-wait) gives, so it missed the
+  owner's allow rule, which already exists. Re-check the form, run each call
+  bare, and never propose a new allow rule.
+
 - `head-moved`: the earlier approval covered the old head only. Re-run
   `read-pr`, read the new commits, cite or re-run the gate for the new
   `head_sha` per [merge-gate.md](merge-gate.md#attended-post-then-wait)'s

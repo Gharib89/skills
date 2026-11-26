@@ -2,6 +2,12 @@
 name: ship-run
 description: Drive one tracker issue to a merge-ready PR in a single run, reaching the merge gate or merging when the repo opts in and the gate is clean. Use when the user wants to ship an issue, or to run the unattended lane.
 argument-hint: "[issue-number] [--unattended | [--rework [\"<feedback>\"]] [--inline [--review]]]"
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: 'g="$CLAUDE_PROJECT_DIR/.claude/skills/ship-run/hooks/merge-form-guard.sh"; [ -f "$g" ] || g="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/ship-run/hooks/merge-form-guard.sh"; [ -f "$g" ] || exit 0; exec bash "$g"'
 metadata:
   version: 0.75.2
   profile-schema: "5"

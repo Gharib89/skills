@@ -25,7 +25,8 @@ echo project > "$repo/.claude/skills/tdd/SKILL.md"
 
 preflight() { ( cd "$repo" && HOME=$home bash "$scripts/preflight.sh" none 2>/dev/null; echo "rc=$?" ); }
 json() { sed '$d' <<<"$out"; }
-warnings() { json | jq -c .warnings; }
+# Only the shadow lines: the merge allow-rule lines have their own test.
+warnings() { json | jq -c '.warnings | map(select(startswith("personal skill copy")))'; }
 verdict() { json | jq -c '[.ok, .reasons]'; }
 
 out=$(preflight); base=$(verdict); base_rc=$(tail -n1 <<<"$out")
