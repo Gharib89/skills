@@ -49,8 +49,10 @@
 #   composes pin invalid: <detail> · not reworkable: <detail> · no feedback
 #   warnings[] holds one line per personal skill copy under ~/.claude/skills that
 #   shadows ship or a skill it composes and differs from the project copy or
-#   cannot be compared with it (an identical copy is not listed): never a
-#   reason, and the exit code is unchanged.
+#   cannot be compared with it (an identical copy is not listed), and one line
+#   per merge call (`merge.sh`, `run-file.sh gate admit`) no Claude Code allow
+#   rule matches at the path ship runs it from: never a reason, and the exit
+#   code is unchanged.
 #   mentions[] lists live PRs that name the issue without closing it: context
 #   for phase 1, and no kind of stop. mentioned_by[] is the same rows widened to
 #   {number, kind: issue|pr, state}, so a run learns whether a mention is an
@@ -221,13 +223,17 @@ while IFS= read -r reason; do
 done < <(ship_missing_skill_reasons "$here" "$(ship_frontmatter "$ship_skill" composes)")
 
 # A personal copy of a composed skill (or of ship) wins over the project copy the
-# lock describes: report it as a warning, never a reason. A cloud sandbox has no
-# personal folder, so it is skipped there.
+# lock describes, and a merge call no allow rule matches falls to the auto-mode
+# classifier: report each as a warning, never a reason. A cloud sandbox has no
+# personal folder, so both are skipped there.
 warnings=()
 if [ "${CLAUDE_CODE_REMOTE:-}" != true ]; then
   while IFS= read -r warning; do
     warnings+=("$warning")
   done < <(ship_shadowed_skills "$here" "$(ship_frontmatter "$ship_skill" composes)" "${HOME:-/nonexistent}")
+  while IFS= read -r warning; do
+    warnings+=("$warning")
+  done < <(ship_merge_allow_warnings "$here" "$(cd "$SHIP_SCRIPTS" && pwd)" "${CLAUDE_CONFIG_DIR:-${HOME:-/nonexistent}/.claude}")
 fi
 
 # The issue itself, unless this is a task-spec run.

@@ -17,10 +17,9 @@ repo may be public.
 
 ## The summary
 
-Lay it out for the case in front of you: no layout is fixed. Head it with the
-issue number, its title and `ship <version>`. What it carries is fixed, because
-the human approves an irreversible merge on it; the names below are what other
-references call each item, not a layout:
+No layout is fixed: head it with the issue number, its title and `ship
+<version>`. What it carries is fixed; the names below are what other references
+call each item:
 
 - **PR and lane**: the PR URL with its branch and base, what was asked in a
   line, and the lane, with any revocation and why.
@@ -57,10 +56,8 @@ references call each item, not a layout:
 - **Timing**: `run-file timing`'s `row`, verbatim.
 - **Host protections**: `protections <pr>`'s `line`, verbatim: what the host
   itself enforces on the base branch (protection, required checks and reviews,
-  admin bypass), read-only. Its reader is the human who answers the merge word:
-  no script reads it, so `unknown` or `no`
-  adds no stop and no prompt, and a repo that opts into unattended merge has
-  already chosen its policy (ADR 0011).
+  admin bypass), read-only and for the human alone: `unknown` or `no` adds no
+  stop and no prompt (ADR 0011).
 - **Clean gate held by**: `gate summary`'s `clean_gate_held_by_line`, `none`
   on a clean gate.
 
@@ -76,13 +73,11 @@ reply lines, written once `merge` answers `merged: true`:
 Merged on a clean gate: <PR url>
 ```
 
-A posted message cannot be edited, so the run posts the summary with no reply
-line, runs the merge sequence, then posts that line
-last. In an opted-in run the reply lines
-appear only on `clean: false` or when `merge` refuses, the refusal named under
-them. A step after the merge that fails (a tracker write, cleanup) is reported
-beneath the merged line; report a completed merge only after the mechanic
-confirms it.
+A posted message cannot be edited, so that line is posted last, after the
+merge. In an opted-in run the reply lines appear only on `clean: false` or a
+`merge` refusal, the refusal named under them. A step after the merge that
+fails (a tracker write, cleanup) is reported beneath the merged line; report a
+completed merge only after the mechanic confirms it.
 
 **Every item is grounded in a result from this run**: `Local gate` is the gate's
 `gates` object from the verdict the Run file recorded, `CI` is `ci-wait`'s
@@ -197,12 +192,14 @@ human's "merge", or `waiver --ruling '<quote>'` quoting a supervisor's waiver or
 ruling, never `human`. Both cover unmet criteria, not a red leg
 (`checks-unsettled`). Then `merge <pr> <issue|none> <head> [--worktree <path>]
 [--run <slug>]`, landing only `<head>`, this gate's `read-pr` `head_sha`. Run
-`run-file.sh` and `merge.sh` from the worktree root as
-`.claude/skills/ship-run/scripts/...`, each its own command with no variable
-prefix or `&&` chain, so allow rules match; the absolute base-directory path is
-for an install with no project copy.
-A `none` run names its Run file's slug with `--run`. `merge.sh`'s header carries
-what it does and what each refusal protects against; a refusal merges nothing
+each of `run-file.sh gate admit` and `merge.sh` bare, as its own Bash call from
+the worktree root: `.claude/skills/ship-run/scripts/...` (the absolute
+base-directory path for an install with no project copy) and literal arguments.
+Any other form (a `cd` prefix, `;`, `&&`, a pipe, a redirect, a newline, `$PWD`
+or any variable) misses the owner's allow rules, and ship's hook refuses it with
+the bare command. Each prints one compact JSON object
+that needs no trimming.
+A `none` run names its Run file's slug with `--run`. A refusal merges nothing
 and stops at this gate, including after a clean-gate decision; on one, read
 [merge-gate-branches.md](merge-gate-branches.md#merge-refusals) for how it comes
 back here.
