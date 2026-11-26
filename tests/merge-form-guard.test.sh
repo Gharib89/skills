@@ -53,6 +53,23 @@ check_rc "a double-quoted ruling holding \$ is refused" 2 \
 check_rc "an unknown variable is refused" 2 "$(run "$P/merge.sh 1 2 \$HEAD_SHA")"
 check "and the message asks for its literal value" 1 "$(grep -c 'literal value' "$work/err")"
 
+# Wrappers, keywords, a trailing separator and a redirect hide no merge call
+# (self-review round 1).
+for c in "$P/merge.sh 1 2 abc &" "$P/merge.sh 1 2 abc;" "($P/merge.sh 1 2 abc)" \
+  "timeout 60 $P/merge.sh 1 2 abc | tail" "env A=b $P/merge.sh 1 2 abc" "nohup $P/merge.sh 1 2 abc" \
+  "sudo $P/merge.sh 1 2 abc" "command $P/merge.sh 1 2 abc" "if true; then $P/merge.sh 1 2 abc; fi" \
+  "xargs $P/merge.sh 1 2" "$P/merge.sh 1 2 abc >&2" "$P/merge.sh 1 2 abc>/dev/null"; do
+  check_rc "refused: $c" 2 "$(run "$c")"
+done
+check_rc "a bash -c string is read as commands" 2 "$(run "bash -c '$P/merge.sh 1 2 abc'")"
+check "and its call comes back bare" yes "$(has "$P/merge.sh 1 2 abc")"
+check_rc "a quoted newline in a ruling is refused" 2 \
+  "$(run "$P/run-file.sh gate admit waiver --ruling 'a
+b' --head abc --issue 5")"
+check_rc "a command substitution is refused" 2 "$(run "$P/merge.sh 1 2 \$(git rev-parse HEAD)")"
+check "and the message asks for its literal value" 1 "$(grep -c 'literal value' "$work/err")"
+check_rc "another tool's merge.sh is not ship's" 0 "$(run "/opt/other/scripts/merge.sh 1 2 | tail")"
+
 # The bare form passes.
 check_rc "bare merge passes" 0 "$(run "$P/merge.sh 1396 1374 abc123 --worktree /home/u/wt")"
 check_rc "bare gate admit clean passes" 0 "$(run "$P/run-file.sh gate admit clean /s/ci-wait.json --head abc --issue 5")"

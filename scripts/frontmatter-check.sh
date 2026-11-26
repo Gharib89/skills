@@ -3,8 +3,8 @@
 # entries. An agent picks a skill by its frontmatter alone, so five rules hold:
 # a frontmatter opening on line 1 with `---` and closed by another; only the
 # keys `name`, `description`, `argument-hint`, `disable-model-invocation`,
-# `metadata` and `hooks` (ship-run's merge-form hook, which
-# tests/merge-form-guard.test.sh runs) at column 0 (a key outside this set is
+# `metadata` at column 0, plus `hooks` on ship-run alone (its merge-form hook,
+# which tests/merge-form-guard.test.sh runs) (a key outside this set is
 # one no skill here relies on, so it is a typo or an untested setting); a value that opens a quote
 # closes it, and one YAML would read as structure is quoted, since a YAML loader
 # rejects the frontmatter otherwise while the text still passes the rules below; a `description` of at most 1,024
@@ -71,7 +71,8 @@ while IFS= read -r n; do
     case $kind in
       key)
         case $value in
-          name|description|argument-hint|disable-model-invocation|metadata|hooks) ;;
+          name|description|argument-hint|disable-model-invocation|metadata) ;;
+          hooks) [ "$n" = ship-run ] || { echo "$rel: frontmatter key hooks is not allowed"; rc=1; } ;;
           *) echo "$rel: frontmatter key $value is not allowed"; rc=1 ;;
         esac ;;
       unbalanced) echo "$rel: frontmatter key $value has an unbalanced quote"; rc=1 ;;

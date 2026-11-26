@@ -75,10 +75,9 @@ Merged on a clean gate: <PR url>
 
 A posted message cannot be edited, so that line is posted last, after the
 merge. In an opted-in run the reply lines appear only on `clean: false` or a
-`merge` refusal, named under them. A step after the merge that fails (a tracker
-write, cleanup) is reported
-beneath the merged line; report a completed merge only after the mechanic
-confirms it.
+`merge` refusal, the refusal named under them. A step after the merge that
+fails (a tracker write, cleanup) is reported beneath the merged line; report a
+completed merge only after the mechanic confirms it.
 
 **Every item is grounded in a result from this run**: `Local gate` is the gate's
 `gates` object from the verdict the Run file recorded, `CI` is `ci-wait`'s
@@ -196,8 +195,8 @@ ruling, never `human`. Both cover unmet criteria, not a red leg
 each of `run-file.sh gate admit` and `merge.sh` bare, as its own Bash call from
 the worktree root: `.claude/skills/ship-run/scripts/...` (the absolute
 base-directory path for an install with no project copy) and literal arguments.
-Any other form misses the owner's allow rules (a `cd` prefix, `;`, `&&`, a pipe,
-a redirect, a newline, `$PWD` or any variable), and ship's hook refuses it with
+Any other form (a `cd` prefix, `;`, `&&`, a pipe, a redirect, a newline, `$PWD`
+or any variable) misses the owner's allow rules, and ship's hook refuses it with
 the bare command. Each prints one compact JSON object
 that needs no trimming.
 A `none` run names its Run file's slug with `--run`. A refusal merges nothing

@@ -123,6 +123,14 @@ check_rc "a key outside the allowlist fails" 1 "$(rc_of "$d")"
 check "the message names the file and the key" \
   "skills/extra/SKILL.md: frontmatter key allowed-tools is not allowed" "$(out_of "$d")"
 
+# `hooks` is ship-run's alone: its merge-form hook is tested, another's is not.
+d=$(tree hooks-key)
+skill "$d" other name: other 'description: Use when other.' 'hooks:' '  PreToolUse: []'
+check "hooks on another skill fails" \
+  "skills/other/SKILL.md: frontmatter key hooks is not allowed" "$(out_of "$d")"
+skill "$d" ship-run name: ship-run 'description: Use when shipping.' 'hooks:' '  PreToolUse: []'
+check "hooks on ship-run passes" 0 "$(out_of "$d" | grep -c 'ship-run/SKILL.md')"
+
 # A key the allowlist names, with a suffix, is another key.
 d=$(tree partial-key)
 skill "$d" plural name: plural 'description: Use when plural.' 'descriptions: x'

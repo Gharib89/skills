@@ -20,6 +20,7 @@
 # substitutions): a command it misreads is one it refuses, never one it passes,
 # since only a lone gated call whose words rebuild exactly passes.
 
+set -uo pipefail
 input=$(cat) || exit 0
 case $input in *merge.sh* | *run-file.sh*) ;; *) exit 0 ;; esac
 command -v jq >/dev/null 2>&1 || exit 0
@@ -27,74 +28,101 @@ cmd=$(jq -r '.tool_input.command // empty' <<<"$input" 2>/dev/null) || exit 0
 cwd=$(jq -r '.cwd // empty' <<<"$input" 2>/dev/null) || cwd=
 case $cmd in *merge.sh* | *run-file.sh*) ;; *) exit 0 ;; esac
 
-# Lex into segments (split at unquoted ; & && | || newline parens) of words
-# (split at unquoted blanks), quotes kept in the words. US separates words.
+# lex <string>: appends its segments (split at unquoted ; & && | || newline and
+# parens) to segs, each its words (split at unquoted blanks) joined by US,
+# quotes kept in the words. Sets sep, redir and dollar when it meets an
+# unquoted separator, an unquoted redirect, or a `$` or backtick outside single
+# quotes; a newline anywhere counts as a separator.
 US=$'\037'
-segs=() word='' seg='' q='' dollar=0 i=0 n=${#cmd}
-end_word() { [ -n "$word" ] && seg+="$word$US"; word=''; }
-end_seg() { end_word; [ -n "$seg" ] && segs+=("$seg"); seg=''; }
-while [ "$i" -lt "$n" ]; do
-  c=${cmd:i:1} nx=${cmd:i+1:1}
-  if [ "$q" = "'" ]; then
-    word+=$c; [ "$c" = "'" ] && q=''
-  elif [ "$q" = '"' ]; then
-    word+=$c
-    case $c in
-      \\) word+=$nx; i=$((i + 1)) ;;
-      '"') q='' ;;
-      '$' | '`') dollar=1 ;;
-    esac
-  else
+segs=() sep=0 redir=0 dollar=0
+lex() {
+  local s=$1 i=0 n=${#1} c nx q='' word='' seg=''
+  while [ "$i" -le "$n" ]; do
+    c=${s:i:1} nx=${s:i+1:1}
+    [ "$c" = $'\n' ] && sep=1
+    if [ "$i" = "$n" ]; then c=$'\n'; q=''
+    elif [ "$q" = "'" ]; then word+=$c; [ "$c" = "'" ] && q=''; i=$((i + 1)); continue
+    elif [ "$q" = '"' ]; then
+      word+=$c
+      case $c in
+        \\) word+=$nx; i=$((i + 1)) ;;
+        '"') q='' ;;
+        '$' | '`') dollar=1 ;;
+      esac
+      i=$((i + 1)); continue
+    fi
     case $c in
       "'" | '"') q=$c; word+=$c ;;
       \\) word+=$c$nx; i=$((i + 1)) ;;
-      ' ' | $'\t') end_word ;;
-      $'\n' | ';' | '(' | ')') end_seg ;;
-      '&')
-        if [ "$nx" = '&' ]; then end_seg; i=$((i + 1))
-        elif [ "${word: -1}" = '>' ] || [ "$nx" = '>' ]; then word+=$c
-        else end_seg; fi ;;
-      '|') end_seg; case $nx in '|' | '&') i=$((i + 1)) ;; esac ;;
+      ' ' | $'\t' | $'\n' | ';' | '(' | ')' | '&' | '|')
+        case $c in
+          '&') if [ "${word: -1}" = '>' ] || [ "$nx" = '>' ]; then word+=$c; i=$((i + 1)); continue; fi ;;
+        esac
+        [ -n "$word" ] && seg+="$word$US"; word=''
+        case $c in ' ' | $'\t') ;; *)
+          [ "$i" -lt "$n" ] && sep=1
+          [ -n "$seg" ] && segs+=("$seg"); seg=''
+          case $c$nx in '&&' | '||' | '|&') i=$((i + 1)) ;; esac ;;
+        esac ;;
+      '<' | '>') redir=1; word+=$c ;;
       '$' | '`') dollar=1; word+=$c ;;
       *) word+=$c ;;
     esac
-  fi
-  i=$((i + 1))
-done
-end_seg
+    i=$((i + 1))
+  done
+}
+lex "$cmd"
 
 # Variables the command assigns, and the directory a `cd` moved to.
 names=() values=() cdir='' unresolved=0
 # expand <word>: sets X to the word with $NAME and ${NAME} replaced where known,
 # a single-quoted word kept. A global, not a $(...), so `unresolved` survives.
 expand() {
-  local w=$1 out='' name val k
+  local w=$1 out='' name val k=0
   case $w in "'"*) X=$w; return ;; esac
   while [[ $w =~ \$\{?([A-Za-z_][A-Za-z0-9_]*)\}? ]]; do
     out+=${w%%"${BASH_REMATCH[0]}"*}; w=${w#*"${BASH_REMATCH[0]}"}
     name=${BASH_REMATCH[1]} val=''
     if [ "$name" = PWD ]; then val=${cdir:-$cwd}
-    else for k in "${!names[@]}"; do [ "${names[k]}" = "$name" ] && val=${values[k]}; done; fi
+    else
+      k=0
+      while [ "$k" -lt "${#names[@]}" ]; do [ "${names[k]}" = "$name" ] && val=${values[k]}; k=$((k + 1)); done
+    fi
     if [ -n "$val" ]; then out+=$val; else out+=${BASH_REMATCH[0]}; unresolved=1; fi
   done
   X=$out$w
 }
 unquote() { case $X in \'*\' | \"*\") X=${X:1:${#X}-2} ;; esac; }
 
-bare=() raw=()
-for s in "${segs[@]}"; do
-  IFS=$US read -r -a ws <<<"$s"
-  j=0
-  while [[ ${ws[j]:-} =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; do
-    names+=("${BASH_REMATCH[1]}"); expand "${BASH_REMATCH[2]}"; unquote; values+=("$X"); j=$((j + 1))
+# Per segment: record assignments, follow a `cd`, step past wrappers and
+# keywords (a `bash -c` string is lexed as more segments), then gate a ship
+# `merge.sh` or `run-file.sh gate admit`: one under a ship scripts directory,
+# by its bare name, or behind a variable. Another tool's merge.sh is not ship's.
+bare=() raw=() si=0
+while [ "$si" -lt "${#segs[@]}" ]; do
+  IFS=$US read -r -a ws <<<"${segs[si]}"
+  si=$((si + 1)) j=0 w0=''
+  while [ "$j" -lt "${#ws[@]}" ]; do
+    w=${ws[j]}
+    if [[ $w =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+      names+=("${BASH_REMATCH[1]}"); expand "${BASH_REMATCH[2]}"; unquote; values+=("$X"); j=$((j + 1)); continue
+    fi
+    case $w in
+      '{' | '!' | exec | env | nohup | command | sudo | time | nice | xargs | if | then | else | elif | do | while | until) j=$((j + 1)) ;;
+      timeout) j=$((j + 2)) ;;
+      bash | sh)
+        if [ "${ws[j + 1]:-}" = -c ] && [ -n "${ws[j + 2]:-}" ]; then X=${ws[j + 2]}; unquote; lex "$X"; j=${#ws[@]}
+        else j=$((j + 1)); fi ;;
+      cd) [ -n "${ws[j + 1]:-}" ] && { expand "${ws[j + 1]}"; unquote; cdir=$X; }; j=${#ws[@]} ;;
+      *) expand "$w"; w0=$X; break ;;
+    esac
   done
-  [ "$j" -lt "${#ws[@]}" ] || continue
-  if [ "${ws[j]}" = cd ] && [ -n "${ws[j + 1]:-}" ]; then expand "${ws[j + 1]}"; unquote; cdir=$X; continue; fi
-  while :; do case ${ws[j]:-} in '{' | '!' | exec | env | bash | sh | time) j=$((j + 1)) ;; *) break ;; esac; done
-  expand "${ws[j]:-}"; w0=$X base=${X##*/}
+  [ -n "$w0" ] || continue
+  base=${w0##*/}
   if [ "$base" = run-file.sh ] && [ "${ws[j + 1]:-}" = gate ] && [ "${ws[j + 2]:-}" = admit ]; then :
   elif [ "$base" = merge.sh ]; then :
   else continue; fi
+  case $w0 in "$base" | */ship-run/scripts/* | */ship/scripts/* | *'$'*) ;; *) continue ;; esac
   case $w0 in /*/ship-run/scripts/"$base") line=$w0 ;; *) line=.claude/skills/ship-run/scripts/$base ;; esac
   has_wt=0 skip=0
   for a in "${ws[@]:j+1}"; do
@@ -107,17 +135,18 @@ for s in "${segs[@]}"; do
     expand "$a"; line+=" $X"
   done
   [ "$base" = merge.sh ] && [ -n "$cdir" ] && [ "$has_wt" = 0 ] && line+=" --worktree $cdir"
+  case $line in *'$'* | *'`'*) unresolved=1 ;; esac
   bare+=("$line")
   r=''; for a in "${ws[@]}"; do r+=${r:+ }$a; done; raw+=("$r")
 done
 
 [ "${#bare[@]}" -gt 0 ] || exit 0
-[ "${#segs[@]}" = 1 ] && [ "${#bare[@]}" = 1 ] && [ "$dollar" = 0 ] && [ "${bare[0]}" = "${raw[0]}" ] && exit 0
+[ "${#segs[@]}" = 1 ] && [ "${#bare[@]}" = 1 ] && [ "$sep$redir$dollar" = 000 ] && [ "${bare[0]}" = "${raw[0]}" ] && exit 0
 
 {
-  echo "ship-run: this merge call is not in the bare form, so it misses the owner's allow rule and falls to the auto-mode classifier. The allow rule already exists: do not propose a new one. Run each line below as its own Bash call from the worktree root, with nothing before or after it (no cd, variable, ;, &&, |, redirect or newline):"
+  echo "ship-run: this merge call is not in the bare form, so it misses the owner's allow rule and falls to the auto-mode classifier. The allow rule already exists (preflight warns when it does not): do not propose a new one. Run each line below as its own Bash call from the worktree root, with nothing before or after it (no cd, variable, ;, &&, |, redirect or newline):"
   printf '  %s\n' "${bare[@]}"
   echo "Each prints one compact JSON object that needs no trimming."
-  [ "$unresolved" = 0 ] || echo "Replace each \$NAME still in a line with its literal value."
+  [ "$unresolved" = 0 ] || echo "Replace each \$NAME, \$(...) or backtick still in a line with its literal value."
 } >&2
 exit 2
