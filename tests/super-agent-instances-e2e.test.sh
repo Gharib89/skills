@@ -7,19 +7,7 @@
 # never picked while another instance is healthy.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
-source tests/lib.sh
-source tests/super-agent-fake.sh
-
-s=skills/super-agent/scripts
-tmp=$(mktemp -d) || exit 2
-trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/bin" "$tmp/tools" "$tmp/fake"
-for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut find wc diff chmod; do
-  ln -s "$(command -v $t)" "$tmp/tools/$t" || exit 2
-done
-export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake
-sa_fake_install "$tmp/bin"
-fleet=$tmp/config/fleet.json
+source tests/super-agent-setup-lib.sh
 
 week() { # <used percent>: a Claude `/usage` print
   jq -cn --arg r "$(printf 'Current session: 2%% used · resets x\nCurrent week (all models): %s%% used · resets y' "$1")" '{result: $r}'
