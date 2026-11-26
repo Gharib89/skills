@@ -43,7 +43,8 @@ new=()
 bash "$s/ledger.sh" --help 2>&1 | grep -q -- --why \
   && new=(--why "it rested 3 times on one test" --option "Relaunch on Opus: a fresh thread" --option "Leave it resting")
 L need $repo#5 --action "Relaunch widgets#5 on Opus" --reason fault "${new[@]}" >/dev/null
-check "the second record keeps the need marked as told" true "$(L list | jq '.needs[0] | .pushed == true or .alerted != null')"
+check "the second record keeps the need marked as told" "fault true" \
+  "$(L list | jq -r '.needs[0] | "\(.reason) \(.pushed == true or .alerted != null)"')"
 check "and nothing is raised again" '[]' "$(S | jq -c '[(.raised // .unpushed // [])[].key]')"
 
 # the stall row that needs nothing yet
