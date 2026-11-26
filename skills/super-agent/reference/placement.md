@@ -36,6 +36,6 @@ full. Pin a repo, unpin it, or set a machine's slots with `scripts/fleet.sh
 --fleet <fleet> pin <owner/name> <machine>`, `unpin <owner/name>` or `slots
 <machine> <n>`, after a probe thread there says the machine is ready
 ([setup](setup.md#steps) step 2); the machine must be in the fleet file and
-`<n>` above its `reserve`. Reach a machine only through its T3
-environment id the owner already linked: no host, user, key or SSH.
+`<n>` above its `reserve`. Place work on a machine only through the T3
+environment id the owner already linked.
 

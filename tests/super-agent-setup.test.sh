@@ -231,8 +231,8 @@ check "never probed, its slots and load threshold are the computed ones, not the
 check "a live reading is not a fact the file keeps" '[]' "$(jq -c '[.fleet.machines.box | keys[] | select(. == "load1" or . == "free_gb")]' <<<"$out")"
 check "a linked machine's quota is the account's, so the file keeps none under it" '[]' \
   "$(jq -c '[.fleet.machines.box | keys[] | select(test("quota|providers"))]' <<<"$out")"
-check "the file holds the environment id and no host, user or key" \
-  '["clis","cores","environment_id","gh_logins","gpu","max_load","probed","proposed_slots","ram_gb","reachable","slots"]' \
+check "the file holds the environment id and the tested ssh string, no key (#1382)" \
+  '["clis","cores","environment_id","gh_logins","gpu","max_load","probed","proposed_slots","ram_gb","reachable","slots","ssh"]' \
   "$(jq -c '.fleet.machines.box | keys' <<<"$out")"
 check "a GPU the probe found is recorded" "RTX 4090" \
   "$(probe_line 4 8 '"RTX 4090"' '[]' > "$tmp/gpu.reply"; P --name laptop --probe env-box="$tmp/gpu.reply" | jq -r .fleet.machines.box.gpu)"
