@@ -13,7 +13,6 @@ reset() {
   sa_environments '[]'; sa_github alice
 }
 # --- the super agent folder: its generated local settings hold the state guard ----
-export XDG_STATE_HOME=$tmp/state HOME=$tmp/home
 hc=$XDG_STATE_HOME/super-agent/home/.claude/settings.local.json
 reset
 out=$(P --name laptop)
