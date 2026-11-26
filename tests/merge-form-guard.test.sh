@@ -96,6 +96,12 @@ for c in "echo '$P/merge.sh 1 2 abc'" "gh pr comment 1 --body \"run $P/merge.sh 
   "grep -n foo $P/merge.sh 1"; do
   check_rc "passes: $c" 0 "$(run "$c")"
 done
+# A quoted script path is still the call; a path another command reads as
+# data is not one (codex round 1).
+check_rc "a quoted script path piped is refused" 2 "$(run "\"$P/merge.sh\" 1 2 abc | tail")"
+for c in "printf '%s\\n' $P/merge.sh 1 2" "grep -n foo $P/merge.sh 1 2" "cat $P/run-file.sh gate admit"; do
+  check_rc "passes: $c" 0 "$(run "$c")"
+done
 check_rc "another tool's merge.sh is not ship's" 0 "$(run "/opt/other/scripts/merge.sh 1 2 | tail")"
 
 # The bare form passes.

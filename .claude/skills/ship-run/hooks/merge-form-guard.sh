@@ -99,9 +99,11 @@ unquote() { case $X in \'*\' | \"*\") X=${X:1:${#X}-2} ;; esac; }
 # a shell runs (after `eval`, or after `-c` or an option cluster ending in c,
 # as in `bash -lc`) as commands of its own, then gate the first word that is
 # ship's `merge.sh` followed by a PR number or a variable and one more word, or
-# ship's `run-file.sh` followed by `gate admit`, wherever it stands: a wrapper
-# and its options hide nothing, and a read of the file (`sed -n 1p
-# .../merge.sh`, `grep x .../merge.sh 1`) has no call after it. A quoted string
+# ship's `run-file.sh` followed by `gate admit`, in command position: first, or
+# behind wrappers (`timeout`, `env`, `sudo`, `bash -c`, a keyword) with their
+# options and option arguments, so a wrapper hides nothing. A word that is no
+# wrapper ends the scan: a path another command reads as data (`grep x
+# .../merge.sh 1 2`, `printf %s .../merge.sh`) is no call, and a quoted string
 # nothing runs (an `echo`, a commit message) is not read. The word is ship's under a
 # ship-run or ship scripts directory, behind a variable, or as `./<script>`
 # after a `cd` into one; another tool's merge.sh is not.
@@ -123,7 +125,7 @@ while [ "$si" -lt "${#segs[@]}" ]; do
       case $w in "$'"*) w=${w:1} ;; esac
       case $w in [\'\"]*merge.sh* | [\'\"]*run-file.sh*) X=$w; unquote; lex "$X" ;; esac ;;
     esac
-    expand "$w"; base=${X##*/}
+    expand "$w"; unquote; base=${X##*/}
     if { [ "$base" = merge.sh ] && [ -n "$nx2" ] && [[ $nx1 =~ ^[\"\']?(\$|[0-9]+[\"\']?$) ]]; } ||
       { [ "$base" = run-file.sh ] && [ "$nx1 $nx2" = 'gate admit' ]; }; then
       case $X in
@@ -131,6 +133,12 @@ while [ "$si" -lt "${#segs[@]}" ]; do
         "$base" | ./"$base") case $cdir in */ship-run/scripts* | */ship/scripts*) call=$X; break ;; esac ;;
       esac
     fi
+    case $w in
+      timeout | nice | ionice | env | sudo | doas | command | builtin | exec | time | nohup | \
+        setsid | stdbuf | xargs | eval | bash | sh | then | do | else | '!' | '{' | -* | \
+        [0-9]* | [A-Za-z_]*=*) ;;
+      *) case $pw in -*) ;; *) break ;; esac ;;
+    esac
     j=$((j + 1))
   done
   [ -n "$call" ] || continue
