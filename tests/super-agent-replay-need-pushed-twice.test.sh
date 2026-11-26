@@ -40,7 +40,8 @@ jq '.needs = [{key: "acme/widgets#5", action: "Relaunch widgets#5 on Opus", reas
 export SA_NOW
 SA_NOW=$(date -d "2026-11-19 09:51" +%s)
 new=()
-bash "$s/ledger.sh" --help 2>&1 | grep -q -- --why \
+help=$(bash "$s/ledger.sh" --help 2>&1)
+grep -q -- --why <<<"$help" \
   && new=(--why "it rested 3 times on one test" --option "Relaunch on Opus: a fresh thread" --option "Leave it resting")
 L need $repo#5 --action "Relaunch widgets#5 on Opus" --reason fault "${new[@]}" >/dev/null
 check "the second record keeps the need marked as told" "fault true" \
