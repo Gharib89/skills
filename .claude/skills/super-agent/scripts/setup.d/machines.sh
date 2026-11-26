@@ -15,8 +15,9 @@
 
 # ssh_ok <machine> <ssh string>: the key-only test; a failure is named in $ssh_refused
 ssh_ok() {
-  local err
-  err=$(ssh "${sa_ssh_opts[@]}" "$2" true 2>&1 >/dev/null </dev/null) && return 0
+  # ssh would read a string starting with - as an option, never a destination
+  local err='not a destination: starts with -'
+  [[ $2 == -* ]] || { err=$(ssh "${sa_ssh_opts[@]}" "$2" true 2>&1 >/dev/null </dev/null) && return 0; }
   ssh_refused=$(jq -c --arg m "$1" --arg s "$2" --arg r "$(sa_ssh_reason "$err")" '. + [{machine: $m, ssh: $s, reason: (if $r == "" then "ssh failed" else $r end)}]' <<<"$ssh_refused")
   return 1
 }
@@ -69,8 +70,8 @@ linked_machines() {
   # Check-only machines: read by the machine check, never placed on.
   while IFS=$'\t' read -r label target; do
     [ -n "$label" ] || continue
-    if [ -n "$(jq -r --arg l "$label" '.machines[$l].environment_id // empty' <<<"$facts")" ]; then
-      warn "--check-only $label: a linked machine has that name, so it was not made check-only"; continue
+    if [ "$label" = "$name" ] || [ -n "$(jq -r --arg l "$label" '.machines[$l].environment_id // empty' <<<"$facts")" ]; then
+      warn "--check-only $label: this or a linked machine has that name, so it was not made check-only"; continue
     fi
     ssh_ok "$label" "$target" && facts=$(jq -c --arg l "$label" --arg s "$target" '.machines[$l] = {ssh: $s, check_only: true}' <<<"$facts")
   done < <(jq -r 'to_entries[] | [.key, .value] | @tsv' <<<"$check_only")

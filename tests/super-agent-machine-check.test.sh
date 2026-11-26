@@ -56,6 +56,9 @@ check "log tails a file the fleet file lists for that machine" 'tail -n 20 -- /v
 check "every check went to the machine's ssh string, with batch mode, strict host keys and a 6 second connect timeout" 0 \
   "$(grep '^ssh ' "$SA_FAKE/calls" | grep -vc -- '-o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=6 gharib@server ')"
 check "a check-only machine is checked like any other" "nas up ok" "$(M nas up | jq -r '"\(.machine) \(.check) \(.result)"')"
+printf '%s\n' '{"machines":{"odd":{"ssh":"-V"}}}' > "$tmp/odd.json"
+n=$(calls)
+check "an ssh string that starts with - is refused before any call" "2 $n" "$(bash "$s/machine-check.sh" --fleet "$tmp/odd.json" odd up >/dev/null 2>&1; echo "$? $(calls)")"
 check "no check ever calls sudo" 0 "$(grep -c sudo "$SA_FAKE/ssh-calls")"
 
 # --- refusals, before any call -----------------------------------------------------------

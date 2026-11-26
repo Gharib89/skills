@@ -56,6 +56,7 @@ mj=$(jq -c --arg m "$machine" '.machines[$m] // empty | objects' "$fleet" 2>/dev
 [ -n "$mj" ] || sa_tooling "$fleet: $machine is not in machines"
 target=$(jq -r '.ssh // empty | strings' <<<"$mj")
 [ -n "$target" ] || sa_tooling "$machine has no ssh string in $fleet (run setup)"
+[[ $target != -* ]] || sa_tooling "$machine: ssh string '$target' starts with -, so ssh would read it as an option"
 
 case $check in
   up) cmd='echo up' ;;

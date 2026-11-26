@@ -35,8 +35,12 @@ check "a machine already in the file whose test now fails keeps its entry and st
 check "and is still named as refused" "new ssh: connect to host new port 22: Connection timed out" "$(jq -r '.ssh_refused[] | "\(.machine) \(.reason)"' <<<"$out")"
 check "an --ssh for no linked machine is ignored and named" '--ssh typo: no linked machine has that name, so it was ignored' \
   "$(P --name laptop --ssh typo=x@y | jq -r '.warnings[] | select(startswith("--ssh"))')"
-check "a --check-only for a linked machine leaves it linked, and is named" 'env-new --check-only new: a linked machine has that name, so it was not made check-only' \
+check "a --check-only for a linked machine leaves it linked, and is named" 'env-new --check-only new: this or a linked machine has that name, so it was not made check-only' \
   "$(P --name laptop --check-only new=gharib@new | jq -r '"\(.fleet.machines.new.environment_id) \(.warnings[] | select(startswith("--check-only")))"')"
+check "an ssh string that starts with - is refused untested" '[0,"not a destination: starts with -"]' \
+  "$(: > "$SA_FAKE/calls"; out=$(P --name laptop --ssh new=-V); jq -c --argjson n "$(grep -c '^ssh .* -V true$' "$SA_FAKE/calls")" '[$n, (.ssh_refused[] | select(.machine == "new") | .reason)]' <<<"$out")"
+check "the machine setup runs on cannot be made check-only" 'null --check-only laptop: this or a linked machine has that name, so it was not made check-only' \
+  "$(P --name laptop --check-only laptop=me@laptop | jq -r '"\(.fleet.machines.laptop.check_only) \(.warnings[] | select(startswith("--check-only")))"')"
 check "a malformed --ssh is a usage error" 2 "$(P --name laptop --ssh new >/dev/null 2>&1; echo $?)"
 
 # --- a check-only machine: an ssh string, no environment id, the marker -----------------------
