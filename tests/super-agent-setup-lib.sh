@@ -13,6 +13,9 @@ for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr hea
   ln -s "$(command -v $t)" "$tmp/tools/$t" || exit 2
 done
 export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake
+# Hermetic state too: setup.sh --write rewrites the super agent folder under
+# XDG_STATE_HOME and reads ~/.claude/settings.json (#1415).
+export HOME=$tmp/home XDG_STATE_HOME=$tmp/state
 sa_fake_install "$tmp/bin"
 fleet=$tmp/config/fleet.json
 S() { bash "$s/setup.sh" --fleet "$fleet" "$@"; }
