@@ -2,11 +2,11 @@
 # The call guard: a PreToolUse hook that refuses a send into a thread the super
 # agent has no business in, and a direct `ssh`, `scp` or `rsync` call. The second
 # refusal reads a Bash command for one of the three as a command word (at the start,
-# after `;`, `&`, `|`, `(`, a backtick or a newline, past variable assignments, the
-# words `env`, `command`, `exec`, `nohup`, `time`, `timeout`, `sudo`, `nice`, `xargs`,
-# `eval`, `bash`, `sh`, `zsh`, `then`, `do`, `else`, `if`, `while`, `until`, `!` and
-# `{`, and their flags, numbers and signal names; a path, a leading backslash or
-# quotes around the word are allowed), refuses it with reason
+# after `;`, `&`, `|`, `(`, a backtick or a newline, past variable assignments,
+# `env`, `sudo`, `xargs` or `nice` with flags that take no value, `timeout [-s SIG]
+# <n>`, `time [-p]`, `bash -c`, `sh -c`, `zsh -c`, `command`, `exec`, `nohup`, `eval`
+# and the keywords `then`, `do`, `else`, `if`, `while`, `until`, `!` and `{`; a path,
+# a leading backslash or quotes around the word are allowed), refuses it with reason
 # `direct-ssh` and logs `{at, event: "refused", reason, command, tool}`: a machine is
 # read only through `machine-check.sh`. It judges `mcp__t3-code__t3_thread_send` and
 # `mcp__t3-code__t3_thread_send_attachments` (their `threadId`) and every `t3 thread
@@ -79,9 +79,9 @@ case $tool in
     cmd=$(jq -r '.tool_input.command | strings' <<<"$input" 2>/dev/null)
     cmd=${cmd//\\$'\n'/ }
     # ssh, scp or rsync as a command word, past the prefixes the header lists
-    ssh_re='(^|[;&|(`'$'\n'']'')[[:space:]]*(([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*|env|command|exec|nohup|time|timeout|sudo|nice|xargs|eval|bash|sh|zsh|then|do|else|if|while|until|!|\{|-[^[:space:]]*|[0-9][0-9.]*[smhd]?|[A-Z][A-Z0-9]*)[[:space:]]+)*([^[:space:];&|()`"'"'"']*/)?\\?["'"'"']?(ssh|scp|rsync)["'"'"']?([[:space:];&|)]|$)'
+    ssh_re='(^|[;&|(`'$'\n'']'')[[:space:]]*(([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*|(env|sudo|xargs|nice)([[:space:]]+-[^[:space:]]+)*|timeout([[:space:]]+-[^[:space:]]+([[:space:]]+[A-Z0-9]+)?)*[[:space:]]+[0-9][0-9.]*[smhd]?|time([[:space:]]+-p)?|(ba|z)?sh[[:space:]]+-c|command|exec|nohup|eval|then|do|else|if|while|until|!|\{)[[:space:]]+)*([^[:space:];&|()`"'"'"']*/)?\\?["'"'"']?(ssh|scp|rsync)["'"'"']?([[:space:];&|)]|$)'
     if [[ $cmd =~ $ssh_re ]]; then
-      word=${BASH_REMATCH[5]}
+      word=${BASH_REMATCH[11]}
       jq -cn --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg w "$word" '{at: $at, event: "refused", reason: "direct-ssh", command: $w, tool: "Bash"}' >> "$log" 2>/dev/null
       printf 'Refused (direct-ssh): a direct %s call. Reach a machine only through scripts/machine-check.sh <machine> <check>, its fixed read-only checks; launching, steering and anything that writes go through the machine'"'"'s T3 environment.\n' "$word" >&2
       exit 2
