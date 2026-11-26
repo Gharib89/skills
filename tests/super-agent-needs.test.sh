@@ -33,10 +33,12 @@ offer41() { L need $repo#41 --action "Close widgets#41 as a duplicate of widgets
 # --- each reason word is blocking or an offer; an unknown word is refused --------------
 fresh
 export SA_NOW; SA_NOW=$(at "2026-11-23 09:00")
-for w in permission-hold merge-gate scope stall-cap fault no-instance; do
+for w in permission-hold merge-gate scope stall-cap fault no-instance no-owner-skill no-project \
+  stale-ship route-ask owner-steered triage; do
   check "$w is blocking" blocking "$(need88 "$w" | jq -r .need.class)"
 done
-for w in daily-offer unqueued parents-done stale-skill issue-closed pr-closed ask-first; do
+for w in daily-offer unqueued parents-done stale-skill issue-closed pr-closed ask-first owner-run \
+  verify cleanup; do
   check "$w is an offer" offer "$(need88 "$w" | jq -r .need.class)"
 done
 out=$(need88 because 2>/dev/null); rc=$?

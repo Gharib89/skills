@@ -7,8 +7,11 @@
 # whose action read "Nothing yet", which then showed under `Needs you`. The incident
 # version is the scripts at 177522f8 (v0.46.0 behaves as v0.37.0 here), where a need
 # takes no options and no acknowledge mark exists. The fixture is hand-built on the
-# fake `t3` and `gh` (tests/super-agent-fake.sh). Fixed: the second record raises
-# nothing, and an acknowledge mark quiets the stall row with no `Needs you` line.
+# fake `t3` and `gh` (tests/super-agent-fake.sh): the 09:20 need as 0.46.0 left it,
+# pushed, and the 09:51 record in the form the scripts under test take (`--why` and
+# options where `ledger --help` lists `--why`), so the incident version goes red at
+# the reset mark. Fixed: the second record keeps the mark and raises nothing, and an
+# acknowledge mark quiets the stall row with no need.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
@@ -31,17 +34,17 @@ R >/dev/null
 sa_stage "$led" $repo#5 at-rest
 jq '.entries["acme/widgets#5"].stalls = 3' "$led" > "$led.new" && mv "$led.new" "$led"
 
-# 09:20, then 09:51 with another reason word
+# 09:20 recorded and pushed, then 09:51 with another reason word
+jq '.needs = [{key: "acme/widgets#5", action: "Relaunch widgets#5 on Opus", reason: "stall-cap", since: "2026-11-19T09:20:00Z", pushed: true}]' \
+  "$led" > "$led.new" && mv "$led.new" "$led"
 export SA_NOW
-SA_NOW=$(date -d "2026-11-19 09:20" +%s)
-L need $repo#5 --action "Relaunch widgets#5 on Opus" --reason stall-cap --why "it rested 3 times on one test" \
-  --option "Relaunch on Opus: a fresh thread" --option "Leave it resting" >/dev/null
-first=$(S | jq -c '[.raised[].key]')
 SA_NOW=$(date -d "2026-11-19 09:51" +%s)
-L need $repo#5 --action "Relaunch widgets#5 on Opus" --reason fault --why "it rested 3 times on one test" \
-  --option "Relaunch on Opus: a fresh thread" --option "Leave it resting" >/dev/null
-check "the first record raises the need" "[\"$repo#5\"]" "$first"
-check "the same action under another reason word is not offered again" '[]' "$(S | jq -c '[.raised[].key]')"
+new=()
+bash "$s/ledger.sh" --help 2>&1 | grep -q -- --why \
+  && new=(--why "it rested 3 times on one test" --option "Relaunch on Opus: a fresh thread" --option "Leave it resting")
+L need $repo#5 --action "Relaunch widgets#5 on Opus" --reason fault "${new[@]}" >/dev/null
+check "the second record keeps the need marked as told" true "$(L list | jq '.needs[0] | .pushed == true or .alerted != null')"
+check "and nothing is raised again" '[]' "$(S | jq -c '[(.raised // .unpushed // [])[].key]')"
 
 # the stall row that needs nothing yet
 L unneed $repo#5 >/dev/null
