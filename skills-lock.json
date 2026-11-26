@@ -152,7 +152,7 @@
     "super-agent": {
       "source": ".",
       "sourceType": "local",
-      "computedHash": "53c4e6ac9f8c170d4cf92298f48ef612193f527308a2de5cdcdd5a3c6061e05d"
+      "computedHash": "aec41f02d3366270c703bb2ee5c547ef6b61d1b57c130813aecc8a9697e7ff43"
     },
     "tdd": {
       "source": "mattpocock/skills",

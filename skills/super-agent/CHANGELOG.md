@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.47.0 (2026-11-26)
+
+### Features
+
+- **super-agent**: Machines carry a tested ssh string, and eight fixed read-only machine checks run
+  over it ([#1422](https://github.com/Gharib89/skills/pull/1422),
+  [`112f596`](https://github.com/Gharib89/skills/commit/112f596cc538e5dd0d2f9772eb2c63ac9a3697d0))
+
+
 ## v0.46.0 (2026-11-25)
 
 ### Features
