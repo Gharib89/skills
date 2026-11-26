@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.33.1 (2026-11-26)
+
+### Bug Fixes
+
+- **ship-run**: Refuse a merge call in any form but the bare one
+  ([#1426](https://github.com/Gharib89/skills/pull/1426),
+  [`190b375`](https://github.com/Gharib89/skills/commit/190b3756a5eea63a837cfa94e3ea3e0fb5294589))
+
+
 ## v0.33.0 (2026-11-24)
 
 ### Features
