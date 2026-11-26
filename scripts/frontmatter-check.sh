@@ -4,8 +4,8 @@
 # a frontmatter opening on line 1 with `---` and closed by another; only the
 # keys `name`, `description`, `argument-hint`, `disable-model-invocation`,
 # `metadata` at column 0, plus `hooks` on ship-run alone, whose merge-form hook
-# tests/merge-form-guard.test.sh runs. A key outside this set is one no skill
-# here relies on, so it is a typo or an untested setting. Further, a value that opens a quote
+# tests/merge-form-guard.test.sh runs (a key outside this set is one no skill
+# here relies on, so it is a typo or an untested setting); a value that opens a quote
 # closes it, and one YAML would read as structure is quoted, since a YAML loader
 # rejects the frontmatter otherwise while the text still passes the rules below; a `description` of at most 1,024
 # characters, counted as the agent reads it, a folded scalar's lines joined by

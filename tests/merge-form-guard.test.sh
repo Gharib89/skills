@@ -82,6 +82,20 @@ check_rc "a quoted newline in a ruling is refused" 2 \
 b' --head abc --issue 5")"
 check_rc "a command substitution is refused" 2 "$(run "$P/merge.sh 1 2 \$(git rev-parse HEAD)")"
 check "and the message asks for its literal value" 1 "$(grep -c 'literal value' "$work/err")"
+# A quoted PR number is still a call, a backslash-newline inside double quotes
+# is still a newline, and an ANSI-C bash -c string is still commands; a quoted
+# string nothing runs, and a read of the file followed by a number, are not a
+# call (self-review round 3).
+for c in "cd /x && $P/merge.sh '1' 2 abc" "cd /x && $P/merge.sh \"1\" 2 abc" \
+  "$P/merge.sh 1 2 \"abc\\
+x\"" "bash -c \$'$P/merge.sh 1 2 abc'" "eval '$P/merge.sh 1 2 abc'"; do
+  check_rc "refused: $c" 2 "$(run "$c")"
+done
+for c in "echo '$P/merge.sh 1 2 abc'" "gh pr comment 1 --body \"run $P/merge.sh 1 2 abc\"" \
+  "git commit -m 'teach $P/run-file.sh gate admit human; then merge' && git push" \
+  "grep -n foo $P/merge.sh 1"; do
+  check_rc "passes: $c" 0 "$(run "$c")"
+done
 check_rc "another tool's merge.sh is not ship's" 0 "$(run "/opt/other/scripts/merge.sh 1 2 | tail")"
 
 # The bare form passes.

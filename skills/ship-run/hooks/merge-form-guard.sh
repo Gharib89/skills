@@ -46,7 +46,7 @@ lex() {
     elif [ "$q" = '"' ]; then
       word+=$c
       case $c in
-        \\) word+=$nx; i=$((i + 1)) ;;
+        \\) word+=$nx; [ "$nx" = $'\n' ] && sep=1; i=$((i + 1)) ;;
         '"') q='' ;;
         '$' | '`') dollar=1 ;;
       esac
@@ -95,12 +95,14 @@ expand() {
 }
 unquote() { case $X in \'*\' | \"*\") X=${X:1:${#X}-2} ;; esac; }
 
-# Per segment: record its leading assignments or its `cd`, lex a quoted word
-# naming a ship script as commands of its own (a `bash -c` or `-lc` string),
-# then gate the first word that is ship's `merge.sh` followed by a PR number or
-# a variable, or ship's `run-file.sh` followed by `gate admit`, wherever it
-# stands: a wrapper and its options hide nothing, and a read of the file
-# (`sed -n 1p .../merge.sh`) has no call after it. The word is ship's under a
+# Per segment: record its leading assignments or its `cd`, lex a quoted string
+# a shell runs (after `eval`, or after `-c` or an option cluster ending in c,
+# as in `bash -lc`) as commands of its own, then gate the first word that is
+# ship's `merge.sh` followed by a PR number or a variable and one more word, or
+# ship's `run-file.sh` followed by `gate admit`, wherever it stands: a wrapper
+# and its options hide nothing, and a read of the file (`sed -n 1p
+# .../merge.sh`, `grep x .../merge.sh 1`) has no call after it. A quoted string
+# nothing runs (an `echo`, a commit message) is not read. The word is ship's under a
 # ship-run or ship scripts directory, behind a variable, or as `./<script>`
 # after a `cd` into one; another tool's merge.sh is not.
 bare=() raw=() si=0
@@ -115,12 +117,14 @@ while [ "$si" -lt "${#segs[@]}" ]; do
     continue
   fi
   while [ "$j" -lt "${#ws[@]}" ]; do
-    w=${ws[j]} nx1=${ws[j + 1]:-} nx2=${ws[j + 2]:-}
-    case $w in
-      [\'\"]*' '*) case $w in *merge.sh* | *run-file.sh*) X=$w; unquote; lex "$X" ;; esac ;;
+    w=${ws[j]} nx1=${ws[j + 1]:-} nx2=${ws[j + 2]:-} pw=''
+    [ "$j" -gt 0 ] && pw=${ws[j - 1]}
+    case $pw in eval | -*c)
+      case $w in "$'"*) w=${w:1} ;; esac
+      case $w in [\'\"]*merge.sh* | [\'\"]*run-file.sh*) X=$w; unquote; lex "$X" ;; esac ;;
     esac
     expand "$w"; base=${X##*/}
-    if { [ "$base" = merge.sh ] && [[ $nx1 =~ ^\"?(\$|[0-9]+$) ]]; } ||
+    if { [ "$base" = merge.sh ] && [ -n "$nx2" ] && [[ $nx1 =~ ^[\"\']?(\$|[0-9]+[\"\']?$) ]]; } ||
       { [ "$base" = run-file.sh ] && [ "$nx1 $nx2" = 'gate admit' ]; }; then
       case $X in
         */ship-run/scripts/"$base" | */ship/scripts/"$base" | *'$'*) call=$X; break ;;
