@@ -34,7 +34,7 @@ check "--help writes nothing on stderr" "" "$(cat "$tmp/err")"
 # --- each check sends one fixed command and prints its result -----------------------
 sa_ssh gharib@server 0 'remote says hi'
 checks=(up load disk gpu t3 clis)
-wants=('echo up' 'cat /proc/loadavg; free -m' 'df -hP -x tmpfs -x devtmpfs -x squashfs -x overlay' \
+wants=('echo up' 'cat /proc/loadavg && free -m' 'df -hP -x tmpfs -x devtmpfs -x squashfs -x overlay' \
   'nvidia-smi --query-gpu=name,memory.used,memory.total,utilization.gpu --format=csv,noheader' \
   'systemctl --user is-active t3code.service; t3 --version' \
   'for c in claude codex agy gh t3; do printf "%s: " "$c"; if command -v "$c" >/dev/null; then "$c" --version 2>&1 | head -n1; else echo missing; fi; done')
@@ -46,7 +46,7 @@ for i in "${!checks[@]}"; do
   check "$c sends its fixed command" "${wants[$i]}" "$(sent)"
 done
 M server process sshd >/dev/null
-check "process sends pgrep for the exact name" 'pgrep -c -x -- sshd || true' "$(sent)"
+check "process sends pgrep for the exact name" 'pgrep -c -x -- sshd; [ $? -le 1 ]' "$(sent)"
 M server log ssh.service >/dev/null
 check "log reads a unit's journal, system and user, 50 lines by default" 'journalctl -n 50 --no-pager -u ssh.service --user-unit ssh.service' "$(sent)"
 M server log ssh.service 200 >/dev/null
@@ -101,6 +101,8 @@ check "a logs field that is no array of strings is refused" 2 "$(bash "$s/machin
 check "and still no sudo anywhere" 0 "$(grep -c sudo "$SA_FAKE/ssh-calls")"
 sa_ssh gharib@server 0 'claude: 2.1.0' 'warning: permission denied reading ~/.cache, ignored'
 check "a check that exits 0 is ok, whatever its stderr mentions" ok "$(M server clis | jq -r .result)"
+sa_ssh gharib@server 1 '' 'bash: line 1: pgrep: command not found'
+check "a process check whose pgrep is missing is failed, never ok" "failed bash: line 1: pgrep: command not found" "$(M server process sshd | jq -r '"\(.result) \(.reason)"')"
 sa_ssh gharib@server 9 '' 'nvidia-smi: command not found'
 check "any other failure is failed, with the last error line" "failed nvidia-smi: command not found" "$(M server gpu | jq -r '"\(.result) \(.reason)"')"
 

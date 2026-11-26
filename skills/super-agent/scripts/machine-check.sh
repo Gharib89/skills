@@ -62,12 +62,13 @@ jq -e '(.logs // []) | type == "array" and all(.[]; type == "string")' <<<"$mj" 
 
 case $check in
   up) cmd='echo up' ;;
-  load) cmd='cat /proc/loadavg; free -m' ;;
+  load) cmd='cat /proc/loadavg && free -m' ;;
   disk) cmd='df -hP -x tmpfs -x devtmpfs -x squashfs -x overlay' ;;
   gpu) cmd='nvidia-smi --query-gpu=name,memory.used,memory.total,utilization.gpu --format=csv,noheader' ;;
   t3) cmd='systemctl --user is-active t3code.service; t3 --version' ;;
   clis) cmd='for c in claude codex agy gh t3; do printf "%s: " "$c"; if command -v "$c" >/dev/null; then "$c" --version 2>&1 | head -n1; else echo missing; fi; done' ;;
-  process) cmd="pgrep -c -x -- $1 || true" ;;
+  # pgrep exits 1 on no match (printing 0); 2, 3 or 127 is a failed read
+  process) cmd="pgrep -c -x -- $1; [ \$? -le 1 ]" ;;
   log)
     if jq -e --arg f "$1" '(.logs // []) | index($f)' <<<"$mj" >/dev/null; then
       cmd="tail -n $lines -- $(printf '%q' "$1")"
