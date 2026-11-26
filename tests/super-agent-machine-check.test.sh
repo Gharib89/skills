@@ -101,8 +101,15 @@ check "a logs field that is no array of strings is refused" 2 "$(bash "$s/machin
 check "and still no sudo anywhere" 0 "$(grep -c sudo "$SA_FAKE/ssh-calls")"
 sa_ssh gharib@server 0 'claude: 2.1.0' 'warning: permission denied reading ~/.cache, ignored'
 check "a check that exits 0 is ok, whatever its stderr mentions" ok "$(M server clis | jq -r .result)"
-sa_ssh gharib@server 1 '' 'bash: line 1: pgrep: command not found'
-check "a process check whose pgrep is missing is failed, never ok" "failed bash: line 1: pgrep: command not found" "$(M server process sshd | jq -r '"\(.result) \(.reason)"')"
+# the fake ssh never runs the command, so run the sent strings here against stubs
+mkdir -p "$tmp/stub"
+printf '#!/bin/sh\nexit 1\n' > "$tmp/stub/cat"; printf '#!/bin/sh\necho mem\n' > "$tmp/stub/free"
+printf '#!/bin/sh\necho 0; exit 1\n' > "$tmp/stub/pgrep"; chmod +x "$tmp/stub/"*
+M server load >/dev/null; load_cmd=$(sent)
+M server process sshd >/dev/null; process_cmd=$(sent)
+check "load fails when its loadavg read fails" 1 "$(PATH=$tmp/stub "$BASH" -c "$load_cmd" >/dev/null 2>&1; echo $?)"
+check "process is ok on pgrep's no match" 0 "$(PATH=$tmp/stub "$BASH" -c "$process_cmd" >/dev/null 2>&1; echo $?)"
+check "process fails when pgrep is missing" 1 "$(PATH=$tmp/nowhere "$BASH" -c "$process_cmd" >/dev/null 2>&1; echo $?)"
 sa_ssh gharib@server 9 '' 'nvidia-smi: command not found'
 check "any other failure is failed, with the last error line" "failed nvidia-smi: command not found" "$(M server gpu | jq -r '"\(.result) \(.reason)"')"
 
