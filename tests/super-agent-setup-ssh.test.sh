@@ -56,5 +56,7 @@ out=$(P --name laptop --check-only nas=admin@nas)
 check "one whose test fails is refused, never added" "null nas" "$(jq -r '"\(.fleet.machines.nas) \(.ssh_refused[0].machine)"' <<<"$out")"
 printf '%s\n' '{"machines":{"box":{"ssh":7}}}' > "$fleet"
 check "a fleet file whose ssh is no string is refused" 2 "$(P --name laptop >/dev/null 2>&1; echo $?)"
+printf '%s\n' '{"machines":{"box":{"logs":"/var/log/x"}}}' > "$fleet"
+check "a fleet file whose logs is no array of strings is refused" 2 "$(P --name laptop >/dev/null 2>&1; echo $?)"
 
 finish

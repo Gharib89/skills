@@ -94,6 +94,10 @@ out=$(M server log /var/log/app/deploy.log)
 check "a permission failure is needs-root" needs-root "$(jq -r .result <<<"$out")"
 sa_ssh gharib@server 0 '-- No entries --' 'Hint: You are currently not seeing messages from other users and the system.'
 check "a journal hidden from this user is needs-root" needs-root "$(M server log ssh.service | jq -r .result)"
+sa_ssh gharib@server 0 'Nov 23 t3code.service: Started.' 'Hint: You are currently not seeing messages from other users and the system.'
+check "a user unit's own entries beside the hint are ok" "ok Nov 23 t3code.service: Started." "$(M server log t3code.service | jq -r '"\(.result) \(.output)"')"
+printf '%s\n' '{"machines":{"s":{"ssh":"s","logs":"/var/log/app/deploy.log"}}}' > "$tmp/logs.json"
+check "a logs field that is no array of strings is refused" 2 "$(bash "$s/machine-check.sh" --fleet "$tmp/logs.json" s log /var/log >/dev/null 2>&1; echo $?)"
 check "and still no sudo anywhere" 0 "$(grep -c sudo "$SA_FAKE/ssh-calls")"
 sa_ssh gharib@server 0 'claude: 2.1.0' 'warning: permission denied reading ~/.cache, ignored'
 check "a check that exits 0 is ok, whatever its stderr mentions" ok "$(M server clis | jq -r .result)"

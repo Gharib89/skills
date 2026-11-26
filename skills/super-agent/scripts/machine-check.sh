@@ -56,6 +56,8 @@ mj=$(jq -c --arg m "$machine" '.machines[$m] // empty | objects' "$fleet" 2>/dev
 [ -n "$mj" ] || sa_tooling "$fleet: $machine is not in machines"
 target=$(jq -r '.ssh // empty | strings' <<<"$mj")
 [ -n "$target" ] || sa_tooling "$machine has no ssh string in $fleet (run setup)"
+jq -e '(.logs // []) | type == "array" and all(.[]; type == "string")' <<<"$mj" >/dev/null \
+  || sa_tooling "$fleet: machines.$machine.logs must be an array of strings"
 [[ $target != -* ]] || sa_tooling "$machine: ssh string '$target' starts with -, so ssh would read it as an option"
 
 case $check in
@@ -81,8 +83,9 @@ err=$(cat "$errf")
 answer() { jq -cn --arg m "$machine" --arg c "$check" --arg r "$1" --arg o "$2" --arg why "$3" \
   '{machine: $m, check: $c, result: $r, output: (if $r == "ok" then $o else null end), reason: (if $why == "" then null else $why end)}'; }
 if [ "$rc" = 255 ]; then answer unreachable '' "$(sa_ssh_reason "$err")"
-# journalctl exits 0 on the entries it may show, so its hint alone means needs-root
-elif grep -q 'not seeing messages from other users' <<<"$err" \
+# journalctl exits 0 and prints its hint whenever the system journal is closed to
+# this user, so the hint means needs-root only when no entry came back
+elif { grep -q 'not seeing messages from other users' <<<"$err" && ! grep -qv -e '^-- No entries --$' -e '^$' <<<"$out"; } \
   || { [ "$rc" != 0 ] && grep -qiE 'permission denied|insufficient permissions' <<<"$err"; }; then answer needs-root '' ''
 elif [ "$rc" != 0 ]; then answer failed '' "$(sa_last_line "$err")"
 else answer ok "$out" ''; fi

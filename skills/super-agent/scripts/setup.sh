@@ -149,6 +149,7 @@ if [ -f "$fleet_file" ]; then
     elif ((.machines // {}) | type) != "object" then "machines must be an object"
     elif ((.providers // {}) | type) != "object" then "providers must be an object"
     elif ([(.machines // {})[] | objects | .ssh | select(. != null and type != "string")] | length) > 0 then "every machine ssh must be a string"
+    elif ([(.machines // {})[] | objects | .logs | select(. != null and (type != "array" or any(.[]; type != "string")))] | length) > 0 then "every machine logs must be an array of strings"
     elif ([(.providers // {})[] | objects | .quota_command | select(. != null and type != "string")] | length) > 0 then "quota_command must be a string"
     elif ([(.providers // {})[] | objects | .weekly_weight // 1 | select(type != "number" or . <= 0)] | length) > 0 then "weekly_weight must be a number above 0"
     elif ([.five_hour_floor, .weekly_reserve | select(. != null) | select(type != "number" or . < 0 or . > 1)] | length) > 0 then "five_hour_floor and weekly_reserve must be fractions 0 to 1"
