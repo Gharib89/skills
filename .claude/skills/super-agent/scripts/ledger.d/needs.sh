@@ -57,13 +57,15 @@ ledger_needs() {
     sa_lock "$ledger"; sa_read "$ledger"
     now=$(jq -rn --argjson s "$(sa_now_s)" '$s | todate')
     # A repeat of an open need's action keeps its time and its alert and reminder marks,
-    # whatever its reason word: the owner was told of that action once.
+    # whatever its reason word: the owner was told of that action once. So does a need
+    # recorded before `--why` on the same key, whose free-text action the owner was
+    # told of and which a ticket-led action replaces.
     row=$(jq -cn --arg k "$key" --arg a "$action" --arg r "$reason" --arg c "$class" --arg why "$why" --arg in "$answer_in" --arg now "$now" \
       --argjson opts "$(printf '%s\n' ${options[@]+"${options[@]}"} | jq -Rc 'select(length > 0) | capture("^(?<label>.*?): (?<consequence>.*)$") // {label: ., consequence: null}' | jq -sc .)" \
       --argjson old "$(jq -c --arg k "$key" "$sa_jq_norm"'(.needs // []) | map(select((.key | norm_repo) == ($k | norm_repo))) | first // null' <<<"$doc")" \
       "$sa_jq_norm$sa_jq_needs"'{key: $k, action: $a, reason: $r, class: $c, why: $why, options: $opts, answer_in: (if $in == "" then null else $in end),
         since: $now, alerted: null, reminded: null}
-       + (if $old != null and $old.action == $a then {since: $old.since, alerted: ($old | need_alerted), reminded: ($old.reminded // null)} else {} end)')
+       + (if $old != null and ($old.action == $a or $old.why == null) then {since: $old.since, alerted: ($old | need_alerted), reminded: ($old.reminded // null)} else {} end)')
     sa_update "$ledger" "$sa_jq_norm"'.needs = ((.needs // []) | map(select((.key | norm_repo) != ($k | norm_repo))) + [$n])' --arg k "$key" --argjson n "$row"
     jq -cn --argjson n "$row" '{need: $n}' ;;
   unneed)

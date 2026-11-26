@@ -34,8 +34,10 @@ sa_jq_needs='
   # One need as the needs-you message prints it: the question (bold when blocking,
   # behind `Offer:` when not), a `Why:` line, then its options from 1, the first
   # recommended, or `Answer in [its thread](…).` A need recorded before these fields
-  # prints its action alone.
-  def need_text: (need_action + "?") as $q
+  # prints its key as a link, then its action, which need not name its ticket.
+  def need_keylink: .key as $k | if ($k | test("^[^/#\\s]+/[^/#\\s]+#[0-9]+$"))
+    then "[\($k | sub("^[^/]*/"; ""))](https://github.com/\($k | sub("#"; "/issues/")))" else $k end;
+  def need_text: (if .why == null then need_keylink + " " + (.action | sub("[?]$"; "")) else need_action end + "?") as $q
     | [if need_blocking then "**\($q)**" else "Offer: \($q)" end]
     + (if .why == null then [] else ["Why: " + (.why | if test("[.!?]$") then . else . + "." end)] end)
     + (if .answer_in != null then ["Answer in [its thread](\(.answer_in))."]

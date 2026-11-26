@@ -172,6 +172,12 @@ fresh
 jq '.needs = [{key: "acme/widgets#88", action: "Restart widgets#88 after 3 stalls", reason: "stall-cap", since: "2026-11-23T09:00:00Z", pushed: true}]' "$led" > "$led.new" && mv "$led.new" "$led"
 L need $repo#88 --action "Restart widgets#88 after 3 stalls" --reason stall-cap --why x --option a --option b >/dev/null
 check "recorded again with the same action, it keeps the push as its alert mark" "2026-11-23T09:00:00Z" "$(L list | jq -r '.needs[0].alerted')"
+fresh
+jq '.needs = [{key: "acme/widgets#88", action: "approve the held call", since: "2026-11-23T09:00:00Z", pushed: true}]' "$led" > "$led.new" && mv "$led.new" "$led"
+check "a free-text 0.46.0 need prints behind its ticket's link" "**[widgets#88](https://github.com/acme/widgets/issues/88) approve the held call?**" "$(S --digest | jq -r .block | head -n 1)"
+L need $repo#88 --action "Approve widgets#88 held call" --reason permission-hold --why x --option a --option b >/dev/null
+check "recorded again with a ticket-led action, it keeps its marks" "2026-11-23T09:00:00Z 2026-11-23T09:00:00Z" "$(L list | jq -r '.needs[0] | "\(.since) \(.alerted)"')"
+check "and is not alerted again" 0 "$(S | jq '.raised | length')"
 
 # --- the acknowledge mark ----------------------------------------------------------
 fresh

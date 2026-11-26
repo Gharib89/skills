@@ -48,6 +48,6 @@ L unneed $repo#5 >/dev/null
 check "the stall row prints" "$repo#5 stall-cap" "$(R | jq -r '[.escalate[] | "\(.key) \(.reason)"] | join(",")')"
 L ack $repo#5 --reason stall-cap >/dev/null
 check "an acknowledge mark quiets it" '[]' "$(R | jq -c '[.escalate[].key]')"
-check "without a Needs you row" 0 "$(bash "$s/status.sh" --ledger "$led" --digest | jq -r .block | grep -c 'Needs you')"
+check "without a need, the mark recorded" "[0,[\"$repo#5\"]]" "$(L list | jq -c '[(.needs // [] | length), (.acks // [] | map(.key))]')"
 
 finish
