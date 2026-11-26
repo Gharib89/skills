@@ -61,6 +61,20 @@ for c in "$P/merge.sh 1 2 abc &" "$P/merge.sh 1 2 abc;" "($P/merge.sh 1 2 abc)" 
   "xargs $P/merge.sh 1 2" "$P/merge.sh 1 2 abc >&2" "$P/merge.sh 1 2 abc>/dev/null"; do
   check_rc "refused: $c" 2 "$(run "$c")"
 done
+# A wrapper taking options hides nothing either (self-review round 2): the call
+# is found by its path and arguments wherever it stands.
+for c in "timeout -s KILL 60 $P/merge.sh 1 2 abc" "nice -n 5 $P/merge.sh 1 2 abc" \
+  "env -i $P/merge.sh 1 2 abc" "sudo -u x $P/merge.sh 1 2 abc" "command -p $P/merge.sh 1 2 abc" \
+  "time -p $P/run-file.sh gate admit human --head abc --issue 5" "eval $P/merge.sh 1 2 abc" \
+  "stdbuf -oL $P/merge.sh 1 2 abc" "bash -lc '$P/merge.sh 1 2 abc'" "bash -x -c '$P/merge.sh 1 2 abc'" \
+  "$P/merge.sh 1 2 \\
+abc"; do
+  check_rc "refused: $c" 2 "$(run "$c")"
+done
+check_rc "a cd into the scripts directory and ./merge.sh is refused" 2 \
+  "$(run "cd /home/u/wt/$P && ./merge.sh 1 2 abc")"
+check_rc "reading merge.sh by its path passes" 0 "$(run "sed -n 1,40p $P/merge.sh | head")"
+check_rc "merge.sh --help piped passes: no merge" 0 "$(run "$P/merge.sh --help | head -3")"
 check_rc "a bash -c string is read as commands" 2 "$(run "bash -c '$P/merge.sh 1 2 abc'")"
 check "and its call comes back bare" yes "$(has "$P/merge.sh 1 2 abc")"
 check_rc "a quoted newline in a ruling is refused" 2 \

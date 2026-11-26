@@ -9,8 +9,9 @@
 # them with no owner word in the transcript (#1419).
 #
 # stdin: the hook's JSON ({cwd, tool_input: {command}}).
-# Exit 0 lets the call through: any other command, the bare form, and every
-# failure of this script's own, so the guard never blocks on its own error.
+# Exit 0 lets the call through: any other command and the bare form. A
+# failure of the script's own exits 0 or, under `set -u`, 1: never 2, the one
+# code Claude Code reads as a refusal, so the guard never blocks on its error.
 # Exit 2 refuses, printing on stderr the bare command per call, in order, with
 # the command's own `NAME=value` assignments resolved, `$PWD` and a `cd <dir>`
 # turned into a literal path, and redirects and pipes dropped.
@@ -53,7 +54,7 @@ lex() {
     fi
     case $c in
       "'" | '"') q=$c; word+=$c ;;
-      \\) word+=$c$nx; i=$((i + 1)) ;;
+      \\) word+=$c$nx; [ "$nx" = $'\n' ] && sep=1; i=$((i + 1)) ;;
       ' ' | $'\t' | $'\n' | ';' | '(' | ')' | '&' | '|')
         case $c in
           '&') if [ "${word: -1}" = '>' ] || [ "$nx" = '>' ]; then word+=$c; i=$((i + 1)); continue; fi ;;
@@ -94,36 +95,42 @@ expand() {
 }
 unquote() { case $X in \'*\' | \"*\") X=${X:1:${#X}-2} ;; esac; }
 
-# Per segment: record assignments, follow a `cd`, step past wrappers and
-# keywords (a `bash -c` string is lexed as more segments), then gate a ship
-# `merge.sh` or `run-file.sh gate admit`: one under a ship scripts directory,
-# by its bare name, or behind a variable. Another tool's merge.sh is not ship's.
+# Per segment: record its leading assignments or its `cd`, lex a quoted word
+# naming a ship script as commands of its own (a `bash -c` or `-lc` string),
+# then gate the first word that is ship's `merge.sh` followed by a PR number or
+# a variable, or ship's `run-file.sh` followed by `gate admit`, wherever it
+# stands: a wrapper and its options hide nothing, and a read of the file
+# (`sed -n 1p .../merge.sh`) has no call after it. The word is ship's under a
+# ship-run or ship scripts directory, behind a variable, or as `./<script>`
+# after a `cd` into one; another tool's merge.sh is not.
 bare=() raw=() si=0
 while [ "$si" -lt "${#segs[@]}" ]; do
   IFS=$US read -r -a ws <<<"${segs[si]}"
-  si=$((si + 1)) j=0 w0=''
-  while [ "$j" -lt "${#ws[@]}" ]; do
-    w=${ws[j]}
-    if [[ $w =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
-      names+=("${BASH_REMATCH[1]}"); expand "${BASH_REMATCH[2]}"; unquote; values+=("$X"); j=$((j + 1)); continue
-    fi
-    case $w in
-      '{' | '!' | exec | env | nohup | command | sudo | time | nice | xargs | if | then | else | elif | do | while | until) j=$((j + 1)) ;;
-      timeout) j=$((j + 2)) ;;
-      bash | sh)
-        if [ "${ws[j + 1]:-}" = -c ] && [ -n "${ws[j + 2]:-}" ]; then X=${ws[j + 2]}; unquote; lex "$X"; j=${#ws[@]}
-        else j=$((j + 1)); fi ;;
-      cd) [ -n "${ws[j + 1]:-}" ] && { expand "${ws[j + 1]}"; unquote; cdir=$X; }; j=${#ws[@]} ;;
-      *) expand "$w"; w0=$X; break ;;
-    esac
+  si=$((si + 1)) j=0 call=''
+  while [[ ${ws[j]:-} =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; do
+    names+=("${BASH_REMATCH[1]}"); expand "${BASH_REMATCH[2]}"; unquote; values+=("$X"); j=$((j + 1))
   done
-  [ -n "$w0" ] || continue
-  base=${w0##*/}
-  if [ "$base" = run-file.sh ] && [ "${ws[j + 1]:-}" = gate ] && [ "${ws[j + 2]:-}" = admit ]; then :
-  elif [ "$base" = merge.sh ]; then :
-  else continue; fi
-  case $w0 in "$base" | */ship-run/scripts/* | */ship/scripts/* | *'$'*) ;; *) continue ;; esac
-  case $w0 in /*/ship-run/scripts/"$base") line=$w0 ;; *) line=.claude/skills/ship-run/scripts/$base ;; esac
+  if [ "${ws[j]:-}" = cd ]; then
+    [ -n "${ws[j + 1]:-}" ] && { expand "${ws[j + 1]}"; unquote; cdir=$X; }
+    continue
+  fi
+  while [ "$j" -lt "${#ws[@]}" ]; do
+    w=${ws[j]} nx1=${ws[j + 1]:-} nx2=${ws[j + 2]:-}
+    case $w in
+      [\'\"]*' '*) case $w in *merge.sh* | *run-file.sh*) X=$w; unquote; lex "$X" ;; esac ;;
+    esac
+    expand "$w"; base=${X##*/}
+    if { [ "$base" = merge.sh ] && [[ $nx1 =~ ^\"?(\$|[0-9]+$) ]]; } ||
+      { [ "$base" = run-file.sh ] && [ "$nx1 $nx2" = 'gate admit' ]; }; then
+      case $X in
+        */ship-run/scripts/"$base" | */ship/scripts/"$base" | *'$'*) call=$X; break ;;
+        "$base" | ./"$base") case $cdir in */ship-run/scripts* | */ship/scripts*) call=$X; break ;; esac ;;
+      esac
+    fi
+    j=$((j + 1))
+  done
+  [ -n "$call" ] || continue
+  case $call in /*/ship-run/scripts/"$base") line=$call ;; *) line=.claude/skills/ship-run/scripts/$base ;; esac
   has_wt=0 skip=0
   for a in "${ws[@]:j+1}"; do
     if [ "$skip" = 1 ]; then skip=0; continue; fi
