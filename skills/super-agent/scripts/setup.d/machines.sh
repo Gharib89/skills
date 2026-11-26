@@ -63,9 +63,15 @@ linked_machines() {
     warn "t3 environment list failed: no linked machines recorded"
   fi
 
+  while IFS= read -r label; do warn "--ssh $label: no linked machine has that name, so it was ignored"
+  done < <(jq -r --argjson e "${envs:-[]}" 'keys[] | select(. as $k | [$e[].label] | index($k) | not)' <<<"$ssh_given")
+
   # Check-only machines: read by the machine check, never placed on.
   while IFS=$'\t' read -r label target; do
     [ -n "$label" ] || continue
+    if [ -n "$(jq -r --arg l "$label" '.machines[$l].environment_id // empty' <<<"$facts")" ]; then
+      warn "--check-only $label: a linked machine has that name, so it was not made check-only"; continue
+    fi
     ssh_ok "$label" "$target" && facts=$(jq -c --arg l "$label" --arg s "$target" '.machines[$l] = {ssh: $s, check_only: true}' <<<"$facts")
   done < <(jq -r 'to_entries[] | [.key, .value] | @tsv' <<<"$check_only")
 }

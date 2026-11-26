@@ -10,5 +10,8 @@ sa_ssh_opts=(-o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=6)
 # error line.
 sa_ssh_reason() {
   if grep -q 'Host key verification failed' <<<"$1"; then echo unknown-host-key
-  else grep -v '^[[:space:]]*$' <<<"$1" | tail -n1; fi
+  else sa_last_line "$1"; fi
 }
+
+# sa_last_line <text>: its last non-blank line.
+sa_last_line() { grep -v '^[[:space:]]*$' <<<"$1" | tail -n1; }

@@ -21,7 +21,7 @@ One supervised thread a machine may run at once. The fleet file sets each machin
 _Avoid_: worker, lane, seat
 
 **Placement**:
-Choosing the machine a launch runs on: the super agent's own machine first, a GPU machine for GPU work, the next reachable linked machine that fits when one is down, and a row in the ledger's waiting list when none does, a launch over its repo's ship cap included. A repo the fleet file pins to a machine (a **machine pin**) is placed there alone, and waits when that machine is down or full. Work is placed on a machine only through its T3 environment id, and only if the owner already linked it; a check-only machine is never placed on. A machine is read over SSH, only by a machine check (ADR 0023).
+Choosing the machine a launch runs on: the super agent's own machine first, a GPU machine for GPU work, the next reachable linked machine that fits when one is down, and a row in the ledger's waiting list when none does, a launch over its repo's ship cap included. A repo the fleet file pins to a machine (a **machine pin**) is placed there alone, and waits when that machine is down or full. Work is placed on a machine only through its T3 environment id, and only if the owner already linked it (ADR 0023).
 _Avoid_: scheduling, load balancing
 
 **Ship cap**:

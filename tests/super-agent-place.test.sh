@@ -25,7 +25,8 @@ cat > "$fleet" <<'JSON'
   "home": {"cores": 8, "slots": 3, "reserve": 1, "max_load": 8, "gpu": null, "gh_logins": ["alice", "bob"]},
   "gpubox": {"environment_id": "env-gpu", "cores": 16, "slots": 4, "max_load": 16, "gpu": "RTX 4090", "gh_logins": ["alice"]},
   "plain": {"environment_id": "env-plain", "cores": 4, "slots": 2, "max_load": 4, "gpu": null, "gh_logins": ["alice", "bob"]},
-  "zghost": {"slots": 2, "max_load": 4, "gpu": null}}}
+  "zghost": {"slots": 2, "max_load": 4, "gpu": null},
+  "znas": {"ssh": "admin@nas", "check_only": true}}}
 JSON
 envs='[{"environmentId":"env-gpu","label":"gpubox","status":"reachable"},{"environmentId":"env-plain","label":"plain","status":"reachable"}]'
 P() { bash "$s/place.sh" --fleet "$fleet" --ledger "$led" --own home --repo Gharib89/skills "$@"; }
@@ -126,6 +127,8 @@ check "no machine fits: waiting, nothing placed" '[null,true]' "$(jq -c '[.place
 check "each refusal is named" 'refused:load refused:load refused:ram' "$(jq -r '[.considered[].outcome | select(startswith("refused"))] | join(" ")' <<<"$out")"
 check "a machine the fleet holds with no environment id cannot be launched on" \
   '{"machine":"zghost","outcome":"skipped:no-environment"}' "$(jq -c '.considered[] | select(.machine == "zghost")' <<<"$out")"
+check "a check-only machine is never placed on" '{"machine":"znas","outcome":"skipped:no-environment"}' \
+  "$(jq -c '.considered[] | select(.machine == "znas")' <<<"$out")"
 check "and the ledger holds it as waiting" 'Gharib89/skills#7' "$(jq -r '.waiting[0].key' "$led")"
 # the row placement wrote is on the owner's queue: reconcile lists it ready, for place to try again
 sa_issue Gharib89/skills 7 open
@@ -168,8 +171,8 @@ check "an own key the fleet file does not hold is skipped, not refused" gpubox "
 
 # --- no machine is ever linked ---------------------------------------------------------------
 check "no call of any run above was a link, unlink or launch" 0 "$(grep -c '^t3 environment \(link\|unlink\)\|^t3 thread start' "$SA_FAKE/calls")"
-check "the fleet file the runs read holds no host, user or key" 0 \
-  "$(jq '[.. | strings | select(test("@|ssh|\\.pem|id_rsa"))] | length' "$fleet")"
+check "the fleet file holds no key, only ssh strings, and placement never calls ssh" "0 0" \
+  "$(jq '[.. | strings | select(test("\\.pem|id_rsa|PRIVATE KEY"))] | length' "$fleet") $(grep -c '^ssh ' "$SA_FAKE/calls")"
 # --- a repo pinned to one machine runs only there -----------------------------------------
 reset
 jq '.repos = {"gharib89/skills": {"machine": "gpubox"}}' "$fleet" > "$tmp/pinned.json"

@@ -33,6 +33,10 @@ sa_ssh gharib@new 255 '' 'ssh: connect to host new port 22: Connection timed out
 out=$(P --name laptop)
 check "a machine already in the file whose test now fails keeps its entry and string" "gharib@new env-new" "$(jq -r '.fleet.machines.new | "\(.ssh) \(.environment_id)"' <<<"$out")"
 check "and is still named as refused" "new ssh: connect to host new port 22: Connection timed out" "$(jq -r '.ssh_refused[] | "\(.machine) \(.reason)"' <<<"$out")"
+check "an --ssh for no linked machine is ignored and named" '--ssh typo: no linked machine has that name, so it was ignored' \
+  "$(P --name laptop --ssh typo=x@y | jq -r '.warnings[] | select(startswith("--ssh"))')"
+check "a --check-only for a linked machine leaves it linked, and is named" 'env-new --check-only new: a linked machine has that name, so it was not made check-only' \
+  "$(P --name laptop --check-only new=gharib@new | jq -r '"\(.fleet.machines.new.environment_id) \(.warnings[] | select(startswith("--check-only")))"')"
 check "a malformed --ssh is a usage error" 2 "$(P --name laptop --ssh new >/dev/null 2>&1; echo $?)"
 
 # --- a check-only machine: an ssh string, no environment id, the marker -----------------------

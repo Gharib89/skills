@@ -107,11 +107,10 @@ reconcile. Escalate only when a fresh `t3_thread_read` itself fails.
 
 Reads go over SSH and writes over a T3 environment (ADR 0023).
 `scripts/machine-check.sh <machine> <check>` runs one fixed, read-only check
-over the machine's tested `ssh` string in the fleet file: `up`, `load`, `disk`,
-`gpu`, `t3`, `clis`, `process <name>`, or `log <unit> [lines]` (a systemd unit,
-or a file listed under the machine's `logs`, at most 200 lines). It takes a
-linked or a check-only machine. Run an asked check inline, in an answer-only
-turn too, and post its printed line. `needs-root` is an offer to the owner,
-never a sudo retry; `unreachable` is one attempt, with no retry, no thread
-fallback and no change to placement. The call guard refuses a direct `ssh`,
-`scp` or `rsync` call, so the script is the only route.
+over the machine's tested `ssh` string in the fleet file (`--help` lists the
+checks; `log` takes a systemd unit or a file listed under the machine's
+`logs`). It takes a linked or a check-only machine. Run an asked check inline,
+in an answer-only turn too, and post its printed line. On `needs-root`, offer
+the owner the read to run themselves. On `unreachable`, post SSH's reason as
+the answer; placement keeps using T3's reachability. The call guard refuses a
+direct `ssh`, `scp` or `rsync` call, so the script is the only route.

@@ -65,10 +65,10 @@ skill's base directory.
    machine's string is proposed from its own T3 host name and recorded only
    after a key-only test passes; a new machine whose test fails is not added.
    For a refused one, offer the owner the saved-machines list
-   (`herdr machine list`, `~/.ssh/config`) as a hint only, and pass the string
-   they pick as `--ssh <machine>=<string>`. `unknown-host-key` means the owner
-   connects once by hand first: setup never accepts a new host key. A machine
-   the owner wants to check but not place work on is added with
+   (`herdr machine list`, `~/.ssh/config`) to pick from, and pass only the
+   string they pick as `--ssh <machine>=<string>`. `unknown-host-key` means
+   the owner connects once by hand first: setup never accepts a new host key. A
+   machine the owner wants to check but not place work on is added with
    `--check-only <machine>=<string>`.
 4. Ask the owner to confirm or adjust it, the `work_week` set to their own
    working days (the morning report and the retro follow it). After the yes,

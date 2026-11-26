@@ -2,7 +2,7 @@
 # Pick the machine a launch runs on: this machine first, then the other linked
 # machines by name, the first that is reachable, has what the ticket needs and
 # passes `launch-check`. Only machines the fleet file already holds are
-# candidates, and nothing here links, unlinks or reaches a machine except
+# candidates, and nothing here links, unlinks or places on a machine except
 # through its T3 environment id.
 #
 #   place --fleet <file> --ledger <file> --repo <owner/name> [--own <key>]

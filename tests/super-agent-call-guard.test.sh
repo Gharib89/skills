@@ -186,7 +186,9 @@ check "in a chain, by path, quoted or escaped" "2 direct-ssh 2 direct-ssh 2 dire
   "$(verdict "$(bash_call 'cd /x && /usr/bin/ssh -o BatchMode=yes box true')") $(verdict "$(bash_call 'echo hi | "ssh" box')") $(verdict "$(bash_call '\ssh box')") $(verdict "$(bash_call 'echo $(ssh box uptime)')")"
 check "behind an assignment, env or timeout" "2 direct-ssh 2 direct-ssh 2 direct-ssh" \
   "$(verdict "$(bash_call 'SSH_AUTH_SOCK=/x ssh box')") $(verdict "$(bash_call 'env ssh box')") $(verdict "$(bash_call 'timeout 5 ssh box')")"
-check "each refusal is logged by reason, naming the command and the tool" "$((n + 10)) ssh,scp,rsync Bash" \
+check "behind a keyword, a wrapper or a shell's -c" "2 direct-ssh 2 direct-ssh 2 direct-ssh 2 direct-ssh 2 direct-ssh 2 direct-ssh" \
+  "$(verdict "$(bash_call 'if true; then ssh box; fi')") $(verdict "$(bash_call 'for h in a b; do ssh $h; done')") $(verdict "$(bash_call 'sudo ssh box')") $(verdict "$(bash_call 'echo box | xargs ssh')") $(verdict "$(bash_call "bash -c 'ssh box uptime'")") $(verdict "$(bash_call 'timeout -s KILL 5 ssh box')")"
+check "each refusal is logged by reason, naming the command and the tool" "$((n + 16)) ssh,scp,rsync Bash" \
   "$(jq -s '[.[] | select(.event == "refused" and .reason == "direct-ssh")] | length' "$log") $(jq -sr '[.[] | select(.reason == "direct-ssh")] | "\([.[0:3][].command] | join(",")) \(.[0].tool)"' "$log")"
 err=$(G <<<"$(bash_call 'ssh box')" 2>&1 >/dev/null)
 check "the refusal names the machine check as the route" 1 "$(grep -c 'machine-check.sh' <<<"$err")"

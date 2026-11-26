@@ -20,7 +20,7 @@
 # --fleet defaults to `super-agent/fleet.json` under $XDG_CONFIG_HOME. One
 # attempt, batch mode, a 6 second connect timeout and strict host keys
 # (lib/ssh.sh): no retry, no fallback to a thread, and nothing it answers changes
-# placement. An asked check runs inline and its line is the answer.
+# placement.
 #
 # stdout: {machine, check, result, output, reason}: `result` is `ok` (`output` what
 #         the machine printed), `unreachable` (`reason` ssh's last error line, or
@@ -74,11 +74,14 @@ case $check in
 esac
 
 errf=$(mktemp) || sa_tooling "mktemp failed"
+trap 'rm -f "$errf"' EXIT
 out=$(ssh "${sa_ssh_opts[@]}" "$target" "$cmd" 2>"$errf" </dev/null); rc=$?
-err=$(cat "$errf"); rm -f "$errf"
+err=$(cat "$errf")
 answer() { jq -cn --arg m "$machine" --arg c "$check" --arg r "$1" --arg o "$2" --arg why "$3" \
   '{machine: $m, check: $c, result: $r, output: (if $r == "ok" then $o else null end), reason: (if $why == "" then null else $why end)}'; }
 if [ "$rc" = 255 ]; then answer unreachable '' "$(sa_ssh_reason "$err")"
-elif grep -qiE 'permission denied|insufficient permissions|not seeing messages from other users' <<<"$err"; then answer needs-root '' ''
-elif [ "$rc" != 0 ]; then answer failed '' "$(grep -v '^[[:space:]]*$' <<<"$err" | tail -n1)"
+# journalctl exits 0 on the entries it may show, so its hint alone means needs-root
+elif grep -q 'not seeing messages from other users' <<<"$err" \
+  || { [ "$rc" != 0 ] && grep -qiE 'permission denied|insufficient permissions' <<<"$err"; }; then answer needs-root '' ''
+elif [ "$rc" != 0 ]; then answer failed '' "$(sa_last_line "$err")"
 else answer ok "$out" ''; fi

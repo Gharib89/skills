@@ -33,19 +33,18 @@ check "--help writes nothing on stderr" "" "$(cat "$tmp/err")"
 
 # --- each check sends one fixed command and prints its result -----------------------
 sa_ssh gharib@server 0 'remote says hi'
-declare -A sent_by
-for c in up load disk gpu t3 clis; do
-  out=$(M server $c); rc=$?
+checks=(up load disk gpu t3 clis)
+wants=('echo up' 'cat /proc/loadavg; free -m' 'df -hP -x tmpfs -x devtmpfs -x squashfs -x overlay' \
+  'nvidia-smi --query-gpu=name,memory.used,memory.total,utilization.gpu --format=csv,noheader' \
+  'systemctl --user is-active t3code.service; t3 --version' \
+  'for c in claude codex agy gh t3; do printf "%s: " "$c"; if command -v "$c" >/dev/null; then "$c" --version 2>&1 | head -n1; else echo missing; fi; done')
+for i in "${!checks[@]}"; do
+  c=${checks[$i]}
+  out=$(M server "$c"); rc=$?
   check_rc "$c exits 0" 0 "$rc"
   check "$c prints its result" "server $c ok remote says hi" "$(jq -r '"\(.machine) \(.check) \(.result) \(.output)"' <<<"$out")"
-  sent_by[$c]=$(sent)
+  check "$c sends its fixed command" "${wants[$i]}" "$(sent)"
 done
-check "up sends its fixed command" 'echo up' "${sent_by[up]}"
-check "load sends its fixed command" 'cat /proc/loadavg; free -m' "${sent_by[load]}"
-check "disk sends its fixed command" 'df -hP -x tmpfs -x devtmpfs -x squashfs -x overlay' "${sent_by[disk]}"
-check "gpu sends its fixed command" 'nvidia-smi --query-gpu=name,memory.used,memory.total,utilization.gpu --format=csv,noheader' "${sent_by[gpu]}"
-check "t3 sends its fixed command" 'systemctl --user is-active t3code.service; t3 --version' "${sent_by[t3]}"
-check "clis sends its fixed command" 'for c in claude codex agy gh t3; do printf "%s: " "$c"; if command -v "$c" >/dev/null; then "$c" --version 2>&1 | head -n1; else echo missing; fi; done' "${sent_by[clis]}"
 M server process sshd >/dev/null
 check "process sends pgrep for the exact name" 'pgrep -c -x -- sshd || true' "$(sent)"
 M server log ssh.service >/dev/null
@@ -93,6 +92,8 @@ check "a permission failure is needs-root" needs-root "$(jq -r .result <<<"$out"
 sa_ssh gharib@server 0 '-- No entries --' 'Hint: You are currently not seeing messages from other users and the system.'
 check "a journal hidden from this user is needs-root" needs-root "$(M server log ssh.service | jq -r .result)"
 check "and still no sudo anywhere" 0 "$(grep -c sudo "$SA_FAKE/ssh-calls")"
+sa_ssh gharib@server 0 'claude: 2.1.0' 'warning: permission denied reading ~/.cache, ignored'
+check "a check that exits 0 is ok, whatever its stderr mentions" ok "$(M server clis | jq -r .result)"
 sa_ssh gharib@server 9 '' 'nvidia-smi: command not found'
 check "any other failure is failed, with the last error line" "failed nvidia-smi: command not found" "$(M server gpu | jq -r '"\(.result) \(.reason)"')"
 
