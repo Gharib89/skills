@@ -114,6 +114,12 @@ check_rc "a double-quoted ruling with no \$ passes" 0 \
   "$(run "$P/run-file.sh gate admit waiver --ruling \"merge it; fine\" --head abc --issue 5")"
 check_rc "the absolute path of an install with no project copy passes" 0 \
   "$(run "/home/u/.claude/skills/ship-run/scripts/merge.sh 1 2 abc")"
+mkdir -p "$work/wt/$P" && touch "$work/wt/$P/merge.sh"
+check_rc "the absolute path of a project copy is refused" 2 \
+  "$(run "$work/wt/$P/merge.sh 1 2 abc" "$work/wt")"
+check "it comes back relative" yes "$(has "$P/merge.sh 1 2 abc")"
+check_rc "a user copy's absolute path beside a project copy is refused" 2 \
+  "$(run "/home/u/.claude/skills/ship-run/scripts/merge.sh 1 2 abc" "$work/wt")"
 check_rc "surrounding whitespace passes" 0 "$(run "  $P/merge.sh 1 2 abc  ")"
 
 # Everything else passes untouched.

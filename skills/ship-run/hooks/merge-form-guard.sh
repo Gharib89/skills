@@ -142,7 +142,10 @@ while [ "$si" -lt "${#segs[@]}" ]; do
     j=$((j + 1))
   done
   [ -n "$call" ] || continue
-  case $call in /*/ship-run/scripts/"$base") line=$call ;; *) line=.claude/skills/ship-run/scripts/$base ;; esac
+  # An absolute path is bare only with no project copy where the call runs: the
+  # allow rule names the relative path, which an absolute one never matches.
+  line=.claude/skills/ship-run/scripts/$base
+  case $call in /*/ship-run/scripts/"$base") [ -f "${cdir:-$cwd}/$line" ] || line=$call ;; esac
   has_wt=0 skip=0
   for a in "${ws[@]:j+1}"; do
     if [ "$skip" = 1 ]; then skip=0; continue; fi
