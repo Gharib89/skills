@@ -7,7 +7,8 @@
 #
 #   setup (--propose | --write) [--fleet <file>] [--name <machine>]
 #         [--probe <environment id>=<reply file>]... [--instances <file>]
-#         [--settings <file>]
+#         [--settings <file>] [--ssh <machine>=<ssh string>]...
+#         [--check-only <machine>=<ssh string>]...
 #
 # --fleet defaults to `super-agent/fleet.json` under $XDG_CONFIG_HOME
 # (`~/.config` when unset), the user-scope path the owner keeps in their
@@ -34,8 +35,10 @@
 # keeps the file's slots and load threshold (the owner's edits) and only
 # `proposed_slots` moves; one never probed takes the computed ones, since
 # nobody could have chosen them. A machine that is unreachable keeps its
-# previous facts and is probed on the next run that finds it reachable. The
-# file holds environment ids only, never a host, user or key.
+# previous facts and is probed on the next run that finds it reachable.
+#
+# Every linked machine also carries a tested `ssh` string, and --check-only adds a
+# check-only machine: setup.d/machines.sh says how.
 #
 # --settings names T3's own settings file: a row has no `homePath` (measured), but
 # `providerInstances.<id>.config.homePath` there is the Claude instance's account
@@ -71,11 +74,12 @@
 # probed by its CLI. Without --instances the providers are the three CLIs, as
 # before.
 #
-# stdout: {fleet_file, written, fleet, warnings, to_probe, instances, home}: `fleet` the merged
+# stdout: {fleet_file, written, fleet, warnings, to_probe, ssh_refused, instances, home}: `fleet` the merged
 #         file as it is or would be written, `warnings` one string per probe
 #         that failed (T3 environments, GitHub accounts, a reply that is no
 #         probe); `to_probe` one {machine, environment_id} per reachable linked
-#         machine no `--probe` covered; a provider whose quota command
+#         machine no `--probe` covered; `ssh_refused` one {machine, ssh, reason}
+#         per machine whose ssh test failed; a provider whose quota command
 #         fails is `unavailable` with a `reason` in `fleet.providers` (a `cursor` or `grok` one is `unknown`: no usage read exists), not a
 #         warning; `instances` one {instance_id, driver, quota_source, auth,
 #         auth_reason, status} per enabled instance; `home` the super agent folder,
@@ -94,17 +98,22 @@
 # Linux only: see the operating system line in SKILL.md.
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
+source "$(dirname "${BASH_SOURCE[0]}")/lib/ssh.sh" || { printf '{"error":"cannot source lib/ssh.sh"}\n'; exit 2; }
 
-usage='usage: setup (--propose | --write) [--fleet <file>] [--name <machine>] [--probe <environment id>=<reply file>]... [--instances <file>] [--settings <file>]'
+usage='usage: setup (--propose | --write) [--fleet <file>] [--name <machine>] [--probe <environment id>=<reply file>]... [--instances <file>] [--settings <file>] [--ssh <machine>=<ssh string>]... [--check-only <machine>=<ssh string>]...'
 sa_help "$usage" "$@"
 fleet_file="${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json"
-name='' write=false mode='' replies='{}' instances_file='' settings_file=''
+name='' write=false mode='' replies='{}' instances_file='' settings_file='' ssh_given='{}' check_only='{}'
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet_file=$2; shift 2 ;;
     --name) sa_flag_value "$usage" "${2:-}"; name=$2; shift 2 ;;
     --probe) sa_flag_value "$usage" "${2:-}"; case $2 in *=?*) ;; *) sa_tooling "$usage" ;; esac
       replies=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$replies"); shift 2 ;;
+    --ssh|--check-only) sa_flag_value "$usage" "${2:-}"; case $2 in ?*=?*) ;; *) sa_tooling "$usage" ;; esac
+      if [ "$1" = --ssh ]; then ssh_given=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$ssh_given")
+      else check_only=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$check_only"); fi
+      shift 2 ;;
     --instances) sa_flag_value "$usage" "${2:-}"; instances_file=$2; shift 2 ;;
     --settings) sa_flag_value "$usage" "${2:-}"; settings_file=$2; shift 2 ;;
     --propose) mode=propose; shift ;;
@@ -139,6 +148,7 @@ if [ -f "$fleet_file" ]; then
   bad=$(jq -r 'if type != "object" then "the file must be an object"
     elif ((.machines // {}) | type) != "object" then "machines must be an object"
     elif ((.providers // {}) | type) != "object" then "providers must be an object"
+    elif ([(.machines // {})[] | objects | .ssh | select(. != null and type != "string")] | length) > 0 then "every machine ssh must be a string"
     elif ([(.providers // {})[] | objects | .quota_command | select(. != null and type != "string")] | length) > 0 then "quota_command must be a string"
     elif ([(.providers // {})[] | objects | .weekly_weight // 1 | select(type != "number" or . <= 0)] | length) > 0 then "weekly_weight must be a number above 0"
     elif ([.five_hour_floor, .weekly_reserve | select(. != null) | select(type != "number" or . < 0 or . > 1)] | length) > 0 then "five_hour_floor and weekly_reserve must be fractions 0 to 1"
@@ -187,35 +197,8 @@ proposed=$(jq -cn --arg n "$name" --argjson m "$local_m" --argjson f "$floor_gb"
       {id: "offline-live-e2e", condition: "A live end-to-end proof needs a real T3 server or other machines: prove it through the scripts over fake CLIs and say so in the PR body."},
       {id: "last-fix-after-cap", condition: $last_fix}]}')
 
-# Linked T3 environments: each is a machine this super agent may launch on. A
-# reachable one is probed through a scratch thread there (the caller runs it, see
-# the header), an unreachable one only has its reachability recorded.
-to_probe='[]'
-if raw=$(t3 environment list --json 2>/dev/null </dev/null) \
-    && envs=$(grep '^\[' <<<"$raw" | tail -1) && jq -e 'type == "array"' <<<"$envs" >/dev/null 2>&1; then
-  facts=$(jq -c --argjson e "$envs" '.machines += ([$e[] | {key: .label, value: {environment_id: .environmentId, reachable: (.status == "reachable")}}] | from_entries)' <<<"$facts")
-  proposed=$(jq -c --argjson e "$envs" '.machines += ([$e[] | {key: .label, value: {probed: false, slots: 1}}] | from_entries)' <<<"$proposed")
-  while IFS=$'\t' read -r label id reachable; do
-    if [ -n "$(jq -r --arg i "$id" '.[$i] // empty' <<<"$replies")" ]; then
-      [ "$reachable" = true ] || { warn "$label: unreachable, so its probe reply was not merged"; continue; }
-      reply=$(jq -r --arg i "$id" '.[$i]' <<<"$replies")
-      line=$(grep '^{' "$reply" 2>/dev/null | tail -1)
-      if ! jq -e '(.cores | type) == "number" and (.ram_gb | type) == "number"' <<<"$line" >/dev/null 2>&1; then
-        warn "$label: no probe line in $reply${line:+: $(jq -r '.error // empty' <<<"$line" 2>/dev/null)}"; continue
-      fi
-      m=$(jq -c "$machine_jq"' machine(.; $f; {})' --argjson f "$floor_gb" <<<"$line")
-      first=$(jq -r --arg l "$label" '.machines[$l].probed // false | not' <<<"$existing")
-      facts=$(jq -c --arg l "$label" --argjson m "$m" '.machines[$l] += $m.facts' <<<"$facts")
-      proposed=$(jq -c --arg l "$label" --argjson m "$m" '.machines[$l] = $m.proposal' <<<"$proposed")
-      # Slots nobody chose (never probed) give way to the computed ones.
-      [ "$first" != true ] || existing=$(jq -c --arg l "$label" 'if .machines[$l] then del(.machines[$l].slots, .machines[$l].max_load) else . end' <<<"$existing")
-    elif [ "$reachable" = true ]; then
-      to_probe=$(jq -c --arg l "$label" --arg i "$id" '. + [{machine: $l, environment_id: $i}]' <<<"$to_probe")
-    fi
-  done < <(jq -r '.[] | [.label, .environmentId, (.status == "reachable")] | @tsv' <<<"$envs")
-else
-  warn "t3 environment list failed: no linked machines recorded"
-fi
+source "$(dirname "${BASH_SOURCE[0]}")/setup.d/machines.sh" || { printf '{"error":"cannot source setup.d/machines.sh"}\n'; exit 2; }
+linked_machines
 
 # GitHub accounts, the active one marked.
 if acct=$(gh auth status --json hosts 2>/dev/null </dev/null) \
@@ -266,8 +249,8 @@ merged=$(jq -cn --argjson p "$proposed" --argjson e "$existing" --argjson f "$fa
 
 if $write; then sa_write "$fleet_file" "$merged"; fi
 sa_home "$write"
-jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjson warn "$warnings" --argjson p "$to_probe" --argjson rows "$rows" --argjson home "$home" \
-  '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn, to_probe: $p, home: $home,
+jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjson warn "$warnings" --argjson p "$to_probe" --argjson sr "$ssh_refused" --argjson rows "$rows" --argjson home "$home" \
+  '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn, to_probe: $p, ssh_refused: $sr, home: $home,
     instances: [$rows[] | .providerInstanceId as $k | $m.providers[$k] as $v
       | {instance_id: $k, driver: $v.driver,
          weekly_weight: ($v.weekly_weight // 1),

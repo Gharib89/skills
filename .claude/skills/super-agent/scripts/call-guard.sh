@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # The call guard: a PreToolUse hook that refuses a send into a thread the super
-# agent has no business in. It judges `mcp__t3-code__t3_thread_send` and
+# agent has no business in, and a direct `ssh`, `scp` or `rsync` call. The second
+# refusal reads a Bash command for one of the three as a command word (at the start,
+# after `;`, `&`, `|`, `(`, a backtick or a newline, past variable assignments and
+# `env`, `command`, `exec`, `nohup`, `time` or `timeout <n>`; a path, a leading
+# backslash or quotes around the word are allowed), refuses it with reason
+# `direct-ssh` and logs `{at, event: "refused", reason, command, tool}`: a machine is
+# read only through `machine-check.sh`. It judges `mcp__t3-code__t3_thread_send` and
 # `mcp__t3-code__t3_thread_send_attachments` (their `threadId`) and every `t3 thread
 # send <id>` in a Bash command (chained with `;`, `&&`, `||`, `|` or a newline; the word
 # `t3` may carry a path, `~/.local/bin/t3`, and a leading backslash or be quoted whole,
@@ -70,6 +76,14 @@ case $tool in
   Bash)
     cmd=$(jq -r '.tool_input.command | strings' <<<"$input" 2>/dev/null)
     cmd=${cmd//\\$'\n'/ }
+    # ssh, scp or rsync as a command word, past variable assignments, env, timeout and the like
+    ssh_re='(^|[;&|(`'$'\n'']'')[[:space:]]*(([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*|env|command|exec|nohup|time|timeout[[:space:]]+[^[:space:]]+)[[:space:]]+)*([^[:space:];&|()`"'"'"']*/)?\\?["'"'"']?(ssh|scp|rsync)["'"'"']?([[:space:];&|)]|$)'
+    if [[ $cmd =~ $ssh_re ]]; then
+      word=${BASH_REMATCH[5]}
+      jq -cn --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg w "$word" '{at: $at, event: "refused", reason: "direct-ssh", command: $w, tool: "Bash"}' >> "$log" 2>/dev/null
+      printf 'Refused (direct-ssh): a direct %s call. Reach a machine only through scripts/machine-check.sh <machine> <check>, its fixed read-only checks; launching, steering and anything that writes go through the machine'"'"'s T3 environment.\n' "$word" >&2
+      exit 2
+    fi
     send_re='(^|[[:space:];&|(`"'"'"'])([^[:space:];&|()`"'"'"']*/)?\\?["'"'"']?t3["'"'"']?[[:space:]]+thread[[:space:]]+send([[:space:]]+|$)'
     set -f # the words below are split, never expanded against the hook's directory
     while [[ $cmd =~ $send_re ]]; do

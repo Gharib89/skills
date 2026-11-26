@@ -7,6 +7,7 @@
 - [The reply file](#the-reply-file)
 - [Between wakes](#between-wakes)
 - [Errors](#errors)
+- [Machine checks](#machine-checks)
 
 `scripts/` is under this skill's base directory. A **remote entry** is a
 ledger entry with an `environment_id`: its thread runs on a linked machine.
@@ -49,7 +50,7 @@ merge and a close.
    <true|false>`, from the ledger entry (`merged` true only for a `ship` entry
    whose stage is `settled` or whose observed PR state is merged), and reply
    with its one JSON line. Read the reply, settle the scratch thread, and
-   report a `kept` result as a local one. Never SSH.
+   report a `kept` result as a local one.
 
 ## The reply file
 
@@ -88,7 +89,7 @@ close. A remote thread's own changes (a finished run, a permission hold, a new
 run) are read only on a wake, when you refresh the files and reconcile, and the
 backstop schedule is the wake that catches a remote thread that rested with no
 PR event. A remote `task` entry with no `--branch` has no GitHub event at all,
-so only that schedule notices it. Never SSH to look sooner.
+so only that schedule notices it.
 
 ## Errors
 
@@ -101,3 +102,16 @@ run `reply.sh`; `not-json` and `shape` mean the file was not written by
 `reply.sh`, so write it with `reply.sh`, since a rerun reads the same bytes.
 After a missing or stale read, read the thread again, rerun `reply.sh` and
 reconcile. Escalate only when a fresh `t3_thread_read` itself fails.
+
+## Machine checks
+
+Reads go over SSH and writes over a T3 environment (ADR 0023).
+`scripts/machine-check.sh <machine> <check>` runs one fixed, read-only check
+over the machine's tested `ssh` string in the fleet file: `up`, `load`, `disk`,
+`gpu`, `t3`, `clis`, `process <name>`, or `log <unit> [lines]` (a systemd unit,
+or a file listed under the machine's `logs`, at most 200 lines). It takes a
+linked or a check-only machine. Run an asked check inline, in an answer-only
+turn too, and post its printed line. `needs-root` is an offer to the owner,
+never a sudo retry; `unreachable` is one attempt, with no retry, no thread
+fallback and no change to placement. The call guard refuses a direct `ssh`,
+`scp` or `rsync` call, so the script is the only route.

@@ -177,4 +177,22 @@ check "a tell whose time carries a fraction is kept by the prune, as the guard h
 check "and lets a send through, logged told naming it" "0  $frac" \
   "$(SA_NOW=$((t + 3602)) verdict "$(tool_call th-f)") $(jq -r 'select(.event == "told" and .thread == "th-f") | .tell_at' "$log")"
 
+# --- a direct ssh, scp or rsync call is refused: the machine check is the only route (#1382) --------
+n=$(jq -s '[.[] | select(.event == "refused" and .reason == "direct-ssh")] | length' "$log")
+check "a direct ssh is refused, direct-ssh" "2 direct-ssh" "$(verdict "$(bash_call 'ssh myserver uptime')")"
+check "so is scp" "2 direct-ssh" "$(verdict "$(bash_call 'scp myserver:/etc/hosts /tmp/x')")"
+check "and rsync" "2 direct-ssh" "$(verdict "$(bash_call 'rsync -a box:/srv/ ./srv/')")"
+check "in a chain, by path, quoted or escaped" "2 direct-ssh 2 direct-ssh 2 direct-ssh 2 direct-ssh" \
+  "$(verdict "$(bash_call 'cd /x && /usr/bin/ssh -o BatchMode=yes box true')") $(verdict "$(bash_call 'echo hi | "ssh" box')") $(verdict "$(bash_call '\ssh box')") $(verdict "$(bash_call 'echo $(ssh box uptime)')")"
+check "behind an assignment, env or timeout" "2 direct-ssh 2 direct-ssh 2 direct-ssh" \
+  "$(verdict "$(bash_call 'SSH_AUTH_SOCK=/x ssh box')") $(verdict "$(bash_call 'env ssh box')") $(verdict "$(bash_call 'timeout 5 ssh box')")"
+check "each refusal is logged by reason, naming the command and the tool" "$((n + 10)) ssh,scp,rsync Bash" \
+  "$(jq -s '[.[] | select(.event == "refused" and .reason == "direct-ssh")] | length' "$log") $(jq -sr '[.[] | select(.reason == "direct-ssh")] | "\([.[0:3][].command] | join(",")) \(.[0].tool)"' "$log")"
+err=$(G <<<"$(bash_call 'ssh box')" 2>&1 >/dev/null)
+check "the refusal names the machine check as the route" 1 "$(grep -c 'machine-check.sh' <<<"$err")"
+check "a call through the machine check script passes" "0 " "$(verdict "$(bash_call 'bash ~/.claude/skills/super-agent/scripts/machine-check.sh server up')")"
+check "a word that only contains ssh is no ssh call" "0  0  0 " \
+  "$(verdict "$(bash_call 'ssh-keygen -l -f key.pub')") $(verdict "$(bash_call 'grep -n sshd /etc/passwd')") $(verdict "$(bash_call 'cat ~/.ssh/config')")"
+check "nor is ssh as an argument" "0 " "$(verdict "$(bash_call 'herdr machine list ssh')")"
+
 finish
