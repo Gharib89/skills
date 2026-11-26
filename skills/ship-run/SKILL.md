@@ -9,7 +9,7 @@ hooks:
         - type: command
           command: 'g="$CLAUDE_PROJECT_DIR/.claude/skills/ship-run/hooks/merge-form-guard.sh"; [ -f "$g" ] || g="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/ship-run/hooks/merge-form-guard.sh"; [ -f "$g" ] || exit 0; exec bash "$g"'
 metadata:
-  version: 0.75.2
+  version: 0.75.3
   profile-schema: "5"
   composes: mattpocock/skills#f3fc5632f401156837ee3872f14fe33ccf1024ea:tdd mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa:codebase-design mattpocock/skills#c55ee46073ed923f86ce59a5eb3b6d895095d1b7:writing-for-agents mattpocock/skills#a496f5513d4a4cf889bc48e189e579f4b0bdf6aa:code-review upstash/context7#9169e8b29fd744758e1fe2d3a2e826177b61b7a9:find-docs humanlayer/skills#ca7c8088db69e315a8b2deea43820270457f8f3c:show-me
 ---
