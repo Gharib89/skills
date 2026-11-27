@@ -89,6 +89,10 @@ check "its row keeps --gpu, --account, --area and --exclude" '{"gpu":true,"accou
   "$(bash "$s/ledger.sh" --ledger "$led" list | jq -c '.waiting[] | select(.key == "task:one-c") | {gpu, account, areas, exclude}')"
 check "a row with none keeps no place field" '[]' \
   "$(bash "$s/ledger.sh" --ledger "$led" list | jq -c '.waiting[] | select(.key == "task:one-b") | [keys[] | select(IN("gpu", "account", "areas", "exclude"))]')"
+check "reconcile lists the row ready with its place flags" '{"gpu":true,"account":"alice","areas":["skills/x"],"exclude":["box"]}' \
+  "$(bash "$s/reconcile.sh" --ledger "$led" | jq -c '.ready[] | select(.key == "task:one-c") | {gpu, account, areas, exclude}')"
+check "and a row with none lists no place field" '[]' \
+  "$(bash "$s/reconcile.sh" --ledger "$led" | jq -c '.ready[] | select(.key == "task:one-b") | [keys[] | select(IN("gpu", "account", "areas", "exclude"))]')"
 check "a ticket's row takes no place flag" 2 "$(bash "$s/ledger.sh" --ledger "$led" wait "$repo#9" --reason full --gpu >/dev/null 2>&1; echo $?)"
 
 # --- the stall ladder's rung 3: a task relaunched with --raise, recorded --rethread -----------

@@ -42,8 +42,8 @@ reconcile, since a row whose issue closed stays on it until then.
   that comes back `waiting` stays on the list. A row placement wrote becomes
   ready the same way.
 - A `task:<slug>` row is a one-off task nothing fit: it is ready on every
-  wake, and relaunches with `launch.sh task` and the row's `ask`, `repo` and
-  `skill` ([tasks](tasks.md#launching-a-task)).
+  wake, and relaunches with `launch.sh task` and the row's `ask`, `repo`,
+  `skill` and place flags ([tasks](tasks.md#launching-a-task)).
 - `dropped`: a row whose issue closed, already removed from the ledger.
 - A row whose issue or blocker cannot be read stays, is not ready and is in
   `errors` as `issue-unreadable`, its `detail.key` the issue that failed. Run

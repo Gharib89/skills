@@ -12,8 +12,8 @@ reconcile_waiting() {
   unreadable() { errors=$(jq -c --arg k "$1" --arg d "$2" '. + [{key: $k, kind: "issue-unreadable", detail: {key: $d}}]' <<<"$errors"); } # <row key> <the key that failed to read>
   while IFS= read -r row; do
     key=$(jq -r .key <<<"$row") repo=$(jq -r .repo <<<"$row")
-    # a task's row has no issue: it is ready on each pass, and its relaunch places it again
-    case $key in task:*) ready=$(jq -c --argjson r "$row" '. + [$r | {key, order, after, reason, since, ask, repo, skill}]' <<<"$ready"); continue ;; esac
+    # a task's row has no issue: it is ready on each pass with its place flags, and its relaunch places it again
+    case $key in task:*) ready=$(jq -c --argjson r "$row" '. + [$r | {key, order, after, reason, since, ask, repo, skill} + ($r | {gpu, account, areas, exclude} | with_entries(select(.value != null)))]' <<<"$ready"); continue ;; esac
     issue=$(issue_read "$repo" "$(jq -r .number <<<"$row")") || issue=''
     state=$(jq -r '.state // empty' <<<"$issue" 2>/dev/null)
     if [ -z "$state" ]; then unreadable "$key" "$key"; continue; fi
