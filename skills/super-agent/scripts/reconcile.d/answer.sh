@@ -42,6 +42,7 @@ reconcile_answer() {
             (if .cleanup_owed == true then {reason: (if .observed.pr.state == "closed" then "pr-closed" else "issue-closed" end), detail: null} else null end)
           elif (.observed.pending // 0) > 0 then {reason: "permission-hold", detail: .observed.pending}
           elif .error != null then {reason: "fault", detail: .error}
+          elif .needs_owner != null then {reason: "needs-owner", detail: .needs_owner}
           elif (.key as $k | any($sdue[]; .key == $k)) then {reason: "owner-steered", detail: "at rest after your message: watch or take?"}
           elif .stage == "at-rest" and (.stalls // 0) >= 3 then {reason: "stall-cap", detail: .stalls}
           else null end) as $r

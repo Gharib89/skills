@@ -11,7 +11,9 @@
 # from 1 (or where to answer it), set apart by blank lines (`needs_text` in
 # lib/needs.sh). The rows follow after a blank line, in this order, an empty row
 # left out: `Merged` (a ship entry whose PR merged and that no
-# digest has listed yet), `Running` (an open entry, read as at its merge gate, in
+# digest has listed yet), `Finished` (a task settled on its `Result:` line that no block
+# has listed yet: `task:<slug>: <result>`, the result's own link the link to what it
+# produced), `Running` (an open entry, read as at its merge gate, in
 # review, launched, running or at rest; a `task` entry reads `task:<slug> (task)`
 # and an adopted one adds `(adopted)`; a steered entry, one whose newest message from
 # outside its thread is the owner's, ends with `(you spoke last)`), `Yours` (an
@@ -28,7 +30,8 @@
 # changed prints none; `--digest` prints
 # every row whatever changed (the owner's "status", the morning report, an
 # emptied waiting list). Any printed block counts its Merged tickets as listed,
-# so Merged holds only the merges since the last block.
+# so Merged holds only the merges since the last block, and its Finished tasks too
+# (`status.finished_ack` keeps each as `<key> <settled_at>`, so a slug used again prints).
 #
 # A need is printed with its alert mark: the needs print whenever one has no
 # `alerted` yet, and status sets it. A blocking need alerted 4 working hours ago
@@ -86,8 +89,8 @@ if [ -n "$fleet" ]; then
 fi
 
 # The rows as the ledger holds them now: {rows: {"Needs you" (the needs-you message),
-# Merged, Running, Yours, Waiting, "Reviewer limit"} (one absent when empty),
-# merged_keys, raised}.
+# Merged, Finished, Running, Yours, Waiting, "Reviewer limit"} (one absent when empty),
+# merged_keys, finished_keys, raised}.
 now=$(jq -c --argjson now "$(sa_now_s)" --argjson week "$week" "$sa_jq_norm$sa_jq_waiting$sa_jq_open$sa_jq_needs"'
   def short: sub("^[^/]*/"; "");
   def link($repo; $n): "[\($repo | short)#\($n)](https://github.com/\($repo)/issues/\($n))";
@@ -103,8 +106,12 @@ now=$(jq -c --argjson now "$(sa_now_s)" --argjson week "$week" "$sa_jq_norm$sa_j
   | (.status.merged_ack // []) as $ack
   | [.entries[] | select((.kind // "ship") == "ship" and (.stage | IN("merged", "settled"))
       and (.key as $k | $ack | map(norm_repo) | index($k | norm_repo) | not))] as $merged
+  | (.status.finished_ack // []) as $fack
+  | [.entries[] | select(.kind == "task" and .stage == "settled" and .result != null
+      and ("\(.key) \(.settled_at)" as $f | $fack | index($f) | not))] as $finished
   | {rows: (((.needs // []) as $n | if ($n | length) > 0 then {"Needs you": ($n | needs_text)} else {} end)
       + row("Merged"; [$merged[] | "\(link(.repo; .number))" + (if .observed.pr.number then " PR [\(.observed.pr.number)](https://github.com/\(.repo)/pull/\(.observed.pr.number))" else "" end)]; ", ")
+      + row("Finished"; [$finished[] | "\(.key): \(.result)"]; "; ")
       + row("Running"; [.entries[] | select((.stage | IN("launched", "running", "at-rest")) and (.owner_run != true))
           | "\(tlabel) \(state)" + (if .instance_id then " on \(.instance_id)" else "" end) + (if .steered == true then " (you spoke last)" else "" end)]; ", ")
       + row("Yours"; [.entries[] | select(.owner_run == true and is_open)
@@ -113,7 +120,7 @@ now=$(jq -c --argjson now "$(sa_now_s)" --argjson week "$week" "$sa_jq_norm$sa_j
             | if $d < 1 then "under a day" elif $d == 1 then "1 day" else "\($d) days" end)"]; ", ")
       + row("Waiting"; [waiting_list[] | .key | keylink]; ", ")
       + row("Reviewer limit"; [(.review_limits // [])[] | "\(.repo) merging on the fallback reviewer only (\(.reviewer) hit its usage limit at \(.since))"]; "; ")),
-     merged_keys: [$merged[].key],
+     merged_keys: [$merged[].key], finished_keys: [$finished[] | "\(.key) \(.settled_at)"],
      raised: [(.needs // [])[] | need_alerted as $al
        | if $al == null then raise(false)
          elif need_blocking and .reminded == null
@@ -125,8 +132,8 @@ printed=$(jq -ec '(.status // {}) as $s | if ($s | type) == "object" and (($s.me
   || sa_tooling "$ledger: status is not an object with a merged_ack array"
 changed=$(jq -r --argjson p "$printed" '.rows != $p' <<<"$now")
 # A digest prints every row; a plain run only the rows that differ from the last
-# block, a row that emptied as `<row>: none` (bar Merged, which empties by being
-# listed). A need to raise prints the needs whatever changed.
+# block, a row that emptied as `<row>: none` (bar Merged and Finished, which empty by
+# being listed). A need to raise prints the needs whatever changed.
 block=$(jq -r --argjson d "$digest" --argjson p "$printed" --argjson q "$qdoc" --arg inst "$instance" '
   def pct: if . == null then "unknown" else "\((. * 100) | round)%" end;
   def bucket($p; $w): [$p.buckets[]? | select(if $w == "5h" then .window == "5h" else .window == "weekly" and (if $p.driver == "claude" then .id == "week" elif $p.driver == "pi" then ((.group // "") | startswith("Claude")) else true end) end)] | first | .remaining;
@@ -135,11 +142,11 @@ block=$(jq -r --argjson d "$digest" --argjson p "$printed" --argjson q "$qdoc" -
   | [if $d or ($now.raised | length) > 0 then $nt // empty
      elif $nt == $p["Needs you"] then empty
      else $nt // "Nothing needs you now." end] as $needs
-  | [("Merged", "Running", "Yours", "Waiting", "Reviewer limit") as $n
+  | [("Merged", "Finished", "Running", "Yours", "Waiting", "Reviewer limit") as $n
       | if $d then $now.rows[$n] // empty
         elif $now.rows[$n] == $p[$n] then empty
         elif $now.rows[$n] != null then $now.rows[$n]
-        elif $n == "Merged" then empty
+        elif $n == "Merged" or $n == "Finished" then empty
         else "\($n): none" end] as $rows
   | ([($q.providers // {}) | to_entries[] | "Quota \(.key): weekly \(bucket(.value; "weekly") | pct), 5 hour \(bucket(.value; "5h") | pct)"]) as $qlines
   | if ($needs + $rows | length) > 0 then
@@ -157,7 +164,8 @@ if [ -n "$block" ]; then
   at=$(jq -rn --argjson s "$(sa_now_s)" '$s | todate')
   jq -c --arg at "$at" '.raised[] | {at: $at, event: (if .reminder then "reminder" else "alert" end), key, action, class}' <<<"$now" \
     >>"$(dirname "$ledger")/needs-alerts.jsonl" || sa_tooling "$(dirname "$ledger")/needs-alerts.jsonl: cannot append"
-  sa_update "$ledger" "$sa_jq_norm"'.status = {rows: ($n.rows | del(.Merged)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique)}
+  sa_update "$ledger" "$sa_jq_norm"'.status = {rows: ($n.rows | del(.Merged, .Finished)), merged_ack: ((.status.merged_ack // []) + $n.merged_keys | unique),
+      finished_ack: ((.status.finished_ack // []) + $n.finished_keys | unique)}
     | if ($n.raised | length) > 0 then .needs = [(.needs // [])[] | . as $x
         | ([$n.raised[] | select((.key | norm_repo) == ($x.key | norm_repo) and .action == $x.action)] | first) as $r
         | if $r == null then . elif $r.reminder then .reminded = $at else .alerted = $at end] else . end' --argjson n "$now" --arg at "$at"

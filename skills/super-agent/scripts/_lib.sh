@@ -171,6 +171,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/home.sh" || { printf '{"error":"canno
 # shellcheck disable=SC2034  # read by launch.sh
 sa_triage_contract="A turn that ends only to wait on your own background work (a check, a subagent) ends with this line, word for word, as its last line: \`$sa_waiting_line\` Your final message is the triage outcome, never that line."
 
+# The contract line of a one-off task.
+source "$(dirname "${BASH_SOURCE[0]}")/lib/task.sh" || { printf '{"error":"cannot source lib/task.sh"}\n'; exit 2; }
+
 # `active($w; $now)` for a snapshot (`$obs`): the thread is running, or at rest on
 # the waiting line for less than `$w` seconds (`rest_at`, the thread's last update,
 # is when its run ended). `waiting` is true only with a `rest_at` to time it by.
@@ -195,9 +198,10 @@ sa_thread_file_ok() { case $1 in */*) return 1 ;; esac; }
 # sa_observe <entry>: one look at an entry's thread (through the `t3` CLI, or for
 # an entry with an `environment_id` through its reply file) and
 # its PR (through `gh` REST) as a snapshot in $obs:
-# {status, run_count, pending, gate, waiting, rest_at, pr: {number, state}}, `state`
-# one of none, open, merged, closed (a merged PR adds its `merged_at`), `waiting`
-# true when the thread's last assistant message ends on `sa_waiting_line`, `rest_at`
+# {status, run_count, pending, gate, waiting, last, rest_at, pr: {number, state}}, `state`
+# one of none, open, merged, closed (a merged PR adds its `merged_at`), `last` the last
+# non-blank line of the thread's last assistant message, trimmed, `waiting`
+# true when that line is `sa_waiting_line`, `rest_at`
 # the thread's `updatedAt` as an epoch (null when it has none), `limit_reset` the epoch of the reset a
 # limit stop names (absent for any other rest: the last line reads `... limit · resets 6:10pm (Africa/Cairo)`,
 # the first such time after `rest_at` in that zone), and `gate` true when the thread's last assistant message
@@ -254,12 +258,13 @@ sa_observe() {
   obs=$(jq -c --argjson pr "$pr_obs" --arg wl "$sa_waiting_line" '
     (.thread.updatedAt | if type == "string" then (sub("[.][0-9]+Z$"; "Z") | try fromdateiso8601 catch null) else null end) as $rest
     | ([.messages[]? | select(.role == "assistant")] | last | (.text // "")) as $text
+    | ($text | split("\n") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != "")) | last // "") as $last
     | {status: .thread.status, run_count: .thread.runCount,
        pending: .thread.pendingRequestCount,
        gate: ($text | (test("(^|[^A-Za-z])ship [0-9]+[.][0-9]+[.][0-9]+") and test("Unmet criteria"))),
-       waiting: ($rest != null and (($text | split("\n") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != "")) | last) == $wl)),
+       waiting: ($rest != null and $last == $wl), last: $last,
        rest_at: $rest, pr: $pr,
-       limit: ($text | split("\n") | map(gsub("^\\s+|\\s+$"; "")) | map(select(. != "")) | last // ""
+       limit: ($last
          | capture("limit\\s*[·.-]\\s*resets\\s+(?<time>[0-9]{1,2}(:[0-9]{2})?\\s*[ap]m)\\s*\\((?<tz>[A-Za-z0-9_/+-]+)\\)\\s*$"; "i") // null)}' <<<"$line")
   sa_limit_reset
 }

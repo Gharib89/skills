@@ -5,7 +5,7 @@
 # candidates, and nothing here links, unlinks or places on a machine except
 # through its T3 environment id.
 #
-#   place --fleet <file> --ledger <file> --repo <owner/name> [--own <key>]
+#   place --fleet <file> --ledger <file> [--repo <owner/name>] [--own <key>]
 #         [--gpu] [--account <login>] [--area <path>]... [--blocked-by <n>]...
 #         [--exclude <key>]... [--readings <file>] [--number <n>]
 #
@@ -22,6 +22,7 @@
 # only on that machine: every other one is `skipped:pinned`, and a pinned machine that
 # is down or full means the ticket waits, never that another machine takes it. A pin
 # naming a machine the fleet file lacks is refused.
+# With no --repo (a task that has none) no pin applies and no repo is checked.
 # --number records the outcome in the ledger: a ticket nothing fits is `wait`ed
 # (the morning report lists it), a placed one is `unwait`ed.
 #
@@ -42,7 +43,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: place --fleet <file> --ledger <file> --repo <owner/name> [--own <key>] [--gpu] [--account <login>] [--area <path>]... [--blocked-by <n>]... [--exclude <key>]... [--readings <file>] [--number <n>]'
+usage='usage: place --fleet <file> --ledger <file> [--repo <owner/name>] [--own <key>] [--gpu] [--account <login>] [--area <path>]... [--blocked-by <n>]... [--exclude <key>]... [--readings <file>] [--number <n>]'
 sa_help "$usage" "$@"
 here=$(dirname "${BASH_SOURCE[0]}")
 fleet='' ledger='' repo='' own='' gpu=false account='' readings='' number='' excluded='[]'
@@ -61,7 +62,8 @@ while [ $# -gt 0 ]; do
   esac
   shift 2
 done
-[ -n "$fleet" ] && [ -n "$ledger" ] && [ -n "$repo" ] || sa_tooling "$usage"
+# a task with no repo places with no pin and no repo check, and a waiting row only a ticket's number names
+[ -n "$fleet" ] && [ -n "$ledger" ] && { [ -n "$repo" ] || [ -z "$number" ]; } || sa_tooling "$usage"
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file"
 jq -e '(.machines | type) == "object"' "$fleet" >/dev/null 2>&1 || sa_tooling "$fleet: not a fleet file (machines must be an object)"
 pinned=$(jq -r --arg r "$repo" "$sa_jq_norm"'[(.repos // {}) | to_entries[] | select(.key | norm_repo == ($r | norm_repo)) | .value.machine // empty] | first // empty' "$fleet" 2>/dev/null) \
@@ -104,7 +106,7 @@ while IFS= read -r m; do
     fi
   fi
   rc=0; res=$(bash "$here/launch-check.sh" --fleet "$fleet" --ledger "$ledger" --machine "$m" --own "$own" ${number:+--key "$repo#$number"} \
-    --load "$(jq -r .load1 <<<"$reading")" --free-gb "$(jq -r .free_gb <<<"$reading")" --repo "$repo" ${check_args[@]+"${check_args[@]}"} 2>/dev/null) || rc=$?
+    --load "$(jq -r .load1 <<<"$reading")" --free-gb "$(jq -r .free_gb <<<"$reading")" ${repo:+--repo "$repo"} ${check_args[@]+"${check_args[@]}"} 2>/dev/null) || rc=$?
   case $rc in 0|1) ;; *) sa_tooling "launch-check failed for $m: $res" ;; esac
   if [ "$rc" = 0 ]; then
     placed=$(jq -cn --arg m "$m" --arg i "$id" --argjson l "$([ "$m" = "$own" ] && echo true || echo false)" \

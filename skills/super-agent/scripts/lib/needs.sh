@@ -10,6 +10,7 @@ sa_jq_needs='
     "permission-hold": "blocking", "merge-gate": "blocking", "scope": "blocking", "stall-cap": "blocking",
     "fault": "blocking", "no-instance": "blocking", "no-owner-skill": "blocking", "no-project": "blocking",
     "stale-ship": "blocking", "route-ask": "blocking", "owner-steered": "blocking", "triage": "blocking",
+    "needs-owner": "blocking",
     "daily-offer": "offer", "unqueued": "offer", "parents-done": "offer", "stale-skill": "offer",
     "pr-closed": "offer", "issue-closed": "offer", "ask-first": "offer", "owner-run": "offer",
     "verify": "offer", "cleanup": "offer"};
