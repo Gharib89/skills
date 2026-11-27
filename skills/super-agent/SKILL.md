@@ -57,9 +57,8 @@ picks, which `launch.sh` runs for you:
    `--raise <n>` on a raised launch (the stall ladder below). The ladder is
    Sonnet medium, Opus medium, Opus high; XS and S start on the first rung,
    M the second, L and XL the third.
-3. When route's `ask` is true, launch answers `ask`: escalate first, then rerun
-   launch with `--wanted yes` or `--wanted no`
-   ([routing](reference/routing.md)); `no_instance` is a need (`no-instance`).
+3. A launch answering `ask` or `no_instance` is escalated first, as
+   [routing](reference/routing.md) says.
 
 ## Placement
 
@@ -67,13 +66,10 @@ Every launch runs where `place.sh` puts it, which `launch.sh` runs with the
 flags you pass it: `--gpu` for GPU work, `--account <login>` for the gh login
 the repo needs, one `--area <path>` per path the ticket touches (judged from
 the issue), one `--blocked-by <n>` per open blocker on GitHub, and
-`--exclude <machine>`. Read launch's answer (a launch, `need_reading`,
-`waiting`) and the rules for slots, same-repo tickets, the ship cap and a
-repo's pin in [reference/placement.md](reference/placement.md). Write to a
-machine only through its linked T3 environment; read it by
-[machine check](reference/remote.md#machine-checks). To pin a repo or set
-a machine's slots, probe it first ([setup](reference/setup.md#steps) step 2),
-then run `fleet.sh`.
+`--exclude <machine>`. Act on launch's answer, and pin a repo or set a
+machine's slots, as [reference/placement.md](reference/placement.md) says.
+Write to a machine only through its linked T3 environment; read it by
+[machine check](reference/remote.md#machine-checks).
 
 ## The waiting list
 
@@ -84,13 +80,10 @@ The owner's "queue" is the waiting list: "add N to the queue" is `ledger.sh
 
 ## Claims and intake
 
-A **claim** keeps two super agents off one ticket: a comment, never an
-assignment (`/ship-run` assigns). `launch.sh` claims before every launch and
-answers `claimed` or `stale` when it does not launch; the owner's "track
-<repo>" and "stop tracking <repo>" run `track.sh`; the **daily offer** is
-`intake.sh`, run at your first turn of each calendar day and whenever the owner
-asks what is ready, and it launches nothing. Steps for all three:
-[reference/claims.md](reference/claims.md).
+`launch.sh` takes the **claim** before every launch; the owner's "track
+<repo>" and "stop tracking <repo>" run `track.sh`; run the **daily offer** at
+your first turn of each calendar day and whenever the owner asks what is ready.
+Steps for all three: [reference/claims.md](reference/claims.md).
 
 ## The loop
 
@@ -100,15 +93,14 @@ reconcile. An owner ask that is not routing work (rotating a secret, editing
 dotfiles) is launched as a `task:<slug>` thread, never done inline; only an
 asked machine check runs inline. A thread that is no ticket's (a grill, a
 deploy, decks, a review: anything the owner asks you to launch) skips
-`launch.sh`'s claim, route and place, and takes `t3_thread_launch` directly;
+`launch.sh`'s claim, route and place, and takes `t3_thread_launch` directly,
+naming its skill from `scripts/skills.sh`;
 step 2 then
 records it with `launch.sh record --ledger <ledger> --task <slug> --thread <id>`
 (`--branch` and `--repo` when it opens a PR you should wake on; on a linked
 machine `--machine <key>` with `--environment`, and `--worktree`). A thread the
-owner asks you to watch that you did not launch ("Watch <thread>") is
-`ledger.sh --ledger <ledger> adopt --read <file>` of its `t3_thread_read`, which
-is step 2's record; then steps 5 and 3
-([handing over](reference/handing-over.md)).
+owner asks you to watch that you did not launch is adopted in place of steps 1
+and 2 ([handing over](reference/handing-over.md#watch-thread)).
 
 1. **Launch.** The owner names a ticket as `<owner/name>#<n>`. Run
    `scripts/launch.sh <owner/name>#<n> --fleet <fleet> --ledger <ledger> --quota
@@ -118,13 +110,10 @@ is step 2's record; then steps 5 and 3
    (Routing, Placement), `--note <text>` for a line only this ticket's thread
    should read, and `--raise <n>` on a raised launch. It reads the labels
    (`ready-for-agent` takes `/ship-run <n>`, `needs-triage` takes `/triage
-   <n>`), claims, routes, places and writes the launch message, records it at
-   stage `launching`, and prints `launch:
-   true` with `args`, the whole `t3_thread_launch` argument object, or `launch:
-   false` with a `reason`: `claimed`, `stale`, `waiting`, `need_reading`, `ask`,
-   `no_owner_skill`, `no_instance` or `stale_ship`. Act on the reason as Claims,
-   Routing and Placement say; `no_owner_skill`, `no_instance` and `stale_ship`
-   are escalations (Escalation). On
+   <n>`), claims, routes, places, writes the launch message and records the
+   entry; `launch.sh --help` lists its answer and reasons. On `launch: false`,
+   act on the `reason` as Claims, Routing and Placement say; `no_owner_skill`,
+   `no_instance` and `stale_ship` are escalations (Escalation). On
    `launch: true`, add each name in `needs` to `args` and call
    `t3_thread_launch` with `args`, never `delegate_task`; the steps, and the
    no-project escalation, are in
@@ -189,13 +178,9 @@ carries a supervised thread's transcript.
 
 ## The launch message and the step-ins
 
-`launch.sh` writes the **launch message** into `args.message`: the invocation
-(for `/triage`, then one waiting-line contract line), plus one `Note:` line with
-`--note`; send it unedited. After it you post into a
-supervised thread only at a **step-in**, exactly five moments: the stall 1
-nudge, the stall 2 missing fact, a gate hold, the owner's answer to a need the
-thread raised, and a hard finding from verification. Nothing is broadcast to
-running threads. What each carries:
+Send the **launch message** `launch.sh` writes into `args.message` unedited.
+After it you post into a supervised thread only at one of the five
+**step-ins**, never a broadcast. What each carries:
 [reference/step-ins.md](reference/step-ins.md).
 
 ## Acting on the summary
@@ -220,18 +205,15 @@ The other lists report:
 - `ready`: waiting rows to launch, in order. `dropped`: closed issues' rows.
   `launching`: no thread bound
   ([wake-actions](reference/wake-actions.md#launching)).
-- `unqueued`: open issues in an active repo, filed since the batch began, that
-  no entry, waiting row or claim holds. Say them in one chat line, each key
-  with its title, and ask whether to launch any: reconcile lists each once.
-  Launch one only on the owner's go.
-- `parents_done`: an open spec parent whose sub-issues are all closed, listed
-  once. Close it as completed yourself, verify by REST, and say so in one chat
-  line ([wake-actions](reference/wake-actions.md#parents_done)).
+- `unqueued`: new open issues nothing holds
+  ([watching](reference/watching.md#unqueued-issues)). Say them in one chat
+  line, each key with its title, and ask whether to launch any.
+- `parents_done`: close each spec parent yourself, as
+  [wake-actions](reference/wake-actions.md#parents_done) says.
 - `woke`: a settled triage thread reran; `Running` shows it again.
 - `at_rest` with a merge-gate summary is no stall: a merge the repo's ship
-  profile allows needs nothing from you; a hold a standing waiver or a
-  repo-scoped ruling matches gets the gate-hold step-in, and any other hold
-  goes to whoever the fleet file's `merge_gate_ruler` names (Escalation).
+  profile allows needs nothing from you, and a hold follows
+  [merge-gate holds](reference/wake-actions.md#merge-gate-holds).
 - `errors` of an entry: its `escalate` row covers them; say others in one chat
   line.
 
@@ -291,15 +273,13 @@ a failure the PR did not cause is never waived, whoever rules**
 
 ### Escalation format
 
-The owner reads one thing: the **status block**, the `status` every reconcile
-and pulse answer carries, posted as printed
-([status-block](reference/status-block.md#every-wake)); never compose it by
-hand. It opens with the needs-you message: each open need in full, blocking
-first. Never a question dialog: it blocks the loop. Record each escalation as
+The owner reads one thing: the **status block**, posted as printed
+([status-block](reference/status-block.md#every-wake)), never a question
+dialog. Record each escalation as
 [a need](reference/status-block.md#a-need), the permission hold and the stall
-at 3 included, and post its block at once. Read the owner's `88 1` with
-`ledger.sh --ledger <ledger> answer '<reply>'`, do that option, record it as a
-[ruling](reference/status-block.md#a-ruling) and `unneed` the key. A
+at 3 included, and post its block at once. On the owner's answer, do that
+option, record it as a [ruling](reference/status-block.md#a-ruling) and
+`unneed` the key. A
 reviewer's usage-limit notice is no escalation: record it as
 [a reviewer usage limit](reference/status-block.md#a-reviewer-usage-limit).
 
