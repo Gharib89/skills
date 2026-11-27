@@ -36,6 +36,16 @@ week, runs the weekly review, whose rows join the bearings file's Needs you.
   message id. `weighted` is input + 2 x cache write + 0.1 x cache read + 5 x
   output; `nothing_changed_share` is the weighted share spent in wakes that
   changed nothing.
+- **Context floor**: `floor.fresh` is the median context (input, cache write
+  and cache read) of the first call of each transcript whose first call fell
+  that day; `floor.compacted` the median of the first call after each
+  compaction summary. `null` with none that day.
+- **Cut calls**: `denied.calls` counts the day's calls that name what the
+  super agent folder's `.claude/settings.json` cut: a denied tool or a tool of
+  a denied server, a `Skill` call for a switched-off skill, or a `ToolSearch`
+  query with any of them as a whole term. `null` when the folder holds no such
+  file. The review sums the week's count; it has no target during the trial
+  ([setup](../reference/setup.md#the-context-floor-cut)).
 - **Needs**: `recorded` counts `ledger.sh need` calls in the transcript.
   `alerted` counts the day's `alert` lines in `needs-alerts.jsonl`, the log
   `status` writes beside the ledger as it raises a need, since `unneed` removes

@@ -85,7 +85,8 @@
 #         auth_reason, status} per enabled instance; `home` the super agent folder,
 #         {folder, settings, written, guard, call_guard, watch_guard, question_flag, observe,
 #         stale, project_id, needs}: --write rewrites the folder's generated
-#         `.claude/settings.local.json`, `stale` is
+#         `.claude/settings.local.json` (the hooks) and `.claude/settings.json`
+#         (the context floor cut, reference/setup.md), `stale` is
 #         {settings, entries, unreadable} or null, and
 #         `needs` holds one Needs you line per missing hook entry, stale
 #         user-settings entry or unreadable user settings (project_id is null:

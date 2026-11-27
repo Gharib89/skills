@@ -4,6 +4,7 @@
 
 - [Steps](#steps)
 - [The guard hook](#the-guard-hook)
+- [The context floor cut](#the-context-floor-cut)
 - [Cursor and Grok](#cursor-and-grok)
 - [Fleet repo entries](#fleet-repo-entries)
 - [Fleet keys the owner sets](#fleet-keys-the-owner-sets)
@@ -121,6 +122,31 @@ when that file is no JSON object, so no entry could be checked. Each is also a
 missing hook or the wake timer: it adds the entry to the folder's file, or to
 the file `--settings` names, and prints the wake timer's unit files and enable
 line.
+
+## The context floor cut
+
+The same rewrite writes the folder's `.claude/settings.json`, the cut that
+lowers the pinned thread's **context floor** from 65.0k tokens to about 32k
+(#1372): it denies `Artifact`, `Agent`, `Workflow`, `ListAgents` and
+`ShareOnboardingGuide` (`AskUserQuestion` stays), excludes the global rules
+files (`~/.claude/rules/*.md`; the global CLAUDE.md stays), switches off every
+skill but `super-agent`, and denies every MCP server but `t3-code` and
+`smart-compact`. The skills come from the first request of the newest
+transcript that loaded this skill, the servers from `claude mcp list`, and each
+list keeps what the file already holds, so a skill or server added later is cut
+at the next rewrite and shows as a rise in the scorecard's floor until then.
+
+A task launch still names a skill: `scripts/skills.sh` prints each one with its
+one-line description, from the listing setup saved.
+
+The cut is a **two-week trial** from the handover that first writes it. One
+command undoes it, `rm ~/.local/state/super-agent/home/.claude/settings.json`
+(under `$XDG_STATE_HOME` when set), and the hooks stay, since they live in the
+other file; the next rewrite writes it again. The scorecard counts, per day,
+every call or ToolSearch query that names a denied tool, a denied server or a
+switched-off skill (`denied.calls`; the review sums the week). A count above 0
+goes to the weekly review, which fixes the miss in a script or the fleet file;
+an item returns to the context only if neither can carry it.
 
 ## Cursor and Grok
 
