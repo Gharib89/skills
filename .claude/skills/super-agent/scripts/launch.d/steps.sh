@@ -33,6 +33,10 @@ rec_add() {
   fi
 }
 
+# rec_open: true when the last `rec_add` was refused only because the entry is open
+# already (a rethread's launch, whose open entry records it).
+rec_open() { [ "$rc" != 0 ] && jq -e '.error | endswith("is already in the ledger")' <<<"$out" >/dev/null 2>&1; }
+
 # fleet_ok: the fleet file and --machine checks every launch makes before anything else.
 fleet_ok() {
   [ -f "$fleet" ] || sa_tooling "$fleet: no such file, run setup"

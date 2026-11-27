@@ -21,7 +21,7 @@ slug=${1:-}; [ $# -gt 0 ] && shift
 sa_task_slug_ok "$slug" || sa_tooling "$usage"
 key="task:$slug"
 request='' fleet='' ledger='' quota='' machine='' repo='' skill='' interactive=false gpu='' account='' readings=''
-named='' go='' outf='' raise='' wanted='' areas='[]' pargs=() wargs=()
+named='' go='' outf='' raise='' wanted='' areas='[]' pargs=()
 while [ $# -gt 0 ]; do
   case $1 in
     --gpu) gpu=--gpu; shift; continue ;; --owner-go) go=--owner-go; shift; continue ;;
@@ -89,7 +89,7 @@ answer_json=$(jq -cn --arg k "$key" --arg slug "$slug" --arg repo "$repo" --arg 
 # Record before launch, as a ticket's launch does. With --raise (the stall ladder's rung 3)
 # the task's open entry already records it, and `record --rethread` binds the new thread.
 rec_add "$(jq -c .record <<<"$answer_json")" --launching
-[ "$rc" = 0 ] || { [ -n "$raise" ] && jq -e '.error | endswith("is already in the ledger")' <<<"$out" >/dev/null 2>&1; } \
+[ "$rc" = 0 ] || { [ -n "$raise" ] && rec_open; } \
   || sa_tooling "cannot record $key before its launch: $(jq -r '.error // empty' <<<"$out")"
 [ -z "$outf" ] || printf '%s\n' "$answer_json" > "$outf" || sa_tooling "cannot write $outf"
 printf '%s\n' "$answer_json"
