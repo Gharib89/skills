@@ -51,8 +51,10 @@
 #   shadows ship or a skill it composes and differs from the project copy or
 #   cannot be compared with it (an identical copy is not listed), and one line
 #   per merge call (`merge.sh`, `run-file.sh gate admit`) no Claude Code allow
-#   rule matches at the path ship runs it from: never a reason, and the exit
-#   code is unchanged.
+#   rule matches at the path ship runs it from, and one line per merged or
+#   closed PR that closes the issue (only an open one is `existing PR`): never a
+#   reason, and the exit code is unchanged. `already claimed` with no `*-<n>`
+#   branch on origin and no open closing PR says so after the assignee.
 #   mentions[] lists live PRs that name the issue without closing it: context
 #   for phase 1, and no kind of stop. mentioned_by[] is the same rows widened to
 #   {number, kind: issue|pr, state}, so a run learns whether a mention is an
@@ -262,8 +264,12 @@ else
   fi
 
   if linked=$(host_issue_linked_prs "$n") && jq -e '.closing and .mentions' >/dev/null 2>&1 <<<"$linked"; then
-    closing=$(jq -r '[.closing[] | "#\(.number) (\(.state))"] | join(", ")' <<<"$linked")
+    # A merged or closed closing PR on a reopened issue is history, not competing work.
+    closing=$(jq -r '[.closing[] | select(.state == "open") | "#\(.number) (open)"] | join(", ")' <<<"$linked")
     $rework || [ -z "$closing" ] || reasons+=("existing PR: $closing")
+    while IFS= read -r warning; do
+      [ -z "$warning" ] || warnings+=("$warning")
+    done < <(jq -r '.closing[] | select(.state != "open") | "closing PR #\(.number) (\(.state)) is not open: history, not competing work"' <<<"$linked")
     open_prs=$(jq -c '[.closing[] | select(.state == "open") | .number]' <<<"$linked")
     mentions=$(jq -c '[.mentions[] | select(.kind == "pr") | .number]' <<<"$linked")
     mentioned_by=$(jq -c '.mentions' <<<"$linked")
@@ -286,6 +292,14 @@ if [ "$n" != none ]; then
     fi
   fi
   $rework || [ -z "$br" ] || reasons+=("existing branch: $br")
+  # A claim with nothing on the host behind it still stops (a run claims before it
+  # pushes), but says so, so the human rules on a stale claim at a glance.
+  if ! $rework && [ -n "${assignees:-}" ] && [ -z "${br-x}" ] && [ "${open_prs:-}" = '[]' ]; then
+    for i in "${!reasons[@]}"; do
+      [ "${reasons[$i]}" != "already claimed: $assignees" ] \
+        || reasons[i]+=" (no *-$n branch on origin, no open closing PR)"
+    done
+  fi
 fi
 
 # The Rework run's admission: the one open PR closing the issue, its head the one
