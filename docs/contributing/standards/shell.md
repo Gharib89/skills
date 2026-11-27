@@ -160,6 +160,25 @@ exceptions bound these rules.
   command's arguments splits on whitespace and expands `*`, so a path with a
   space becomes two arguments. The places Bash never splits are the index's
   quoting exceptions.
+- **A value written into a command string that runs later is shell-escaped.** A
+  hook command in generated settings, an `eval`, a line written to a script: the
+  string is parsed again when it runs, so a single quote, `$`, backtick or
+  backslash in the value breaks or rewrites the command, and quoting the
+  variable at the write site does not prevent it. Use the skill's own
+  single-quote escaper where it has one (`sa_shq` in
+  `skills/super-agent/scripts/lib/home.sh`), else `printf '%q'` where Bash
+  parses the string, never bare double or single quotes around the value.
+  `sa_shq`'s form suits any POSIX shell, `printf '%q'` only Bash; a string a
+  non-shell parser reads (a systemd unit line, JSON) is escaped for that parser,
+  and its test parses it back with that parser. The generator's test feeds a
+  value holding a single quote (and, where the value is free text, `$` and a
+  backtick), runs the generated command or parses it back, and asserts the value
+  arrives unchanged: a syntax-only check such as `bash -n` passes a command that
+  injects. On #1413 the super agent's settings wrote `bash '<path>/guard.sh'`
+  with the path in plain single quotes, so a skill path holding `'` produced
+  invalid shell and the guard never ran. A command a doc hands to a reader falls
+  under the prose standard's "A command or YAML block a skill hands a consumer
+  runs as written", not this rule.
 - **Every `mktemp` is paired with a trap.** `trap 'rm -f "$f"' EXIT` at script
   top level, `trap 'rm -f "$f"; trap - RETURN' RETURN` for a file created inside
   a function. An interrupted run between the `mktemp` and the `rm -f` otherwise
