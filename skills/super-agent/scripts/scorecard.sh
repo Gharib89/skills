@@ -193,6 +193,7 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
       elif $o == "peer" or ($t | startswith("Another Claude session")) then "other"
       elif ($t | startswith("Note: the T3 server restarted")) or ($t | startswith("[Your previous response"))
         or ($t | startswith("Continue where you left off")) then "restart or harness"
+      elif $t | startswith("Wake timer:") then "wake timer"
       else "owner" end;
   # The wakes of one transcript: a wake is a turn start (a user entry that is no
   # tool result and no boilerplate) and runs to the next. Tokens are summed once

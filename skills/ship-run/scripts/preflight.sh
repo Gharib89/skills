@@ -49,8 +49,12 @@
 #   composes pin invalid: <detail> · not reworkable: <detail> · no feedback
 #   warnings[] holds one line per personal skill copy under ~/.claude/skills that
 #   shadows ship or a skill it composes and differs from the project copy or
-#   cannot be compared with it (an identical copy is not listed): never a
-#   reason, and the exit code is unchanged.
+#   cannot be compared with it (an identical copy is not listed), and one line
+#   per merge call (`merge.sh`, `run-file.sh gate admit`) no Claude Code allow
+#   rule matches at the path ship runs it from, and one line per merged PR
+#   that closes the issue (only an open one is `existing PR`): never a
+#   reason, and the exit code is unchanged. `already claimed` with no `*-<n>`
+#   branch on origin and no open closing PR says so after the assignee.
 #   mentions[] lists live PRs that name the issue without closing it: context
 #   for phase 1, and no kind of stop. mentioned_by[] is the same rows widened to
 #   {number, kind: issue|pr, state}, so a run learns whether a mention is an
@@ -221,13 +225,17 @@ while IFS= read -r reason; do
 done < <(ship_missing_skill_reasons "$here" "$(ship_frontmatter "$ship_skill" composes)")
 
 # A personal copy of a composed skill (or of ship) wins over the project copy the
-# lock describes: report it as a warning, never a reason. A cloud sandbox has no
-# personal folder, so it is skipped there.
+# lock describes, and a merge call no allow rule matches falls to the auto-mode
+# classifier: report each as a warning, never a reason. A cloud sandbox has no
+# personal folder, so both are skipped there.
 warnings=()
 if [ "${CLAUDE_CODE_REMOTE:-}" != true ]; then
   while IFS= read -r warning; do
     warnings+=("$warning")
   done < <(ship_shadowed_skills "$here" "$(ship_frontmatter "$ship_skill" composes)" "${HOME:-/nonexistent}")
+  while IFS= read -r warning; do
+    warnings+=("$warning")
+  done < <(ship_merge_allow_warnings "$here" "$(cd "$SHIP_SCRIPTS" && pwd)" "${CLAUDE_CONFIG_DIR:-${HOME:-/nonexistent}/.claude}")
 fi
 
 # The issue itself, unless this is a task-spec run.
@@ -256,8 +264,12 @@ else
   fi
 
   if linked=$(host_issue_linked_prs "$n") && jq -e '.closing and .mentions' >/dev/null 2>&1 <<<"$linked"; then
-    closing=$(jq -r '[.closing[] | "#\(.number) (\(.state))"] | join(", ")' <<<"$linked")
+    # A merged closing PR on a reopened issue is history, not competing work.
+    closing=$(jq -r '[.closing[] | select(.state == "open") | "#\(.number) (open)"] | join(", ")' <<<"$linked")
     $rework || [ -z "$closing" ] || reasons+=("existing PR: $closing")
+    while IFS= read -r warning; do
+      [ -z "$warning" ] || warnings+=("$warning")
+    done < <(jq -r '.closing[] | select(.state != "open") | "closing PR #\(.number) (\(.state)) is not open: history, not competing work"' <<<"$linked")
     open_prs=$(jq -c '[.closing[] | select(.state == "open") | .number]' <<<"$linked")
     mentions=$(jq -c '[.mentions[] | select(.kind == "pr") | .number]' <<<"$linked")
     mentioned_by=$(jq -c '.mentions' <<<"$linked")
@@ -271,15 +283,24 @@ fi
 # A free-text run has no number to match: its `<type>/<slug>-none` branch would
 # collide with any earlier free-text run's, and two of those are not one run.
 if [ "$n" != none ]; then
+  br_read=true
   if ! br=$(git -C "$root" ls-remote --heads origin "*-$n" 2>/dev/null | awk '{print $2}' | sed 's|refs/heads/||' | paste -sd, -); then
     if $rework; then
       reasons+=("not reworkable: remote unreadable")
       open_prs=""
     else
       reasons+=("existing branch: remote unreadable, cannot prove none")
+      br_read=false
     fi
   fi
   $rework || [ -z "$br" ] || reasons+=("existing branch: $br")
+  # A bare claim still stops (a run claims before it pushes), but says it is bare.
+  if ! $rework && [ -n "${assignees:-}" ] && $br_read && [ -z "$br" ] && [ "${open_prs:-}" = '[]' ]; then
+    for i in "${!reasons[@]}"; do
+      [ "${reasons[$i]}" != "already claimed: $assignees" ] \
+        || reasons[i]+=" (no *-$n branch on origin, no open closing PR)"
+    done
+  fi
 fi
 
 # The Rework run's admission: the one open PR closing the issue, its head the one

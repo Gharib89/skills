@@ -58,6 +58,7 @@ check "and set no assignee" '[]' "$claimed_assignees"
 issue "$claimed_assignees" "$claimed_comments"
 check "a ticket claimed by claim.sh passes" '[]' "$(claimed_reasons)"
 issue '["other"]' '[]'
-check "an assignee with no claim comment of its own still stops" '["already claimed: other"]' "$(claimed_reasons)"
+check "an assignee with no claim comment of its own still stops" \
+  '["already claimed: other (no *-5 branch on origin, no open closing PR)"]' "$(claimed_reasons)"
 
 finish

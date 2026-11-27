@@ -7,6 +7,24 @@ released version. See
 
 <!-- version list -->
 
+## v0.47.1 (2026-11-27)
+
+### Bug Fixes
+
+- **super-agent**: The scorecard counts a wake timer wake as its own cause, and records gate #1384's
+  window ([#1430](https://github.com/Gharib89/skills/pull/1430),
+  [`3196cac`](https://github.com/Gharib89/skills/commit/3196cac96877c1a251d39814f7cd0fd930c24868))
+
+
+## v0.47.0 (2026-11-26)
+
+### Features
+
+- **super-agent**: Machines carry a tested ssh string, and eight fixed read-only machine checks run
+  over it ([#1422](https://github.com/Gharib89/skills/pull/1422),
+  [`112f596`](https://github.com/Gharib89/skills/commit/112f596cc538e5dd0d2f9772eb2c63ac9a3697d0))
+
+
 ## v0.46.0 (2026-11-25)
 
 ### Features

@@ -39,7 +39,7 @@
 # records the directory it was run in and that directory's git common dir, a line of
 # `agy-cwd`. `sleep` runs
 # the one-shot script `on-sleep` first, to change what the fakes answer while a
-# script waits.
+# script waits. `ssh` answers per target from `ssh/<target>.*` (sa_ssh).
 
 sa_fake_install() { # <dir>
   cat > "$1/t3" <<'FAKE'
@@ -179,8 +179,28 @@ printf 'systemctl %s\n' "$*" >> "$SA_FAKE/calls"
 [ ! -f "$SA_FAKE/timer-inactive" ] || { echo inactive; exit 3; }
 echo active
 FAKE
-  chmod +x "$1/notify-send" "$1/systemctl" "$1/uptime" "$1/sleep" "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/hostname"
-  mkdir -p "$SA_FAKE/threads" "$SA_FAKE/gh" "$SA_FAKE/probe" "$SA_FAKE/provider"
+  cat > "$1/ssh" <<'FAKE'
+#!/usr/bin/env bash
+printf 'ssh %s\n' "$*" >> "$SA_FAKE/calls"
+while [ $# -gt 0 ]; do case $1 in -o) shift 2 ;; -*) shift ;; *) break ;; esac; done
+target=$1; shift
+printf '%s\t%s\n' "$target" "$*" >> "$SA_FAKE/ssh-calls"
+f=$SA_FAKE/ssh/$target
+[ ! -f "$f.out" ] || cat "$f.out"
+[ ! -f "$f.err" ] || cat "$f.err" >&2
+exit "$(cat "$f.rc" 2>/dev/null || echo 0)"
+FAKE
+  chmod +x "$1/notify-send" "$1/systemctl" "$1/uptime" "$1/sleep" "$1/t3" "$1/gh" "$1/pgrep" "$1/ps" "$1/nproc" "$1/free" "$1/hostname" "$1/ssh"
+  mkdir -p "$SA_FAKE/threads" "$SA_FAKE/gh" "$SA_FAKE/probe" "$SA_FAKE/provider" "$SA_FAKE/ssh"
+}
+
+# sa_ssh <target> <rc> [<stdout>] [<stderr>]: what `ssh ... <target> <command>`
+# answers; a target with none set exits 0 and prints nothing. Every call is a
+# line of `calls`, and `ssh-calls` holds `<target>\t<remote command>` per call.
+sa_ssh() {
+  printf '%s\n' "$2" > "$SA_FAKE/ssh/$1.rc"
+  if [ -n "${3:-}" ]; then printf '%s\n' "$3" > "$SA_FAKE/ssh/$1.out"; else rm -f "$SA_FAKE/ssh/$1.out"; fi
+  if [ -n "${4:-}" ]; then printf '%s\n' "$4" > "$SA_FAKE/ssh/$1.err"; else rm -f "$SA_FAKE/ssh/$1.err"; fi
 }
 
 # sa_machine <hostname> <cores> <ram_mb> [<gpu line>]: what the machine probes

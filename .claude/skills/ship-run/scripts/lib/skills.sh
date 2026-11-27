@@ -86,3 +86,34 @@ ship_shadowed_skills() {
       "$skill" "$skill" "$state"
   done
 }
+
+# ship_merge_allow_warnings <root> <scripts dir> <config dir>: one line per merge
+# call (`merge.sh`, `run-file.sh gate admit`) no `Bash(...)` allow rule matches
+# in the user settings (<config dir>/settings.json) or the project's
+# `.claude/settings.json` and `.claude/settings.local.json`. Without a match the
+# call falls to the auto-mode classifier (#1419); a skill rename once left the
+# owner's rule on the old path. The path checked is the one merge-gate.md has
+# the run invoke: the project copy's relative path where one exists, else
+# <scripts dir>. A rule matches as Claude Code's prefix rules do: `:*` or a
+# trailing ` *` is any arguments. An unreadable file holds no rule.
+ship_merge_allow_warnings() {
+  local root=$1 dir=$2 config=$3 rules call rule glob hit
+  [ -f "$root/.claude/skills/ship-run/scripts/merge.sh" ] && dir=.claude/skills/ship-run/scripts
+  rules=$(for f in "$config/settings.json" "$root/.claude/settings.json" "$root/.claude/settings.local.json"; do
+    [ -f "$f" ] && jq -r '.permissions.allow[]? | strings' "$f" 2>/dev/null
+  done)
+  for call in merge.sh 'run-file.sh gate admit'; do
+    hit=0
+    while IFS= read -r rule; do
+      case $rule in Bash) hit=1 ;; Bash\(*\)) ;; *) continue ;; esac
+      glob=${rule#Bash(}; glob=${glob%)}
+      case $glob in *:\*) glob="${glob%:\*}*" ;; esac
+      # The rule's text is a glob: its `*` is the wildcard. `x` stands for the
+      # call's arguments.
+      # shellcheck disable=SC2053
+      [[ "$dir/$call x" == $glob ]] && hit=1
+    done <<<"$rules"
+    [ "$hit" = 1 ] || printf 'no Claude Code allow rule matches %s: merge calls fall to the auto-mode classifier; add Bash(%s:*) to your settings\n' \
+      "$dir/$call" "$dir/$call"
+  done
+}
