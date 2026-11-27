@@ -26,8 +26,9 @@
 # `../scorecard/README.md`.
 #
 # stdout: `row` {row, file}: the row and the file it went to · `review` {week:
-#         {from, to}, days, call_guard: {refused}, needs: [text]}: the rows read, the
-#         week's call guard refusals, one line per row to raise
+#         {from, to}, days, call_guard: {refused}, denied: {calls}, needs: [text]}: the
+#         rows read, the week's call guard refusals and calls naming what the context
+#         floor cut took out, one line per row to raise
 # exit: 0 answered · 2 usage, an unreadable ledger, no thread id, no transcript
 #       for it, an unread version, a malformed transcript, log, targets or
 #       pattern file, a week missing some day's row, or a file that could not
@@ -80,8 +81,11 @@ if [ "$cmd" = review ]; then
     # A week with no row at all predates the scorecard: nothing to review.
     | if $missing != [] and $days != [] then error("week \($w): no row for \($missing | join(", ")); count it with row --day") else . end
     | {week: {from: $w, to: $to}, days: ($days | length),
-       call_guard: {refused: ([$days[] | .call_guard.refused? // 0] | add // 0)}, needs: (
-        [$t[0] | to_entries[] | select(.value.slice == null) | .key as $k | .value.max as $max
+       call_guard: {refused: ([$days[] | .call_guard.refused? // 0] | add // 0)},
+       denied: {calls: ([$days[] | .denied.calls? // 0] | add // 0)}, needs: (
+        [[$days[] | .denied.calls? // 0] | add // 0 | select(. > 0)
+          | "Context floor cut: \(.) calls named a denied tool, server or skill this week: fix the miss in a script or the fleet file."]
+        + [$t[0] | to_entries[] | select(.value.slice == null) | .key as $k | .value.max as $max
           | [$days[] | at($k) | select(type == "number" and . > $max)] as $over
           | select($over | length > 0)
           | "Scorecard: \($k) missed its target of \($max) on \($over | length) of \($days | length) days (worst \($over | max))."]
@@ -111,20 +115,10 @@ if [ ${#files[@]} -eq 0 ]; then
   [ -n "$thread" ] || thread=$(jq -r '.own_thread // empty' <<<"$doc")
   [ -n "$thread" ] || thread=${T3CODE_THREAD_ID:-}
   [ -n "$thread" ] || sa_tooling "no thread id: pass --thread, or run in the super agent's thread"
-  roots=()
-  for r in "${CLAUDE_CONFIG_DIR:-}" "$HOME"/.claude*; do [ -n "$r" ] && [ -d "$r/projects" ] && roots+=("$r/projects"); done
-  if [ ${#roots[@]} -gt 0 ]; then
-    while IFS= read -r f; do
-      case $f in */subagents/*) continue ;; esac
-      # A skill load is a user entry that opens on the line; a session that only
-      # quotes the line, in a command or its output, never loaded the skill.
-      grep -qF 'Base directory for this skill: ' "$f" && jq -enR 'first(inputs | fromjson? // empty
-        | select(type == "object" and .type == "user" and (.isSidechain | not)) | .message.content
-        | if type == "array" then .[]? | .text? else . end | strings
-        | select(test("^Base directory for this skill: \\S*/super-agent(\\s|$)"))) | true' "$f" >/dev/null 2>&1 \
-        && files+=("$f")
-    done < <(grep -rlF --include='*.jsonl' -- "$thread" "${roots[@]}" 2>/dev/null | sort -u)
-  fi
+  while IFS= read -r f; do
+    case $f in */subagents/*) continue ;; esac
+    sa_loaded_skill "$f" && files+=("$f")
+  done < <(sa_transcript_roots | while IFS= read -r root; do grep -rlF --include='*.jsonl' -- "$thread" "$root" 2>/dev/null; done | sort -u)
   [ ${#files[@]} -gt 0 ] || sa_tooling "no transcript for thread $thread: none under ~/.claude*/projects loaded the super-agent skill"
 fi
 for f in ${files[@]+"${files[@]}"}; do [ -r "$f" ] || sa_tooling "$f: cannot read"; done
@@ -135,6 +129,7 @@ patterns=$(jq -Rsr 'split("\n") | map(select(length > 0 and (startswith("#") | n
 [ ! -f "$ledger.archive.jsonl" ] || jq -s . "$ledger.archive.jsonl" >/dev/null 2>&1 || sa_tooling "$ledger.archive.jsonl: not JSON lines"
 
 source "$(dirname "${BASH_SOURCE[0]}")/scorecard.d/logs.sh" || sa_tooling "cannot source scorecard.d/logs.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/scorecard.d/floor.sh" || sa_tooling "cannot source scorecard.d/floor.sh"
 
 # One slim record per transcript entry, file by file in order, so a 30 MB
 # transcript is never held whole: a user entry's text (null for a tool result),
@@ -143,7 +138,7 @@ slim=$(for i in ${files[@]+"${!files[@]}"}; do
   jq -cR --argjson f "$i" 'fromjson? // empty | select(type == "object" and (.isSidechain | not))
     | if .type == "user" then (.message.content) as $c
       | {f: $f, ts: .timestamp, u: true, origin: (.origin.kind? // null),
-         skip: ((.isCompactSummary // false) or (.isMeta // false)),
+         skip: ((.isCompactSummary // false) or (.isMeta // false)), compact: (.isCompactSummary // false),
          text: (if ($c | type) == "string" then $c
            elif ($c | type) == "array" then (if any($c[]; .type? == "tool_result") then null
              else [$c[] | select(.type? == "text") | .text] | join(" ") end)
@@ -154,13 +149,14 @@ slim=$(for i in ${files[@]+"${!files[@]}"}; do
            cr: (.cache_read_input_tokens // 0), out: (.output_tokens // 0)}),
          texts: [$m.content[]? | select(.type == "text") | .text],
          tools: [$m.content[]? | select(.type == "tool_use")
-           | {name, id, cmd: (.input.command? // null), bg: (.input.run_in_background? // false)}]}
+           | {name, id, cmd: (.input.command? // null), bg: (.input.run_in_background? // false),
+              q: (.input.query? // null), sk: (.input.skill? // null)}]}
     else empty end' "${files[$i]}" || exit 1
 done | jq -sc .) || sa_tooling "cannot read the transcripts"
 
 row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')" \
-  --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" --argjson qlog "$qlog" --argjson cglog "$cglog" --argjson nlog "$nlog" \
-  --slurpfile led <(printf '%s\n' "$doc") --slurpfile archive <(cat "$ledger.archive.jsonl" 2>/dev/null) "$sa_jq_norm$sa_jq_open$sa_jq_changing"'
+  --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" --argjson qlog "$qlog" --argjson cglog "$cglog" --argjson nlog "$nlog" --argjson cut "$cut" \
+  --slurpfile led <(printf '%s\n' "$doc") --slurpfile archive <(cat "$ledger.archive.jsonl" 2>/dev/null) "$sa_jq_norm$sa_jq_open$sa_jq_changing$sa_jq_floor"'
   def wsum: reduce .[] as $t ({in: 0, cw: 0, cr: 0, out: 0}; .in += $t.in | .cw += $t.cw | .cr += $t.cr | .out += $t.out);
   def total: .in + .cw + .cr + .out;
   def weighted: .in + 2 * .cw + 0.1 * .cr + 5 * .out;
@@ -229,6 +225,9 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
     ([$ents[] | select((.launched_at | epoch) as $a | $a != null and $a < $d1)
       | select((ended | epoch) as $e | $e == null or $e >= $d0)] | length) as $open
   | ([$ents[] | select((ended | epoch) as $e | $e != null and $e >= $d0 and $e < $d1)] | length) as $settled
+  | ([$all | group_by(.f)[] | fresh_calls($day) | ctx] | median) as $fresh
+  | ([$all | group_by(.f)[] | compacted_calls($day) | ctx] | median) as $compacted
+  | (if $cut == null then null else {calls: [$calls[] | .tools[] | select(cut_call($cut))] | length} end) as $denied
   | ($wakes | map(.tok) | wsum) as $tok
   | ($wakes | map(select(.changed | not) | .tok) | wsum) as $nctok
   | def guard: {blocks: map(select(.event == "block" and (.at // "" | startswith($day)))) | length,
@@ -256,6 +255,8 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
    wakes: {count: ($wakes | length), per_open: ($wakes | length | per($open)),
      by_cause: ($wakes | group_by(.cause) | map({key: .[0].cause, value: length}) | from_entries),
      changed_nothing: ($wakes | map(select(.changed | not)) | length)},
+   floor: {fresh: $fresh, compacted: $compacted},
+   denied: $denied,
    tokens: {total: ($tok | total), weighted: ($tok | weighted | round), per_open: ($tok | weighted | per($open)),
      nothing_changed_share: (if ($tok | weighted) > 0 then (($nctok | weighted) / ($tok | weighted) * 100 | round) / 100 else null end)}}
   ' <<<"$slim") || sa_tooling "cannot count the row for $day"

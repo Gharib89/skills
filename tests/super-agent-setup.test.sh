@@ -125,7 +125,7 @@ check "probed facts are refreshed: cores, RAM, GPU" '{"cores":16,"ram_gb":64,"gp
 check "so is a provider's status" unavailable "$(jq -r .providers.agy.status <<<"$g")"
 check "and the account list" '[{"login":"alice","active":true}]' "$(jq -c .github_accounts <<<"$g")"
 check "the re-run probed the command the owner edited, not the default" \
-  "claude -p /usage" "$(grep '^claude ' "$SA_FAKE/calls" | tail -1)"
+  "claude -p /usage" "$(grep '^claude ' "$SA_FAKE/calls" | grep -v '^claude mcp list' | tail -1)"
 check "the owner's slot count stays" 2 "$(jq .machines.laptop.slots <<<"$g")"
 check "and the load threshold" 8 "$(jq .machines.laptop.max_load <<<"$g")"
 check "and the active repos" '["Gharib89/skills"]' "$(jq -c .active_repos <<<"$g")"

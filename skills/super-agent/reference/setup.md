@@ -4,6 +4,7 @@
 
 - [Steps](#steps)
 - [The guard hook](#the-guard-hook)
+- [The context floor cut](#the-context-floor-cut)
 - [Cursor and Grok](#cursor-and-grok)
 - [Fleet repo entries](#fleet-repo-entries)
 - [Fleet keys the owner sets](#fleet-keys-the-owner-sets)
@@ -121,6 +122,52 @@ when that file is no JSON object, so no entry could be checked. Each is also a
 missing hook or the wake timer: it adds the entry to the folder's file, or to
 the file `--settings` names, and prints the wake timer's unit files and enable
 line.
+
+## The context floor cut
+
+The same rewrite writes the folder's `.claude/settings.json`, the cut that
+lowers the pinned thread's **context floor** from 65.0k tokens (measured, with
+about 36k of it never used) to a target of 32k:
+
+- it denies `Artifact`, `Agent`, `Workflow`, `ListAgents` and
+  `ShareOnboardingGuide` (`AskUserQuestion` stays);
+- it excludes the global rules files, everything under `rules/` in the config
+  root the pinned thread runs under (`~/.claude` by default; the global
+  CLAUDE.md stays);
+- it switches off every skill but `super-agent`;
+- it denies every MCP server but `t3-code` and `smart-compact`.
+
+The skills come from the first request of the newest transcript that loaded this
+skill, the servers from `claude mcp list`. Each list keeps what the file already
+holds, so a skill or server added later is cut at the next rewrite and raises
+`floor.fresh` until then. A failed read (`claude mcp list`, or one with no
+`t3-code` server in it, the listing, a cut file or `skills.json` that is no JSON
+object) writes no cut and raises a need. When no listing, found or saved,
+names a skill to switch off, the rest of the cut is written and a need says to
+run `scripts/setup.sh --write` from the pinned thread.
+
+A task launch still names a skill: `scripts/skills.sh` prints each one with its
+one-line description, from the listing setup saved. A skill already switched
+off keeps the description it had when the cut took it out, since later listings
+no longer show it; the launch passes only the name, and the launched thread
+reads the skill as it is now.
+
+The cut is a **two-week trial** from the handover that first writes it. One
+command line undoes it, and the hooks stay, since they live in the other file:
+
+```sh
+d=${XDG_STATE_HOME:-$HOME/.local/state}/super-agent/home
+: > "$d/cut-off" && rm -f "$d/.claude/settings.json"
+```
+
+While `cut-off` exists, every rewrite deletes the cut instead of writing it;
+deleting `cut-off` restores it at the next rewrite. The scorecard counts, per
+day, every call or ToolSearch query that names a denied tool, a denied server or
+a switched-off skill (`denied.calls`; the review sums the week). A count above 0
+goes to the weekly review, which fixes the miss in a script or the fleet file;
+an item returns to the context only if neither can carry it. At two weeks the
+weekly review settles the trial: it keeps the cut when every miss was fixed that
+way and `floor.fresh` held near its target, and otherwise writes `cut-off`.
 
 ## Cursor and Grok
 

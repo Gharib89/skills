@@ -161,6 +161,7 @@ if [ "$n" = claude ] && [ "${1:-} ${2:-}" = "auth status" ]; then
   [ "$rc" = 0 ] && echo '{"loggedIn": true}' || echo '{"loggedIn": false}'
   exit "$rc"
 fi
+[ "$n" != claude ] || [ "${1:-} ${2:-}" != "mcp list" ] || { cat "$SA_FAKE/provider/claude-mcp.out" 2>/dev/null || printf 't3-code: t3 mcp - \342\234\224 Connected\n'; exit "$(cat "$SA_FAKE/provider/claude-mcp.rc" 2>/dev/null || echo 0)"; }
 [ -z "$d" ] || [ ! -f "$SA_FAKE/provider/$n@$d.out" ] || k=$n@$d
 cat "$SA_FAKE/provider/$k.out" 2>/dev/null
 exit "$(cat "$SA_FAKE/provider/$k.rc" 2>/dev/null || echo 0)"
@@ -244,6 +245,18 @@ sa_account() {
 
 # sa_claude_auth <config dir name> <exit code>: `claude auth status` for that account
 sa_claude_auth() { printf '%s\n' "$2" > "$SA_FAKE/provider/claude-auth@$1.rc"; }
+# sa_mcp_list <text> [<rc>]: what `claude mcp list` prints, and its exit (with
+# none set, one connected t3-code line)
+sa_mcp_list() { printf '%s\n' "$1" > "$SA_FAKE/provider/claude-mcp.out"; echo "${2:-0}" > "$SA_FAKE/provider/claude-mcp.rc"; }
+# sa_pinned_transcript <file> <names JSON array>: a transcript that loaded the
+# super-agent skill, its first request listing those skills, each described as
+# "<name> does a thing."
+sa_pinned_transcript() {
+  mkdir -p "$(dirname "$1")"
+  { jq -cn '{type: "user", message: {role: "user", content: "Base directory for this skill: /x/.claude/skills/super-agent"}}'
+    jq -cn --argjson n "$2" '{type: "attachment", attachment: {type: "skill_listing", isInitial: true, names: $n,
+      content: ([$n[] | "- \(.): \(.) does a thing."] | join("\n"))}}'; } > "$1"
+}
 
 # sa_instances <file> <id>:<driverKind>[:disabled|:unauth|:home=<path>]...: the saved
 # `orchestrator_capabilities` answer, in the shape measured on 2026-11-08: one row per

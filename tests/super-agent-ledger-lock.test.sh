@@ -138,10 +138,11 @@ check "and names the field" "$led: status is not an object with a merged_ack arr
 
 # --- no script writes the ledger but sa_update -----------------------------------
 # sa_write is the bare write; outside lib/ledger-io.sh it may name only the fleet and
-# quota files and the super agent folder's settings, never a ledger.
+# quota files and the super agent folder's settings (the hooks, the cut and its
+# skills.json), never a ledger.
 check "sa_write names no ledger outside sa_update" "" \
   "$(grep -rn 'sa_write' "$s" | grep -v "^$s/lib/ledger-io.sh:" | grep -v 'sa_write "\$fleet' | grep -v 'sa_write "\$fleet_file"' | grep -v 'sa_write "\$save"' \
-    | grep -v "^$s/lib/home.sh:.*(sa_write \"\\\$settings\"")"
+    | grep -vE "^$s/lib/home.sh:.*\(sa_write \"(\\\$settings|\\\$cut_file|\\\$\(sa_home_skills\))\"")"
 check "nothing redirects into a ledger" "" "$(grep -rnE '>>? *"\$(ledger|led|1)"' "$s")"
 
 finish

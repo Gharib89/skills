@@ -16,6 +16,8 @@ jq -n --arg f "$folder" '{projects: [{id: "p-other", workspaceRoot: "/repo"}, {i
 mkdir -p "$HOME/.claude/projects/p"
 jq -cn '{type: "user", timestamp: "2026-11-17T09:00:00Z", message: {role: "user",
   content: "Base directory for this skill: /x/.claude/skills/super-agent\nthread th-old"}}' > "$HOME/.claude/projects/p/s.jsonl"
+jq -cn '{type: "attachment", attachment: {type: "skill_listing", isInitial: true, names: ["super-agent", "tdd"],
+  content: "- super-agent: the super agent.\n- tdd: test-first."}}' >> "$HOME/.claude/projects/p/s.jsonl"
 
 loaded=$(sed -n 's/^  version: //p' "$s/../SKILL.md")
 src=skills/super-agent/SKILL.md

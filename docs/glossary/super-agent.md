@@ -139,5 +139,13 @@ A test that reproduces one dated super-agent incident from a hand-built fixture,
 _Avoid_: regression fixture, incident test
 
 **Super agent folder**:
-The folder the pinned super agent thread runs in, `super-agent/home` under `$XDG_STATE_HOME` (`~/.local/state` when unset), holding the generated `.claude/settings.local.json` that `setup.sh --write` and every daily handover rewrite. Its settings reach only that thread, so they carry the super agent's hooks, starting with the state guard. The owner creates its T3 project once.
+The folder the pinned super agent thread runs in, `super-agent/home` under `$XDG_STATE_HOME` (`~/.local/state` when unset), holding the generated `.claude/settings.local.json` and `.claude/settings.json` that `setup.sh --write` and every daily handover rewrite. Its settings reach only that thread, so they carry the super agent's hooks, starting with the state guard, and the cut that lowers its context floor. The owner creates its T3 project once.
 _Avoid_: super agent workspace, pinned folder
+
+**Context floor**:
+The context the pinned super agent thread's first call reads after a fresh start or after a compaction; every later call reads at least that much. The scorecard counts both (`floor.fresh`, `floor.compacted`), and the super agent folder's settings lower it.
+_Avoid_: baseline context
+
+**Context floor cut**:
+The super agent folder's `.claude/settings.json`: the tools, MCP servers, rules files and skills the pinned thread never uses, denied, excluded or switched off to lower its context floor. A two-week trial that `cut-off` in the folder turns off.
+_Avoid_: trim, slim settings

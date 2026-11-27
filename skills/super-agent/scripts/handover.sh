@@ -31,7 +31,9 @@
 #         (null when it failed, `error` saying why), `review` the weekly review's
 #         rows on the first handover of a week, else null, `review_error` why the
 #         review failed (also a Needs you line), else null, `home` the super agent
-#         folder (`stale` {settings, entries, unreadable} or null)
+#         folder (`stale` {settings, entries, unreadable} or null; `written`
+#         true only when the hooks and the context floor cut were both written,
+#         a cut not written, or one switching no skill off, a Needs you line)
 # exit: 0 the bearings written · 1 the refresh failed (the bearings still
 #       written, saying so) · 2 usage, an unreadable ledger or projects file, or
 #       a bearings file that could not be written
