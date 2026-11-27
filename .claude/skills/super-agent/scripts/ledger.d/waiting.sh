@@ -4,15 +4,18 @@
 # shellcheck disable=SC2154  # usage, ledger and the sa_jq_* helpers come from ledger.sh and _lib.sh
 
 ledger_waiting() {
-  local cmd=$1 key reason order after k row had
+  local cmd=$1 key reason order after k row had ask trepo skill tkeys
   shift
   case $cmd in
   wait)
     [ $# -ge 3 ] || sa_tooling "$usage"
-    key=$1; shift; reason='' order='' after=''
+    key=$1; shift; reason='' order='' after='' ask='' trepo='' skill=''
     while [ $# -gt 0 ]; do
       case $1 in
         --reason) sa_flag_value "$usage" "${2:-}"; reason=$2 ;;
+        --ask) sa_flag_value "$usage" "${2:-}"; ask=$2 ;;
+        --repo) sa_flag_value "$usage" "${2:-}"; trepo=$2 ;;
+        --skill) sa_flag_value "$usage" "${2:-}"; skill=$2 ;;
         --order) sa_flag_value "$usage" "${2:-}"; case $2 in ''|*[!0-9]*|??????????*) sa_tooling "$usage" ;; esac; order=$2 ;;
         --after) sa_flag_value "$usage" "${2:-}"; after=$2 ;;
         *) sa_tooling "$usage" ;;
@@ -20,7 +23,13 @@ ledger_waiting() {
       shift 2
     done
     [ -n "$reason" ] || sa_tooling "$usage"
-    for k in "$key" ${after:+"$after"}; do
+    # a task's row carries what relaunches it (`launch task`); a ticket's is read from its issue
+    case $key in
+      task:*) case ${key#task:} in ''|.*|*[!A-Za-z0-9._-]*) sa_tooling "$usage" ;; esac
+        [ -n "$ask" ] && [ -z "$after" ] || sa_tooling "$usage"; tkeys=() ;;
+      *) [ -z "$ask$trepo$skill" ] || sa_tooling "$usage"; tkeys=("$key") ;;
+    esac
+    for k in ${tkeys[@]+"${tkeys[@]}"} ${after:+"$after"}; do
       case $k in */*#*[0-9]) ;; *) sa_tooling "$usage" ;; esac
       case ${k##*#} in *[!0-9]*) sa_tooling "$usage" ;; esac
     done
@@ -30,10 +39,13 @@ ledger_waiting() {
     # A repeat keeps the first `since` (how long it has waited is the report's
     # point) and the order and blocker it is not given anew (placement rewrites
     # a row's reason and knows neither).
-    row=$(jq -cn --arg k "$key" --arg r "${key%#*}" --argjson n "${key##*#}" --arg why "$reason" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      --arg order "$order" --arg after "$after" \
+    row=$(jq -cn --arg k "$key" --arg why "$reason" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      --arg order "$order" --arg after "$after" --arg ask "$ask" --arg tr "$trepo" --arg skill "$skill" \
       --argjson old "$(jq -c --arg k "$key" "$sa_jq_norm"'(.waiting // []) | map(select((.key | norm_repo) == ($k | norm_repo))) | first // null' <<<"$doc")" \
-      '{key: $k, repo: $r, number: $n, reason: $why, since: ($old.since // $now),
+      '(if $k | startswith("task:") then {key: $k, repo: (if $tr == "" then null else $tr end), number: null, ask: $ask}
+          + (if $skill == "" then {} else {skill: $skill} end)
+        else {key: $k, repo: ($k | sub("#[^#]*$"; "")), number: ($k | sub("^.*#"; "") | tonumber)} end)
+        + {reason: $why, since: ($old.since // $now),
         order: (if $order != "" then ($order | tonumber) else $old.order end),
         after: (if $after != "" then $after else $old.after end)}')
     sa_update "$ledger" "$sa_jq_norm"'.waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))) + [$w])' --arg k "$key" --argjson w "$row"

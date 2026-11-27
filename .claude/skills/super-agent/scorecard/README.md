@@ -98,3 +98,12 @@ raises nothing. Otherwise it raises one row per live target a day of the
 week went over, and one per guard logged in each of the four weeks ending with
 that week and blocking nothing in them. A number with no target raises none,
 except `denied.calls`.
+
+One number is read at the weekly review rather than counted: **non-ticket asks
+done inline or mishandled**, baseline 7 (#1388), target 0. At the review, read
+the week's owner asks that were no ticket's, and count each one answered inline
+with new reading, a test or a change, or launched without `launch.sh task`
+([tasks](../reference/tasks.md)). `scorecard.sh` does not count it because
+telling a non-ticket ask apart, and an answer from the record apart from new
+work, is a judgment of the owner's words that no count over the transcript
+makes soundly; so it has no row path and no line in `targets.json`.

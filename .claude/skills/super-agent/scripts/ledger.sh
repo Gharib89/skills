@@ -27,6 +27,8 @@
 #   ledger --ledger <file> allowed
 #   ledger --ledger <file> scoped [--repo <owner/name>]
 #   ledger --ledger <file> wait <key> --reason <text> [--order <n>] [--after <key>]
+#   ledger --ledger <file> wait task:<slug> --reason <text> --ask <text> [--repo <owner/name>]
+#          [--skill <name>] [--order <n>]
 #   ledger --ledger <file> unwait <key>
 #   ledger --ledger <file> need <key> --action <text> --reason <word> --why <clause>
 #          (--option <label>[: <consequence>]... | --answer-in <thread link>)
@@ -81,7 +83,9 @@
 # which placement reads to run two tickets of one repo side by side. A ticket
 # that could not be placed is `wait`ed: a row in `waiting` (no thread, no
 # stage, never watched) that the morning report lists, and that `add` or
-# `unwait` removes. The waiting list is also the owner's queue: a row takes an
+# `unwait` removes. A one-off task nothing fits (`launch task`) waits as a `task:<slug>` row
+# carrying its `ask`, `repo` and `skill`, which `reconcile` lists ready on every pass for a
+# relaunch, and which takes no `--after`. The waiting list is also the owner's queue: a row takes an
 # `--order` (a whole number of up to 9 digits, lowest first, 0 allowed; rows with none follow the
 # ordered ones, oldest first) and an `--after <key>` blocker, another ticket that
 # must merge first, which `reconcile` reads into its `ready` rows. A repeat
@@ -91,11 +95,13 @@
 # A `task` entry (`--task <slug>`, kind `task`) is any other thread the super agent
 # launched (a grill, a deploy, a review): its key needs no issue number, `repo` and
 # `number` are null unless `--repo` is given (so a remote task's PR is found by its
-# `--branch`), and `reconcile` closes it on its thread's rest, never on an issue's or
-# a PR's state. `adopt` takes `add`'s flags and records a thread someone else launched
-# (`adopted` true, kind `task` unless `--repo` and `--number` name a ticket); the
-# watcher and `reconcile` treat it like a launched one. `--interactive` marks a task
-# whose skill waits on the owner by design (a grill): `reconcile` counts it no stall
+# `--branch`), and `reconcile` settles it on its thread's `Result:` last line, never on
+# an issue's or a PR's state. `adopt` takes `add`'s flags and records a thread someone
+# else launched (`adopted` true, kind `task` unless `--repo` and `--number` name a
+# ticket); the watcher and `reconcile` treat it like a launched one, and a new one-off
+# task entry it adopts answers `step_in`, the contract line (`sa_task_contract`) to send
+# into the thread once. `--interactive` marks a task whose skill waits on the owner by
+# design (a grill): `reconcile` counts it no stall
 # and does not settle it on its rest, so it leaves on `drop`.
 # `take` is the owner taking an open entry's thread ("I'll take <thread>"): the entry
 # is `owner_run` and its open needs are cleared. It keeps its stage, so it still takes
@@ -151,15 +157,15 @@
 # the row is open. `unlimit` clears it once a later run records that reviewer as
 # landed, or the owner says so.
 #
-# stdout: `add` {ledger, key, entry}, `adopt` also {existing: true} for a thread an entry already held
-#         and {claim} for a ship adoption; `get` the entry; `list` {ledger, entries,
+# stdout: `add` {ledger, key, entry}, `adopt` also {existing: true} for a thread an entry already held,
+#         {claim} for a ship adoption and {step_in} for a new one-off task; `get` the entry; `list` {ledger, entries,
 #         rulings}, `entries` an array of entries (`--open` leaves out settled
 #         and closed ones); `set` {key, field, value}; `rethread` {ledger, key, entry}; `ruling` {ruling:
 #         {date, text, allow, repo, expires, pinned}}; `pin` {pinned:
 #         [ruling]}; `migrate-rulings` {pinned: [{date, text}], lapsed: [{date,
 #         text}], moved: [{date, text, to}]}; `allowed` {allowed: [{date, call, line}]};
 #         `scoped` {scoped: [{date, text, repo}]}; `wait`
-#         {waiting: {key, repo, number, reason, since, order, after}}; `unwait` {key,
+#         {waiting: {key, repo, number, reason, since, order, after}}, a task's also {ask, skill}; `unwait` {key,
 #         removed}; `need` {need: {key, action, reason, class, why, options:
 #         [{label, consequence}], answer_in, since, alerted, reminded}}; `unneed` {key,
 #         removed}; `ack` {ack: {key, reason, stage, since}}; `answer` {key, action,
@@ -182,7 +188,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | adopt (--read <t3_thread_read file> | --thread <id>) [--repo <owner/name>] [--number <n>] [--worktree <path>] [--branch <name>] [--kind ship|triage] [--task <slug>] [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | add --launching <the add flags, less --thread and --worktree> | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | unwait <key> | need <key> --action <text> --reason <word> --why <clause> (--option <label>[: <consequence>]... | --answer-in <thread link>) | unneed <key> | ack <key> --reason <word> | answer <reply> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | take <key> | tell <key or thread id> | drop <key> | reset-stalls <key> | self [<thread id>]'
+usage='usage: ledger --ledger <file> add (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | adopt (--read <t3_thread_read file> | --thread <id>) [--repo <owner/name>] [--number <n>] [--worktree <path>] [--branch <name>] [--kind ship|triage] [--task <slug>] [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | add --launching <the add flags, less --thread and --worktree> | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | wait task:<slug> --reason <text> --ask <text> [--repo <owner/name>] [--skill <name>] [--order <n>] | unwait <key> | need <key> --action <text> --reason <word> --why <clause> (--option <label>[: <consequence>]... | --answer-in <thread link>) | unneed <key> | ack <key> --reason <word> | answer <reply> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | take <key> | tell <key or thread id> | drop <key> | reset-stalls <key> | self [<thread id>]'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2

@@ -16,7 +16,9 @@ thread's provider instance, read once per session from `t3 thread show
 $T3CODE_THREAD_ID --json` (`.thread.providerInstanceId`); without it the block
 has no `Super agent on` line. The block opens with the **needs-you message**,
 every open [need](#a-need) printed in full, then after a blank line the rows
-`Merged`, `Running`, `Yours`, `Waiting` and `Reviewer limit`, one line each;
+`Merged`, `Finished`, `Running`, `Yours`, `Waiting` and `Reviewer limit`, one
+line each; `Finished` lists each task settled on its `Result:` line as
+`task:<slug>: <result>`, the result's own link the link to what it produced;
 each ticket is a link, and a `Running` ticket names the provider instance it
 launched on and ends `(you spoke last)` when the owner's message is the newest
 from outside its thread. `Yours` lists the entries the owner took ("I'll take"),
@@ -39,9 +41,10 @@ way. Every `status` answer:
 - `block` holds the needs-you message when the needs changed or one is raised,
   then only the rows that changed since the last posted block, a row that
   emptied reading `<row>: none` (needs that emptied, `Nothing needs you now.`),
-  and `Merged` lists only the merges since that block. Post it as printed, in
-  chat. Empty: post nothing, no prose either. A merge, a launch, a change to the
-  waiting list and every need reach the owner this way.
+  and `Merged` and `Finished` list only what ended since that block. Post it
+  as printed, in chat. Empty: post nothing, no prose either. A merge, a
+  launch, a change to the waiting list and every need reach the owner this
+  way.
 - `raised` lists the needs this block alerts: a need not alerted before, and a
   blocking need's one reminder. Nothing to do with it; the block carries them.
   A need you record after this wake's reconcile is in no block yet: run
@@ -174,8 +177,8 @@ skip this section.
 ## The digest
 
 `status.sh --ledger <ledger> --digest` prints every row whatever changed, and
-counts every `Merged` ticket as listed, as any posted block does, so the next
-block leaves them out.
+counts every `Merged` ticket and `Finished` task as listed, as any posted block
+does, so the next block leaves them out.
 Run it on the owner's "status", at the morning report and on the wake where
 `ledger.sh list` shows `waiting` empty after the last block's `Waiting` row.
 Give detail about one ticket only when the owner asks about it.

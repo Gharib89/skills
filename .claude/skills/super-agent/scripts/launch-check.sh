@@ -12,7 +12,7 @@
 # where the machine is, since this script measures nothing. --own names the
 # machine the ledger is on (`hostname` when omitted), where an entry added with
 # the default machine `local` counts. A machine's slots in use are the open
-# ledger entries on it. Its ceiling is its `slots` less its `reserve`, the slots
+# ledger entries on it, bar an interactive task's, which waits on the owner. Its ceiling is its `slots` less its `reserve`, the slots
 # kept for the owner's messages (setup proposes 1 for the super agent's own
 # machine). The load limit is the machine's `max_load` (its cores when unset),
 # the RAM floor the fleet file's `thread_ram_floor_gb` (4 when unset); load must
@@ -78,7 +78,7 @@ out=$(jq -c --slurpfile fleet "$fleet" --arg m "$machine" --arg own "$own" --arg
     | $x == $y or ($x | startswith($y + "/")) or ($y | startswith($x + "/"));
   . as $doc | $fleet[0] as $f | $f.machines[$m] as $mm
   | [$doc.entries[] | select(is_open) | select((.key | norm_repo) != ($key | norm_repo))] as $open
-  | ([$open[] | select(.machine == $m or (.machine == "local" and $m == $own))] | length) as $used
+  | ([$open[] | select(.interactive != true and (.machine == $m or (.machine == "local" and $m == $own)))] | length) as $used
   | (($mm.slots // 1) - ($mm.reserve // 0)) as $ceiling
   | ($mm.max_load // $mm.cores // 0) as $limit
   | ($f.thread_ram_floor_gb // 4) as $floor

@@ -23,7 +23,9 @@ triage). A first message that is neither, with no `--task` or `--number`, is
 refused. The first reconcile finds the PR by the branch. Adoption starts the
 clock (`launched_at`, `held_since`) and posts the claim for a ship thread.
 
-`adopt` is the launched thread's record step. Then reconcile once (it takes the
+`adopt` is the launched thread's record step. When its answer holds `step_in` (a
+new one-off task thread), send it once with `t3_thread_send`, the [adoption
+step-in](tasks.md#an-adopted-task-thread). Then reconcile once (it takes the
 baseline the watcher compares against) and start the watcher, as steps 5 and 3
 of the loop say. A thread the ledger already holds stays one entry: when it was
 owner-run it stops being owner-run, and its owner-steered mark and need are
