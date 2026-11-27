@@ -48,11 +48,11 @@ rm "$H/cut-off"
 sa_mcp_list "" 1
 out=$(S --write --name laptop 2>/dev/null)
 check "a failed claude mcp list writes no cut, and raises a need" "false false 1" \
-  "$(jq -r .home.written <<<"$out") $([ -f "$cut" ] && echo true || echo false) $(jq '[.home.needs[] | select(test("not all written"))] | length' <<<"$out")"
-sa_mcp_list "t3-code: t3 mcp - \xe2\x9c\x94 Connected"
+  "$(jq -r .home.written <<<"$out") $([ -f "$cut" ] && echo true || echo false) $(jq '[.home.needs[] | select(test("cut was not written \\(claude mcp list failed"))] | length' <<<"$out")"
+sa_mcp_list $'t3-code: t3 mcp - \xe2\x9c\x94 Connected'
 echo '[]' > "$cut"
 out=$(S --write --name laptop 2>/dev/null)
 check "a cut file that is no JSON object is left as it is, and raises a need" "false [] 1" \
-  "$(jq -r .home.written <<<"$out") $(jq -c . "$cut") $(jq '[.home.needs[] | select(test("not all written"))] | length' <<<"$out")"
+  "$(jq -r .home.written <<<"$out") $(jq -c . "$cut") $(jq '[.home.needs[] | select(test("cut was not written \\(.*settings.json: not a JSON object"))] | length' <<<"$out")"
 
 finish
