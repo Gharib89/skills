@@ -39,12 +39,14 @@ week, runs the weekly review, whose rows join the bearings file's Needs you.
 - **Context floor**: `floor.fresh` is the median context (input, cache write
   and cache read) of the first call of each transcript whose first call fell
   that day; `floor.compacted` the median of the first call after each
-  compaction summary. `null` with none that day.
-- **Cut calls**: `denied.calls` counts the day's calls that name what the
-  super agent folder's `.claude/settings.json` cut: a denied tool or a tool of
-  a denied server, a `Skill` call for a switched-off skill, or a `ToolSearch`
-  query with any of them as a whole term. `null` when the folder holds no such
-  file. The review sums the week's count; it has no target during the trial
+  compaction summary. `null` with none that day. Baselines before the cut:
+  65.0k fresh, 76.4k after a compaction; `floor.fresh` targets 32k,
+  and the 42k `floor.compacted` target belongs to the wake command slice.
+- **Cut calls**: `denied.calls` counts the day's calls that name what the super
+  agent folder's `.claude/settings.json` cut: a denied tool or a tool of a
+  denied server, a `Skill` call for a switched-off skill, or a `ToolSearch`
+  query naming one in full as one of its terms. `null` when the folder holds no
+  such file. The review sums the week's count; it has no target during the trial
   ([setup](../reference/setup.md#the-context-floor-cut)).
 - **Needs**: `recorded` counts `ledger.sh need` calls in the transcript.
   `alerted` counts the day's `alert` lines in `needs-alerts.jsonl`, the log

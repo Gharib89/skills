@@ -143,5 +143,9 @@ The folder the pinned super agent thread runs in, `super-agent/home` under `$XDG
 _Avoid_: super agent workspace, pinned folder
 
 **Context floor**:
-The context the pinned super agent thread's first call reads after a fresh start or after a compaction; every later call reads at least that much. The scorecard counts both, and the super agent folder's settings lower it.
-_Avoid_: floor, baseline context
+The context the pinned super agent thread's first call reads after a fresh start or after a compaction; every later call reads at least that much. The scorecard counts both (`floor.fresh`, `floor.compacted`), and the super agent folder's settings lower it.
+_Avoid_: baseline context
+
+**Context floor cut**:
+The super agent folder's `.claude/settings.json`: the tools, MCP servers, rules files and skills the pinned thread never uses, denied, excluded or switched off to lower its context floor. A two-week trial that `cut-off` in the folder turns off.
+_Avoid_: trim, slim settings

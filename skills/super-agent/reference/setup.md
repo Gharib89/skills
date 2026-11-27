@@ -126,27 +126,41 @@ line.
 ## The context floor cut
 
 The same rewrite writes the folder's `.claude/settings.json`, the cut that
-lowers the pinned thread's **context floor** from 65.0k tokens to about 32k
-(#1372): it denies `Artifact`, `Agent`, `Workflow`, `ListAgents` and
-`ShareOnboardingGuide` (`AskUserQuestion` stays), excludes the global rules
-files (`~/.claude/rules/*.md`; the global CLAUDE.md stays), switches off every
-skill but `super-agent`, and denies every MCP server but `t3-code` and
-`smart-compact`. The skills come from the first request of the newest
-transcript that loaded this skill, the servers from `claude mcp list`, and each
-list keeps what the file already holds, so a skill or server added later is cut
-at the next rewrite and shows as a rise in the scorecard's floor until then.
+lowers the pinned thread's **context floor** from 65.0k tokens (measured, with
+about 36k of it never used) to a target of 32k:
+
+- it denies `Artifact`, `Agent`, `Workflow`, `ListAgents` and
+  `ShareOnboardingGuide` (`AskUserQuestion` stays);
+- it excludes the global rules files, `~/.claude/rules/*.md` (the global
+  CLAUDE.md stays);
+- it switches off every skill but `super-agent`;
+- it denies every MCP server but `t3-code` and `smart-compact`.
+
+The skills come from the first request of the newest transcript that loaded
+this skill, the servers from `claude mcp list`. Each list keeps what the file
+already holds, so a skill or server added later is cut at the next rewrite and
+raises `floor.fresh` until then. A failed read (`claude mcp list`, the
+listing, a cut file that is no JSON object) writes no cut and raises a need.
 
 A task launch still names a skill: `scripts/skills.sh` prints each one with its
 one-line description, from the listing setup saved.
 
 The cut is a **two-week trial** from the handover that first writes it. One
-command undoes it, `rm ~/.local/state/super-agent/home/.claude/settings.json`
-(under `$XDG_STATE_HOME` when set), and the hooks stay, since they live in the
-other file; the next rewrite writes it again. The scorecard counts, per day,
-every call or ToolSearch query that names a denied tool, a denied server or a
-switched-off skill (`denied.calls`; the review sums the week). A count above 0
+command line undoes it, and the hooks stay, since they live in the other file:
+
+```sh
+d=${XDG_STATE_HOME:-$HOME/.local/state}/super-agent/home
+: > "$d/cut-off" && rm -f "$d/.claude/settings.json"
+```
+
+While `cut-off` exists, every rewrite deletes the cut instead of writing it;
+deleting `cut-off` restores it at the next rewrite. The scorecard counts, per
+day, every call or ToolSearch query that names a denied tool, a denied server or
+a switched-off skill (`denied.calls`; the review sums the week). A count above 0
 goes to the weekly review, which fixes the miss in a script or the fleet file;
-an item returns to the context only if neither can carry it.
+an item returns to the context only if neither can carry it. At two weeks the
+weekly review settles the trial: it keeps the cut when every miss was fixed that
+way and `floor.fresh` held near its target, and otherwise writes `cut-off`.
 
 ## Cursor and Grok
 

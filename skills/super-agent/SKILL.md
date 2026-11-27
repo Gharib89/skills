@@ -94,9 +94,8 @@ dotfiles) is launched as a `task:<slug>` thread, never done inline; only an
 asked machine check runs inline. A thread that is no ticket's (a grill, a
 deploy, decks, a review: anything the owner asks you to launch) skips
 `launch.sh`'s claim, route and place, and takes `t3_thread_launch` directly,
-naming its skill from `scripts/skills.sh`;
-step 2 then
-records it with `launch.sh record --ledger <ledger> --task <slug> --thread <id>`
+naming its skill from `scripts/skills.sh`; step 2 then records it with
+`launch.sh record --ledger <ledger> --task <slug> --thread <id>`
 (`--branch` and `--repo` when it opens a PR you should wake on; on a linked
 machine `--machine <key>` with `--environment`, and `--worktree`). A thread the
 owner asks you to watch that you did not launch is adopted in place of steps 1
@@ -277,9 +276,9 @@ The owner reads one thing: the **status block**, posted as printed
 ([status-block](reference/status-block.md#every-wake)), never a question
 dialog. Record each escalation as
 [a need](reference/status-block.md#a-need), the permission hold and the stall
-at 3 included, and post its block at once. On the owner's answer, do that
-option, record it as a [ruling](reference/status-block.md#a-ruling) and
-`unneed` the key. A
+at 3 included, and post its block at once. Read the owner's answer with
+`ledger.sh --ledger <ledger> answer '<reply>'`, do that option, record it as a
+[ruling](reference/status-block.md#a-ruling) and `unneed` the key. A
 reviewer's usage-limit notice is no escalation: record it as
 [a reviewer usage limit](reference/status-block.md#a-reviewer-usage-limit).
 

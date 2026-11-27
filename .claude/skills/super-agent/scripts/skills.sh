@@ -6,7 +6,7 @@
 #
 #   skills
 #
-# stdout: one `<name>: <description>` line per skill, sorted by name
+# stdout: {skills: [{name, description}]}, sorted by name
 # exit: 0 printed · 2 usage, or no listing saved yet (run scripts/setup.sh --write)
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
@@ -16,4 +16,4 @@ sa_help "$usage" "$@"
 f=$(sa_home_skills)
 jq -e 'type == "object" and length > 0' "$f" >/dev/null 2>&1 \
   || sa_tooling "$f: no skill listing saved yet: run scripts/setup.sh --write"
-jq -r 'to_entries | sort_by(.key)[] | "\(.key): \(.value)"' "$f"
+jq -c '{skills: [to_entries | sort_by(.key)[] | {name: .key, description: .value}]}' "$f"

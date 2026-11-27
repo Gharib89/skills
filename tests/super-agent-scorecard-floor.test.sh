@@ -26,7 +26,7 @@ tool() { jq -cn --arg n "$1" --argjson i "${2:-{\}}" '{type: "tool_use", id: "t"
   a "${day}T10:00:09Z" m2 61000 "$(tool ToolSearch '{"query":"select:mcp__claude_ai_Exa__web_search_exa,mcp__t3-code__t3_thread_read"}')"
   u "${day}T12:00:00Z" "summary" true; a "${day}T12:00:05Z" m3 70000 "$(tool Skill '{"skill":"tdd"}')"
   a "${day}T12:00:09Z" m4 71000 "$(tool mcp__claude_ai_Exa__web_fetch_exa)" "$(tool ToolSearch '{"query":"+slack tdd-helper"}')"
-  u "${day}T14:00:00Z" "summary" true; a "${day}T14:00:05Z" m5 80000 "$(tool Bash '{"command":"ls"}')"
+  u "${day}T14:00:00Z" "summary" true; a "${day}T14:00:05Z" m5 80000 "$(tool Bash '{"command":"ls"}')" "$(tool ToolSearch '{"query":"\"Agent\""}')"
 } > "$tmp/a.jsonl"
 { u "${day}T16:00:00Z" "start"; a "${day}T16:00:05Z" m6 30000; } > "$tmp/b.jsonl"
 
@@ -39,10 +39,10 @@ mkdir -p "$XDG_STATE_HOME/super-agent/home/.claude"
 jq -n '{permissions: {deny: ["Artifact", "Agent", "mcp__claude_ai_Exa"]}, skillOverrides: {tdd: "off"}}' \
   > "$XDG_STATE_HOME/super-agent/home/.claude/settings.json"
 out=$(R --day "$day" --transcript "$tmp/a.jsonl" --transcript "$tmp/b.jsonl")
-check "a denied tool, a denied server's tool, a switched-off skill and a ToolSearch naming one each count, a near name does not" \
-  '{"calls":4}' "$(jq -c .row.denied <<<"$out")"
+check "a denied tool, a denied server's tool, a switched-off skill and a ToolSearch naming one, quoted or not, each count, a near name does not" \
+  '{"calls":5}' "$(jq -c .row.denied <<<"$out")"
 for d in 17 18 20 21 22 23; do R --day "2026-11-$d" --transcript "$tmp/a.jsonl" >/dev/null; done
-check "the review sums the week's count" 4 \
+check "the review sums the week's count" 5 \
   "$(bash "$s/scorecard.sh" review --ledger "$led" --week 2026-11-17 | jq .denied.calls)"
 
 finish

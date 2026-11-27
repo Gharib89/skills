@@ -13,7 +13,8 @@ cut=null
 # `compacted_calls($day)` the first call after each compaction summary on the day.
 # `cut_call($cut)` over a tool call: true when it names what the cut took out, a
 # denied tool or a tool of a denied server, a switched-off skill, or a ToolSearch
-# query with any of them as a whole term.
+# query naming any of them in full as one of its terms (quotes and the
+# `select:` and `+` prefixes stripped).
 sa_jq_floor='
   def ctx: .use.in + .use.cw + .use.cr;
   def fresh_calls($day): first(.[] | select(.u | not)) | select(.ts // "" | startswith($day));
@@ -25,6 +26,6 @@ sa_jq_floor='
     | [$cut.skillOverrides // {} | objects | to_entries[] | select(.value == "off") | .key] as $off
     | def cut_name: . as $n | any($deny[]; . == $n) or any($srv[]; . as $p | $n | startswith($p + "__"));
     if .name == "Skill" then (.sk // "") as $k | any($off[]; . == $k)
-    elif .name == "ToolSearch" then any(.q // "" | strings | splits("[\\s,]+") | sub("^(select:|\\+)"; "") | select(length > 0);
+    elif .name == "ToolSearch" then any(.q // "" | strings | splits("[\\s,]+") | gsub("^(select:|\\+)|[\"\u0027]"; "") | select(length > 0);
       cut_name or (. as $k | any($off[]; . == $k)))
     else .name | cut_name end;'

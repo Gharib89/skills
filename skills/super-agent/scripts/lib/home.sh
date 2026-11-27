@@ -10,6 +10,9 @@ sa_home_settings() { printf '%s/.claude/settings.local.json' "$(sa_home_dir)"; }
 sa_home_cut_settings() { printf '%s/.claude/settings.json' "$(sa_home_dir)"; }
 # The listing the cut was read from, {name: one-line description}, for `skills.sh`.
 sa_home_skills() { printf '%s/skills.json' "$(sa_home_dir)"; }
+# The trial's off switch: while this file exists, a rewrite deletes the cut's file
+# instead of writing it.
+sa_home_cut_off() { printf '%s/cut-off' "$(sa_home_dir)"; }
 
 # sa_transcript_roots: one `projects` folder per line, under $CLAUDE_CONFIG_DIR
 # and every `~/.claude*`, where Claude Code keeps its transcripts.
@@ -28,37 +31,37 @@ sa_loaded_skill() {
 }
 
 # sa_home_cut <cut file>: the cut's settings, which take about 36k tokens off the
-# pinned thread's context floor (#1372): the five tools it never needs denied, the
-# global rules files excluded (the global CLAUDE.md stays), every skill but
+# pinned thread's context floor (measured): the five tools it never needs denied,
+# the global rules files excluded (the global CLAUDE.md stays), every skill but
 # super-agent switched off and every MCP server but T3 and smart-compact denied.
 # Skills come from the first request of the newest transcript that loaded this
 # skill (built-in and account skills are not on disk), servers from `claude mcp
 # list` run in the folder; neither lists `claude-in-chrome`, which is built in.
 # Each list keeps what the file already holds: after the cut, the pinned thread's
-# own listing names only the skills left on. Writes the listing to `skills.json`.
+# own listing names only the skills left on. Also writes the listing to
+# `skills.json`. Exits 1, its reason on stderr, when the cut file is no JSON
+# object or a read fails (`claude mcp list`, the transcript's listing).
 sa_home_cut() {
-  local prev listing='{}' saved='{}' t='' f mcp root roots=()
-  prev=$(jq -c 'if type == "object" then . else {} end' "$1" 2>/dev/null) || prev='{}'
-  [ -n "$prev" ] || prev='{}'
-  mapfile -t roots < <(sa_transcript_roots)
-  if [ ${#roots[@]} -gt 0 ]; then
-    while IFS= read -r f; do sa_loaded_skill "$f" && { t=$f; break; }; done \
-      < <(for root in "${roots[@]}"; do find "$root" -name '*.jsonl' -not -path '*/subagents/*' -printf '%T@ %p\n' 2>/dev/null; done | sort -rn | cut -d' ' -f2-)
+  local prev='{}' listing='{}' saved='{}' t='' f mcp
+  if [ -f "$1" ]; then
+    prev=$(jq -ce 'objects' "$1" 2>/dev/null) || { echo "$1: not a JSON object" >&2; return 1; }
   fi
-  [ -z "$t" ] || listing=$(jq -cnR 'first(inputs | fromjson? // empty | select(type == "object" and .type == "attachment"
-      and .attachment.type? == "skill_listing") | .attachment) // {names: [], content: ""}
-    | (.content | strings | split("\n")) as $l
-    | [.names[]? | strings as $n | {key: $n, value: (first($l[] | select(startswith("- \($n): ")) | .[($n | length) + 4:]) // "")}]
-    | from_entries' "$t" 2>/dev/null) || listing='{}'
-  saved=$(jq -c 'if type == "object" then . else {} end' "$(sa_home_skills)" 2>/dev/null) || saved='{}'
-  [ -n "$saved" ] || saved='{}'
+  while IFS= read -r f; do sa_loaded_skill "$f" && { t=$f; break; }; done \
+    < <(sa_transcript_roots | while IFS= read -r root; do find "$root" -name '*.jsonl' -not -path '*/subagents/*' -printf '%T@ %p\n' 2>/dev/null; done | sort -rn | cut -d' ' -f2-)
+  if [ -n "$t" ]; then
+    listing=$(jq -cnR 'first(inputs | fromjson? // empty | select(type == "object" and .type == "attachment"
+        and .attachment.type? == "skill_listing") | .attachment) // {names: [], content: ""}
+      | (.content | strings | split("\n")) as $l
+      | [.names[]? | strings as $n | {key: $n, value: (first($l[] | select(startswith("- \($n): ")) | .[($n | length) + 4:]) // "")}]
+      | from_entries' "$t" 2>/dev/null) || { echo "$t: its skill listing cannot be read" >&2; return 1; }
+  fi
+  [ ! -f "$(sa_home_skills)" ] || saved=$(jq -ce 'objects' "$(sa_home_skills)" 2>/dev/null) || saved='{}'
   saved=$(jq -cn --argjson s "$saved" --argjson l "$listing" '$s + $l | del(.["super-agent"])')
-  (sa_write "$(sa_home_skills)" "$saved") >/dev/null
-  mkdir -p "$(sa_home_dir)" 2>/dev/null
-  mcp=$(cd "$(sa_home_dir)" 2>/dev/null && timeout 60 claude mcp list 2>/dev/null </dev/null)
+  (sa_write "$(sa_home_skills)" "$saved") >/dev/null || return 1
+  mcp=$(cd "$(sa_home_dir)" && timeout 60 claude mcp list 2>/dev/null </dev/null) || { echo "claude mcp list failed or timed out in $(sa_home_dir)" >&2; return 1; }
   jq -cn --argjson p "$prev" --argjson s "$saved" --arg rules "$HOME/.claude/rules/*.md" --arg mcp "$mcp" '
     def server: "mcp__" + gsub("[^A-Za-z0-9_-]"; "_");
-    ([$mcp | split("\n")[] | capture("^(?<n>.+?): .* - [\u2714\u2718!]").n | server]
+    ([$mcp | split("\n")[] | capture("^(?<n>[^ ].*?): .* - [\u2714\u2718!]").n | server]
       - (["t3-code", "smart-compact"] | map(server))) as $servers
     | {permissions: {deny: (["Agent", "Artifact", "ListAgents", "ShareOnboardingGuide", "Workflow", "mcp__claude-in-chrome"]
         + $servers + [$p.permissions.deny[]? | strings] | unique)},
@@ -147,7 +150,8 @@ sa_guard_stale() {
 # project_id, needs}. With write true the generated settings are rewritten whole (every hook
 # the super agent owns: the state guard, the call guard, the watch guard, the question flag
 # and the observe hook), so a run reproduces the same file and a hand edit there is lost;
-# then the cut's file (sa_home_cut), and `written` is true only when both were written.
+# then the cut's file (sa_home_cut; deleted instead while the folder holds `cut-off`),
+# and `written` is true only when both were written.
 # `guard`, `call_guard`, `watch_guard`, `question_flag` and `observe` say whether the file
 # holds this copy's entry for each. The projects file is
 # every `projects` row of `t3_project_list` (its answer, or the rows of all its pages
@@ -157,14 +161,16 @@ sa_guard_stale() {
 # stale or unreadable user-settings entry, a missing project.
 # shellcheck disable=SC2034  # home is read by the scripts that call it
 sa_home() {
-  local dir settings entry wentry qentry oentry centry written=false has whas qhas ohas chas stale pid=null needs='[]'
+  local dir settings entry wentry qentry oentry centry cut written=false has whas qhas ohas chas stale pid=null needs='[]'
   dir=$(sa_home_dir) settings=$(sa_home_settings) entry=$(sa_guard_entry) wentry=$(sa_watch_guard_entry)
   qentry=$(sa_question_flag_entry) oentry=$(sa_observe_entry) centry=$(sa_call_guard_entry)
   # The bare write exits on a failure, so it runs in a subshell: a failure is a need,
   # its reason left on stderr.
   if [ "$1" = true ] && (sa_write "$settings" "$(jq -cn --argjson e "$entry" --argjson w "$wentry" --argjson q "$qentry" --argjson o "$oentry" --argjson c "$centry" \
     '{hooks: {PreToolUse: [$e, $o, $c], UserPromptSubmit: [$q], Stop: [$w]}}')") >/dev/null \
-    && (sa_write "$(sa_home_cut_settings)" "$(sa_home_cut "$(sa_home_cut_settings)")") >/dev/null; then written=true; fi
+    && if [ -f "$(sa_home_cut_off)" ]; then rm -f "$(sa_home_cut_settings)"
+       else cut=$(sa_home_cut "$(sa_home_cut_settings)") && (sa_write "$(sa_home_cut_settings)" "$cut") >/dev/null; fi; then written=true; fi
+  [ "$1" != true ] || [ "$written" = true ] || needs='["Super agent folder: its generated settings were not all written (the reason is on stderr): fix that, then run scripts/setup.sh --write"]'
   has=$(jq --argjson e "$entry" "$sa_jq_hook_has"'hook_has("PreToolUse"; $e)' "$settings" 2>/dev/null) || has=false
   whas=$(jq --argjson e "$wentry" "$sa_jq_hook_has"'hook_has("Stop"; $e)' "$settings" 2>/dev/null) || whas=false
   qhas=$(jq --argjson e "$qentry" "$sa_jq_hook_has"'hook_has("UserPromptSubmit"; $e)' "$settings" 2>/dev/null) || qhas=false

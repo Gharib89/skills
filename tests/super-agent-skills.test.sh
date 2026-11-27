@@ -19,13 +19,13 @@ check "and names the setup line that saves one" "1" "$(K 2>/dev/null | jq -r .er
 sa_pinned_transcript "$HOME/.claude/projects/p/pinned.jsonl" '["code-review", "eli5:eli5", "super-agent"]'
 S --write --name laptop >/dev/null
 check "it prints each skill a task can name with its one-line description" \
-  "code-review: code-review does a thing.
-eli5:eli5: eli5:eli5 does a thing." "$(K)"
+  '[{"name":"code-review","description":"code-review does a thing."},{"name":"eli5:eli5","description":"eli5:eli5 does a thing."}]' \
+  "$(K | jq -c .skills)"
 
 sa_pinned_transcript "$HOME/.claude/projects/p/pinned.jsonl" '["super-agent", "new-skill"]'
 S --write --name laptop >/dev/null
 check "a listing after the cut keeps the skills already off, and adds a new one" \
   '{"code-review":"off","eli5:eli5":"off","new-skill":"off"}' "$(jq -c .skillOverrides "$hc")"
-check "and the names script still lists them all" "code-review eli5:eli5 new-skill" "$(K | sed 's/: .*//' | tr '\n' ' ' | sed 's/ $//')"
+check "and the names script still lists them all" "code-review eli5:eli5 new-skill" "$(K | jq -r '[.skills[].name] | join(" ")')"
 
 finish

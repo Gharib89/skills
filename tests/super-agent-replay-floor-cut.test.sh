@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
-# Replay case (new, script only, #1385): the pinned thread's fresh context floor
-# was 65,008 tokens, about 36k of it tool definitions, rules files, skills and MCP
-# servers it never used (#1370, #1372). From a fixture first request that lists
-# skills and a fixture `claude mcp list`, `setup.sh --write` writes the super agent
-# folder's settings with the cut: the five tools and every server but T3 and
-# smart-compact denied, the global rules files excluded and every skill but
-# super-agent switched off. Red on v0.48.0's scripts, whose settings hold hooks only.
+# Replay: every pinned thread started at a context floor of 65,008 tokens, about
+# 36k of it tool definitions, rules files, skills and MCP servers it never used
+# (24 Nov, issues #1370 and #1372; over 6,564 calls in six pinned transcripts the
+# only skill invoked was super-agent and no server but T3 and smart-compact was
+# called). The incident version is v0.48.0's scripts, whose folder settings hold
+# hooks only. The fixture is hand-built: a first request that lists skills and a
+# `claude mcp list` answer (tests/super-agent-fake.sh). Fixed: `setup.sh --write`
+# writes the folder's `.claude/settings.json` with the cut, the five tools and
+# every server but T3 and smart-compact denied, the global rules files excluded
+# and every skill but super-agent switched off; the trial's off switch deletes it,
+# and a failed read writes no cut and raises a need.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/super-agent-setup-lib.sh
@@ -18,16 +22,37 @@ sa_pinned_transcript "$HOME/.claude/projects/p/pinned.jsonl" '["code-review", "e
 sa_mcp_list $'Checking MCP server health\xe2\x80\xa6\n\nclaude.ai Exa: https://mcp.example/exa - \xe2\x9c\x94 Connected
 plugin:playwright:playwright: npx @playwright/mcp@latest - \xe2\x9c\x94 Connected
 t3-code: t3 mcp - \xe2\x9c\x94 Connected
+claude.ai Slack: https://mcp.example/slack - ! Needs authentication
+  indented: not a server - \xe2\x9c\x94 Connected
+note: no status here
 smart-compact: node compact.js - \xe2\x9c\x98 Failed to connect'
 
 S --write --name laptop >/dev/null
-check "the five tools and every server but T3 and smart-compact are denied" \
-  '["Agent","Artifact","ListAgents","ShareOnboardingGuide","Workflow","mcp__claude-in-chrome","mcp__claude_ai_Exa","mcp__plugin_playwright_playwright"]' \
+check "the five tools and every server but T3 (an indented or status-less line is none) and smart-compact are denied" \
+  '["Agent","Artifact","ListAgents","ShareOnboardingGuide","Workflow","mcp__claude-in-chrome","mcp__claude_ai_Exa","mcp__claude_ai_Slack","mcp__plugin_playwright_playwright"]' \
   "$(jq -c '.permissions.deny | sort' "$cut")"
 check "the global rules files are excluded, and the global CLAUDE.md is not" \
   "[\"$HOME/.claude/rules/*.md\"]" "$(jq -c .claudeMdExcludes "$cut")"
 check "every skill but super-agent is switched off" \
   '{"code-review":"off","eli5:eli5":"off","tdd":"off"}' "$(jq -c '.skillOverrides' "$cut")"
 check "the cut is a file of its own, so deleting it keeps the hooks" "3 null" "$(jq '.hooks.PreToolUse | length' "$hc") $(jq -c .permissions "$hc")"
+
+
+H=$XDG_STATE_HOME/super-agent/home
+: > "$H/cut-off"
+out=$(S --write --name laptop)
+check "the off switch: the rewrite deletes the cut and keeps the hooks" "true false 3" \
+  "$(jq -r .home.written <<<"$out") $([ -f "$cut" ] && echo true || echo false) $(jq '.hooks.PreToolUse | length' "$hc")"
+rm "$H/cut-off"
+
+sa_mcp_list "" 1
+out=$(S --write --name laptop 2>/dev/null)
+check "a failed claude mcp list writes no cut, and raises a need" "false false 1" \
+  "$(jq -r .home.written <<<"$out") $([ -f "$cut" ] && echo true || echo false) $(jq '[.home.needs[] | select(test("not all written"))] | length' <<<"$out")"
+sa_mcp_list "t3-code: t3 mcp - \xe2\x9c\x94 Connected"
+echo '[]' > "$cut"
+out=$(S --write --name laptop 2>/dev/null)
+check "a cut file that is no JSON object is left as it is, and raises a need" "false [] 1" \
+  "$(jq -r .home.written <<<"$out") $(jq -c . "$cut") $(jq '[.home.needs[] | select(test("not all written"))] | length' <<<"$out")"
 
 finish

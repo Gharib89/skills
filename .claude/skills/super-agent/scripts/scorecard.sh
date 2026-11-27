@@ -113,13 +113,10 @@ if [ ${#files[@]} -eq 0 ]; then
   [ -n "$thread" ] || thread=$(jq -r '.own_thread // empty' <<<"$doc")
   [ -n "$thread" ] || thread=${T3CODE_THREAD_ID:-}
   [ -n "$thread" ] || sa_tooling "no thread id: pass --thread, or run in the super agent's thread"
-  mapfile -t roots < <(sa_transcript_roots)
-  if [ ${#roots[@]} -gt 0 ]; then
-    while IFS= read -r f; do
-      case $f in */subagents/*) continue ;; esac
-      sa_loaded_skill "$f" && files+=("$f")
-    done < <(grep -rlF --include='*.jsonl' -- "$thread" "${roots[@]}" 2>/dev/null | sort -u)
-  fi
+  while IFS= read -r f; do
+    case $f in */subagents/*) continue ;; esac
+    sa_loaded_skill "$f" && files+=("$f")
+  done < <(sa_transcript_roots | while IFS= read -r root; do grep -rlF --include='*.jsonl' -- "$thread" "$root" 2>/dev/null; done | sort -u)
   [ ${#files[@]} -gt 0 ] || sa_tooling "no transcript for thread $thread: none under ~/.claude*/projects loaded the super-agent skill"
 fi
 for f in ${files[@]+"${files[@]}"}; do [ -r "$f" ] || sa_tooling "$f: cannot read"; done
