@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.49.0 (2026-11-27)
+
+### Features
+
+- **super-agent**: The super agent folder's settings cut the context floor, under a SKILL.md word
+  cap ([#1432](https://github.com/Gharib89/skills/pull/1432),
+  [`3e5791f`](https://github.com/Gharib89/skills/commit/3e5791f24658f3561af9a84ead0e17c4b6e78e51))
+
+
 ## v0.48.0 (2026-11-27)
 
 ### Features
