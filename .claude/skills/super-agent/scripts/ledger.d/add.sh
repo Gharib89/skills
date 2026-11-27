@@ -92,7 +92,7 @@ ledger_add() {
       --environment) sa_flag_value "$usage" "${2:-}"; environment=$2 ;;
       --instance) sa_flag_value "$usage" "${2:-}"; instance=$2 ;;
       --kind) sa_flag_value "$usage" "${2:-}"; case $2 in ship|triage) kind=$2 ;; *) sa_tooling "$usage" ;; esac ;;
-      --task) sa_flag_value "$usage" "${2:-}"; case $2 in *[!A-Za-z0-9._-]*) sa_tooling "$usage" ;; esac; task=$2 ;;
+      --task) sa_flag_value "$usage" "${2:-}"; sa_task_slug_ok "$2" || sa_tooling "$usage"; task=$2 ;;
       --model) sa_flag_value "$usage" "${2:-}"; model=$2 ;;
       --effort) sa_flag_value "$usage" "${2:-}"; effort=$2 ;;
       *) sa_tooling "$usage" ;;

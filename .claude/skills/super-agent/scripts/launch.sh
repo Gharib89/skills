@@ -49,6 +49,8 @@
 # anything more only at a step-in (ADR 0020). One exception: a `/triage` message carries
 # the waiting-line contract line (`sa_triage_contract`, `_lib.sh`) between the invocation
 # and the note, because the triage skill is upstream and no SKILL.md this repo owns can.
+# A one-off `task` (a --skill that is neither ship, triage nor a grill) ends its message
+# on the task contract line (`sa_task_contract`), after the note, as `launch task` does.
 # The fleet file's `merge_gate_ruler` is checked here, `owner` (the default) or
 # `super-agent`, so a fleet the super agent cannot rule a hold from launches nothing.
 # `record` reads the worktree from `t3 thread show` when --worktree is omitted
@@ -211,12 +213,13 @@ branch="$type/$slug-$number"
 answer_json=$(jq -cn --arg k "$key" --arg kind "$kind" --arg size "$size" --arg ss "$size_source" --arg claim "$claim" \
   --argjson route "$route" --argjson use "\"$use\"" --argjson placed "$placed" --argjson sel "$selection" --argjson areas "$areas" \
   --arg base "$base" --arg branch "$branch" --arg slug "$slug" --arg msg "/$skill $number" --arg skill "$skill" --argjson ia "$interactive" \
-  --arg note "$note" --arg n "$number" --arg short "${repo#*/}" --arg contract "$([ "$kind" = triage ] && printf %s "$sa_triage_contract")" '
+  --arg note "$note" --arg n "$number" --arg short "${repo#*/}" --arg contract "$([ "$kind" = triage ] && printf %s "$sa_triage_contract")" \
+  --arg tcontract "$([ "$kind" = task ] && [ "$interactive" = false ] && printf %s "$sa_task_contract")" '
   ($route[$use]) as $tier
   | {key: $k, launch: true, kind: $kind, size: $size, size_source: $ss, claim: $claim,
      args: ({title: "\($short)#\($n) \($slug)",
              workspaceStrategy: {type: "worktree", baseRef: $base, branch: $branch, startFromOrigin: true},
-             modelSelection: $sel, message: ([$msg, $contract, (if $note == "" then "" else "Note: \($note)" end)] | map(select(. != "")) | join("\n"))}
+             modelSelection: $sel, message: ([$msg, $contract, (if $note == "" then "" else "Note: \($note)" end), $tcontract] | map(select(. != "")) | join("\n"))}
             + (if $placed.environment_id == null then {} else {environmentId: $placed.environment_id} end)),
      needs: ["projectId"],
      record: ({key: (if $kind == "task" then "task:\($skill)-\($short)-\($n)" else $k end), kind: $kind, machine: $placed.machine, environment_id: $placed.environment_id, instance_id: $route.instance_id,

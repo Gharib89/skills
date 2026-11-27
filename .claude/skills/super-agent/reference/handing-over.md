@@ -14,8 +14,9 @@ adopted from one read. Call `t3_thread_read` with `afterPosition: -1` and a low
 
 `ledger.sh --ledger <ledger> adopt --read <file>` (`--repo <owner/name>` when
 the thread's worktree has no GitHub `origin` remote; `--task <slug>` for a
-thread that is no ticket's; `--machine` and `--environment` for a linked
-machine).
+thread that is no ticket's, plus `--interactive` when it waits on the owner by
+design, a grill, which then gets no step-in and counts no stall; `--machine` and
+`--environment` for a linked machine).
 
 The entry is filled from the read: worktree and branch from the thread, and the
 ticket from the first message (`/ship-run <n>` is a ship, `/triage <n>` a

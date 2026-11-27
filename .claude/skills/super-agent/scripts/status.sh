@@ -12,7 +12,7 @@
 # lib/needs.sh). The rows follow after a blank line, in this order, an empty row
 # left out: `Merged` (a ship entry whose PR merged and that no
 # digest has listed yet), `Finished` (a task settled on its `Result:` line that no block
-# has listed yet: `task:<slug>: <result>`, the result's own link the link to what it
+# has listed yet: `task:<slug>: <result>`, its link pointing at what the task
 # produced), `Running` (an open entry, read as at its merge gate, in
 # review, launched, running or at rest; a `task` entry reads `task:<slug> (task)`
 # and an adopted one adds `(adopted)`; a steered entry, one whose newest message from
@@ -128,8 +128,8 @@ now=$(jq -c --argjson now "$(sa_now_s)" --argjson week "$week" "$sa_jq_norm$sa_j
          else empty end]}' <<<"$doc") \
   && [ -n "$now" ] || sa_tooling "$ledger: needs, waiting and entries are not the shapes status reads"
 
-printed=$(jq -ec '(.status // {}) as $s | if ($s | type) == "object" and (($s.merged_ack // []) | type) == "array" then $s.rows // {} else error end' <<<"$doc") \
-  || sa_tooling "$ledger: status is not an object with a merged_ack array"
+printed=$(jq -ec '(.status // {}) as $s | if ($s | type) == "object" and (($s.merged_ack // []) | type) == "array" and (($s.finished_ack // []) | type) == "array" then $s.rows // {} else error end' <<<"$doc") \
+  || sa_tooling "$ledger: status is not an object with merged_ack and finished_ack arrays"
 changed=$(jq -r --argjson p "$printed" '.rows != $p' <<<"$now")
 # A digest prints every row; a plain run only the rows that differ from the last
 # block, a row that emptied as `<row>: none` (bar Merged and Finished, which empty by

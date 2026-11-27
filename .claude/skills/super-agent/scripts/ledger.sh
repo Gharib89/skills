@@ -28,7 +28,8 @@
 #   ledger --ledger <file> scoped [--repo <owner/name>]
 #   ledger --ledger <file> wait <key> --reason <text> [--order <n>] [--after <key>]
 #   ledger --ledger <file> wait task:<slug> --reason <text> --ask <text> [--repo <owner/name>]
-#          [--skill <name>] [--order <n>]
+#          [--skill <name>] [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]...
+#          [--order <n>]
 #   ledger --ledger <file> unwait <key>
 #   ledger --ledger <file> need <key> --action <text> --reason <word> --why <clause>
 #          (--option <label>[: <consequence>]... | --answer-in <thread link>)
@@ -84,8 +85,9 @@
 # that could not be placed is `wait`ed: a row in `waiting` (no thread, no
 # stage, never watched) that the morning report lists, and that `add` or
 # `unwait` removes. A one-off task nothing fits (`launch task`) waits as a `task:<slug>` row
-# carrying its `ask`, `repo` and `skill`, which `reconcile` lists ready on every pass for a
-# relaunch, and which takes no `--after`. The waiting list is also the owner's queue: a row takes an
+# carrying its `ask`, `repo` and `skill`, and the place flags it was launched with (`gpu`
+# true, `account`, `areas`, `exclude`, each only when given), which `reconcile` lists ready on
+# every pass for a relaunch with them, and which takes no `--after`. The waiting list is also the owner's queue: a row takes an
 # `--order` (a whole number of up to 9 digits, lowest first, 0 allowed; rows with none follow the
 # ordered ones, oldest first) and an `--after <key>` blocker, another ticket that
 # must merge first, which `reconcile` reads into its `ready` rows. A repeat
@@ -188,7 +190,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: ledger --ledger <file> add (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | adopt (--read <t3_thread_read file> | --thread <id>) [--repo <owner/name>] [--number <n>] [--worktree <path>] [--branch <name>] [--kind ship|triage] [--task <slug>] [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | add --launching <the add flags, less --thread and --worktree> | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | wait task:<slug> --reason <text> --ask <text> [--repo <owner/name>] [--skill <name>] [--order <n>] | unwait <key> | need <key> --action <text> --reason <word> --why <clause> (--option <label>[: <consequence>]... | --answer-in <thread link>) | unneed <key> | ack <key> --reason <word> | answer <reply> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | take <key> | tell <key or thread id> | drop <key> | reset-stalls <key> | self [<thread id>]'
+usage='usage: ledger --ledger <file> add (--repo <owner/name> --number <n> --worktree <path> --branch <name> [--kind ship|triage] | --task <slug> [--worktree <path>] [--branch <name>] [--repo <owner/name>]) --thread <id> [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | adopt (--read <t3_thread_read file> | --thread <id>) [--repo <owner/name>] [--number <n>] [--worktree <path>] [--branch <name>] [--kind ship|triage] [--task <slug>] [--machine <name>] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... [--interactive] | add --launching <the add flags, less --thread and --worktree> | get <key> | list [--open] | set <key> <field> <json> | rethread <key> --thread <id> [--worktree <path>] [--branch <name>] [--kind ship|triage|task] [--environment <id>] [--instance <id>] [--model <id>] [--effort <level>] [--area <path>]... | ruling <text> [--allow <call>]... [--repo <owner/name>] | pin <date> <text> | migrate-rulings <list.json> | allowed | scoped [--repo <owner/name>] | wait <key> --reason <text> [--order <n>] [--after <key>] | wait task:<slug> --reason <text> --ask <text> [--repo <owner/name>] [--skill <name>] [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]... [--order <n>] | unwait <key> | need <key> --action <text> --reason <word> --why <clause> (--option <label>[: <consequence>]... | --answer-in <thread link>) | unneed <key> | ack <key> --reason <word> | answer <reply> | limit <owner/name> --reviewer <name> | unlimit <owner/name> | take <key> | tell <key or thread id> | drop <key> | reset-stalls <key> | self [<thread id>]'
 sa_help "$usage" "$@"
 [ "${1:-}" = --ledger ] || sa_tooling "$usage"
 sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2

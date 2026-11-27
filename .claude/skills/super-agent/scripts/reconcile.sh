@@ -17,8 +17,9 @@
 # `sa_settled_days` (7) days is read again, thread only: one whose run count grew, or that runs, goes back to `at-rest` or
 # `running` and is named in `woke`. A `--kind task` entry has no ticket: it is
 # `running` while its thread runs; once it has run and rests, its last line
-# (`sa_observe`'s `last`) decides, whatever any issue or PR says: `Result: ...` settles it,
-# the line's rest its `result`; `Needs owner: <question>` is `at-rest` with no stall, a
+# (`sa_observe`'s `last`, its markup taken off by `sa_task_end`) decides, whatever any issue
+# or PR says: `Result: <text>` settles it, the text its `result` (a bare `Result:` is no
+# result); `Needs owner: <question>` is `at-rest` with no stall, a
 # `needs-owner` escalate row; any other is a rest judged as a stall. An `interactive`
 # one (it waits on the owner) is never settled on rest and counts no stall. An `owner_run` entry (`ledger take`) counts no
 # stall and owes no cleanup: a ticket's is read from GitHub alone and settles on a merged
@@ -191,8 +192,8 @@ while IFS= read -r entry; do
     # the owner (`Needs owner:`); an interactive one waits on the owner at rest, so it leaves on `drop`
     if [ "$active" = true ]; then stage=running
     elif [ "$interactive" != true ] && [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] && [ "$(jq -r .pending <<<"$obs")" -eq 0 ]; then
-      last=$(jq -r '.last // ""' <<<"$obs") stage=at-rest
-      case $last in Result:*) stage=settled result=$last ;; 'Needs owner:'*) question=$last ;; esac
+      last=$(sa_task_end "$(jq -r '.last // ""' <<<"$obs")") stage=at-rest
+      case $last in 'Result:'*[![:space:]]*) stage=settled result=$last ;; 'Needs owner:'*[![:space:]]*) question=$last ;; esac
     else stage=at-rest; fi
   else
     case $(jq -r .pr.state <<<"$obs") in
