@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # A plain `preflight <n>` reads two stale shapes as what they are (#1427):
-# - a closing PR that is merged or closed is history on a reopened issue, not
+# - a closing PR that is merged is history on a reopened issue, not
 #   competing work: no `existing PR` reason, one warning naming it. An open
 #   closing PR still stops the run.
 # - a claim with no `*-<n>` branch on origin and no open closing PR still stops
@@ -48,10 +48,10 @@ out=$(preflight)
 check "a merged closing PR is no stop" '[]' "$(stops "$out")"
 check "and is named in a warning" '["closing PR #9 (merged) is not open: history, not competing work"]' "$(notes "$out")"
 
-fixture '[]' '[{"number": 9, "state": "closed"}, {"number": 11, "state": "open"}]'
+fixture '[]' '[{"number": 9, "state": "merged"}, {"number": 11, "state": "open"}]'
 out=$(preflight)
-check "an open closing PR beside a closed one still stops" '["existing PR: #11 (open)"]' "$(stops "$out")"
-check "and the closed one is a warning" '["closing PR #9 (closed) is not open: history, not competing work"]' "$(notes "$out")"
+check "an open closing PR beside a merged one still stops" '["existing PR: #11 (open)"]' "$(stops "$out")"
+check "and the merged one is a warning" '["closing PR #9 (merged) is not open: history, not competing work"]' "$(notes "$out")"
 
 fixture '["other"]' '[{"number": 9, "state": "merged"}]'
 check "a claim with no branch and no open PR says so" \
@@ -60,6 +60,22 @@ check "a claim with no branch and no open PR says so" \
 fixture '["other"]' '[{"number": 9, "state": "open"}]'
 check "a claim with an open PR reads as before" \
   '["already claimed: other","existing PR: #9 (open)"]' "$(stops "$(preflight)")"
+
+# A remote that cannot be read proves no absence: the claim reads as before.
+cat > "$work/bin/git" <<SHIM
+#!/usr/bin/env bash
+[ "\$*" = "remote get-url origin" ] && { echo https://github.com/owner/repo.git; exit 0; }
+[ "\$3" = ls-remote ] && exit 128
+exec "$real_git" "\$@"
+SHIM
+fixture '["other"]' '[]'
+check "a claim beside an unreadable remote reads as before" \
+  '["already claimed: other","existing branch: remote unreadable, cannot prove none"]' "$(stops "$(preflight)")"
+cat > "$work/bin/git" <<SHIM
+#!/usr/bin/env bash
+[ "\$*" = "remote get-url origin" ] && { echo https://github.com/owner/repo.git; exit 0; }
+exec "$real_git" "\$@"
+SHIM
 
 g -C "$work/repo" push -q origin main:fix/y-5 2>/dev/null
 fixture '["other"]' '[]'
