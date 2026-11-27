@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.75.4 (2026-11-27)
+
+### Bug Fixes
+
+- **ship-run**: Preflight reads a merged closing PR and a bare claim as stale state
+  ([#1429](https://github.com/Gharib89/skills/pull/1429),
+  [`56632c4`](https://github.com/Gharib89/skills/commit/56632c47136241d0536c6387aaa720ffe414537d))
+
+
 ## v0.75.3 (2026-11-26)
 
 ### Bug Fixes
