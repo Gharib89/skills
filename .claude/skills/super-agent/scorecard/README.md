@@ -24,8 +24,8 @@ week, runs the weekly review, whose rows join the bearings file's Needs you.
   boilerplate (a skill load, a compaction summary, a slash command's echo),
   running to the next one. A wake that made no API call is not counted. Its
   cause comes from its text: `watcher`, `backstop`, `owner`, `compaction
-  resume`, `other background`, `other scheduled`, `restart or harness` or
-  `other`.
+  resume`, `other background`, `other scheduled`, `restart or harness`,
+  `wake timer` (the line the wake timer sends) or `other`.
 - **Changing call**: a tool call that writes state: a `ledger.sh` write, a
   launch, claim, merge, cleanup, reply, intake or handover script, a `gh`
   issue or PR write, a `git` commit, push, merge or worktree change, a T3

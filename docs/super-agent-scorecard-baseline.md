@@ -37,3 +37,53 @@ Wakes by cause:
 | 2026-11-16 | 31 | 15 | 9 | 3 | 1 | 0 | 0 | 0 |
 | 2026-11-18 | 51 | 22 | 9 | 3 | 2 | 0 | 3 | 0 |
 | 2026-11-19 | 54 | 19 | 34 | 4 | 1 | 0 | 2 | 0 |
+
+## The research note's hand counts
+
+PR #1412 recounted the 19 Nov session (S5) against the research note's hand
+counts. The gaps come from definitions, not from lost data:
+
+| Number | Hand count | Script | Why they differ |
+|---|---|---|---|
+| Messages | 134 | 134 | |
+| Saying nothing changed | 25 | 32 | `nothing-changed.txt` also matches "Nothing needs you" after a reported change; the note's grep did not. |
+| Over 1,500 characters | 15 | 15 | |
+| Median length | 467 | 470.5 | The script averages the two middle lengths of an even count. |
+| Needs recorded, alerted, alerted twice | 12, 7, 1 | 12, 9, 2 | The note counted push calls; the script counts `ledger.sh pushed` marks, and two needs were marked twice. |
+| Question turns with a write | 3 of 11 | 6 of 7 | The note counted "why" asks over all five sessions; the script counted that day's owner turns holding a `?`. |
+| Wakes | 97 | 97 | |
+
+The day row above holds 156 messages for 19 Nov, not 134: it counts every
+session that day, and S4's morning adds 22.
+
+Recounted on 27 Nov with the script at super-agent v0.47.0, the table above
+holds except in two columns. Questions read `null` on every day: since v0.45.0
+(#1418) the row counts the question-flag log, which did not exist before 26
+Nov, so these days have no question count. Wakes that changed nothing rise by
+1 to 4 on 11, 12, 13, 18 and 19 Nov (70, 52, 41, 35, 38), and the
+nothing-changed token share by up to 0.03: #1418 moved the changing-call list
+into `lib/changing.sh` and narrowed it. Compare a later row with this table
+only in the columns the two versions count alike.
+
+## The gate's three counted work days
+
+Gate #1384 compares a slice's three counted work days before it ships against
+its first three after. Its first window is 24 to 26 Nov, counted on the
+owner's machine:
+
+| Day | Version | Open | Weighted tokens | Weighted tokens per open entry |
+|---|---|---|---|---|
+| 2026-11-24 | 0.43.0 | 23 | 9509048 | 413436.87 |
+| 2026-11-25 | 0.44.0 | 20 | 10789784 | 539489.21 |
+| 2026-11-26 | 0.46.0 | 24 | 15095375 | 628973.95 |
+
+Weighted tokens per open entry per day, the mean of the three days: **527,300**
+(pooled over the window, 35,394,207 over 67 open entries: 528,272). Slice 15's
+target, 40% below it, is 316,380, kept in `targets.json` as `tokens.per_open`
+under the slice's tag until slice 15 lands. The token counts did not move when
+the three days were recounted with v0.47.0.
+
+The rows of 24 and 25 Nov were counted before v0.45.0, so their `questions`
+came from the transcript and their wakes that changed nothing from the older
+changing-call list (25 Nov reads 31, not 28, under v0.47.0). The 26 Nov row
+counts both the current way.
