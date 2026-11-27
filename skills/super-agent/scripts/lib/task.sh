@@ -15,5 +15,5 @@ sa_task_slug_ok() { case $1 in ''|.*|*[!A-Za-z0-9._-]*) return 1 ;; esac; }
 # around the label), so `- **Result:** x` and `**Result: x**` read `Result: x`. The label
 # stays case-sensitive: `result: x` is no contract line.
 sa_task_end() {
-  sed -E 's/\r$//; s/^[-*] +//; s/^`(.*)`$/\1/; s/^\*\*(.*)\*\*$/\1/; s/^(`|\*\*|\*)(Result|Needs owner)(:?)\1(:?)/\2\3\4/' <<<"$1"
+  sed -E 's/\r$//; s/^[-*] +//; s/^`([^`]*)`$/\1/; s/^\*\*([^*]*)\*\*$/\1/; s/^(`|\*\*|\*)(Result|Needs owner)(:?)\1(:?)/\2\3\4/' <<<"$1"
 }

@@ -81,6 +81,8 @@ ends() { fresh; baseline form-x t-f; rests t-f "$(printf 'Done.\n%s' "$1")"; R >
 for line in '`Result: x`' '**Result:** x' '- Result: x' '* **Result:** x' '**Result: x**' '`Result:` x' "$(printf 'Result: x\r')"; do
   check "$line settles, the result read past the markup" "settled x false" "$(ends "$line")"
 done
+check "bold inside the result is kept" "settled x **bold** false" "$(ends '**Result:** x **bold**')"
+check "a backticked label with a backticked result" "settled \`x\` false" "$(ends '`Result:` `x`')"
 for line in 'Result:' 'result: x' 'Results: x' '**Result:**'; do
   check "$line is no result: a stall" "at-rest null false" "$(ends "$line")"
 done
