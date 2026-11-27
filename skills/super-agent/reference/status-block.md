@@ -18,7 +18,7 @@ has no `Super agent on` line. The block opens with the **needs-you message**,
 every open [need](#a-need) printed in full, then after a blank line the rows
 `Merged`, `Finished`, `Running`, `Yours`, `Waiting` and `Reviewer limit`, one
 line each; `Finished` lists each task settled on its `Result:` line as
-`task:<slug>: <result>`, the result's own link the link to what it produced;
+`task:<slug>: <result>`, its link pointing at what the task produced;
 each ticket is a link, and a `Running` ticket names the provider instance it
 launched on and ends `(you spoke last)` when the owner's message is the newest
 from outside its thread. `Yours` lists the entries the owner took ("I'll take"),

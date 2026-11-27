@@ -41,6 +41,10 @@ check "the block prints it in a Finished row" \
   "$(jq -r .status.block <<<"$out" | grep '^Finished')"
 check "the next block does not print it again" "" "$(S --digest | jq -r .block | grep '^Finished')"
 check "nor does the next reconcile's" "" "$(R | jq -r .status.block | grep '^Finished')"
+jq '.status.finished_ack = "x"' "$led" > "$led.bad"
+out=$(bash "$s/status.sh" --ledger "$led.bad" 2>&1); rc=$?
+check_rc "a finished_ack that is no array is refused at load" 2 "$rc"
+check "naming the field" yes "$(grep -q finished_ack <<<"$out" && echo yes || echo no)"
 check "it stalled no count" 0 "$(L get task:research-x | jq -r .stalls)"
 
 # --- Needs owner: an escalate row, no stall --------------------------------------------------
@@ -70,6 +74,23 @@ out=$(R)
 check "a task resting on no contract line is not settled" "at-rest 0" "$(jq -r '"\(.entries[0].stage) \(.settled | length)"' <<<"$out")"
 check "it counts a stall" "task:plain-x 1 run-completed" "$(jq -r '.stalled[] | "\(.key) \(.stalls) \(.reason)"' <<<"$out")"
 check "and raises no needs-owner row" '[]' "$(jq -c '[.escalate[].reason]' <<<"$out")"
+
+# --- the forms a model writes: a list marker, backticks, emphasis -----------------------------
+# ends <last line>: the stage and result a one-off task gets resting on that last line
+ends() { fresh; baseline form-x t-f; rests t-f "$(printf 'Done.\n%s' "$1")"; R >/dev/null; L get task:form-x | jq -r '"\(.stage) \(.result) \(.needs_owner // "" | length > 0)"'; }
+for line in '`Result: x`' '**Result:** x' '- Result: x' '* **Result:** x'; do
+  check "$line settles, the result read past the markup" "settled x false" "$(ends "$line")"
+done
+for line in 'Result:' 'result: x' 'Results: x' '**Result:**'; do
+  check "$line is no result: a stall" "at-rest null false" "$(ends "$line")"
+done
+for line in '`Needs owner: which?`' '**Needs owner:** which?' '- Needs owner: which?'; do
+  check "$line raises needs-owner" "task:form-x needs-owner which?" \
+    "$(fresh; baseline form-x t-f; rests t-f "$line"; R | jq -r '.escalate[] | "\(.key) \(.reason) \(.detail)"')"
+done
+for line in 'Needs owner:' 'needs owner: which?'; do
+  check "$line raises no row" '[]' "$(fresh; baseline form-x t-f; rests t-f "$line"; R | jq -c '[.escalate[].reason]')"
+done
 
 # --- the adoption step-in ----------------------------------------------------------------------
 fresh

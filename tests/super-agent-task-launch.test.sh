@@ -82,4 +82,57 @@ out=$(bash "$s/reconcile.sh" --ledger "$led")
 check "reconcile lists the waiting task ready, with its ask" "task:one-b Run the soak test" "$(jq -r '.ready[] | "\(.key) \(.ask)"' <<<"$out")"
 check "and reads no issue for it" 0 "$(grep -c 'issues' "$SA_FAKE/calls")"
 
+# --- a waiting row keeps the place flags its relaunch re-passes -----------------------------
+out=$(F one-c --ask "Train the model" --repo $repo --gpu --account alice --area skills/x --exclude box); rc=$?
+check_rc "a task with place flags waits on the full machine" 1 "$rc"
+check "its row keeps --gpu, --account, --area and --exclude" '{"gpu":true,"account":"alice","areas":["skills/x"],"exclude":["box"]}' \
+  "$(bash "$s/ledger.sh" --ledger "$led" list | jq -c '.waiting[] | select(.key == "task:one-c") | {gpu, account, areas, exclude}')"
+check "a row with none keeps no place field" '[]' \
+  "$(bash "$s/ledger.sh" --ledger "$led" list | jq -c '.waiting[] | select(.key == "task:one-b") | [keys[] | select(IN("gpu", "account", "areas", "exclude"))]')"
+check "a ticket's row takes no place flag" 2 "$(bash "$s/ledger.sh" --ledger "$led" wait "$repo#9" --reason full --gpu >/dev/null 2>&1; echo $?)"
+
+# --- the stall ladder's rung 3: a task relaunched with --raise, recorded --rethread -----------
+reset
+T research-x --ask "Research the stall" --repo $repo --out "$out_f" >/dev/null
+sa_thread th-x running 0 0 /wt/x task/research-x
+bash "$s/launch.sh" record --launch "$out_f" --thread th-x --ledger "$led" >/dev/null
+out=$(T research-x --ask "Research the stall" --repo $repo 2>/dev/null); rc=$?
+check_rc "an open task's slug launches again only with --raise" 2 "$rc"
+out=$(T research-x --ask "Research the stall" --repo $repo --raise 1 --out "$out_f"); rc=$?
+check_rc "--raise relaunches the open task" 0 "$rc"
+check "and leaves its entry on the old thread until record --rethread" th-x \
+  "$(bash "$s/ledger.sh" --ledger "$led" get task:research-x | jq -r .thread)"
+sa_thread th-x2 running 0 0 /wt/x2 task/research-x
+out=$(bash "$s/launch.sh" record --launch "$out_f" --thread th-x2 --ledger "$led" --rethread); rc=$?
+check_rc "record --rethread binds the new thread" 0 "$rc"
+check "the entry is the same task's, on the new thread" "th-x2 /wt/x2 1" \
+  "$(bash "$s/ledger.sh" --ledger "$led" get task:research-x | jq -r '"\(.thread) \(.worktree) \(.stalls == 0 | if . then 1 else 0 end)"')"
+T deploy-y --ask "Deploy the dashboard" --out "$out_f" >/dev/null
+sa_thread th-y running 0 0 '' ''
+bash "$s/launch.sh" record --launch "$out_f" --thread th-y --ledger "$led" >/dev/null
+T deploy-y --ask "Deploy the dashboard" --raise 1 --out "$out_f" >/dev/null
+sa_thread th-y2 running 0 0 '' ''
+out=$(bash "$s/launch.sh" record --launch "$out_f" --thread th-y2 --ledger "$led" --rethread); rc=$?
+check_rc "a scratch task rethreads too" 0 "$rc"
+check "onto the new thread" th-y2 "$(bash "$s/ledger.sh" --ledger "$led" get task:deploy-y | jq -r .thread)"
+
+# --- a ticket run with a named one-off skill ends on the contract line -----------------------
+reset; issue 7 "widgets: add a frobnicator" ready-for-agent
+sa_skill_file "$repo" .claude/skills/research/SKILL.md 1.0.0
+out=$(bash "$s/launch.sh" "$repo#7" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine home --thread th-super \
+  --skill research --note "Mind the cache."); rc=$?
+check_rc "a ticket-form --skill task launches" 0 "$rc"
+check "its message is the skill call and the note, the contract line its last line" \
+  "$(printf '/research 7\nNote: Mind the cache.\n%s' "$contract")" "$(jq -r .args.message <<<"$out")"
+reset; issue 7 "widgets: add a frobnicator" ready-for-agent
+sa_skill_file "$repo" .claude/skills/grill-with-artifact/SKILL.md 1.0.0
+out=$(bash "$s/launch.sh" "$repo#7" --fleet "$fleet" --ledger "$led" --quota "$quota" --machine home --thread th-super --skill grill-with-artifact)
+check "a ticket-form grill carries no contract line" "/grill-with-artifact 7" "$(jq -r .args.message <<<"$out")"
+
+# --- one slug check: a slug starting with . is refused everywhere -----------------------------
+reset
+check "launch task refuses a .slug" 2 "$(T .x --ask x >/dev/null 2>&1; echo $?)"
+check "ledger add refuses a .slug" 2 "$(bash "$s/ledger.sh" --ledger "$led" add --task .x --thread t >/dev/null 2>&1; echo $?)"
+check "ledger wait refuses a .slug" 2 "$(bash "$s/ledger.sh" --ledger "$led" wait task:.x --reason full --ask x >/dev/null 2>&1; echo $?)"
+
 finish

@@ -5,21 +5,23 @@
 # $usage and the steps of launch.d/steps.sh, and exits.
 #
 # A one-off task is placed as a ticket is (`place`: pins, slots, a `waiting` answer, which
-# records a waiting row carrying the ask so a later wake relaunches it); its message is
+# records a waiting row carrying the ask, the skill and the place flags, so a later wake
+# relaunches it with them); its message is
 # the ask (`/<skill> <ask>` with --skill), then the contract line (`sa_task_contract`) as
 # its last line. An interactive task (--interactive, or a --skill in
 # `sa_interactive_skills`) waits on the owner by design: it takes no slot, runs on this
 # machine and carries no contract line, since it leaves only on the owner's `drop`. With
 # --repo the thread gets a worktree on `task/<slug>` from the repo's default branch; with
-# none it runs in a scratch folder (`args.scratch`) and takes no --area.
+# none it runs in a scratch folder (`args.scratch`) and takes no --area. --raise relaunches
+# an open task one tier up (the stall ladder's rung 3), then `record --rethread`.
 
 # shellcheck disable=SC2154,SC2034  # usage, out, rc, route, use, selection and base come from launch.sh and its steps, which read size, raise, wanted, named and go
 
 slug=${1:-}; [ $# -gt 0 ] && shift
-case $slug in ''|.*|*[!A-Za-z0-9._-]*) sa_tooling "$usage" ;; esac
+sa_task_slug_ok "$slug" || sa_tooling "$usage"
 key="task:$slug"
 request='' fleet='' ledger='' quota='' machine='' repo='' skill='' interactive=false gpu='' account='' readings=''
-named='' go='' outf='' raise='' wanted='' areas='[]' pargs=()
+named='' go='' outf='' raise='' wanted='' areas='[]' pargs=() wargs=()
 while [ $# -gt 0 ]; do
   case $1 in
     --gpu) gpu=--gpu; shift; continue ;; --owner-go) go=--owner-go; shift; continue ;;
@@ -31,6 +33,7 @@ while [ $# -gt 0 ]; do
     --repo) case $2 in */*) repo=$2 ;; *) sa_tooling "$usage" ;; esac ;;
     --skill) case $2 in .*|*[!A-Za-z0-9._-]*) sa_tooling "$usage" ;; esac; skill=$2 ;;
     --wanted) case $2 in yes|no) wanted=$2 ;; *) sa_tooling "$usage" ;; esac ;;
+    --raise) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; raise=$2 ;;
     --instance) named=$2 ;; --readings) readings=$2 ;; --account) account=$2 ;; --out) outf=$2 ;;
     --area) areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas"); pargs+=(--area "$2") ;;
     --exclude) pargs+=(--exclude "$2") ;;
@@ -48,14 +51,15 @@ size=M; route_pick
 if [ "$interactive" = true ]; then
   placed=$(jq -cn --arg m "$machine" '{machine: $m, environment_id: null}')
 else
-  sub place --fleet "$fleet" --ledger "$ledger" ${repo:+--repo "$repo"} --own "$machine" ${gpu:+"$gpu"} ${account:+--account "$account"} \
+  sub place --fleet "$fleet" --ledger "$ledger" ${repo:+--repo "$repo"} --key "$key" --own "$machine" ${gpu:+"$gpu"} ${account:+--account "$account"} \
     ${readings:+--readings "$readings"} ${pargs[@]+"${pargs[@]}"}
   jq -e 'has("placed")' <<<"$out" >/dev/null 2>&1 || sa_tooling "place gave no answer"
   placed=$(jq -c .placed <<<"$out")
   if [ "$placed" = null ]; then
     jq -e '.need_reading != null' <<<"$out" >/dev/null && answer need_reading "$(jq -c .need_reading <<<"$out")"
     detail=$(jq -c '{reason, considered}' <<<"$out")
-    sub ledger --ledger "$ledger" wait "$key" --reason "$(jq -r .reason <<<"$detail")" --ask "$request" ${repo:+--repo "$repo"} ${skill:+--skill "$skill"}
+    sub ledger --ledger "$ledger" wait "$key" --reason "$(jq -r .reason <<<"$detail")" --ask "$request" ${repo:+--repo "$repo"} ${skill:+--skill "$skill"} \
+      ${gpu:+"$gpu"} ${account:+--account "$account"} ${pargs[@]+"${pargs[@]}"}
     [ "$rc" = 0 ] || sa_tooling "cannot record $key as waiting: $(jq -r '.error // empty' <<<"$out")"
     answer waiting "$detail"
   fi
@@ -82,9 +86,11 @@ answer_json=$(jq -cn --arg k "$key" --arg slug "$slug" --arg repo "$repo" --arg 
               + (if $route.owner_go == true then {owner_go: true} else {} end))}') \
   || sa_tooling "cannot build the launch answer"
 
-# Record before launch, as a ticket's launch does.
+# Record before launch, as a ticket's launch does. With --raise (the stall ladder's rung 3)
+# the task's open entry already records it, and `record --rethread` binds the new thread.
 rec_add "$(jq -c .record <<<"$answer_json")" --launching
-[ "$rc" = 0 ] || sa_tooling "cannot record $key before its launch: $(jq -r '.error // empty' <<<"$out")"
+[ "$rc" = 0 ] || { [ -n "$raise" ] && jq -e '.error | endswith("is already in the ledger")' <<<"$out" >/dev/null 2>&1; } \
+  || sa_tooling "cannot record $key before its launch: $(jq -r '.error // empty' <<<"$out")"
 [ -z "$outf" ] || printf '%s\n' "$answer_json" > "$outf" || sa_tooling "cannot write $outf"
 printf '%s\n' "$answer_json"
 exit 0
