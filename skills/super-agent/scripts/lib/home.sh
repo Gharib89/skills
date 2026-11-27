@@ -42,7 +42,7 @@ sa_loaded_skill() {
 # `skills.json`. Exits 1, its reason on stderr, when the cut file is no JSON
 # object or a read fails (`claude mcp list`, or one naming no t3-code; the
 # transcript's listing; `skills.json`). Exits 3, the cut still printed, when it
-# switches no skill off: no transcript loaded the skill and none was saved.
+# switches no skill off: no listing, found or saved, names one to switch off.
 sa_home_cut() {
   local prev='{}' listing='{}' saved='{}' t='' f mcp servers rules
   if [ -f "$1" ]; then
@@ -81,7 +81,7 @@ sa_home_cut() {
          | map({key: ., value: "off"}) | from_entries)}')
   printf '%s\n' "$cut"
   jq -e '.skillOverrides != {}' <<<"$cut" >/dev/null \
-    || { echo "no transcript that loaded the super-agent skill" >&2; return 3; }
+    || { echo "no skill listing, found or saved, names a skill to switch off" >&2; return 3; }
 }
 
 # sa_shq <text>: the text single-quoted for a shell, each ' in it written '\''.
@@ -199,7 +199,7 @@ sa_home() {
     case $cut_rc in
       0) written=true ;;
       3) written=true
-        needs='["Super agent folder: the context floor cut switches no skill off (no transcript that loaded the super-agent skill): run scripts/setup.sh --write from the pinned thread"]' ;;
+        needs=$(jq -cn --arg e "$cut_err" '["Super agent folder: the context floor cut switches no skill off (\($e | split("\n") | last)): run scripts/setup.sh --write from the pinned thread"]') ;;
       *) needs=$(jq -cn --arg e "$cut_err" '["Super agent folder: the context floor cut was not written (\($e | split("\n") | last)): fix that, then run scripts/setup.sh --write"]') ;;
     esac
   fi

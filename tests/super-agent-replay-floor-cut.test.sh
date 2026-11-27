@@ -84,6 +84,6 @@ check "the rules excluded are those of the config root the pinned thread runs un
 rm -rf "$tmp/projects/cfg/projects" "$H/.claude/settings.json" "$H/skills.json"
 out=$(CLAUDE_CONFIG_DIR=$tmp/projects/cfg S --write --name laptop 2>/dev/null)
 check "with no transcript and no saved listing the rest of the cut is written, and a need says no skill is switched off" "true {} 1" \
-  "$(jq -r .home.written <<<"$out") $(jq -c .skillOverrides "$cut") $(jq '[.home.needs[] | select(test("switches no skill off"))] | length' <<<"$out")"
+  "$(jq -r .home.written <<<"$out") $(jq -c .skillOverrides "$cut") $(jq '[.home.needs[] | select(test("switches no skill off \\(no skill listing, found or saved"))] | length' <<<"$out")"
 
 finish

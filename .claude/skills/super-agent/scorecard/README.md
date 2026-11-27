@@ -46,7 +46,8 @@ week, runs the weekly review, whose rows join the bearings file's Needs you.
   agent folder's `.claude/settings.json` cut: a denied tool or a tool of a
   denied server, a `Skill` call for a switched-off skill, or a `ToolSearch`
   query naming one in full as one of its terms. `null` when the folder holds no
-  such file. The review sums the week's count; it has no target during the trial
+  such file. The review sums the week's count and raises one row when the sum is
+  above 0; it has no target during the trial
   ([setup](../reference/setup.md#the-context-floor-cut)).
 - **Needs**: `recorded` counts `ledger.sh need` calls in the transcript.
   `alerted` counts the day's `alert` lines in `needs-alerts.jsonl`, the log
@@ -95,5 +96,5 @@ The weekly review refuses a week missing some day's row, naming the day to
 count with `row --day`; a week with no row at all predates the scorecard and
 raises nothing. Otherwise it raises one row per live target a day of the
 week went over, and one per guard logged in each of the four weeks ending with
-that week and blocking nothing in them. A number with no target never raises
-one.
+that week and blocking nothing in them. A number with no target raises none,
+except `denied.calls`.
