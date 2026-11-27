@@ -32,7 +32,7 @@ check "the five tools and every server but T3 (an indented or status-less line i
   '["Agent","Artifact","ListAgents","ShareOnboardingGuide","Workflow","mcp__claude-in-chrome","mcp__claude_ai_Exa","mcp__claude_ai_Slack","mcp__plugin_playwright_playwright"]' \
   "$(jq -c '.permissions.deny | sort' "$cut")"
 check "the global rules files are excluded, and the global CLAUDE.md is not" \
-  "[\"$HOME/.claude/rules/*.md\"]" "$(jq -c .claudeMdExcludes "$cut")"
+  "[\"$HOME/.claude/rules/**\"]" "$(jq -c .claudeMdExcludes "$cut")"
 check "every skill but super-agent is switched off" \
   '{"code-review":"off","eli5:eli5":"off","tdd":"off"}' "$(jq -c '.skillOverrides' "$cut")"
 check "the cut is a file of its own, so deleting it keeps the hooks" "3 null" "$(jq '.hooks.PreToolUse | length' "$hc") $(jq -c .permissions "$hc")"
@@ -64,5 +64,20 @@ jq -cn '{type: "user", message: {role: "user", content: "Base directory for this
 out=$(S --write --name laptop 2>/dev/null)
 check "a transcript that loaded the skill but holds no listing writes no cut, and raises a need" "false false 1" \
   "$(jq -r .home.written <<<"$out") $([ -f "$cut" ] && echo true || echo false) $(jq '[.home.needs[] | select(test("cut was not written \\(.*no skill listing"))] | length' <<<"$out")"
+
+rm -f "$H/.claude/settings.json" "$H/skills.json"
+sa_pinned_transcript "$HOME/.claude/projects/p/pinned.jsonl" '["code-review", "super-agent"]'
+for bad in "" $'t3-code: t3 mcp - \xe2\x9c\x93 Connected'; do
+  sa_mcp_list "$bad"
+  out=$(S --write --name laptop 2>/dev/null)
+  check "a claude mcp list with no t3-code parsed ($( [ -z "$bad" ] && echo empty || echo 'an unknown status')) writes no cut, and raises a need" "false false 1" \
+    "$(jq -r .home.written <<<"$out") $([ -f "$cut" ] && echo true || echo false) $(jq '[.home.needs[] | select(test("no t3-code server parsed"))] | length' <<<"$out")"
+done
+
+sa_mcp_list $'t3-code: t3 mcp - \xe2\x9c\x94 Connected'
+mv "$HOME/.claude/projects" "$tmp/other-root-projects"; mkdir -p "$tmp/cfg"; mv "$tmp/other-root-projects" "$tmp/cfg/projects"
+out=$(CLAUDE_CONFIG_DIR=$tmp/cfg S --write --name laptop 2>/dev/null)
+check "the rules excluded are those of the config root the pinned thread runs under" "[\"$tmp/cfg/rules/**\"]" \
+  "$(jq -c .claudeMdExcludes "$cut")"
 
 finish

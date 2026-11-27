@@ -40,10 +40,11 @@ sa_loaded_skill() {
 # Each list keeps what the file already holds: after the cut, the pinned thread's
 # own listing names only the skills left on. Also writes the listing to
 # `skills.json`. Exits 1, its reason on stderr, when the cut file is no JSON
-# object or a read fails (`claude mcp list`, the transcript's listing,
+# object or a read fails (`claude mcp list`, or one naming no t3-code; the
+# transcript's listing;
 # `skills.json`).
 sa_home_cut() {
-  local prev='{}' listing='{}' saved='{}' t='' f mcp
+  local prev='{}' listing='{}' saved='{}' t='' f mcp servers rules
   if [ -f "$1" ]; then
     prev=$(jq -ce 'objects' "$1" 2>/dev/null) || { echo "$1: not a JSON object" >&2; return 1; }
   fi
@@ -63,10 +64,15 @@ sa_home_cut() {
   saved=$(jq -cn --argjson s "$saved" --argjson l "$listing" '$s + $l | del(.["super-agent"])')
   (sa_write "$(sa_home_skills)" "$saved") >/dev/null || { echo "cannot write $(sa_home_skills)" >&2; return 1; }
   mcp=$(cd "$(sa_home_dir)" && timeout 60 claude mcp list 2>/dev/null </dev/null) || { echo "claude mcp list failed or timed out in $(sa_home_dir)" >&2; return 1; }
-  jq -cn --argjson p "$prev" --argjson s "$saved" --arg rules "$HOME/.claude/rules/*.md" --arg mcp "$mcp" '
+  # The pinned thread always has t3-code, so a parse that misses it read nothing.
+  servers=$(jq -cn --arg mcp "$mcp" '[$mcp | split("\n")[] | capture("^(?<n>[^ ].*?): .* - [\u2714\u2718!]").n]')
+  jq -e 'index("t3-code")' <<<"$servers" >/dev/null || { echo "claude mcp list: no t3-code server parsed" >&2; return 1; }
+  # The rules folder of the config root the pinned thread runs under: the found
+  # transcript's, else the default one. `**` reaches subfolders (probed).
+  rules=${t%%/projects/*}; [ -n "$t" ] || rules=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
+  jq -cn --argjson p "$prev" --argjson s "$saved" --arg rules "$rules/rules/**" --argjson n "$servers" '
     def server: "mcp__" + gsub("[^A-Za-z0-9_-]"; "_");
-    ([$mcp | split("\n")[] | capture("^(?<n>[^ ].*?): .* - [\u2714\u2718!]").n | server]
-      - (["t3-code", "smart-compact"] | map(server))) as $servers
+    ($n - ["t3-code", "smart-compact"] | map(server)) as $servers
     | {permissions: {deny: (["Agent", "Artifact", "ListAgents", "ShareOnboardingGuide", "Workflow", "mcp__claude-in-chrome"]
         + $servers + [$p.permissions.deny[]? | strings] | unique)},
        claudeMdExcludes: ([$rules] + [$p.claudeMdExcludes[]? | strings] | unique),

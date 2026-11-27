@@ -131,17 +131,18 @@ about 36k of it never used) to a target of 32k:
 
 - it denies `Artifact`, `Agent`, `Workflow`, `ListAgents` and
   `ShareOnboardingGuide` (`AskUserQuestion` stays);
-- it excludes the global rules files, `~/.claude/rules/*.md` (the global
+- it excludes the global rules files, everything under `rules/` in the config
+  root the pinned thread runs under (`~/.claude` by default; the global
   CLAUDE.md stays);
 - it switches off every skill but `super-agent`;
 - it denies every MCP server but `t3-code` and `smart-compact`.
 
-The skills come from the first request of the newest transcript that loaded
-this skill, the servers from `claude mcp list`. Each list keeps what the file
-already holds, so a skill or server added later is cut at the next rewrite and
-raises `floor.fresh` until then. A failed read (`claude mcp list`, the
-listing, a cut file or `skills.json` that is no JSON object) writes no cut and
-raises a need.
+The skills come from the first request of the newest transcript that loaded this
+skill, the servers from `claude mcp list`. Each list keeps what the file already
+holds, so a skill or server added later is cut at the next rewrite and raises
+`floor.fresh` until then. A failed read (`claude mcp list`, or one with no
+`t3-code` server in it, the listing, a cut file or `skills.json` that is no JSON
+object) writes no cut and raises a need.
 
 A task launch still names a skill: `scripts/skills.sh` prints each one with its
 one-line description, from the listing setup saved. A skill already switched

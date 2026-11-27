@@ -88,9 +88,11 @@
 #         `.claude/settings.local.json` (the hooks) and `.claude/settings.json`
 #         (the context floor cut, reference/setup.md), `stale` is
 #         {settings, entries, unreadable} or null, and
+#         `written` is true only when both were written, and
 #         `needs` holds one Needs you line per missing hook entry, stale
-#         user-settings entry or unreadable user settings (project_id is null:
-#         setup reads no projects, the handover does)
+#         user-settings entry, unreadable user settings or cut not written (the
+#         line names why) (project_id is null: setup reads no projects, the
+#         handover does)
 # exit: 0 a proposal or a write, failed probes included · 2 usage, a fleet file
 #       that is not JSON, has a field of the wrong shape or a retired `brief`
 #       line under a repo or machine, a machine probe
