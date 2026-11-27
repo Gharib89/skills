@@ -169,7 +169,9 @@ exceptions bound these rules.
   `skills/super-agent/scripts/lib/home.sh`), else `printf '%q'` where Bash
   parses the string, never bare double or single quotes around the value. The
   generator's test feeds a value holding a single quote (and, where the value is
-  free text, `$` and a backtick) and runs or parses the generated command. On
+  free text, `$` and a backtick), runs the generated command or parses it back,
+  and asserts the value arrives unchanged: a syntax-only check such as `bash -n`
+  passes a command that injects. On
   #1413 the super agent's settings wrote `bash '<path>/guard.sh'` with the path
   in plain single quotes, so a skill path holding `'` produced invalid shell and
   the guard never ran. A command a doc hands to a reader falls under the prose
