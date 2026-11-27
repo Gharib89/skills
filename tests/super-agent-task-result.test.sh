@@ -78,7 +78,7 @@ check "and raises no needs-owner row" '[]' "$(jq -c '[.escalate[].reason]' <<<"$
 # --- the forms a model writes: a list marker, backticks, emphasis -----------------------------
 # ends <last line>: the stage and result a one-off task gets resting on that last line
 ends() { fresh; baseline form-x t-f; rests t-f "$(printf 'Done.\n%s' "$1")"; R >/dev/null; L get task:form-x | jq -r '"\(.stage) \(.result) \(.needs_owner // "" | length > 0)"'; }
-for line in '`Result: x`' '**Result:** x' '- Result: x' '* **Result:** x'; do
+for line in '`Result: x`' '**Result:** x' '- Result: x' '* **Result:** x' '**Result: x**' '`Result:` x' "$(printf 'Result: x\r')"; do
   check "$line settles, the result read past the markup" "settled x false" "$(ends "$line")"
 done
 for line in 'Result:' 'result: x' 'Results: x' '**Result:**'; do

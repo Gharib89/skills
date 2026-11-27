@@ -16,7 +16,8 @@
 #   launch task <slug> --ask <text> --fleet <file> --ledger <file> --quota <file>
 #          --machine <key> [--repo <owner/name>] [--skill <name>] [--interactive]
 #          [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]...
-#          [--readings <file>] [--instance <id>] [--wanted yes|no] [--owner-go] [--out <file>]
+#          [--readings <file>] [--instance <id>] [--raise <n>] [--wanted yes|no]
+#          [--owner-go] [--out <file>]
 #   launch record --launch <file> --thread <id> --ledger <file> [--rethread]
 #          [--worktree <path>] [--remote <environment id>=<dir>]...
 #   launch record --task <slug> --thread <id> --ledger <file> [--worktree <path>]
@@ -99,7 +100,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file> --machine <key> --thread <id> [--area <path>]... [--gpu] [--account <login>] [--blocked-by <n>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--readings <file>] [--exclude <key>]... [--owner-go] [--skill <name>] [--note <text>] [--out <file>] | launch task <slug> --ask <text> --fleet <file> --ledger <file> --quota <file> --machine <key> [--repo <owner/name>] [--skill <name>] [--interactive] [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]... [--readings <file>] [--instance <id>] [--wanted yes|no] [--owner-go] [--out <file>] | launch record (--launch <file> [--rethread] | --task <slug> [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>] [--interactive]) --thread <id> --ledger <file> [--worktree <path>] [--remote <environment id>=<dir>]...'
+usage='usage: launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file> --machine <key> --thread <id> [--area <path>]... [--gpu] [--account <login>] [--blocked-by <n>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--readings <file>] [--exclude <key>]... [--owner-go] [--skill <name>] [--note <text>] [--out <file>] | launch task <slug> --ask <text> --fleet <file> --ledger <file> --quota <file> --machine <key> [--repo <owner/name>] [--skill <name>] [--interactive] [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]... [--readings <file>] [--instance <id>] [--raise <n>] [--wanted yes|no] [--owner-go] [--out <file>] | launch record (--launch <file> [--rethread] | --task <slug> [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>] [--interactive]) --thread <id> --ledger <file> [--worktree <path>] [--remote <environment id>=<dir>]...'
 sa_help "$usage" "$@"
 here=$(dirname "${BASH_SOURCE[0]}")
 source "$here/launch.d/steps.sh" || sa_tooling "cannot source launch.d/steps.sh"
@@ -232,8 +233,7 @@ answer_json=$(jq -cn --arg k "$key" --arg kind "$kind" --arg size "$size" --arg 
 # come out, so a turn cut between `t3_thread_launch` and `record` loses no launch. An
 # open entry for the ticket (a rethread) already records it, and `add` refuses that one.
 rec_add "$(jq -c .record <<<"$answer_json")" --launching
-[ "$rc" = 0 ] || jq -e '.error | endswith("is already in the ledger")' <<<"$out" >/dev/null 2>&1 \
-  || sa_tooling "cannot record $key before its launch"
+[ "$rc" = 0 ] || rec_open || sa_tooling "cannot record $key before its launch"
 
 [ -z "$outf" ] || printf '%s\n' "$answer_json" > "$outf" || sa_tooling "cannot write $outf"
 printf '%s\n' "$answer_json"

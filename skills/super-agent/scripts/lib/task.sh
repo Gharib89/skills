@@ -10,9 +10,10 @@ sa_task_contract='Your final message ends with one last line: `Result: <one line
 # `.`, `_` and `-`, not empty, not starting with `.`).
 sa_task_slug_ok() { case $1 in ''|.*|*[!A-Za-z0-9._-]*) return 1 ;; esac; }
 
-# sa_task_end <last line>: the line a model wrote with its markup taken off (a leading `- `
-# or `* ` list marker, wrapping backticks, `**` or `*` around the label), so `- **Result:** x`
-# reads `Result: x`. The label stays case-sensitive: `result: x` is no contract line.
+# sa_task_end <last line>: the line a model wrote with its markup taken off (a trailing CR,
+# a leading `- ` or `* ` list marker, wrapping backticks or `**`, and backticks, `**` or `*`
+# around the label), so `- **Result:** x` and `**Result: x**` read `Result: x`. The label
+# stays case-sensitive: `result: x` is no contract line.
 sa_task_end() {
-  sed -E 's/^[-*] +//; s/^`(.*)`$/\1/; s/^(\*\*|\*)(Result|Needs owner)(:?)\1(:?)/\2\3\4/' <<<"$1"
+  sed -E 's/\r$//; s/^[-*] +//; s/^`(.*)`$/\1/; s/^\*\*(.*)\*\*$/\1/; s/^(`|\*\*|\*)(Result|Needs owner)(:?)\1(:?)/\2\3\4/' <<<"$1"
 }
