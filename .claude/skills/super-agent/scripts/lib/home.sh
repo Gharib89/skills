@@ -51,10 +51,11 @@ sa_home_cut() {
     < <(sa_transcript_roots | while IFS= read -r root; do find "$root" -name '*.jsonl' -not -path '*/subagents/*' -printf '%T@ %p\n' 2>/dev/null; done | sort -rn | cut -d' ' -f2-)
   if [ -n "$t" ]; then
     listing=$(jq -cnR 'first(inputs | fromjson? // empty | select(type == "object" and .type == "attachment"
-        and .attachment.type? == "skill_listing") | .attachment) // {names: [], content: ""}
-      | (.content | strings | split("\n")) as $l
+        and .attachment.type? == "skill_listing") | .attachment) // error("no listing")
+      | if (.names | type) == "array" and (.names | length) > 0 and (.content | type) == "string" then . else error("partial") end
+      | (.content | split("\n")) as $l
       | [.names[]? | strings as $n | {key: $n, value: (first($l[] | select(startswith("- \($n): ")) | .[($n | length) + 4:]) // "")}]
-      | from_entries' "$t" 2>/dev/null) || { echo "$t: its skill listing cannot be read" >&2; return 1; }
+      | from_entries' "$t" 2>/dev/null) || { echo "$t: no skill listing with names and descriptions" >&2; return 1; }
   fi
   if [ -f "$(sa_home_skills)" ]; then
     saved=$(jq -ce 'objects' "$(sa_home_skills)" 2>/dev/null) || { echo "$(sa_home_skills): not a JSON object" >&2; return 1; }

@@ -58,5 +58,11 @@ echo '{}' > "$cut"; echo '[]' > "$H/skills.json"
 out=$(S --write --name laptop 2>/dev/null)
 check "a skills.json that is no JSON object writes no cut either, and raises a need" "false {} 1" \
   "$(jq -r .home.written <<<"$out") $(jq -c . "$cut") $(jq '[.home.needs[] | select(test("cut was not written \\(.*skills.json: not a JSON object"))] | length' <<<"$out")"
+echo '{}' > "$H/skills.json"; rm -f "$cut"
+jq -cn '{type: "user", message: {role: "user", content: "Base directory for this skill: /x/.claude/skills/super-agent"}}' \
+  > "$HOME/.claude/projects/p/pinned.jsonl"
+out=$(S --write --name laptop 2>/dev/null)
+check "a transcript that loaded the skill but holds no listing writes no cut, and raises a need" "false false 1" \
+  "$(jq -r .home.written <<<"$out") $([ -f "$cut" ] && echo true || echo false) $(jq '[.home.needs[] | select(test("cut was not written \\(.*no skill listing"))] | length' <<<"$out")"
 
 finish

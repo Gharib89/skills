@@ -144,7 +144,10 @@ listing, a cut file or `skills.json` that is no JSON object) writes no cut and
 raises a need.
 
 A task launch still names a skill: `scripts/skills.sh` prints each one with its
-one-line description, from the listing setup saved.
+one-line description, from the listing setup saved. A skill already switched
+off keeps the description it had when the cut took it out, since later listings
+no longer show it; the launch passes only the name, and the launched thread
+reads the skill as it is now.
 
 The cut is a **two-week trial** from the handover that first writes it. One
 command line undoes it, and the hooks stay, since they live in the other file:
