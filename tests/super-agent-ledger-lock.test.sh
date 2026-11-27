@@ -86,7 +86,7 @@ cat > "$tmp/mid/gh" <<EOF
 if [ ! -f "$tmp/mid/done" ]; then
   : > "$tmp/mid/done"
   bash "$PWD/$s/ledger.sh" --ledger "$led" ruling "made mid-reconcile" >/dev/null
-  bash "$PWD/$s/ledger.sh" --ledger "$led" need "$repo#5" --action "answer it" >/dev/null
+  bash "$PWD/$s/ledger.sh" --ledger "$led" need "$repo#5" --action "Answer ${repo#*/}#5 now" --reason fault --why w --option a --option b >/dev/null
 fi
 exec "$tmp/bin/gh" "\$@"
 EOF
@@ -94,7 +94,7 @@ chmod +x "$tmp/mid/gh"
 out=$(PATH="$tmp/mid:$PATH" bash "$s/reconcile.sh" --ledger "$led"); rc=$?
 check_rc "reconcile exits 0" 0 "$rc"
 check "the ruling made mid-reconcile survives it" "made mid-reconcile" "$(jq -r '.rulings[].text' "$led")"
-check "the need made mid-reconcile survives it" "answer it" "$(jq -r '.needs[].action' "$led")"
+check "the need made mid-reconcile survives it" "Answer skills#5 now" "$(jq -r '.needs[].action' "$led")"
 check "and reconcile's own change still lands" running "$(jq -r --arg k "$repo#5" '.entries[$k].stage' "$led")"
 
 # A rethread made mid-reconcile is not overwritten with the old thread's reading.

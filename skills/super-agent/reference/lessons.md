@@ -59,8 +59,8 @@ ticket hit it again.
 A lesson that holds in more than one repo belongs in the owner's global rules,
 so every repo's runs inherit it.
 
-1. Propose it as a Needs you escalation: the proposed rule text and its
-   evidence, the tickets or PRs that showed it.
+1. Propose it as a need: the proposed rule text and its evidence, the
+   tickets or PRs that showed it.
 2. On the owner's yes, write it in the owner's own rules by the owner's
    method. On a no, drop it.
 3. Keep it out of a repo's public text when it would name private things.

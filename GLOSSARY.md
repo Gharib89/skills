@@ -15,6 +15,7 @@ One glossary in several files, one per area, so a session reads only the area it
 - [Grilling](docs/glossary/grilling.md): the grilling round.
 - [Supervision](docs/glossary/supervision.md): driving sessions in Herdr.
 - [Super agent](docs/glossary/super-agent.md): the one supervisor for every ticket across repos, its ledger, watcher, stalls and standing waivers.
+- [Super agent: the status block and needs](docs/glossary/super-agent-status.md): the one report the owner reads, its needs-you message, blocking needs, offers, alert marks and acknowledge marks.
 - [Super agent: fleet and placement](docs/glossary/super-agent-fleet.md): the fleet file, the machines and provider instances it lists, the machine check, slots, placement and the ship cap.
 - [Explainer video](docs/glossary/explainer-video.md): the explainer-video skill's vocabulary.
 - [Creative video](docs/glossary/creative-video.md): the `creative-video` skill's vocabulary, the freely authored sibling of `explainer-video`.

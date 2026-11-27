@@ -7,8 +7,8 @@ The morning report starts a fresh super-agent thread, so compactions and stale
 context never pile up in one. It is the one exception to SKILL.md's The loop
 watcher
 rule and to the Hard rules: the successor is launched without a claim and is
-never recorded or watched, this thread settles itself, and its pin request is
-the one push that is not a need. The old thread, in this order:
+never recorded or watched, and this thread settles itself. The old thread, in
+this order:
 
 1. Save every `projects` row of `t3_project_list` to a file as one JSON
    array (call again with `cursor` set to `nextCursor` until it is null). Then
@@ -42,9 +42,8 @@ the one push that is not a need. The old thread, in this order:
    block and say in one chat line that the handover failed: the next morning
    retries.
 5. Settle this thread: `t3_thread_organize` action `settle` on it.
-6. Push one notification (PushNotification), and post the same line in chat:
-   `Pin the new super agent: <link>`, the successor's `link`. No T3 tool pins
-   a thread.
+6. Post one line in chat: `Pin the new super agent: <link>`, the successor's
+   `link`. No T3 tool pins a thread.
 
 **When your first message carries a `Handover:` line, you are the
 successor.** Record your own thread id first, `scripts/ledger.sh --ledger

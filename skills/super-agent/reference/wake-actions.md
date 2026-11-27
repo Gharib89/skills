@@ -56,8 +56,9 @@ Only the owner can unblock it. Record one need per row with `ledger.sh need`
 (SKILL.md, Escalation format), adding `--reason <the row's reason>`: it silences
 that row only, so a later cause on the entry still prints. By `reason`:
 
-- `permission-hold` (`detail` the held requests): name the thread, the held call
-  and your recommendation; a held thread is not a stall.
+- `permission-hold` (`detail` the held requests): `--answer-in` the thread's
+  link, the held call in the action, your recommendation in `--why`; a held
+  thread is not a stall.
 - `fault` (`detail` the error kind): see [stall ladder](stall-ladder.md#errors);
   start the watcher again after escalating.
 - `stall-cap`: the entry is at rest at 3 stalls. A `stalled` row may print on
@@ -84,8 +85,9 @@ written `'\''`, then merge through
 `.claude/skills/ship-run/scripts/merge.sh`, each its own command from the
 worktree root, and name the waiver in its PR body. A hold none matches follows
 the fleet file's `merge_gate_ruler`. `owner` (the default, and a fleet file
-without the key): record a need with `ledger.sh --ledger <ledger> need <key>
---action <text> --reason merge-gate`. `super-agent`: you rule on the hold,
+without the key): record a need with `--reason merge-gate`, its options to
+merge, rework or hold
+([a need](status-block.md#a-need)). `super-agent`: you rule on the hold,
 record it with `ledger.sh ruling`, tell the run in its thread as the gate-hold
 step-in, and say it in the next status block. A ruling you cannot defend is
 the owner's: record a need with `--reason merge-gate`.

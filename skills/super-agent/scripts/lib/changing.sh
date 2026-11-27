@@ -5,7 +5,7 @@
 sa_jq_changing='
   # Every `ledger.sh` subcommand that writes.
   def ledger_verbs: ["add", "adopt", "set", "rethread", "ruling", "pin", "migrate-rulings", "wait", "unwait", "need",
-    "pushed", "unneed", "limit", "unlimit", "take", "tell", "drop", "reset-stalls", "self"];
+    "unneed", "ack", "limit", "unlimit", "take", "tell", "drop", "reset-stalls", "self"];
   # The verb sits right after `ledger.sh` and its `--ledger <file>`, so a verb word inside the
   # `--action` text of a need does not match.
   def ledger_write($verbs): "ledger\\.sh(\\s+--ledger\\s+(\"[^\"]*\"|\\x27[^\\x27]*\\x27|(\\\\.|\\S)+))?\\s+(\($verbs | join("|")))\\b";

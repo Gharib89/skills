@@ -111,8 +111,8 @@ read_of '/ship-run 7'; jq '.thread.threadId = "th-t22"' "$tmp/read.json" > "$tmp
 out=$(L adopt --read "$tmp/read.json" --repo $repo --number 22 2>&1); rc=$?
 check "and a --number the first message does not name is refused" "2 1" "$rc $(grep -q -- '--number 22 is not the ticket' <<<"$out" && echo 1)"
 L set $repo#7 steered true >/dev/null
-L need $repo#7 --action "watch or take?" --reason owner-steered >/dev/null
-L need $repo#9 --action "an other need" --reason owner >/dev/null
+L need $repo#7 --action "Watch widgets#7 or take it?" --reason owner-steered --why w --option a --option b >/dev/null
+L need $repo#9 --action "Decide widgets#9 other need" --reason scope --why w --option a --option b >/dev/null
 read_of '/ship-run 7'
 L adopt --read "$tmp/read.json" >/dev/null
 check "Watch clears the entry's owner-steered need, so the next steer is asked about again" "$repo#9" "$(L list | jq -r '[.needs[].key] | join(",")')"

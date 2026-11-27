@@ -18,3 +18,6 @@ here in the same diff. A cell holds no `|`.
 | 0.46.0 | paused | owner-run |
 | 0.46.0 | unpause | adopt |
 | 0.46.0 | give back | Watch <thread> |
+| 0.47.0 | pushed mark | alert mark |
+| 0.47.0 | unpushed need | raised need |
+| 0.47.0 | Needs you row | needs-you message |

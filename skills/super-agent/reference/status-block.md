@@ -5,6 +5,7 @@
 - [Every wake](#every-wake)
 - [A reviewer usage limit](#a-reviewer-usage-limit)
 - [A need](#a-need)
+- [An acknowledge mark](#an-acknowledge-mark)
 - [A ruling](#a-ruling)
 - [The digest](#the-digest)
 
@@ -13,11 +14,12 @@ block for you, as `status` in their answer (`status.sh --help` lists its
 fields); never compose it or rewrite it. Pass them `--instance <id>` with this
 thread's provider instance, read once per session from `t3 thread show
 $T3CODE_THREAD_ID --json` (`.thread.providerInstanceId`); without it the block
-has no `Super agent on` line. The rows are `Needs you`, `Merged`, `Running`,
-`Yours`, `Waiting` and `Reviewer limit`, one line each, `Needs you` first; each
-ticket is a link, and a `Running` ticket names the provider instance it launched
-on and ends `(you spoke last)` when the owner's message is the newest from
-outside its thread. `Yours` lists the entries the owner took ("I'll take"),
+has no `Super agent on` line. The block opens with the **needs-you message**,
+every open [need](#a-need) printed in full, then after a blank line the rows
+`Merged`, `Running`, `Yours`, `Waiting` and `Reviewer limit`, one line each;
+each ticket is a link, and a `Running` ticket names the provider instance it
+launched on and ends `(you spoke last)` when the owner's message is the newest
+from outside its thread. `Yours` lists the entries the owner took ("I'll take"),
 each with its pull request's state and how long it has been the owner's. A
 `task` entry (a thread that is no ticket's) reads `task:<slug> (task)`, and an
 adopted entry of either kind adds `(adopted)`. A posted block ends with one
@@ -27,29 +29,28 @@ runs on.
 
 ## Every wake
 
-Reconcile (or pulse) with `--quota <file> --instance <id>`, `<file>` the
+Reconcile (or pulse) with `--fleet <fleet> --quota <file> --instance <id>`
+(the fleet file's `work_week` sets the reminder clock), `<file>` the
 latest saved quota read (Routing: `quota.sh --fleet <fleet> --save <file> --wake
 <wake-id>`) and `<id>` this thread's provider instance. `launch.sh record`
-answers a `status` of its own, from its baseline reconcile: post and push it
-the same way. Every `status` answer:
+answers a `status` of its own, from its baseline reconcile: post it the same
+way. Every `status` answer:
 
-- `block` holds only the rows that changed since the last posted block, a row
-  that emptied reading `<row>: none`, and `Merged` lists only the merges since
-  that block. Post it as printed, with no push. Empty: post nothing, no prose
-  either. A merge, a launch or a change to the waiting list reaches the owner
-  this way.
-- `unpushed` holds a need, whatever `block` says: that need is new, and it is
-  the only thing that sends a push, bar the
-  [daily handover](../SKILL.md#daily-handover)'s pin request. Send one push
-  notification (the PushNotification tool) naming the run and the one action,
-  then run `ledger.sh --ledger <ledger> pushed <key>`. Until then every
-  reconcile lists it again. A need you record after this wake's reconcile is
-  pushed and marked the same way at once; its row reaches the next block.
-- A need that asks the owner to pick (approve or deny a held call, a scope
-  fork) goes out as chat text after the block: the question, the options
-  numbered with your recommendation first and marked, and its push. The owner
-  answers in chat. Never open a question dialog: it blocks the loop until
-  answered.
+- `block` holds the needs-you message when the needs changed or one is raised,
+  then only the rows that changed since the last posted block, a row that
+  emptied reading `<row>: none` (needs that emptied, `Nothing needs you now.`),
+  and `Merged` lists only the merges since that block. Post it as printed, in
+  chat. Empty: post nothing, no prose either. A merge, a launch, a change to the
+  waiting list and every need reach the owner this way.
+- `raised` lists the needs this block alerts: a need not alerted before, and a
+  blocking need's one reminder. Nothing to do with it; the block carries them.
+  A need you record after this wake's reconcile is in no block yet: run
+  `status.sh --ledger <ledger> --fleet <fleet> --quota <file> --instance <id>`
+  and post its `block` at once.
+- The owner answers in chat, `88 1` (ticket and option) or a bare `1` while one
+  need with options is open: `ledger.sh --ledger <ledger> answer '<reply>'`
+  names the need and the option, or exits 1 when the reply names none or
+  several. Never open a question dialog: it blocks the loop until answered.
 - A `status` holding only `error` built no block: act on the rest of the
   answer as usual, and tell the owner that error in chat.
 
@@ -67,17 +68,57 @@ as landed, or the owner says it is back.
 
 ## A need
 
-Record one when you escalate: `ledger.sh --ledger <ledger> need <key> --action
-<text> --reason <word>`, `<key>` the entry (or the waiting ticket), `<text>` the
-one action and `<word>` the `escalate` row's `reason`, or for a need no row
-raised a word naming its cause (`verify`, `merge-gate`, `cleanup`). A need
-with no reason silences every later `escalate` row of its entry until
-`unneed`.
+Record one when you escalate:
+
+```sh
+ledger.sh --ledger <ledger> need <key> --action <question> --reason <word> \
+  --why <clause> --option <option> --option <option>...
+```
+
+The question reads `<verb> <ticket> <detail>`, and an option
+`<label>: <consequence>` or a bare `<label>`.
+
+`<key>` is the entry (or the waiting ticket); the action is the question without
+its `?`, its second word the ticket (`name#n`, `owner/name#n` or `task:slug`),
+the verb and ticket within its first 30 characters and the whole within 72.
+`<word>` is the `escalate` row's `reason`, or for a need no row raised a word
+naming its cause (`verify`, `merge-gate`, `cleanup`). Give 2 to 4 options, the
+recommended one first, each label at most 5 words, the label ending at the first
+`: `; a held call the owner answers in its own thread takes
+`--answer-in <thread link>` and no options, your recommendation in `--why`.
+`ledger need` refuses a need the message could not print, and a reason word it
+does not know: its refusal lists the words.
+
+The reason word sets the need's class. A **blocking need** is one whose thread
+or the queue is stopped until the owner acts (`permission-hold`, `merge-gate`,
+`scope`, `stall-cap`, `fault`, `no-instance`, `no-owner-skill`, `no-project`,
+`stale-ship`, `route-ask`, `owner-steered`, `triage`); it prints bold, before
+the offers. An **offer** is one nothing waits on (`daily-offer`, `unqueued`,
+`parents-done`, `stale-skill`, `pr-closed`, `issue-closed`, `ask-first`,
+`owner-run`, `verify`, `cleanup`); it prints behind `Offer:`. Each need prints
+at most 6 lines, its options numbered from 1.
+
+The block that first prints a need sets its alert mark. A blocking need still
+open 4 working hours later (hours on the fleet file's `work_week` days) is
+raised once more, and never again. Repeating `need` with the same action keeps
+its time and both marks, whatever its reason word, so a re-escalation is never
+raised twice. Each alert and reminder is logged in `needs-alerts.jsonl` beside
+the ledger, which the scorecard counts. A need 0.46.0 recorded and pushed
+counts as alerted at its `since`; it prints as its ticket's link and its action,
+so record it again with `--why` and options: on the same key it keeps its marks,
+whatever the new action.
+
 Clear it with `ledger.sh --ledger <ledger> unneed <key>` once the owner has
 answered, its ticket settles, or its stall resets, since nothing else clears
-one. A `closed` ticket's need stays until the owner answers. Repeating `need`
-with the same action keeps its time and its push, so a re-escalation never
-pushes twice.
+one. A `closed` ticket's need stays until the owner answers.
+
+## An acknowledge mark
+
+An `escalate` row that needs nothing of the owner yet (a stall you are already
+handling, a fault you will retry) takes an **acknowledge mark**, not a need:
+`ledger.sh --ledger <ledger> ack <key> --reason <the row's reason>`. It hides
+that row and adds nothing to the block. It lapses once the entry's stage
+changes, so the row prints again if the cause comes back.
 
 ## A ruling
 
@@ -119,7 +160,7 @@ skip this section.
    to the fleet file's standing waivers, and any other ruling is pinned when it
    still holds and lapses otherwise.
 3. Put the list on a page for the owner (an artifact, the rows grouped by mark
-   with your reason for each), and post its link with a push. Wait for the
+   with your reason for each), and post its link in chat. Wait for the
    owner to approve it or edit it; a row they strike is left unmarked, which
    lapses, unless its ruling already has its own `expires`, which it keeps.
 4. Write each `move` into its destination first (the fleet key as
@@ -127,8 +168,8 @@ skip this section.
    repo's own PR), then save the approved rows as a JSON array and run
    `ledger.sh --ledger <ledger> migrate-rulings <list.json>`. It refuses two
    things: a row whose date and text match no ruling (fix the row from `list`
-   and rerun) and any run after the first. Send the owner its `pinned`,
-   `lapsed` and `moved` lists in a push: the status block does not carry them.
+   and rerun) and any run after the first. Post the owner its `pinned`,
+   `lapsed` and `moved` lists in chat: the status block does not carry them.
 
 ## The digest
 

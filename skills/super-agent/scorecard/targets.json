@@ -1,5 +1,5 @@
 {
-  "needs.alerted_twice": {"max": 0, "slice": 12},
+  "needs.alerted_twice": {"max": 0},
   "questions.with_write": {"max": 0},
   "guards.watch.passes": {"max": 0},
   "timer.worst_minutes": {"max": 15},

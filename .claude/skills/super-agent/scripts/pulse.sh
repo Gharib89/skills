@@ -11,7 +11,7 @@
 # transcript read, no status block, no further call. `changed` is true when the
 # reconcile answer holds anything to act on: any of its lists but `entries` and
 # `at_rest` is not empty (a new list counts by default), an entry's stage
-# moved, or its `status` holds a block to post or a need to push. A thread at
+# moved, or its `status` holds a block to post or a need raised. A thread at
 # rest that is only waiting for the owner's answer (`at_rest`) is not a change,
 # and nor is an error of an entry that the ledger holds: its `escalate` row
 # carries it until a need silences it. A dead watcher is `alive` false whatever
@@ -53,5 +53,5 @@ jq -cn --argjson s "$summary" --argjson a "$alive" --argjson held "$held" "$sa_j
      | [to_entries[] | select(.key | IN("ledger", "checked", "entries", "at_rest") | not) | .value
         | select(type == "array" and length > 0)] | length > 0) as $lists
   | ($lists or ([$s.entries[] | select(.from != .stage)] | length > 0)
-     or $s.status.block != "" or ($s.status.unpushed | length > 0)) as $c
+     or $s.status.block != "" or (($s.status.raised // []) | length > 0)) as $c
   | {alive: $a, changed: $c, end_turn: ($a and ($c | not)), summary: (if $c then $s else null end), skill: $s.skill}'

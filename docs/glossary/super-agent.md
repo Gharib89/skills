@@ -30,10 +30,6 @@ _Avoid_: board, roster (that is drive-session's), wiki, memory
 The ledger's `waiting` rows, in order: the owner's queue. A row is a ticket with no thread yet, either one placement could not place (a machine or the ship cap was in the way) or one the owner queued; it may carry an order and an `--after` blocker, another ticket's key that must merge first, which is the ledger's own and adds no blocking edge on GitHub. Reconcile prints its `ready` rows (blocker merged, repo under its ship cap), drops a row whose issue closed, and the super agent launches the `ready` ones. The owner's word "queue" means this list.
 _Avoid_: backlog, pending list, a queue kept in a scratch file
 
-**Status block**:
-The one report the owner reads, printed by every reconcile from the ledger alone and posted as printed: the rows `Needs you`, `Merged`, `Running` and `Waiting`, an empty row left out, each ticket a link and each task or adopted entry marked as one, ending on the provider instance the super agent itself runs on. A wake that changed no row posts none, and only a new open need sends a push; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
-_Avoid_: report (prose written fresh on each wake), summary, dashboard
-
 **Watcher**:
 The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent; a thread on a linked machine is woken from GitHub alone (its PR opening, its checks finishing, a merge or a close) and read itself only on a wake. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
 _Avoid_: watchdog, poller, monitor
@@ -59,7 +55,7 @@ The UserPromptSubmit hook (`scripts/question-flag.sh`) in the same generated set
 _Avoid_: question detector, answer-only gate (it refuses nothing)
 
 **Wake timer**:
-The systemd user timer that runs `scripts/wake-timer.sh` every 5 minutes, with no model, on the super agent's machine. While `watch.sh --owed` says a watcher is owed and the super agent's own thread is idle, it sends the thread one fixed wake line, then runs the notify command if no reconcile follows. A running thread is the watch guard's, and a limit stop is held until its reset plus 10 minutes. Its unit files are the owner's to install: `guard.sh --install` prints them, and a missing timer is a `Needs you` row.
+The systemd user timer that runs `scripts/wake-timer.sh` every 5 minutes, with no model, on the super agent's machine. While `watch.sh --owed` says a watcher is owed and the super agent's own thread is idle, it sends the thread one fixed wake line, then runs the notify command if no reconcile follows. A running thread is the watch guard's, and a limit stop is held until its reset plus 10 minutes. Its unit files are the owner's to install: `guard.sh --install` prints them, and a missing timer is a `needs` line in `home`.
 _Avoid_: heartbeat, cron job, backstop (that is the hourly schedule)
 
 **Waiting line**:
@@ -135,7 +131,7 @@ The Markdown file `handover.sh` writes from the ledger for the successor: the pr
 _Avoid_: handoff notes, state dump
 
 **Scorecard**:
-The daily row `scorecard.sh` counts from the ledger, the guard and timer logs and the super agent's own transcript (workload, messages, needs, questions, wakes and tokens), stamped with the skill version that ran the day, and the weekly review that raises one Needs you row per number over its target. A new super-agent version is judged by these counts, not by a model's reading.
+The daily row `scorecard.sh` counts from the ledger, the guard and timer logs and the super agent's own transcript (workload, messages, needs, questions, wakes and tokens), stamped with the skill version that ran the day, and the weekly review that adds one line to the bearings file's Needs you list per number over its target. A new super-agent version is judged by these counts, not by a model's reading.
 _Avoid_: metrics, dashboard, report card
 
 **Replay case**:

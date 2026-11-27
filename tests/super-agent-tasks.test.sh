@@ -50,7 +50,7 @@ L add --task grill --kind ship --thread t >/dev/null 2>&1; rc=$?
 check_rc "add --task grill --kind ship is a usage error" 2 "$rc"
 L add --repo $repo --number 9 --thread t --worktree w --branch b --kind task >/dev/null 2>&1; rc=$?
 check_rc "--kind task without --task is a usage error" 2 "$rc"
-out=$(L need task:grill-auth --action "answer the grill"); rc=$?
+out=$(L need task:grill-auth --action "Answer task:grill-auth grill" --reason scope --why w --answer-in https://t3.example/t/g); rc=$?
 check_rc "a task can hold a need" 0 "$rc"
 
 # --- adopt records a thread somebody else launched ----------------------------------
@@ -188,13 +188,13 @@ L add --task grill-auth --thread t-g --worktree /wt/g --branch grill/auth >/dev/
 L adopt --task deploy-x --thread t-d --worktree /wt/d --branch deploy/x >/dev/null
 L adopt --repo $repo --number 12 --thread t-s --worktree /wt/s --branch feat/s-12 >/dev/null
 L add --repo $repo --number 13 --thread t-13 --worktree /wt/13 --branch feat/x-13 >/dev/null
-L need task:grill-auth --action "answer the grill" >/dev/null
+L need task:grill-auth --action "Answer task:grill-auth grill" --reason scope --why w --answer-in https://t3.example/t/g >/dev/null
 block=$(S | jq -r .block)
 check "a task reads task:<slug> (task) in Running" "yes" "$(grep -q 'task:grill-auth (task) launched' <<<"$block" && echo yes || echo no)"
 check "an adopted task says so" "yes" "$(grep -q 'task:deploy-x (task) (adopted) launched' <<<"$block" && echo yes || echo no)"
 check "an adopted ticket is a link with its mark" "yes" "$(grep -q '\[skills#12\](https://github.com/Gharib89/skills/issues/12) (adopted) launched' <<<"$block" && echo yes || echo no)"
 check "a launched ticket carries no mark" "yes" "$(grep -q '\[skills#13\](https://github.com/Gharib89/skills/issues/13) launched' <<<"$block" && echo yes || echo no)"
-check "a task's need names its key, not a link" "yes" "$(grep -q '^Needs you (1): task:grill-auth answer the grill' <<<"$block" && echo yes || echo no)"
+check "a task's need names its key, not a link" "yes" "$(grep -qF '**Answer task:grill-auth grill?**' <<<"$block" && echo yes || echo no)"
 sa_stage "$led" task:grill-auth settled
 settled_block=$(S --digest | jq -r .block)
 check "a settled task is no Merged row" "no" "$(grep -q '^Merged' <<<"$settled_block" && echo yes || echo no)"

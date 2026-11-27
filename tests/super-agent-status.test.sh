@@ -30,7 +30,7 @@ check_rc "a bare call exits 2" 2 "$rc"
 # --- an empty ledger: nothing to post ------------------------------------------
 out=$(S); rc=$?
 check_rc "no ledger file exits 0" 0 "$rc"
-check "an empty ledger prints no block and no change" '{"block":"","changed":false,"unpushed":[]}' "$(jq -c '{block, changed, unpushed}' <<<"$out")"
+check "an empty ledger prints no block and no change" '{"block":"","changed":false,"raised":[]}' "$(jq -c '{block, changed, raised}' <<<"$out")"
 check "a digest of an empty ledger prints no block either" '' "$(S --digest | jq -r .block)"
 
 # --- each row, in order, an empty row left out ---------------------------------
@@ -69,27 +69,19 @@ check "a launched ticket reads launched, a running one running" \
   "$(S | jq -r .block | grep '^Running')"
 check "an entry's change moves the row" false "$(obs 701 '{"gate":false,"pr":{"number":9,"state":"open"}}'; S | jq '.changed | not')"
 
-# --- a new need: first row, unpushed once --------------------------------------
-L need Gharib89/skills#681 --action "pick backfill or forward-only" >/dev/null
+# --- a need: the needs-you message opens the block, raised once ------------------
+# (the message itself, the reminder and the alert log: super-agent-needs.test.sh)
+L need Gharib89/skills#681 --action "Pick skills#681 backfill or forward-only" --reason scope --why "the issue allows both" \
+  --option "Backfill: every old row too" --option "Forward-only" >/dev/null
 out=$(S)
-check "a need makes Needs you the first row" "Needs you (1): [skills#681]($u/issues/681) pick backfill or forward-only" "$(jq -r '.block | split("\n")[0]' <<<"$out")"
-check "and the run reports a change" true "$(jq .changed <<<"$out")"
-check "listing the need not yet pushed" '[{"key":"Gharib89/skills#681","action":"pick backfill or forward-only"}]' "$(jq -c '[.unpushed[] | {key, action}]' <<<"$out")"
-L pushed Gharib89/skills#681 >/dev/null
+check "a need opens the block, bold" "**Pick [skills#681]($u/issues/681) backfill or forward-only?**" "$(jq -r '.block | split("\n")[0]' <<<"$out")"
+check "and the run reports a change, raising it" 'true ["Gharib89/skills#681"]' "$(jq -r '"\(.changed) \([.raised[].key] | tojson)"' <<<"$out")"
+check "the next run raises nothing and changes no row" 'false []' "$(S | jq -r '"\(.changed) \(.raised)"')"
+check "a digest keeps the needs first" "**Pick [skills#681]($u/issues/681) backfill or forward-only?**" "$(S --digest | jq -r '.block | split("\n")[0]')"
+L unneed Gharib89/skills#681 >/dev/null
 out=$(S)
-check "marking it pushed lists none and changes no row" 'false []' "$(jq -r '"\(.changed) \(.unpushed)"' <<<"$out")"
-check "a digest keeps the need row first" "Needs you (1): [skills#681]($u/issues/681) pick backfill or forward-only" "$(S --digest | jq -r '.block | split("\n")[0]')"
-L need Gharib89/skills#682 --action "approve the held merge" >/dev/null
-out=$(S)
-check "a second need is one more row item and only it is unpushed" \
-  '["Gharib89/skills#682"]' "$(jq -c '[.unpushed[].key]' <<<"$out")"
-check "its row joins the actions with semicolons" \
-  "Needs you (2): [skills#681]($u/issues/681) pick backfill or forward-only; [skills#682]($u/issues/682) approve the held merge" \
-  "$(jq -r '.block | split("\n")[0]' <<<"$out")"
-L unneed Gharib89/skills#681 >/dev/null; L unneed Gharib89/skills#682 >/dev/null
-out=$(S)
-check "clearing the needs reports the change, the row saying none" "true Needs you: none" "$(jq -r .changed <<<"$out") $(jq -r .block <<<"$out")"
-check "and a digest leaves the empty row out" 0 "$(S --digest | jq -r .block | grep -c '^Needs')"
+check "clearing the needs reports the change, saying none" "true Nothing needs you now." "$(jq -r .changed <<<"$out") $(jq -r .block <<<"$out")"
+check "and a digest leaves them out" 0 "$(S --digest | jq -r .block | grep -c '^Needs')"
 
 # --- a ledger status never reads GitHub, and a settled triage entry is no merge -
 add 800; L set Gharib89/skills#800 kind '"triage"' >/dev/null; stage 800 settled

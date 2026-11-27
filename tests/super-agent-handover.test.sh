@@ -33,7 +33,7 @@ seed() {
   sa_skill_file Gharib89/skills "$src" "$loaded"
   bash "$s/ledger.sh" --ledger "$led" add --repo "$repo" --number 7 --thread th-7 --worktree /wt/7 --branch feat/x-7 >/dev/null
   bash "$s/ledger.sh" --ledger "$led" add --task rotate-key --thread th-t >/dev/null
-  bash "$s/ledger.sh" --ledger "$led" need "$repo#7" --action "approve the merge" >/dev/null
+  bash "$s/ledger.sh" --ledger "$led" need "$repo#7" --action "Approve ${repo#*/}#7 merge" --reason merge-gate --why w --option a --option b >/dev/null
   bash "$s/ledger.sh" --ledger "$led" wait "$repo#9" --reason "no slot" >/dev/null
 }
 
@@ -72,7 +72,7 @@ check_rc "a handover exits 0" 0 "$rc"
 check "it answers where the bearings are and that no refresh ran" "$bear false" "$(jq -r '"\(.bearings) \(.refreshed)"' <<<"$out")"
 check "it names the predecessor thread and the ledger" 1 "$(grep -F 'th-old' "$bear" | grep -cF "$led")"
 check "each open entry is a line with its thread and stage" "2" "$(grep -cE "^- ($repo#7 thread th-7 launched|task:rotate-key thread th-t launched)" "$bear")"
-check "each open need is a line with its action" 1 "$(grep -c "^- $repo#7: approve the merge" "$bear")"
+check "each open need is a line with its action" 1 "$(grep -c "^- $repo#7: Approve ${repo#*/}#7 merge" "$bear")"
 check "each waiting row is a line with its reason" 1 "$(grep -c "^- $repo#9: no slot" "$bear")"
 check "a settled entry is not in the bearings" 0 "$(bash "$s/ledger.sh" --ledger "$led" add --repo "$repo" --number 3 --thread th-3 --worktree /wt/3 --branch b-3 >/dev/null
   jq '.entries["acme/widgets#3"].stage = "settled"' "$led" > "$tmp/l" && mv "$tmp/l" "$led"; H >/dev/null; grep -c 'acme/widgets#3' "$bear")"

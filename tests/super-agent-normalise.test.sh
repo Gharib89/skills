@@ -57,9 +57,9 @@ out=$(bash "$s/intake.sh" --fleet "$fleet" --ledger "$led" --machine alpha --thr
 check "intake: a ticket the ledger holds under another case is held" '["Acme/Widgets#5"]' "$(jq -c .held <<<"$out")"
 
 # --- ledger need, limit and wait --after: the same row in another case ------------------
-L need acme/widgets#7 --action a >/dev/null; L need ACME/Widgets#7 --action b >/dev/null
+L need acme/widgets#7 --action "Approve widgets#7 a" --reason scope --why w --option a --option b >/dev/null; L need ACME/Widgets#7 --action "Approve widgets#7 b" --reason scope --why w --option a --option b >/dev/null
 check "ledger need: a repeat in another case is one row" 1 "$(jq '.needs | length' "$led")"
-check "ledger pushed: a mixed-case key marks it" true "$(L pushed ACME/WIDGETS#7 | jq -r .need.pushed)"
+check "ledger ack: a mixed-case key names the entry" 1 "$(L ack ACME/WIDGETS#7 --reason scope >/dev/null 2>&1; echo $?)"
 check "ledger unneed: a mixed-case key removes it" 0 "$(L unneed Acme/widgets#7 >/dev/null; jq '.needs | length' "$led")"
 L limit acme/widgets --reviewer claude >/dev/null; L limit ACME/Widgets --reviewer codex >/dev/null
 check "ledger limit: a repeat in another case is one row" 1 "$(jq '.review_limits | length' "$led")"
@@ -96,7 +96,7 @@ RL wait acme/widgets#9 --reason r --after ACME/WIDGETS#6 >/dev/null
 check "reconcile: a blocker named in another case is the merged ticket" '["acme/widgets#9"]' "$(RC | jq -c '[.ready[].key]')"
 rfix; sa_thread t-5 idle 4 1 /wt/5 b5 "Stopped after the tests."
 check "reconcile: a permission hold is escalated" "acme/widgets#5" "$(RC | jq -r '[.escalate[].key] | join(",")')"
-RL need ACME/Widgets#5 --action x --reason permission-hold >/dev/null
+RL need ACME/Widgets#5 --action "Approve Widgets#5 held call" --reason permission-hold --why w --answer-in https://t3.example/t/5 >/dev/null
 check "and a need on it in another case silences it" '[]' "$(RC | jq -c '[.escalate[].key]')"
 # a waiting row that duplicates a settled entry in another case is no error row for pulse
 printf '%s\n' '{"rulings":[],"entries":{"acme/widgets#5":{"key":"acme/widgets#5","repo":"acme/widgets","number":5,"stage":"settled","observed":{}}},"waiting":[{"key":"ACME/Widgets#5","reason":"r","since":"2026-11-01T00:00:00Z"}]}' > "$rled"

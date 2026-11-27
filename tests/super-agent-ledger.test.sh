@@ -216,23 +216,24 @@ check "a ledger written before waiting existed lists none" '[]' \
   "$(jq 'del(.waiting)' "$led" > "$tmp/old.json" && bash "$s/ledger.sh" --ledger "$tmp/old.json" list | jq -c .waiting)"
 
 # --- need: what only the owner can settle, one row per key ---------------------
-out=$(L need Gharib89/skills#681 --action "pick backfill or forward-only"); rc=$?
+N() { L need "$1" --action "$2" --reason scope --why "the issue allows both" --option "Backfill: every old row" --option "Forward-only"; }
+out=$(N Gharib89/skills#681 "Pick skills#681 backfill or forward-only"); rc=$?
 check_rc "need exits 0" 0 "$rc"
-check "a new need is unpushed, with its action and the time" \
-  '{"key":"Gharib89/skills#681","action":"pick backfill or forward-only","pushed":false,"since":true}' \
-  "$(jq -c '.need | {key, action, pushed, since: (.since | test("^20[0-9-]+T[0-9:]+Z$"))}' <<<"$out")"
+check "a new need is not alerted yet, with its class and the time" \
+  '{"key":"Gharib89/skills#681","action":"Pick skills#681 backfill or forward-only","class":"blocking","alerted":null,"since":true}' \
+  "$(jq -c '.need | {key, action, class, alerted, since: (.since | test("^20[0-9-]+T[0-9:]+Z$"))}' <<<"$out")"
 check "list carries the open needs" '["Gharib89/skills#681"]' "$(L list | jq -c '[.needs[].key]')"
 since=$(L list | jq -r '.needs[0].since')
-check "pushed marks the push sent" true "$(L pushed gharib89/SKILLS#681 | jq .need.pushed)"
-out=$(L need Gharib89/skills#681 --action "pick backfill or forward-only")
-check "the same need again keeps its push and its time" "true $since" "$(jq -r '.need | "\(.pushed) \(.since)"' <<<"$out")"
-out=$(L need gharib89/skills#681 --action "approve the held merge")
-check "a new action under the key is a new unpushed need, one row" \
-  '[{"action":"approve the held merge","pushed":false}]' "$(L list | jq -c '[.needs[] | {action, pushed}]')"
+bash "$s/status.sh" --ledger "$led" >/dev/null # prints the need, setting its alert mark
+out=$(N gharib89/SKILLS#681 "Pick skills#681 backfill or forward-only")
+check "the same need again keeps its alert mark and its time" "true $since" "$(jq -r '.need | "\(.alerted != null) \(.since)"' <<<"$out")"
+N gharib89/skills#681 "Approve skills#681 held merge" >/dev/null
+check "a new action under the key is a new need not alerted, one row" \
+  '[{"action":"Approve skills#681 held merge","alerted":null}]' "$(L list | jq -c '[.needs[] | {action, alerted}]')"
 check_rc "a need with no action exits 2" 2 "$(L need Gharib89/skills#681 >/dev/null 2>&1; echo $?)"
-check_rc "a need on a key that is no repo and number exits 2" 2 "$(L need nope --action x >/dev/null 2>&1; echo $?)"
-check_rc "a need action holding a newline exits 2" 2 "$(L need Gharib89/skills#9 --action $'a\nb' >/dev/null 2>&1; echo $?)"
-check_rc "pushed on a key with no need exits 1" 1 "$(L pushed Gharib89/skills#1 >/dev/null 2>&1; echo $?)"
+check_rc "a need on a key that is no repo and number exits 2" 2 "$(N nope "Pick skills#681 x" >/dev/null 2>&1; echo $?)"
+check_rc "a need action holding a newline exits 2" 2 "$(N Gharib89/skills#9 $'Pick skills#9 a\nb' >/dev/null 2>&1; echo $?)"
+check_rc "pushed is no verb any more" 2 "$(L pushed Gharib89/skills#681 >/dev/null 2>&1; echo $?)"
 check "unneed clears the need and says so" '{"key":"Gharib89/skills#681","removed":true}' "$(L unneed Gharib89/skills#681 | jq -c .)"
 check "and a second says it had none" false "$(L unneed Gharib89/skills#681 | jq .removed)"
 check "a ledger written before needs existed lists none" '[]' \
