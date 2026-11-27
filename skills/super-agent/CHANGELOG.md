@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.48.0 (2026-11-27)
+
+### Features
+
+- **super-agent**: A need is blocking or an offer and prints as a needs-you message
+  ([#1421](https://github.com/Gharib89/skills/pull/1421),
+  [`325d2c7`](https://github.com/Gharib89/skills/commit/325d2c7e761eb3a97aee0e132457e4954d0f8a20))
+
+
 ## v0.47.1 (2026-11-27)
 
 ### Bug Fixes
