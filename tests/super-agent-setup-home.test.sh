@@ -18,6 +18,7 @@ reset
 out=$(P --name laptop)
 check "a proposal writes no folder, and the missing guard is one Needs you row" "absent false 1" \
   "$([ -e "$hc" ] && echo present || echo absent) $(jq .home.written <<<"$out") $(jq '[.home.needs[] | select(test("state guard"))] | length' <<<"$out")"
+sa_pinned_transcript "$HOME/.claude/projects/p/pinned.jsonl" '["code-review", "super-agent"]'
 out=$(S --write --name laptop)
 check "--write writes the folder's local settings, its first PreToolUse hook the state guard" "true true 3 1 []" \
   "$(jq .home.written <<<"$out") $(jq .home.guard <<<"$out") $(jq '.hooks.PreToolUse | length' "$hc") \

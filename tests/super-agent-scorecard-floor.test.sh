@@ -44,5 +44,7 @@ check "a denied tool, a denied server's tool, a switched-off skill and a ToolSea
 for d in 17 18 20 21 22 23; do R --day "2026-11-$d" --transcript "$tmp/a.jsonl" >/dev/null; done
 check "the review sums the week's count" 5 \
   "$(bash "$s/scorecard.sh" review --ledger "$led" --week 2026-11-17 | jq .denied.calls)"
+check "a week's count above 0 is a need for the review" 1 \
+  "$(bash "$s/scorecard.sh" review --ledger "$led" --week 2026-11-17 | jq '[.needs[] | select(startswith("Context floor cut: 5 calls"))] | length')"
 
 finish

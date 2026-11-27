@@ -83,7 +83,9 @@ if [ "$cmd" = review ]; then
     | {week: {from: $w, to: $to}, days: ($days | length),
        call_guard: {refused: ([$days[] | .call_guard.refused? // 0] | add // 0)},
        denied: {calls: ([$days[] | .denied.calls? // 0] | add // 0)}, needs: (
-        [$t[0] | to_entries[] | select(.value.slice == null) | .key as $k | .value.max as $max
+        [[$days[] | .denied.calls? // 0] | add // 0 | select(. > 0)
+          | "Context floor cut: \(.) calls named a denied tool, server or skill this week: fix the miss in a script or the fleet file."]
+        + [$t[0] | to_entries[] | select(.value.slice == null) | .key as $k | .value.max as $max
           | [$days[] | at($k) | select(type == "number" and . > $max)] as $over
           | select($over | length > 0)
           | "Scorecard: \($k) missed its target of \($max) on \($over | length) of \($days | length) days (worst \($over | max))."]

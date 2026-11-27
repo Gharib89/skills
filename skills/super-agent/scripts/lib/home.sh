@@ -41,8 +41,8 @@ sa_loaded_skill() {
 # own listing names only the skills left on. Also writes the listing to
 # `skills.json`. Exits 1, its reason on stderr, when the cut file is no JSON
 # object or a read fails (`claude mcp list`, or one naming no t3-code; the
-# transcript's listing;
-# `skills.json`).
+# transcript's listing; `skills.json`). Exits 3, the cut still printed, when it
+# switches no skill off: no transcript loaded the skill and none was saved.
 sa_home_cut() {
   local prev='{}' listing='{}' saved='{}' t='' f mcp servers rules
   if [ -f "$1" ]; then
@@ -69,15 +69,19 @@ sa_home_cut() {
   jq -e 'index("t3-code")' <<<"$servers" >/dev/null || { echo "claude mcp list: no t3-code server parsed" >&2; return 1; }
   # The rules folder of the config root the pinned thread runs under: the found
   # transcript's, else the default one. `**` reaches subfolders (probed).
-  rules=${t%%/projects/*}; [ -n "$t" ] || rules=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
-  jq -cn --argjson p "$prev" --argjson s "$saved" --arg rules "$rules/rules/**" --argjson n "$servers" '
+  rules=${t%/projects/*}; [ -n "$t" ] || rules=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
+  local cut
+  cut=$(jq -cn --argjson p "$prev" --argjson s "$saved" --arg rules "$rules/rules/**" --argjson n "$servers" '
     def server: "mcp__" + gsub("[^A-Za-z0-9_-]"; "_");
     ($n - ["t3-code", "smart-compact"] | map(server)) as $servers
     | {permissions: {deny: (["Agent", "Artifact", "ListAgents", "ShareOnboardingGuide", "Workflow", "mcp__claude-in-chrome"]
         + $servers + [$p.permissions.deny[]? | strings] | unique)},
        claudeMdExcludes: ([$rules] + [$p.claudeMdExcludes[]? | strings] | unique),
        skillOverrides: ([($s | keys[]), ($p.skillOverrides // {} | objects | keys[])] - ["super-agent"] | unique
-         | map({key: ., value: "off"}) | from_entries)}'
+         | map({key: ., value: "off"}) | from_entries)}')
+  printf '%s\n' "$cut"
+  jq -e '.skillOverrides != {}' <<<"$cut" >/dev/null \
+    || { echo "no transcript that loaded the super-agent skill" >&2; return 3; }
 }
 
 # sa_shq <text>: the text single-quoted for a shell, each ' in it written '\''.
@@ -156,13 +160,16 @@ sa_guard_stale() {
 }
 
 # sa_home_write_cut: writes the cut's file, or deletes it while the folder holds
-# `cut-off`. Exits 1 when it is not written, with the reason on stderr.
+# `cut-off`. Exits 1 when it is not written, with the reason on stderr, and 3
+# when it is written but switches no skill off (sa_home_cut's 3).
 sa_home_write_cut() {
-  local cut cut_file
+  local cut cut_file rc=0
   cut_file=$(sa_home_cut_settings)
   if [ -f "$(sa_home_cut_off)" ]; then rm -f "$cut_file"; return; fi
-  cut=$(sa_home_cut "$cut_file") || return 1
+  cut=$(sa_home_cut "$cut_file") || rc=$?
+  [ "$rc" = 0 ] || [ "$rc" = 3 ] || return 1
   (sa_write "$cut_file" "$cut") >/dev/null || { echo "cannot write $cut_file" >&2; return 1; }
+  return "$rc"
 }
 
 # sa_home <write: true|false> [<projects file>]: the folder's JSON in $home,
@@ -181,16 +188,20 @@ sa_home_write_cut() {
 # stale or unreadable user-settings entry, a missing project, a cut not written.
 # shellcheck disable=SC2034  # home is read by the scripts that call it
 sa_home() {
-  local dir settings entry wentry qentry oentry centry cut_err written=false has whas qhas ohas chas stale pid=null needs='[]'
+  local dir settings entry wentry qentry oentry centry cut_err cut_rc=0 written=false has whas qhas ohas chas stale pid=null needs='[]'
   dir=$(sa_home_dir) settings=$(sa_home_settings) entry=$(sa_guard_entry) wentry=$(sa_watch_guard_entry)
   qentry=$(sa_question_flag_entry) oentry=$(sa_observe_entry) centry=$(sa_call_guard_entry)
   # The bare write exits on a failure, so it runs in a subshell, its reason left on
-  # stderr; a cut not written is a need that names its reason.
+  # stderr; a cut not written, or one switching no skill off, is a need.
   if [ "$1" = true ] && (sa_write "$settings" "$(jq -cn --argjson e "$entry" --argjson w "$wentry" --argjson q "$qentry" --argjson o "$oentry" --argjson c "$centry" \
-    '{hooks: {PreToolUse: [$e, $o, $c], UserPromptSubmit: [$q], Stop: [$w]}}')") >/dev/null \
-    && cut_err=$(sa_home_write_cut 2>&1 >/dev/null); then written=true
-  elif [ -n "${cut_err:-}" ]; then
-    needs=$(jq -cn --arg e "$cut_err" '["Super agent folder: the context floor cut was not written (\($e | split("\n") | last)): fix that, then run scripts/setup.sh --write"]')
+    '{hooks: {PreToolUse: [$e, $o, $c], UserPromptSubmit: [$q], Stop: [$w]}}')") >/dev/null; then
+    cut_err=$(sa_home_write_cut 2>&1 >/dev/null) || cut_rc=$?
+    case $cut_rc in
+      0) written=true ;;
+      3) written=true
+        needs='["Super agent folder: the context floor cut switches no skill off (no transcript that loaded the super-agent skill): run scripts/setup.sh --write from the pinned thread"]' ;;
+      *) needs=$(jq -cn --arg e "$cut_err" '["Super agent folder: the context floor cut was not written (\($e | split("\n") | last)): fix that, then run scripts/setup.sh --write"]') ;;
+    esac
   fi
   has=$(jq --argjson e "$entry" "$sa_jq_hook_has"'hook_has("PreToolUse"; $e)' "$settings" 2>/dev/null) || has=false
   whas=$(jq --argjson e "$wentry" "$sa_jq_hook_has"'hook_has("Stop"; $e)' "$settings" 2>/dev/null) || whas=false

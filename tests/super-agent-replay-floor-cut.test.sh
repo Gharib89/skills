@@ -75,9 +75,15 @@ for bad in "" $'t3-code: t3 mcp - \xe2\x9c\x93 Connected'; do
 done
 
 sa_mcp_list $'t3-code: t3 mcp - \xe2\x9c\x94 Connected'
-mv "$HOME/.claude/projects" "$tmp/other-root-projects"; mkdir -p "$tmp/cfg"; mv "$tmp/other-root-projects" "$tmp/cfg/projects"
-out=$(CLAUDE_CONFIG_DIR=$tmp/cfg S --write --name laptop 2>/dev/null)
-check "the rules excluded are those of the config root the pinned thread runs under" "[\"$tmp/cfg/rules/**\"]" \
+# A config root whose own path holds /projects/ still names its rules folder.
+mv "$HOME/.claude/projects" "$tmp/other-root-projects"; mkdir -p "$tmp/projects/cfg"; mv "$tmp/other-root-projects" "$tmp/projects/cfg/projects"
+out=$(CLAUDE_CONFIG_DIR=$tmp/projects/cfg S --write --name laptop 2>/dev/null)
+check "the rules excluded are those of the config root the pinned thread runs under" "[\"$tmp/projects/cfg/rules/**\"]" \
   "$(jq -c .claudeMdExcludes "$cut")"
+
+rm -rf "$tmp/projects/cfg/projects" "$H/.claude/settings.json" "$H/skills.json"
+out=$(CLAUDE_CONFIG_DIR=$tmp/projects/cfg S --write --name laptop 2>/dev/null)
+check "with no transcript and no saved listing the rest of the cut is written, and a need says no skill is switched off" "true {} 1" \
+  "$(jq -r .home.written <<<"$out") $(jq -c .skillOverrides "$cut") $(jq '[.home.needs[] | select(test("switches no skill off"))] | length' <<<"$out")"
 
 finish

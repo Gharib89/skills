@@ -142,7 +142,9 @@ skill, the servers from `claude mcp list`. Each list keeps what the file already
 holds, so a skill or server added later is cut at the next rewrite and raises
 `floor.fresh` until then. A failed read (`claude mcp list`, or one with no
 `t3-code` server in it, the listing, a cut file or `skills.json` that is no JSON
-object) writes no cut and raises a need.
+object) writes no cut and raises a need. With no such transcript and no saved
+listing, the rest of the cut is written, switching no skill off, and a need
+says to run `scripts/setup.sh --write` from the pinned thread.
 
 A task launch still names a skill: `scripts/skills.sh` prints each one with its
 one-line description, from the listing setup saved. A skill already switched
