@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# super-agent's `scorecard`: what woke a turn, from the turn's text. A wake the
-# wake timer sent counts under its own cause, never as the owner's (#1416).
+# Replay case: on 2026-11-25 the ship run for the wake timer (#1380, PR #1417)
+# found that the scorecard sorted the wake timer's own line ("Wake timer: no
+# watcher is running...") into cause `owner`, so every timer wake would count as
+# the owner's (#1416). A wake the wake timer sent now counts under its own cause,
+# `wake timer`, and an owner's wake stays the owner's. Red on v0.47.0's
+# scorecard.sh, which reads {"owner":2}.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
