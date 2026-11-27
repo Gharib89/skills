@@ -7,7 +7,7 @@ The one agent the owner talks to about every open ticket in every repo: a pinned
 _Avoid_: router, orchestrator, chief of staff, dispatcher
 
 **Supervised thread**:
-One T3 thread the super agent launched, in its own worktree on whichever machine runs it, recorded as an entry of the ledger: for a ticket (kind `ship` or `triage`) or for any other job the owner asked for (kind **task**: a grill, a deploy, decks, a review). A thread someone else launched that the owner asks it to watch is **adopted**, with the same entry. Every one is watched until it is at rest, whatever its kind, unless the owner takes it over: that thread is **owner-run**, still holding its machine's slot, its thread neither read nor nudged and its PR not merged by the super agent (only its PR and issue are read, on GitHub), until the owner says "Watch <thread>" (watching restarts from the thread's state then), its ticket closes or merges (it then settles with nothing for the super agent to clean up), or, for a task, the owner drops it. A thread that waits on the owner by design, such as a grill, is **interactive**: it never counts as stalled and is not settled on its rest, but leaves when the owner drops it; the super agent touches no thread the ledger does not hold, except the probe threads it launches and, to settle them once at rest, the helper and review threads a supervised thread started.
+One T3 thread the super agent launched, in its own worktree on whichever machine runs it, recorded as an entry of the ledger: for a ticket (kind `ship` or `triage`) or for any other job the owner asked for (kind **task**: a grill, a deploy, decks, a review). A thread someone else launched that the owner asks it to watch is **adopted**, with the same entry. Every one is watched until it ends, whatever its kind (a ticket's on its PR or issue, a one-off task's on its `Result:` line), unless the owner takes it over: that thread is **owner-run**, still holding its machine's slot, its thread neither read nor nudged and its PR not merged by the super agent (only its PR and issue are read, on GitHub), until the owner says "Watch <thread>" (watching restarts from the thread's state then), its ticket closes or merges (it then settles with nothing for the super agent to clean up), or, for a task, the owner drops it. A thread that waits on the owner by design, such as a grill, is an **interactive task**; the super agent touches no thread the ledger does not hold, except the probe threads it launches and, to settle them once at rest, the helper and review threads a supervised thread started.
 _Avoid_: worker, worker thread, child thread, held thread (held is a permission-held call or a gate-held ticket), taken thread (taken is a won claim)
 
 **Owner-run**:
@@ -23,11 +23,19 @@ The PreToolUse hook `call-guard.sh` of the super agent folder's generated settin
 _Avoid_: send filter, send lock
 
 **Ledger**:
-The super agent's JSON file in the state directory, one entry per supervised thread it holds (a ticket's, keyed by issue, or a task's, keyed `task:<slug>` and closed on its thread's rest, never on an issue's state; an adopted entry marked as such), with the thread, model, stage and stall count, plus the owner's recent rulings, each dated and lapsing after a week unless pinned (a lasting preference lives where a script reads it: the fleet file or the repo's ship profile). A settled entry moves to the ledger's archive a week after it settles. It is how a compacted or restarted super agent still knows what it owns; GitHub stays the record for issues, blocking edges and PRs.
+The super agent's JSON file in the state directory, one entry per supervised thread it holds (a ticket's, keyed by issue, or a task's, keyed `task:<slug>` and settled when its thread's last line is `Result:`, never on its first rest or an issue's state; an interactive task's leaves only on the owner's drop; an adopted entry marked as such), with the thread, model, stage and stall count, plus the owner's recent rulings, each dated and lapsing after a week unless pinned (a lasting preference lives where a script reads it: the fleet file or the repo's ship profile). A settled entry moves to the ledger's archive a week after it settles. It is how a compacted or restarted super agent still knows what it owns; GitHub stays the record for issues, blocking edges and PRs.
 _Avoid_: board, roster (that is drive-session's), wiki, memory
 
+**One-off task**:
+A task that does one bounded job the owner asked for in plain words ("run", "research", "test" or "deploy X"), launched by `launch.sh task` and placed like a ticket (a slot, pins, a waiting row when nothing fits) with no claim. Its launch message ends with the contract line: its final message's last line is `Result: <one line> <link>` or `Needs owner: <question>`. Reconcile settles it on `Result:`, raises a `needs-owner` escalate row on `Needs owner:` (no stall), and counts any other rest as a stall; the status block lists it once under `Finished`. Anything the super agent's own record cannot answer becomes one.
+_Avoid_: inline job, side quest, errand
+
+**Interactive task**:
+A task that waits on the owner by design ("grill me on X"): it takes no slot, runs on the super agent's machine, carries no contract line, never counts as stalled and is never settled on its rest; it leaves only when the owner drops it.
+_Avoid_: conversation thread, long-running task
+
 **Waiting list**:
-The ledger's `waiting` rows, in order: the owner's queue. A row is a ticket with no thread yet, either one placement could not place (a machine or the ship cap was in the way) or one the owner queued; it may carry an order and an `--after` blocker, another ticket's key that must merge first, which is the ledger's own and adds no blocking edge on GitHub. Reconcile prints its `ready` rows (blocker merged, repo under its ship cap), drops a row whose issue closed, and the super agent launches the `ready` ones. The owner's word "queue" means this list.
+The ledger's `waiting` rows, in order: the owner's queue. A row is a ticket with no thread yet (or a one-off task nothing fit, carrying its ask), either one placement could not place (a machine or the ship cap was in the way) or one the owner queued; it may carry an order and an `--after` blocker, another ticket's key that must merge first, which is the ledger's own and adds no blocking edge on GitHub. Reconcile prints its `ready` rows (blocker merged, repo under its ship cap), drops a row whose issue closed, and the super agent launches the `ready` ones. The owner's word "queue" means this list.
 _Avoid_: backlog, pending list, a queue kept in a scratch file
 
 **Watcher**:
@@ -91,11 +99,11 @@ A merge-gate hold the owner waives in advance, with its condition written out, s
 _Avoid_: auto-merge, merge allowance (that is the permission to merge at all), exception
 
 **Launch message**:
-The first message of a supervised thread: its owner-skill invocation (`/ship-run <n>`, `/triage <n>`), plus one `Note:` line only when the owner gave one for that ticket. A `/triage` message also carries one contract line after the invocation, since the triage skill is upstream and cannot ask for the waiting line itself. Nothing else rides on it: rules the run must follow live in the skill, the repo's profile or the global rules it loads.
+The first message of a supervised thread: its owner-skill invocation (`/ship-run <n>`, `/triage <n>`), plus one `Note:` line only when the owner gave one for that ticket. A `/triage` message also carries one contract line after the invocation, since the triage skill is upstream and cannot ask for the waiting line itself. A one-off task's is its ask, its last line the task contract line. Nothing else rides on it: rules the run must follow live in the skill, the repo's profile or the global rules it loads.
 _Avoid_: launch brief, preamble, system prompt
 
 **Step-in**:
-A message the super agent sends into a supervised thread after its launch message, only when the thread reaches the situation it answers, and carrying only what that situation needs.
+A message the super agent sends into a supervised thread after its launch message, only when the thread reaches the situation it answers, and carrying only what that situation needs. The adoption step-in is one: the contract line, sent once into a one-off task thread the super agent adopted.
 _Avoid_: re-brief, reminder, broadcast
 
 **Claim**:

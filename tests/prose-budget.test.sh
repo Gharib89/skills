@@ -39,13 +39,13 @@ check_rc "a 3,501-word SKILL.md fails" 1 "$(rc_of "$d")"
 check "the overrun message names the file and the count" \
   "skills/ship-run/SKILL.md: 3501 words, over the 3500-word budget" "$(out_of "$d")"
 
-# super-agent's own cap, 3000 (#1385), lowered by each later slice that deletes its prose.
-d=$(tree sa-at-3000); mkdir -p "$d/skills/super-agent"; words 3000 > "$d/skills/super-agent/SKILL.md"
-check_rc "a 3,000-word super-agent SKILL.md passes" 0 "$(rc_of "$d")"
-d=$(tree sa-over-3000); mkdir -p "$d/skills/super-agent"; words 3001 > "$d/skills/super-agent/SKILL.md"
-check_rc "a 3,001-word super-agent SKILL.md fails" 1 "$(rc_of "$d")"
+# super-agent's own cap, 2621 (#1388), lowered by each later slice that deletes its prose.
+d=$(tree sa-at-cap); mkdir -p "$d/skills/super-agent"; words 2621 > "$d/skills/super-agent/SKILL.md"
+check_rc "a 2,621-word super-agent SKILL.md passes" 0 "$(rc_of "$d")"
+d=$(tree sa-over-cap); mkdir -p "$d/skills/super-agent"; words 2622 > "$d/skills/super-agent/SKILL.md"
+check_rc "a 2,622-word super-agent SKILL.md fails" 1 "$(rc_of "$d")"
 check "its overrun message names its own budget" \
-  "skills/super-agent/SKILL.md: 3001 words, over the 3000-word budget" "$(out_of "$d")"
+  "skills/super-agent/SKILL.md: 2622 words, over the 2621-word budget" "$(out_of "$d")"
 
 # Lines are no longer the measure: a long file inside the word budget passes,
 # which is what keeps a skill from dodging the budget with long lines instead.

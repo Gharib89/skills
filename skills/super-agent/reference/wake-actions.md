@@ -21,8 +21,8 @@ An entry ended and its thread and worktree are yours to close. Per row:
 
 1. Settle the thread with `t3_thread_organize` action `settle` on its `thread`
    (and `environment_id`), skipping that call when its status is already
-   `settled`. Of kind `task`, first read its last message in a small slice and
-   say its outcome in one chat line. Of kind `triage`, first confirm the issue
+   `settled`. Of kind `task`, its `Finished` row already said its outcome. Of
+   kind `triage`, first confirm the issue
    now carries a ready label or the owner skill's other outcome; with none,
    record a need naming the gap, with `--reason triage`, and go on.
 2. Settle the threads the entry's thread started (its helper and review
@@ -72,6 +72,10 @@ that row only, so a later cause on the entry still prints. By `reason`:
   ([handing over](handing-over.md#owner-steered)).
 - `owner-run`: the owner took the thread 3 days ago; ask "watch or drop?". It
   prints once.
+- `needs-owner` (`detail` the question): a one-off task ended on `Needs owner:`
+  ([tasks](tasks.md#how-a-task-ends)). Record the need, the question its
+  `--why`, its options when the question offers some, else `--answer-in` the
+  thread's link.
 
 ## Merge-gate holds
 
