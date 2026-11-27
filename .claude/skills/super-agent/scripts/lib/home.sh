@@ -151,11 +151,11 @@ sa_guard_stale() {
 # sa_home_write_cut: writes the cut's file, or deletes it while the folder holds
 # `cut-off`. Exits 1 when it is not written, with the reason on stderr.
 sa_home_write_cut() {
-  local cut f
-  f=$(sa_home_cut_settings)
-  if [ -f "$(sa_home_cut_off)" ]; then rm -f "$f"; return; fi
-  cut=$(sa_home_cut "$f") || return 1
-  (sa_write "$f" "$cut") >/dev/null || { echo "cannot write $f" >&2; return 1; }
+  local cut cut_file
+  cut_file=$(sa_home_cut_settings)
+  if [ -f "$(sa_home_cut_off)" ]; then rm -f "$cut_file"; return; fi
+  cut=$(sa_home_cut "$cut_file") || return 1
+  (sa_write "$cut_file" "$cut") >/dev/null || { echo "cannot write $cut_file" >&2; return 1; }
 }
 
 # sa_home <write: true|false> [<projects file>]: the folder's JSON in $home,
