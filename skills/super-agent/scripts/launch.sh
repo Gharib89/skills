@@ -11,12 +11,12 @@
 #   launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file>
 #          --machine <key> --thread <id> [--area <path>]... [--gpu]
 #          [--account <login>] [--blocked-by <n>]... [--instance <id>]
-#          [--raise <n>] [--wanted yes|no] [--readings <file>] [--exclude <key>]...
+#          [--raise <n>] [--wanted yes|no] [--exclude <key>]...
 #          [--owner-go] [--skill <name>] [--note <text>] [--out <file>]
 #   launch task <slug> --ask <text> --fleet <file> --ledger <file> --quota <file>
 #          --machine <key> [--repo <owner/name>] [--skill <name>] [--interactive]
 #          [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]...
-#          [--readings <file>] [--instance <id>] [--raise <n>] [--wanted yes|no]
+#          [--instance <id>] [--raise <n>] [--wanted yes|no]
 #          [--owner-go] [--out <file>]
 #   launch record --launch <file> --thread <id> --ledger <file> [--rethread]
 #          [--worktree <path>]
@@ -28,7 +28,7 @@
 # key itself when it records none, is what `hostname` prints here: any other key
 # is a tooling error) and --thread the super agent's own thread, which `claim`
 # records; --quota is the saved `quota` read of this wake. --area,
-# --gpu, --account, --blocked-by, --readings and --exclude go to `place`,
+# --gpu, --account, --blocked-by and --exclude go to `place`,
 # --instance and --raise to `route`. --wanted answers a route's `ask`: `yes`
 # launches the wanted tier, `no` the default one. --owner-go is the owner's go past
 # the 5 hour floor and the weekly reserve when no instance passes them (`route`); a
@@ -81,8 +81,7 @@
 #         `stale_ship` (installed, minimum: the repo's installed ship is below
 #         `sa_min_ship`; read before the claim, so none is taken),
 #         `claimed` or `stale` (the claim), `ask` (route's wanted, tier, bucket,
-#         reason), `no_instance` (route's reason), `need_reading` (place's
-#         machine and environment_id) or `waiting` (place's reason and
+#         reason), `no_instance` (route's reason) or `waiting` (place's reason and
 #         considered, and the ledger now holds the waiting row, a task's carrying its ask).
 #         record: {key, entry, reconcile: {checked, errors}, status}, `status`
 #         the baseline reconcile's status answer, its block to post; or the
@@ -100,7 +99,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file> --machine <key> --thread <id> [--area <path>]... [--gpu] [--account <login>] [--blocked-by <n>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--readings <file>] [--exclude <key>]... [--owner-go] [--skill <name>] [--note <text>] [--out <file>] | launch task <slug> --ask <text> --fleet <file> --ledger <file> --quota <file> --machine <key> [--repo <owner/name>] [--skill <name>] [--interactive] [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]... [--readings <file>] [--instance <id>] [--raise <n>] [--wanted yes|no] [--owner-go] [--out <file>] | launch record (--launch <file> [--rethread] | --task <slug> [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>] [--interactive]) --thread <id> --ledger <file> [--worktree <path>]'
+usage='usage: launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file> --machine <key> --thread <id> [--area <path>]... [--gpu] [--account <login>] [--blocked-by <n>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--exclude <key>]... [--owner-go] [--skill <name>] [--note <text>] [--out <file>] | launch task <slug> --ask <text> --fleet <file> --ledger <file> --quota <file> --machine <key> [--repo <owner/name>] [--skill <name>] [--interactive] [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--owner-go] [--out <file>] | launch record (--launch <file> [--rethread] | --task <slug> [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>] [--interactive]) --thread <id> --ledger <file> [--worktree <path>]'
 sa_help "$usage" "$@"
 here=$(dirname "${BASH_SOURCE[0]}")
 source "$here/launch.d/steps.sh" || sa_tooling "cannot source launch.d/steps.sh"
@@ -118,7 +117,7 @@ key=${1:-}; [ $# -gt 0 ] && shift
 case $key in */*#[0-9]*) ;; *) sa_tooling "$usage" ;; esac
 repo=${key%#*} number=${key##*#}
 case $number in *[!0-9]*) sa_tooling "$usage" ;; esac
-fleet='' ledger='' quota='' machine='' thread='' raise='' named='' wanted='' readings='' note='' outf='' gpu=''
+fleet='' ledger='' quota='' machine='' thread='' raise='' named='' wanted='' note='' outf='' gpu=''
 account='' go='' skill=''
 pargs=()
 areas='[]'
@@ -128,7 +127,7 @@ while [ $# -gt 0 ]; do
   case $1 in
     --fleet) fleet=$2 ;; --ledger) ledger=$2 ;; --quota) quota=$2 ;; --machine) machine=$2 ;; --thread) thread=$2 ;;
     --raise) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; raise=$2 ;;
-    --instance) named=$2 ;; --readings) readings=$2 ;; --note) case $2 in *$'\n'*) sa_tooling "--note holds a newline: the launch message takes one Note: line" ;; esac; note=$2 ;; --out) outf=$2 ;; --account) account=$2 ;;
+    --instance) named=$2 ;; --note) case $2 in *$'\n'*) sa_tooling "--note holds a newline: the launch message takes one Note: line" ;; esac; note=$2 ;; --out) outf=$2 ;; --account) account=$2 ;;
     --wanted) case $2 in yes|no) wanted=$2 ;; *) sa_tooling "$usage" ;; esac ;;
     --area) areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas"); pargs+=(--area "$2") ;;
     --blocked-by) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; pargs+=(--blocked-by "$2") ;;
@@ -191,11 +190,10 @@ route_pick
 
 # 4. The placement.
 sub place --fleet "$fleet" --ledger "$ledger" --repo "$repo" --number "$number" --own "$machine" ${gpu:+"$gpu"} ${account:+--account "$account"} \
-  ${readings:+--readings "$readings"} ${pargs[@]+"${pargs[@]}"}
+  ${pargs[@]+"${pargs[@]}"}
 jq -e 'has("placed")' <<<"$out" >/dev/null 2>&1 || sa_tooling "place gave no answer"
 placed=$(jq -c .placed <<<"$out")
 if [ "$placed" = null ]; then
-  jq -e '.need_reading != null' <<<"$out" >/dev/null && answer need_reading "$(jq -c .need_reading <<<"$out")"
   answer waiting "$(jq -c '{reason, considered}' <<<"$out")"
 fi
 

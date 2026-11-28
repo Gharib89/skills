@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# super-agent's `probe`, the fixed probe a scratch thread runs on a linked
+# super-agent's `probe`, the fixed probe run here and, over ssh, on a linked
 # machine, driven over the fake machine tools: one JSON line of cores, RAM, live
 # load and free RAM, GPU, provider CLIs and gh logins, with a failed GPU read
 # told apart from no GPU.
@@ -26,6 +26,7 @@ check "cores, RAM, live load and free RAM" '{"cores":12,"ram_gb":32,"load1":1.25
 check "the GPU" '{"gpu":"NVIDIA GeForce RTX 2070","gpu_failed":false}' "$(jq -c '{gpu, gpu_failed}' <<<"$out")"
 check "a provider CLI is a boolean, installed or not" '{"claude":true,"codex":false,"agy":true,"gh":true,"bun":false}' "$(jq -c .clis <<<"$out")"
 check "the gh logins this machine holds" '["alice","bob"]' "$(jq -c .gh_logins <<<"$out")"
+check "its text on stdin through bash -s, as a linked machine with no checkout runs it, gives the same line" "$out" "$(bash -s -- --json < "$s/probe.sh")"
 check "no host name, user or key is in the line" 0 "$(jq '[.. | strings | select(test("laptop|@"))] | length' <<<"$out")"
 sa_machine laptop 12 32768
 check "no nvidia-smi is no GPU, not a failed read" '{"gpu":null,"gpu_failed":false}' "$(probe | jq -c '{gpu, gpu_failed}')"

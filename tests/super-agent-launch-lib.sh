@@ -4,21 +4,23 @@
 # helpers. Source it after tests/lib.sh and tests/super-agent-fake.sh, whose
 # sa_* helpers it calls.
 # shellcheck disable=SC2034 # the variables set here are read by the sourcing test
+source tests/super-agent-on-machine-lib.sh
 s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/bin" "$tmp/tools" "$tmp/fake" "$tmp/remote"
+mkdir -p "$tmp/bin" "$tmp/tools" "$tmp/fake" "$tmp/config/super-agent"
 for t in bash env jq awk sed grep cat mktemp mv rm mkdir dirname basename tr head tail date timeout sort cut find wc diff chmod cp; do
   ln -s "$(command -v $t)" "$tmp/tools/$t" || exit 2
 done
-export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake
+# the fleet sits at its default path: record reads a remote thread over its ssh string
+export PATH="$tmp/bin:$tmp/tools" SA_FAKE=$tmp/fake XDG_CONFIG_HOME=$tmp/config
 sa_fake_install "$tmp/bin"
-fleet=$tmp/fleet.json led=$tmp/ledger.json quota=$tmp/quota.json readings=$tmp/readings.json out_f=$tmp/launch.json
+fleet=$tmp/config/super-agent/fleet.json led=$tmp/ledger.json quota=$tmp/quota.json out_f=$tmp/launch.json
 repo=acme/widgets
 cat > "$fleet" <<'JSON'
 {"thread_ram_floor_gb": 4,
  "machines": {"home": {"cores": 8, "slots": 4, "reserve": 1, "max_load": 8, "gpu": null, "gh_logins": ["alice"]},
-              "box": {"environment_id": "env-box", "cores": 8, "slots": 4, "max_load": 8, "gpu": null, "gh_logins": ["alice"]}},
+              "box": {"environment_id": "env-box", "ssh": "box.lan", "cores": 8, "slots": 4, "max_load": 8, "gpu": null, "gh_logins": ["alice"]}},
  "repos": {"acme/widgets": {"max_ships": 2}},
  "waivers": [{"id": "w", "condition": "Codex answers with a usage-limit notice: record it as not landed."}]}
 JSON
@@ -50,5 +52,5 @@ reset() {
   sa_skill_file "$repo" .claude/skills/ship-run/SKILL.md 9.0.0
   echo 2026-11-06T12:00:00Z > "$SA_FAKE/now"
   quota_with 0.8
-  printf '{"box":{"load1":1,"free_gb":20}}\n' > "$readings"
+  sa_on_machine box.lan sa_machine box 8 32768; sa_on_machine box.lan sa_load 1 20480
 }

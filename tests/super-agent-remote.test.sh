@@ -8,6 +8,7 @@ set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 source tests/super-agent-fake.sh
+source tests/super-agent-on-machine-lib.sh
 
 s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
@@ -36,8 +37,8 @@ fixture() {
   L add --repo $repo --number 7 --thread t-7 --worktree /wt/7 --branch feat/x-7 --machine beta --environment env-b >/dev/null
   for n in 5 6 7 8 9; do sa_pr $repo "feat/x-$n" none; sa_issue $repo "$n" open; done
   sa_thread t-5 running 1 0 /wt/5 feat/x-5
-  for n in 6 8 9; do sa_machine_thread alpha t-$n running 1 0 /wt/$n feat/x-$n; done
-  sa_machine_thread me@beta t-7 running 1 0 /wt/7 feat/x-7
+  for n in 6 8 9; do sa_on_machine alpha sa_thread t-$n running 1 0 /wt/$n feat/x-$n; done
+  sa_on_machine me@beta sa_thread t-7 running 1 0 /wt/7 feat/x-7
 }
 
 # --- the ledger records the environment -----------------------------------------
@@ -55,7 +56,7 @@ check "one SSH call per machine, whatever its thread count" "alpha=1 me@beta=1" 
 check "this machine's t3 was asked for the local thread only" "t3 thread show t-5 --json --messages 1" "$(calls | grep '^t3 thread show')"
 
 # --- a thread with another worktree is a mismatch, as locally ----------------------
-sa_machine_thread alpha t-6 running 1 0 /wt/other feat/x-6
+sa_on_machine alpha sa_thread t-6 running 1 0 /wt/other feat/x-6
 check "a remote thread with another worktree is thread-mismatch" "$repo#6 thread-mismatch" \
   "$(R | jq -r '.errors[] | "\(.key) \(.kind)"')"
 
@@ -87,13 +88,13 @@ R >/dev/null
 rm -f "$SA_FAKE/ssh-calls"
 check "a quiet poll times out" timeout "$(W --timeout 0 | jq -r .event)"
 check "one poll is one SSH call per machine" "alpha=1 me@beta=1" "$(ssh_calls)"
-sa_machine_thread alpha t-8 idle 2 0 /wt/8 feat/x-8 "done for now" 2020-01-01T00:00:00Z
+sa_on_machine alpha sa_thread t-8 idle 2 0 /wt/8 feat/x-8 "done for now" 2020-01-01T00:00:00Z
 out=$(W --timeout 5)
 check "a remote thread that finished wakes watch" "$repo#8 run-finished" "$(jq -r '[.key, .event] | join(" ")' <<<"$out")"
 check "the rest and the wake that reported it are logged" "rest wake $repo#8 alpha 2020-01-01T00:00:00Z run-finished" \
   "$(jq -sr '[.[] | select(.event == "rest" or .event == "wake")] | [(map(.event) | join(" ")), .[-1].key, .[-1].machine, .[-1].rest_at, .[-1].reported] | join(" ")' "$tmp/remote-watch.jsonl")"
 R >/dev/null
-sa_machine_thread alpha t-9 running 1 1 /wt/9 feat/x-9
+sa_on_machine alpha sa_thread t-9 running 1 1 /wt/9 feat/x-9
 check "a permission hold on a remote thread wakes watch" "$repo#9 pending-approval" "$(W --timeout 5 | jq -r '[.key, .event] | join(" ")')"
 
 # --- a machine that cannot be read: GitHub still wakes its entries ------------------

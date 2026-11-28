@@ -20,7 +20,7 @@
 slug=${1:-}; [ $# -gt 0 ] && shift
 sa_task_slug_ok "$slug" || sa_tooling "$usage"
 key="task:$slug"
-request='' fleet='' ledger='' quota='' machine='' repo='' skill='' interactive=false gpu='' account='' readings=''
+request='' fleet='' ledger='' quota='' machine='' repo='' skill='' interactive=false gpu='' account=''
 named='' go='' outf='' raise='' wanted='' areas='[]' pargs=()
 while [ $# -gt 0 ]; do
   case $1 in
@@ -34,7 +34,7 @@ while [ $# -gt 0 ]; do
     --skill) case $2 in .*|*[!A-Za-z0-9._-]*) sa_tooling "$usage" ;; esac; skill=$2 ;;
     --wanted) case $2 in yes|no) wanted=$2 ;; *) sa_tooling "$usage" ;; esac ;;
     --raise) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; raise=$2 ;;
-    --instance) named=$2 ;; --readings) readings=$2 ;; --account) account=$2 ;; --out) outf=$2 ;;
+    --instance) named=$2 ;; --account) account=$2 ;; --out) outf=$2 ;;
     --area) areas=$(jq -c --arg a "$2" '. + [$a]' <<<"$areas"); pargs+=(--area "$2") ;;
     --exclude) pargs+=(--exclude "$2") ;;
     *) sa_tooling "$usage" ;;
@@ -52,11 +52,10 @@ if [ "$interactive" = true ]; then
   placed=$(jq -cn --arg m "$machine" '{machine: $m, environment_id: null}')
 else
   sub place --fleet "$fleet" --ledger "$ledger" ${repo:+--repo "$repo"} --key "$key" --own "$machine" ${gpu:+"$gpu"} ${account:+--account "$account"} \
-    ${readings:+--readings "$readings"} ${pargs[@]+"${pargs[@]}"}
+    ${pargs[@]+"${pargs[@]}"}
   jq -e 'has("placed")' <<<"$out" >/dev/null 2>&1 || sa_tooling "place gave no answer"
   placed=$(jq -c .placed <<<"$out")
   if [ "$placed" = null ]; then
-    jq -e '.need_reading != null' <<<"$out" >/dev/null && answer need_reading "$(jq -c .need_reading <<<"$out")"
     detail=$(jq -c '{reason, considered}' <<<"$out")
     sub ledger --ledger "$ledger" wait "$key" --reason "$(jq -r .reason <<<"$detail")" --ask "$request" ${repo:+--repo "$repo"} ${skill:+--skill "$skill"} \
       ${gpu:+"$gpu"} ${account:+--account "$account"} ${pargs[@]+"${pargs[@]}"}

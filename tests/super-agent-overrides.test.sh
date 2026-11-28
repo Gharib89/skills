@@ -76,7 +76,7 @@ check "a skill name opening on a dot is refused" 2 "$(L 9 --skill .. >/dev/null 
 sa_gh_fail contents/.claude/skills/to-tickets 1
 check "a failed read of the repo's skill is no verdict" 2 "$(L 9 --skill to-tickets >/dev/null 2>&1; echo $?)"
 jq '.machines.home.slots = 0' "$fleet" > "$tmp/fleet0.json"
-F0() { bash "$s/launch.sh" "$repo#9" --fleet "$tmp/fleet0.json" --ledger "$led" --quota "$quota" --machine home --thread th-super --readings "$readings" "$@"; }
+F0() { bash "$s/launch.sh" "$repo#9" --fleet "$tmp/fleet0.json" --ledger "$led" --quota "$quota" --machine home --thread th-super "$@"; }
 check "a repo skill goes to another machine when this one is full" env-box "$(F0 --skill grill-with-artifact | jq -r .args.environmentId)"
 check "a skill only this machine installs waits for this machine" waiting "$(F0 --skill to-tickets | jq -r .reason)"
 sa_thread th-g running 1 0 /wt/g "$(jq -r .args.workspaceStrategy.branch "$out_f")"

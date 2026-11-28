@@ -39,7 +39,8 @@
 # records the directory it was run in and that directory's git common dir, a line of
 # `agy-cwd`. `sleep` runs
 # the one-shot script `on-sleep` first, to change what the fakes answer while a
-# script waits. `ssh` answers per target from `ssh/<target>.*` (sa_ssh).
+# script waits. `ssh` answers per target from `ssh/<target>.*` (sa_ssh), or runs the command
+# on a machine (`machines/<target>/`, tests/super-agent-on-machine-lib.sh) when it has no fixed answer.
 
 sa_fake_install() { # <dir>
   cat > "$1/t3" <<'FAKE'
@@ -187,9 +188,10 @@ while [ $# -gt 0 ]; do case $1 in -o) shift 2 ;; -*) shift ;; *) break ;; esac; 
 target=$1; shift
 printf '%s\t%s\n' "$target" "$*" >> "$SA_FAKE/ssh-calls"
 f=$SA_FAKE/ssh/$target
-# a machine (sa_machine_thread) with no fixed answer runs the command there, its fakes
+# a machine (sa_on_machine) with no fixed answer runs the command there, its fakes
 # answering from machines/<target>/
-if [ -d "$SA_FAKE/machines/$target" ] && [ ! -f "$f.rc" ]; then SA_FAKE=$SA_FAKE/machines/$target exec bash -c "$*"; fi
+m=$SA_FAKE/machines/$target
+if [ -d "$m" ] && [ ! -f "$f.rc" ]; then SA_FAKE=$m PATH=$m/bin:$PATH exec bash -c "$*"; fi
 [ ! -f "$f.out" ] || cat "$f.out"
 [ ! -f "$f.err" ] || cat "$f.err" >&2
 exit "$(cat "$f.rc" 2>/dev/null || echo 0)"
@@ -316,15 +318,6 @@ sa_thread() {
        + (if $u == "" then {} else {updatedAt: $u} end)),
       messages: (if $m == "" then [] else [{role: "assistant", runId: "r", text: $m}] end)}' \
     > "$SA_FAKE/threads/$1.json"
-}
-
-# sa_machine_thread <ssh target> <sa_thread's arguments>: a thread on a linked machine,
-# known to the `t3` that machine runs, never to this one's. `ssh <target> <command>`
-# runs the command with the fakes answering from `machines/<target>/` (its own
-# `threads/`, `probe/` and `calls`), unless sa_ssh fixed an answer for the target.
-sa_machine_thread() {
-  local target=$1; shift
-  (SA_FAKE=$SA_FAKE/machines/$target; mkdir -p "$SA_FAKE/threads" "$SA_FAKE/probe"; sa_thread "$@")
 }
 
 sa_route() { # <endpoint> <json>: what `gh api <endpoint>` answers

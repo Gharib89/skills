@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# shellcheck disable=SC2154  # the globals below are setup.sh's: existing, facts, proposed, replies and the like
+# shellcheck disable=SC2154  # the globals below are setup.sh's: existing, facts, proposed and the like
 # Sourced by setup.sh: the linked T3 environments and the check-only machines.
 #
 # Every linked machine also carries `ssh`, the `user@host` or config alias the
@@ -12,6 +12,9 @@
 # (the owner connects once by hand). --check-only adds a **check-only machine**,
 # `{ssh, check_only: true}` with no environment id, on the same test: the machine
 # check reads it, and placement never puts work on it. The file holds no user's key.
+# A linked machine whose test passed and that T3 reports reachable is then measured
+# by `probe.sh` over the same string (`sa_ssh_probe`); a probe that fails or prints no
+# JSON line is a warning, and the machine keeps its previous facts.
 
 # ssh_ok <machine> <ssh string>: the key-only test; a failure is named in $ssh_refused
 ssh_ok() {
@@ -23,19 +26,21 @@ ssh_ok() {
 }
 
 # linked_machines: the linked machines and the check-only ones into $facts and
-# $proposed, with $to_probe and $ssh_refused.
+# $proposed, with $ssh_refused.
 linked_machines() {
   # Linked T3 environments: each is a machine this super agent may launch on. A
-  # reachable one is probed through a scratch thread there (the caller runs it, see
-  # the header), an unreachable one only has its reachability recorded.
-  to_probe='[]' ssh_refused='[]'
+  # reachable one whose ssh test passed is probed over that ssh (lib/ssh.sh), an
+  # unreachable one only has its reachability recorded.
+  ssh_refused='[]'
   if raw=$(t3 environment list --json 2>/dev/null </dev/null) \
       && envs=$(grep '^\[' <<<"$raw" | tail -1) && jq -e 'type == "array"' <<<"$envs" >/dev/null 2>&1; then
     facts=$(jq -c --argjson e "$envs" '.machines += ([$e[] | {key: .label, value: {environment_id: .environmentId, reachable: (.status == "reachable")}}] | from_entries)' <<<"$facts")
     proposed=$(jq -c --argjson e "$envs" '.machines += ([$e[] | {key: .label, value: {probed: false, slots: 1}}] | from_entries)' <<<"$proposed")
-    while IFS=$'\t' read -r label id reachable host; do
+    while IFS=$'\t' read -r label _ reachable host; do
       target=$(jq -r --arg l "$label" --arg h "${host:-$label}" --argjson g "$ssh_given" '$g[$l] // (.machines[$l].ssh | strings) // $h' <<<"$existing")
+      ssh_up=false
       if ssh_ok "$label" "$target"; then
+        ssh_up=true
         facts=$(jq -c --arg l "$label" --arg s "$target" '.machines[$l].ssh = $s' <<<"$facts")
       elif ! jq -e --arg l "$label" '.machines | has($l)' <<<"$existing" >/dev/null 2>&1; then
         # SSH is required for a linked machine: one new to the file is not added
@@ -43,22 +48,19 @@ linked_machines() {
         proposed=$(jq -c --arg l "$label" 'del(.machines[$l])' <<<"$proposed")
         continue
       fi
-      if [ -n "$(jq -r --arg i "$id" '.[$i] // empty' <<<"$replies")" ]; then
-        [ "$reachable" = true ] || { warn "$label: unreachable, so its probe reply was not merged"; continue; }
-        reply=$(jq -r --arg i "$id" '.[$i]' <<<"$replies")
-        line=$(grep '^{' "$reply" 2>/dev/null | tail -1)
-        if ! jq -e '(.cores | type) == "number" and (.ram_gb | type) == "number"' <<<"$line" >/dev/null 2>&1; then
-          warn "$label: no probe line in $reply${line:+: $(jq -r '.error // empty' <<<"$line" 2>/dev/null)}"; continue
-        fi
-        m=$(jq -c "$machine_jq"' machine(.; $f; {})' --argjson f "$floor_gb" <<<"$line")
-        first=$(jq -r --arg l "$label" '.machines[$l].probed // false | not' <<<"$existing")
-        facts=$(jq -c --arg l "$label" --argjson m "$m" '.machines[$l] += $m.facts' <<<"$facts")
-        proposed=$(jq -c --arg l "$label" --argjson m "$m" '.machines[$l] = $m.proposal' <<<"$proposed")
-        # Slots nobody chose (never probed) give way to the computed ones.
-        [ "$first" != true ] || existing=$(jq -c --arg l "$label" 'if .machines[$l] then del(.machines[$l].slots, .machines[$l].max_load) else . end' <<<"$existing")
-      elif [ "$reachable" = true ]; then
-        to_probe=$(jq -c --arg l "$label" --arg i "$id" '. + [{machine: $l, environment_id: $i}]' <<<"$to_probe")
+      [ "$reachable" = true ] || continue
+      [ "$ssh_up" = true ] || continue
+      out=$(sa_ssh_probe "$target" 2>/dev/null)
+      line=$(grep '^{' <<<"$out" | tail -1)
+      if ! jq -e '(.cores | type) == "number" and (.ram_gb | type) == "number"' <<<"$line" >/dev/null 2>&1; then
+        warn "$label: no probe line over ssh${line:+: $(jq -r '.error // empty' <<<"$line" 2>/dev/null)}"; continue
       fi
+      m=$(jq -c "$machine_jq"' machine(.; $f; {})' --argjson f "$floor_gb" <<<"$line")
+      first=$(jq -r --arg l "$label" '.machines[$l].probed // false | not' <<<"$existing")
+      facts=$(jq -c --arg l "$label" --argjson m "$m" '.machines[$l] += $m.facts' <<<"$facts")
+      proposed=$(jq -c --arg l "$label" --argjson m "$m" '.machines[$l] = $m.proposal' <<<"$proposed")
+      # Slots nobody chose (never probed) give way to the computed ones.
+      [ "$first" != true ] || existing=$(jq -c --arg l "$label" 'if .machines[$l] then del(.machines[$l].slots, .machines[$l].max_load) else . end' <<<"$existing")
     done < <(jq -r '.[] | [.label, .environmentId, (.status == "reachable"), ((.urls // [])[0] // "" | sub("^[a-z]+://"; "") | sub("[:/].*$"; ""))] | @tsv' <<<"$envs")
   else
     warn "t3 environment list failed: no linked machines recorded"

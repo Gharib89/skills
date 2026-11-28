@@ -93,14 +93,17 @@ done
 
 # --- the flags place and route take pass through -------------------------------------
 sa_load 9 12288
+sa_ssh box.lan 255 "" "ssh: connect to host box.lan port 22: Connection refused"
 out=$(L 7); rc=$?
-check_rc "own machine over its load limit and the other unread: no launch, exit 1" 1 "$rc"
-check "the reason is need_reading, naming the machine to probe" '{"launch":false,"reason":"need_reading","detail":{"machine":"box","environment_id":"env-box"}}' \
-  "$(jq -c '{launch, reason, detail}' <<<"$out")"
-out=$(L 7 --readings "$readings" --account alice)
-check "with its reading it launches on the linked machine, carrying the environment id" '["env-box","box"]' \
+check_rc "own machine over its load limit and the other's probe over ssh failing: no launch, exit 1" 1 "$rc"
+check "the answer is waiting, the linked machine skipped as having no reading" '{"launch":false,"reason":"waiting","outcome":"skipped:no-reading"}' \
+  "$(jq -c '{launch, reason, outcome: .detail.considered[1].outcome}' <<<"$out")"
+rm -f "$SA_FAKE/ssh/box.lan.rc" "$SA_FAKE/ssh/box.lan.err"; : > "$SA_FAKE/ssh-calls"
+out=$(L 7 --account alice)
+check "with the probe answering it launches on the linked machine, carrying the environment id" '["env-box","box"]' \
   "$(jq -c '[.args.environmentId, .record.machine]' <<<"$out")"
-check "a named instance the quota read lacks is no_instance" no_instance "$(L 7 --readings "$readings" --instance ghost | jq -r .reason)"
+check "its load and free RAM were read over ssh with probe.sh" 1 "$(grep -c $'^box.lan\tbash -s -- --json$' "$SA_FAKE/ssh-calls")"
+check "a named instance the quota read lacks is no_instance" no_instance "$(L 7 --instance ghost | jq -r .reason)"
 sa_load 0.5 12288
 check "a gh login no machine holds is waiting, with the machines considered" '["waiting",2]' "$(L 7 --account nobody | jq -c '[.reason, (.detail.considered | length)]')"
 
@@ -164,16 +167,17 @@ check_rc "a second record of an open ticket exits 1" 1 "$rc"
 check "and says it is already in the ledger" "$repo#7 is already in the ledger" "$(jq -r .error <<<"$out")"
 check_rc "a launch answer that did not launch is no record, exit 2" 2 "$(echo '{"launch":false}' > "$tmp/no.json"; bash "$s/launch.sh" record --launch "$tmp/no.json" --thread t --ledger "$led" >/dev/null 2>&1; echo $?)"
 
-# --- record never writes `local` for a remote machine ----------------------------------
+# --- record never writes `local` for a remote machine, and reads its thread over SSH ------
 reset; issue 7 "widgets: add a frobnicator to the pipeline and more" ready-for-agent L bug
 sa_load 9 12288
-L 7 --readings "$readings" --out "$out_f" >/dev/null
-check_rc "a remote launch's record without --worktree exits 2" 2 "$(bash "$s/launch.sh" record --launch "$out_f" --thread t-r --ledger "$led" >/dev/null 2>&1; echo $?)"
-out=$(bash "$s/launch.sh" record --launch "$out_f" --thread t-r --worktree /wt/remote --ledger "$led" --remote "env-box=$tmp/remote"); rc=$?
-check_rc "with --worktree it records" 0 "$rc"
-check "the entry names the fleet's key and the environment, never local" '["box","env-box"]' \
-  "$(bash "$s/ledger.sh" --ledger "$led" get "$repo#7" | jq -c '[.machine, .environment_id]')"
-check "its reconcile read the --remote files, and a missing one is that entry's error" thread-unreadable "$(jq -r '.reconcile.errors[0].kind' <<<"$out")"
+L 7 --out "$out_f" >/dev/null
+check_rc "a remote thread its machine does not know, with no --worktree, exits 2" 2 "$(bash "$s/launch.sh" record --launch "$out_f" --thread t-r --ledger "$led" >/dev/null 2>&1; echo $?)"
+sa_on_machine box.lan sa_thread t-r running 1 0 /wt/remote fix/add-a-frobnicator-to-the-7; sa_pr $repo fix/add-a-frobnicator-to-the-7 none
+out=$(bash "$s/launch.sh" record --launch "$out_f" --thread t-r --ledger "$led"); rc=$?
+check_rc "a thread its machine knows records" 0 "$rc"
+check "the entry names the fleet's key, the environment and the worktree read over SSH, never local" '["box","env-box","/wt/remote"]' \
+  "$(bash "$s/ledger.sh" --ledger "$led" get "$repo#7" | jq -c '[.machine, .environment_id, .worktree]')"
+check "its baseline reconcile read the thread on its machine" '{"checked":1,"errors":[]}' "$(jq -c .reconcile <<<"$out")"
 
 # --- a rethread: the stall ladder's rung 3 points the open entry at the new thread ----------
 reset; issue 7 "widgets: add a frobnicator to the pipeline and more" ready-for-agent L bug
@@ -181,9 +185,9 @@ L 7 --out "$out_f" >/dev/null
 sa_thread t-7 running 1 0 /wt/seven fix/add-a-frobnicator-to-the-7; sa_pr $repo fix/add-a-frobnicator-to-the-7 none
 bash "$s/launch.sh" record --launch "$out_f" --thread t-7 --ledger "$led" >/dev/null
 sa_load 9 12288
-out=$(L 7 --raise 1 --readings "$readings" --out "$out_f"); rc=$?
+out=$(L 7 --raise 1 --out "$out_f"); rc=$?
 check "the open entry does not count against the repo or the cap for its own relaunch" '["env-box","opus"]' "$(jq -c '[.args.environmentId, .args.modelSelection.model]' <<<"$out")"
-out=$(bash "$s/launch.sh" record --launch "$out_f" --thread t-8 --worktree /wt/eight --ledger "$led" --rethread --remote "env-box=$tmp/remote"); rc=$?
+out=$(bash "$s/launch.sh" record --launch "$out_f" --thread t-8 --worktree /wt/eight --ledger "$led" --rethread); rc=$?
 check_rc "record --rethread exits 0" 0 "$rc"
 check "the one entry now holds the new thread, machine, environment and tier, back at launched" '["t-8","box","env-box","opus"]' \
   "$(bash "$s/ledger.sh" --ledger "$led" get "$repo#7" | jq -c '[.thread, .machine, .environment_id, .model]')"

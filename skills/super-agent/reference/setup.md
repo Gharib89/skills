@@ -21,24 +21,14 @@ skill's base directory.
    pass both to every later `--propose` and `--write` too. `<settings>` is T3's
    own `settings.json` in its userdata directory: a capabilities row has no
    home path, so each Claude instance's account directory is read from it.
-   Its `to_probe` lists each reachable linked machine as `{machine,
-   environment_id}`.
-2. Launch one **probe thread** per `to_probe` row, all at once, with
-   `t3_thread_launch`: `environmentId` set, `scratch: true`, no worktree, the
-   cheapest tier. With a fleet file, take `modelSelection` from route
-   (`quota.sh`, then `route.sh --size XS --quota <file>`, `<file>` the saved
-   quota read: its `instance_id`, `model`, `options`); on a first setup, use the
-   first enabled Claude instance in the capabilities answer, its Sonnet model
-   and effort low, as that answer names them. Its message is one line asking it
-   to run the script below with `bash -s -- --json` and reply with its one JSON
-   line and nothing else, then the full text of `scripts/probe.sh` in a code
-   fence: that machine has no checkout of this repo. `t3_thread_wait` each, read
-   its reply with `t3_thread_read` (`limit` 2), save it to a file, and settle
-   the thread (`t3_thread_organize` action `settle`) as soon as its reply is
-   read. A probe thread is no ledger entry and takes no slot. Measured
-   2026-11-06: one replied in 15 to 20 s.
-3. Run setup again with `--propose` and one `--probe <environment id>=<reply
-   file>` per machine, and show the owner its proposal: each machine's slots,
+2. Setup measures each reachable linked machine itself: it runs
+   `scripts/probe.sh` there over the machine's tested `ssh` string (`bash -s --
+   --json`, the script text on stdin, since that machine has no checkout of this
+   repo) and merges the JSON line it prints. No thread is launched. A machine
+   whose ssh test failed (an `ssh_refused` row) or whose probe failed (a
+   `warnings` line) is not measured: it keeps its previous facts and is probed
+   on the next run.
+3. Show the owner the proposal: each machine's slots,
    the thresholds, the `work_week` (weekday numbers in week order, 0 is
    Sunday; proposed Monday to Friday), each of `instances` with its driver,
    instance id, quota source and auth result, each provider marked
@@ -47,8 +37,8 @@ skill's base directory.
    inside grok; grok's auth is read by grepping `grok models`; a `cursor`
    instance's is T3's row alone, empty `constraints` is `ok`, because `agent` on
    PATH can be the Grok binary),
-   and every line of `warnings` (a reply that
-   is no probe lands there; so does a Claude instance with no
+   and every line of `warnings` (a failed probe over ssh
+   lands there; so does a Claude instance with no
    `env.CLAUDE_CONFIG_DIR`: with none it reads the default account, so each
    extra account needs its own).
    Each provider carries `weekly_weight` 1 and the file `five_hour_floor` 0.1
@@ -73,7 +63,7 @@ skill's base directory.
    `--check-only <machine>=<string>`.
 4. Ask the owner to confirm or adjust it, the `work_week` set to their own
    working days (the morning report and the retro follow it). After the yes,
-   run it again with `--write` and the same `--probe` flags, then apply the
+   run it again with `--write` and the same flags, then apply the
    owner's adjustments by editing the written file.
 5. Tell the owner to keep the fleet file in their dotfiles, so every machine a
    super agent may start on has it. Setup records this machine's `hostname` in

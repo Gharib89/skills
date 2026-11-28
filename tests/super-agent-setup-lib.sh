@@ -2,6 +2,7 @@
 # (tests/super-agent-fake.sh), with the fixtures each provider answers.
 source tests/lib.sh
 source tests/super-agent-fake.sh
+source tests/super-agent-on-machine-lib.sh
 
 s=skills/super-agent/scripts
 tmp=$(mktemp -d) || exit 2
