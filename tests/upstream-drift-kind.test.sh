@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # The upstream-drift workflow files its issue with the Kind label update-skills'
 # title rule gives the run that ships it: `enhancement` where a skill ship
-# composes drifted, `chore` where only `others` rows moved. The step's script is
+# composes drifted, `chore` where only `others` rows moved. It also drops the
+# heads of skills installed from heygen-com/hyperframes before planning, so
+# their daily upstream commits draw no rows. The step's script is
 # lifted from the workflow and run with stub mechanics and a `gh` stub that
 # records each call. No call here reaches a host.
 set -uo pipefail
@@ -22,8 +24,9 @@ work=$(mktemp -d) || exit 2
 trap 'rm -rf "$work"' EXIT
 U=$work/cwd/skills/update-skills/scripts
 mkdir -p "$U" "$work/bin" "$work/tmp"
-printf '#!/usr/bin/env bash\necho {}\n' > "$U/heads.sh"
-printf '#!/usr/bin/env bash\ncat "$PLAN"\n' > "$U/plan.sh"
+printf '#!/usr/bin/env bash\necho %s\n' "'{\"heads\":{\"hyperframes\":\"h\",\"media-use\":\"h\",\"tdd\":\"t\"},\"unreachable\":[]}'" > "$U/heads.sh"
+printf '#!/usr/bin/env bash\njq -c . "$2" > "$WORK/heads-seen"\ncat "$PLAN"\n' > "$U/plan.sh"
+printf '%s\n' '{"version":2,"skills":{"hyperframes":{"source":"heygen-com/hyperframes"},"media-use":{"source":"heygen-com/hyperframes"},"tdd":{"source":"mattpocock/skills"}}}' > "$work/cwd/skills-lock.json"
 printf '#!/usr/bin/env bash\necho %s\n' "'{\"rows\":1,\"table\":\"| x |\",\"changed\":true}'" > "$U/drift-body.sh"
 cat > "$work/bin/gh" <<'STUB'
 #!/usr/bin/env bash
@@ -49,6 +52,7 @@ others='[{"skill":"hyperframes","source":"o/h","old_ref":"'$A'","head":"'$B'","i
 out=$(create_call '{"mode":"source","drift":[],"others":'"$others"'}')
 check "only others rows file the issue as chore" "--label chore" "$(grep -o -- '--label chore' <<<"$out")"
 check "only others rows file no enhancement" "" "$(grep -o -- '--label enhancement' <<<"$out")"
+check "the plan reads no heygen-com/hyperframes head" '{"heads":{"tdd":"t"},"unreachable":[]}' "$(cat "$work/heads-seen")"
 out=$(create_call '{"mode":"source","drift":'"$drift"',"others":'"$others"'}')
 check "a drift row files the issue as enhancement" "--label enhancement" "$(grep -o -- '--label enhancement' <<<"$out")"
 check "a drift row files no chore" "" "$(grep -o -- '--label chore' <<<"$out")"

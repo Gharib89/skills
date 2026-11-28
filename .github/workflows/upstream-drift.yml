@@ -36,6 +36,10 @@ jobs:
       # Its Kind is the title type update-skills gives the run that ships it:
       # `enhancement` where a skill ship composes drifted (`feat(ship-run)`),
       # `chore` where only `others` rows moved (`chore(skills)`).
+      # Skills installed from heygen-com/hyperframes (hyperframes,
+      # hyperframes-cli, media-use) are dropped from the heads before the plan:
+      # that upstream lands 40 to 49 commits a day (26 to 28 Nov 2026), so its
+      # rows rewrote the issue daily. Their pins move on a hand refresh.
       # A bot-filed issue alone reaches no one's notifications; the mention
       # does. It posts with gh: comment-issue's create-then-verify reads
       # GET /user, which a workflow token is refused (403).
@@ -52,7 +56,9 @@ jobs:
           "$U/heads.sh" . > "$t/heads.json" || rc=$?
           jq -r '.unreachable[]? | "- drift not checked: \(.skill): \(.error)"' "$t/heads.json" >> "$GITHUB_STEP_SUMMARY"
           [ "$rc" -eq 0 ] || exit "$rc"
-          "$U/plan.sh" . "$t/heads.json" > "$t/plan.json"
+          jq --slurpfile lock skills-lock.json '.heads |= with_entries(select(
+            $lock[0].skills[.key].source != "heygen-com/hyperframes"))' "$t/heads.json" > "$t/kept.json"
+          "$U/plan.sh" . "$t/kept.json" > "$t/plan.json"
           n=$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100" \
             --jq ".[] | select(.pull_request == null and .title == \"$title\") | .number")
           n=${n%%$'\n'*}
