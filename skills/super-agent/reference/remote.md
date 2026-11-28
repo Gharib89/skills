@@ -2,9 +2,8 @@
 
 ## Contents
 
-- [Why a reply file](#why-a-reply-file)
+- [How a remote thread is read](#how-a-remote-thread-is-read)
 - [Steps](#steps)
-- [The reply file](#the-reply-file)
 - [Between wakes](#between-wakes)
 - [Errors](#errors)
 - [Machine checks](#machine-checks)
@@ -12,96 +11,59 @@
 `scripts/` is under this skill's base directory. A **remote entry** is a
 ledger entry with an `environment_id`: its thread runs on a linked machine.
 
-## Why a reply file
+## How a remote thread is read
 
-`t3 thread show` has no environment flag (measured 2026-11-06), so the
-scripts cannot read a remote thread themselves. You can: `t3_thread_read`
-takes an `environmentId`. You save that read, `reply.sh` turns it into a
-**reply file**, and `reconcile.sh` reads the file in place of the CLI. The PR
-needs no file: it is found on GitHub by branch, the same from any machine, and
-`watch.sh` wakes a remote entry from GitHub alone: a PR opening on its branch
-(`pr-opened`), the checks on its head commit finishing (`checks-finished`), a
-merge and a close.
+`t3 thread show` has no environment flag (measured 2026-11-06), so the scripts
+read a remote thread with the `t3` on its machine, over SSH (`lib/remote.sh`):
+the fleet file's machine whose `environment_id` is the entry's, through its
+`ssh` string. One SSH call reads every open thread on that machine, and
+`reconcile.sh`, `pulse.sh`, `watch.sh` and `launch.sh record` share it. You
+read no remote thread by hand. The PR is found on GitHub by branch, the same
+from any machine.
 
 ## Steps
 
 1. **Record.** `launch.sh record` carries the launch's environment id onto the
-   entry (a `--rethread` too, clearing it for a thread on this machine). Before
-   it runs, write the new thread's reply file (step 2), pass
-   `--worktree <path>` from it and one `--remote` (step 3) per environment
-   holding an open remote entry, the new one included: its baseline reconcile
-   reads it.
-2. **Read.** On each wake, before `reconcile.sh` or `pulse.sh`, read every
-   open remote entry's thread with `t3_thread_read`, its `environmentId` the
-   entry's `environment_id`, with a low `limit` and a `maxCharsPerItem` that
-   holds the last message whole. Save each read to a file, then run `reply.sh
-   <read file> --dir <dir>`, one `<dir>` per environment, under your own
-   scratch or state directory. It writes `<dir>/<thread id>.json`.
-3. **Pass.** Give `reconcile.sh` (or `pulse.sh`) one `--remote <environment
-   id>=<dir>` per environment that holds an open entry. `watch.sh` takes none:
-   it reads no reply file.
-4. **Settle.** Settle a remote thread with `t3_thread_organize` action
+   entry (a `--rethread` too, clearing it for a thread on this machine) and
+   reads the thread's worktree on its machine. Its baseline reconcile reads the
+   thread there too.
+2. **Settle.** Settle a remote thread with `t3_thread_organize` action
    `settle`, passing its `environmentId`.
-5. **Remove the worktree.** Launch a scratch thread on the entry's
-   environment, the way setup's probe thread runs
-   ([setup](setup.md#steps) step 2). Its message asks it to run the pasted
-   full text of `scripts/worktree.sh` with `bash -s -- remove --key <key>
-   --path <worktree> --branch <branch> --stage <stage> --kind <kind> --merged
-   <true|false>`, from the ledger entry (`merged` true only for a `ship` entry
-   whose stage is `settled` or whose observed PR state is merged), and reply
-   with its one JSON line. Read the reply, settle the scratch thread, and
-   report a `kept` result as a local one.
-
-## The reply file
-
-`reply.sh` is the only way to write one. A hand-written file once read a
-finished run as stalled and missed a finish: the file's shape and its last
-message decide the verdict, and a guess at either is wrong without an error.
-Never write, edit or patch one yourself; when `reply.sh` refuses a read,
-fix the read.
-
-`reply.sh <read file> --dir <dir>` prints `{file, thread, status}` and exits 0.
-It exits 1, writing nothing, when the read cannot give a verdict: the last
-assistant message was truncated (`textTruncated`), or the page holds no
-assistant message while `hasMore` says older items exist. The waiting line and
-the merge-gate summary sit at a message's end, so either gives a false verdict.
-Read the thread again with a larger `maxCharsPerItem` or `limit`. It exits 2 for
-a file that is not a `t3_thread_read` result, one whose thread lacks a field
-reconcile requires included.
-
-The file is one JSON object in the shape `t3 thread show --json` prints:
-
-```json
-{"thread": {"threadId": "<id>", "status": "<status>", "runCount": 3,
-  "pendingRequestCount": 0, "worktreePath": "<path>", "branch": "<branch>"},
- "messages": [{"role": "assistant", "text": "<last assistant message>"}]}
-```
-
-`threadId` and `worktreePath` must match the ledger entry, or the entry reads
-as `thread-mismatch`. `messages` holds only the last assistant message: the
-merge-gate summary is read from its `text`.
+3. **Remove the worktree.** A write goes over a T3 environment, not SSH
+   (ADR 0023). Launch a scratch thread on the entry's environment
+   (`t3_thread_launch` with its `environmentId`). Its message asks it to run
+   the pasted full text of `scripts/worktree.sh` with `bash -s -- remove --key
+   <key> --path <worktree> --branch <branch> --stage <stage> --kind <kind>
+   --merged <true|false>`, from the ledger entry (`merged` true only for a
+   `ship` entry whose stage is `settled` or whose observed PR state is
+   merged), and reply with its one JSON line. Read the reply, settle the
+   scratch thread, and report a `kept` result as a local one.
 
 ## Between wakes
 
-`watch.sh` reads no reply file. It wakes a remote entry from GitHub alone: a PR
-opening on the entry's branch, the checks on its head finishing, a merge or a
-close. A remote thread's own changes (a finished run, a permission hold, a new
-run) are read only on a wake, when you refresh the files and reconcile, and the
-backstop schedule is the wake that catches a remote thread that rested with no
-PR event. A remote `task` entry with no `--branch` has no GitHub event at all,
-so only that schedule notices it.
+`watch.sh` reads a remote thread every poll, like a local one, so a finished
+run, a permission hold and every other local wake reason wake you for it too.
+Each rest it reads and the wake that reports it are lines of
+`remote-watch.jsonl` beside the ledger, which the scorecard's `remote` row
+times.
 
 ## Errors
 
-An environment with no `--remote`, a missing reply file, one that is not JSON
-or one of the wrong shape gives `thread-unreadable` for that environment's
-entries alone; local entries are still read. Its detail holds the
-`environment_id`, a `reason` (`no-remote`, `missing`, `not-json` or `shape`)
-and the `file` read. `no-remote` means pass the `--remote`; `missing` means
-run `reply.sh`; `not-json` and `shape` mean the file was not written by
-`reply.sh`, so write it with `reply.sh`, since a rerun reads the same bytes.
-After a missing or stale read, read the thread again, rerun `reply.sh` and
-reconcile. Escalate only when a fresh `t3_thread_read` itself fails.
+A machine that cannot be read gives `thread-unreadable` for its entries alone;
+local entries and other machines are still read. Its detail holds the
+`environment_id`, the `machine` and a `reason`: `ssh` (the call failed, with
+SSH's own reason as `ssh`), `no-ssh` (no fleet machine with that environment
+has an `ssh` string: add it, as [setup](setup.md) says) or `shape` (the
+machine's `t3` answered no thread JSON, so it does not know the thread).
+
+`watch.sh` raises no `thread-unreadable`. While a machine fails, it watches
+that machine's entries from GitHub alone (a PR opening on the branch, its
+checks finishing, a merge, a close) and logs each failed read. After 5 minutes
+unread it exits once with `machine-unreadable`, naming the `machine`, the
+`reason` and `since`: make one offer in chat naming the machine (check it or
+fix its `ssh` string), with no phone alert, and start the watcher again. A
+restarted watcher does not offer the same outage again, and the next good read
+clears it with no wake.
 
 ## Machine checks
 

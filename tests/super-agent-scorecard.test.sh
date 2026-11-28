@@ -49,7 +49,7 @@ transcript() { # the day's three wakes, a wake the day before, and noise that is
 }
 
 ledger_fixture() {
-  rm -f "$led" "$led.archive.jsonl" "$card" "$dir"/*-guard.jsonl "$dir/wake-timer.jsonl" "$dir/needs-alerts.jsonl"
+  rm -f "$led" "$led.archive.jsonl" "$card" "$dir"/*-guard.jsonl "$dir/wake-timer.jsonl" "$dir/needs-alerts.jsonl" "$dir/remote-watch.jsonl"
   bash "$s/ledger.sh" --ledger "$led" add --repo "$repo" --number 7 --thread th-7 --worktree /wt/7 --branch b-7 >/dev/null
   bash "$s/ledger.sh" --ledger "$led" add --repo "$repo" --number 8 --thread th-8 --worktree /wt/8 --branch b-8 >/dev/null
   bash "$s/ledger.sh" --ledger "$led" add --repo "$repo" --number 10 --thread th-10 --worktree /wt/10 --branch b-10 >/dev/null
@@ -79,6 +79,12 @@ printf '%s\n' "{\"at\":\"${day}T09:00:00Z\",\"event\":\"block\"}" "{\"at\":\"${d
   '{"at":"2026-11-18T09:00:00Z","event":"pass"}' > "$dir/watch-guard.jsonl"
 printf '%s\n' "{\"at\":\"${day}T03:00:00Z\",\"event\":\"closed\",\"minutes\":5}" \
   "{\"at\":\"${day}T04:00:00Z\",\"event\":\"closed\",\"minutes\":20}" > "$dir/wake-timer.jsonl"
+# the watcher's linked-machine log: two rests woken 1 and 3.5 minutes on, one the day
+# before; three unreadable reads, two over ssh
+{ printf '{"at":"%s","event":"wake","key":"acme/widgets#7","machine":"box","rest_at":"%s","reported":"run-finished"}\n' \
+    "${day}T10:01:00Z" "${day}T10:00:00Z" "${day}T11:03:30Z" "${day}T11:00:00Z" 2026-11-18T10:09:00Z 2026-11-18T10:00:00Z
+  printf '{"at":"%s","event":"unreadable","machine":"box","environment_id":"env-a","reason":"%s"}\n' \
+    "${day}T12:00:00Z" ssh "${day}T12:00:30Z" ssh "${day}T12:01:00Z" no-ssh 2026-11-18T12:00:00Z shape; } > "$dir/remote-watch.jsonl"
 # the needs' alert log: #7 alerted the day before and again today (its key in
 # another case), #9 alerted
 # today and reminded twice, the second reminder one past its one
@@ -98,6 +104,8 @@ check "messages: count, per open entry, nothing changed, over 1,500 characters, 
 check "needs: recorded, the day's alerts, alerts of a need alerted before plus reminders past the one" '{"recorded":1,"alerted":2,"alerted_twice":2}' "$(jq -c .needs <<<"$row")"
 check "guards: the day's blocks and passes, by guard" '{"watch":{"blocks":1,"passes":1}}' "$(jq -c .guards <<<"$row")"
 check "timer: the day's outages, median and worst minutes" '{"outages":2,"median_minutes":12.5,"worst_minutes":20}' "$(jq -c .timer <<<"$row")"
+check "remote: the day's rest-to-wake minutes and unreadable reads by reason" \
+  '{"wakes":2,"median_minutes":2.25,"worst_minutes":3.5,"unreadable":{"no-ssh":1,"ssh":2}}' "$(jq -c .remote <<<"$row")"
 check "questions: null with no question-flag log, never a count from the transcript" null "$(jq -c .questions <<<"$row")"
 check "wakes: count, per open entry, by cause, and those that changed nothing" \
   '{"count":3,"per_open":1.5,"by_cause":{"backstop":1,"owner":1,"watcher":1},"changed_nothing":1}' "$(jq -c .wakes <<<"$row")"
@@ -109,11 +117,11 @@ check "a day counted again replaces its row; another day is appended" "2026-11-1
   "$(jq -r .day "$card" | sort | tr '\n' ' ' | sed 's/ $//')"
 
 # --- a log not written yet reads as absent -------------------------------------
-rm -f "$dir/watch-guard.jsonl" "$dir/wake-timer.jsonl"
+rm -f "$dir/watch-guard.jsonl" "$dir/wake-timer.jsonl" "$dir/remote-watch.jsonl"
 out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9); rc=$?
-check "no guard or timer log: exit 0, both absent, the rest still counted" "0 null null 3" \
-  "$rc $(jq -c .row.guards <<<"$out") $(jq -c .row.timer <<<"$out") $(jq .row.messages.count <<<"$out")"
-for log in watch-guard.jsonl wake-timer.jsonl question-flag.jsonl; do
+check "no guard, timer or linked-machine log: exit 0, each absent, the rest still counted" "0 null null null 3" \
+  "$rc $(jq -c .row.guards <<<"$out") $(jq -c .row.timer <<<"$out") $(jq -c .row.remote <<<"$out") $(jq .row.messages.count <<<"$out")"
+for log in watch-guard.jsonl wake-timer.jsonl remote-watch.jsonl question-flag.jsonl; do
   printf '{"at":"2026-11-19T09:00:00Z","event":"block"}\n{"at":"2026-11-19T09:' > "$dir/$log"
   check "a $log with a malformed line is refused by name, exit 2" "2 $dir/$log: not JSON lines" \
     "$(out=$(R --day "$day" --transcript "$tmp/t.jsonl" --version 9.9.9 2>/dev/null); echo "$? $(jq -r .error <<<"$out")")"

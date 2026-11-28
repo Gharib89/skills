@@ -42,8 +42,14 @@ else
   env=$(jq -r '.environment_id // empty' <<<"$rec")
   # a task with no repo runs in a scratch folder and holds no worktree, so its thread is not read
   if [ -z "$worktree" ] && ! jq -e '.kind == "task" and .repo == null' <<<"$rec" >/dev/null; then
-    [ -z "$env" ] || sa_tooling "a launch on a linked machine needs --worktree"
-    raw=$(t3 thread show "$thread" --json 2>/dev/null </dev/null) || sa_tooling "cannot read thread $thread: pass --worktree"
+    if [ -n "$env" ]; then
+      # a thread on a linked machine is read with the t3 there, over the fleet's ssh string
+      sa_remote_read "${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json" "$(jq -cn --arg t "$thread" --arg e "$env" '[{thread: $t, environment_id: $e}]')"
+      raw=$(jq -r --arg t "$thread" '.[$t] // empty' <<<"$sa_remote_lines")
+      [ -n "$raw" ] || sa_tooling "cannot read thread $thread on its machine over SSH: pass --worktree"
+    else
+      raw=$(t3 thread show "$thread" --json 2>/dev/null </dev/null) || sa_tooling "cannot read thread $thread: pass --worktree"
+    fi
     worktree=$(grep '^{"' <<<"$raw" | tail -1 | jq -r '.thread.worktreePath // empty' 2>/dev/null)
     [ -n "$worktree" ] || sa_tooling "thread $thread has no worktree path: pass --worktree"
   fi

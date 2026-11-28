@@ -207,7 +207,7 @@ down_after=300
 declare -A rest_logged=()
 rlog_line() { # <jq filter> [<jq args>...]: one line of the remote log, stamped `at`
   local f=$1; shift
-  jq -cn --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$@" "{at: \$at} + ($f)" >> "$rlog" 2>/dev/null || true
+  jq -cn --argjson now "$(sa_now_s)" "$@" "{at: (\$now | todate)} + ($f)" >> "$rlog" 2>/dev/null || true
 }
 
 # remote_poll: read every linked machine once; log and hold each unreadable one, clear

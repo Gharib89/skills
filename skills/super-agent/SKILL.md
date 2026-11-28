@@ -113,16 +113,13 @@ watch that you did not launch is adopted in place of steps 1 and 2
    [step-ins](reference/step-ins.md#sending-the-launch).
 2. **Record.** Run `scripts/launch.sh record --launch <launch file> --thread
    <id> --ledger <ledger>`, `<id>` the thread id `t3_thread_launch` returned. No
-   turn ends between `t3_thread_launch` and this call. A remote launch also
-   passes `--worktree` and `--remote` ([remote](reference/remote.md#steps) step
-   1). It binds the thread to that entry and runs the baseline reconcile
-   `watch.sh` compares against; a running watcher picks the entry up from
-   there. Post its `status` as step 5 does. A triaged ticket
-   now shipping takes a new launch and record, never `rethread`, which is rung
-   3's. On the first wake, compare
-   `.thread.branch` from `t3 thread show` with the entry's branch: the PR is
-   found by branch, so when they differ, `ledger.sh --ledger <ledger> set <key>
-   branch <json>`.
+   turn ends between `t3_thread_launch` and this call. It binds the thread to
+   that entry and runs the baseline reconcile `watch.sh` compares against; a
+   running watcher picks the entry up from there. Post its `status` as step 5
+   does. A triaged ticket now shipping takes a new launch and record, never
+   `rethread`, which is rung 3's. On the first wake, compare `.thread.branch`
+   from `t3 thread show` with the entry's branch: the PR is found by branch, so
+   when they differ, `ledger.sh --ledger <ledger> set <key> branch <json>`.
 3. **Watch.** Start `scripts/watch.sh --ledger <ledger> --fleet <fleet>
    --timeout 7000` (seconds) with Bash `run_in_background: true` and
    `timeout: 7200000` (ms), then end your turn. Start it blindly: on exit 1
@@ -135,13 +132,12 @@ watch that you did not launch is adopted in place of steps 1 and 2
    it: the loop is done.
 4. **Wake.** The watcher's exit or the schedule wakes you. A watcher wake runs
    step 5. A backstop wake runs `scripts/pulse.sh --ledger <ledger> --fleet
-   <fleet>` instead, with step 5's flags, `--remote` included (Remote
-   entries, below). Read its `skill` first (below). `end_turn` true
-   (`alive` true, `changed` false) ends the turn: it posts nothing, and reads
-   nothing else; `alive` false starts
-   the watcher; `changed` true makes its `summary` the answer step 5 acts on.
-   **A stale copy** (`skill.stale` true in a pulse or reconcile answer): say so
-   once in chat ([handover](reference/handover.md#a-stale-copy)).
+   <fleet>` instead, with step 5's flags. Read its `skill` first (below).
+   `end_turn` true (`alive` true, `changed` false) ends the turn: it posts
+   nothing, and reads nothing else; `alive` false starts the watcher; `changed`
+   true makes its `summary` the answer step 5 acts on. **A stale copy**
+   (`skill.stale` true in a pulse or reconcile answer): say so once in chat
+   ([handover](reference/handover.md#a-stale-copy)).
 5. **Reconcile.** Reconcile first on every wake, unless step 4's pulse just
    ran it: `scripts/reconcile.sh --ledger <ledger> --fleet <fleet> --quota
    <file> --instance <id>` (`<file>` and `<id>` from
@@ -157,12 +153,12 @@ then end the turn. On a `Wake timer:` line, run step 4's pulse.
 
 **Thread reads**: on each wake, before reconcile or pulse, save each open
 entry's `t3_thread_read` (not an owner-run one's; small: a low `limit`,
-`runLimit: 1`) and convert each with `reply.sh --owner-only --dir <dir>`, one
-directory for all. Pass it as `--reads <dir>`, which is how a steered entry is
-found ([handing over](reference/handing-over.md#owner-steered)). A remote entry
-(an `environment_id`) takes the full `reply.sh`, without `--owner-only`, into
-its `--remote` directory ([remote](reference/remote.md)): a pulse without it
-reads its thread as `thread-unreadable`.
+`runLimit: 1`, a remote entry's `environmentId`) and convert each with
+`owner-read.sh <read file> --dir <dir>`, one directory for all. Pass it as
+`--reads <dir>`, which finds a steered entry ([handing
+over](reference/handing-over.md#owner-steered)). The scripts read the rest, a
+remote thread over SSH; on `machine-unreadable`, offer once in chat naming the
+machine ([remote](reference/remote.md#errors)).
 
 Wait only through the watcher: a `sleep` or a poll in your own turn spends
 context on nothing. Read a thread's messages only in small slices
@@ -325,11 +321,11 @@ the successor (your first message carries a `Handover:` line).
 
 - **Every thread you launch is watched until it ends, whatever its
   kind**: record it before your turn ends (The loop). The exceptions are a
-  probe or scratch thread you read and settle within the same turn, and a
+  scratch thread you read and settle within the same turn, and a
   thread a supervised thread started, which you settle once at rest and do
   nothing else with, and the [daily handover](#daily-handover)'s successor,
   launched unclaimed and never recorded.
-- Touch only threads the ledger holds, your probe threads, the helper
+- Touch only threads the ledger holds, your scratch threads, the helper
   threads the first rule settles, and this thread itself at the daily
   handover.
 - Route and verify; the supervised thread implements, and its owner skill
