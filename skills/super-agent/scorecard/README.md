@@ -28,7 +28,7 @@ Needs you.
   resume`, `other background`, `other scheduled`, `restart or harness`,
   `wake timer` (the line the wake timer sends) or `other`.
 - **Changing call**: a tool call that writes state: a `ledger.sh` write, a
-  launch, claim, merge, cleanup, reply, intake or handover script, a `gh`
+  launch, claim, merge, cleanup, owner-read, intake or handover script, a `gh`
   issue or PR write, a `git` commit, push, merge or worktree change, a T3
   thread send, launch or interrupt, a schedule change, `Write`, `Edit`,
   `AskUserQuestion` or `PushNotification` (the full lists are `changing_bash`

@@ -221,5 +221,9 @@ check "a bad transcript before a good one still refuses the row, exit 2" "2 cann
   "$(out=$(R --day "$day" --transcript "$tmp/t3.jsonl" --transcript "$tmp/t.jsonl" --version 9.9.9 2>/dev/null); echo "$? $(jq -r .error <<<"$out")")"
 check "the row is stamped with the running copy's version by default" \
   "$(sed -n 's/^  version: //p' "$s/../SKILL.md")" "$(R --day "$day" --thread th-arg | jq -r '.row.versions[0]')"
+{ u "${day}T15:00:00Z" "Backstop: check the ledger"
+  a "${day}T15:00:05Z" m9 "$(use 1 0 1)" "[$(bash_call "bash skills/super-agent/scripts/owner-read.sh r.json --dir d")]"; } > "$tmp/t4.jsonl"
+check "an owner read writes the file reconcile reads, so its wake changed something" 0 \
+  "$(R --day "$day" --transcript "$tmp/t4.jsonl" --version 9.9.9 | jq .row.wakes.changed_nothing)"
 
 finish
