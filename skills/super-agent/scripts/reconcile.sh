@@ -16,9 +16,12 @@
 # waiting on the owner has the second). A `triage` entry settled within the last
 # `sa_settled_days` (7) days is read again, thread only: one whose run count grew, or that runs, goes back to `at-rest` or
 # `running` and is named in `woke`. A `--kind task` entry has no ticket: it is
-# `running` while its thread runs and `settled` once the thread has run and is at
-# rest, whatever any issue or PR says, unless it is `interactive` (it waits on the
-# owner: never settled on rest, no stall). An `owner_run` entry (`ledger take`) counts no
+# `running` while its thread runs; once it has run and rests, its last line
+# (`sa_observe`'s `last`, its markup taken off by `sa_task_end`) decides, whatever any issue
+# or PR says: `Result: <text>` settles it, the text its `result` (a bare `Result:` is no
+# result); `Needs owner: <question>` is `at-rest` with no stall, a
+# `needs-owner` escalate row; any other is a rest judged as a stall. An `interactive`
+# one (it waits on the owner) is never settled on rest and counts no stall. An `owner_run` entry (`ledger take`) counts no
 # stall and owes no cleanup: a ticket's is read from GitHub alone and settles on a merged
 # PR or a closed issue, a task's is not read; after 3 days one `owner-run` escalate row
 # asks "watch or drop?", listed once (`owner_run_reminded`). `resumed` (a second `adopt`
@@ -117,7 +120,8 @@
 #         entry only the owner can unblock and with no open need for its reason: `permission-hold`
 #         (detail the pending count), `fault` (detail the error kind), `stall-cap` (an
 #         entry at rest at 3 stalls), `pr-closed` or `issue-closed` (until its cleanup is
-#         done), `owner-steered` (at rest past the window after the owner's message),
+#         done), `needs-owner` (a task's question), `owner-steered` (at rest past the
+#         window after the owner's message),
 #         `owner-run` (once, 3 days after the owner took the entry, whatever its needs);
 #         `at_rest` one {key, thread}; `woke` one {key, thread, kind} per settled
 #         triage entry reopened now; `errors` one {key, kind, detail}, `kind`
@@ -172,7 +176,7 @@ while IFS= read -r entry; do
   # an owner-run task's thread is the owner's until `drop`: nothing to read
   [ "$owner_run" = true ] && [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ] && continue
   checked=$((checked + 1))
-  stage='' reason=''
+  stage='' reason='' result='' question=''
   if [ "$owner_run" = true ]; then
     # an owner-run ticket's thread is the owner's: its end is read from GitHub alone
     active=false
@@ -184,10 +188,12 @@ while IFS= read -r entry; do
     active=$(jq -r --argjson w "$window" --argjson now "$now_s" "$sa_jq_active"'active($w; $now)' <<<"$obs")
   fi
   if [ "$(jq -r '.kind // "ship"' <<<"$entry")" = task ]; then
-    # a task has no ticket: only its thread says whether it is done; an interactive
-    # one waits on the owner at rest, so it leaves on `drop`
+    # a task has no ticket: its thread's last line says it is done (`Result:`) or waits on
+    # the owner (`Needs owner:`); an interactive one waits on the owner at rest, so it leaves on `drop`
     if [ "$active" = true ]; then stage=running
-    elif [ "$interactive" != true ] && [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] && [ "$(jq -r .pending <<<"$obs")" -eq 0 ]; then stage=settled
+    elif [ "$interactive" != true ] && [ "$(jq -r .run_count <<<"$obs")" -ge 1 ] && [ "$(jq -r .pending <<<"$obs")" -eq 0 ]; then
+      last=$(sa_task_end "$(jq -r '.last // ""' <<<"$obs")") stage=at-rest
+      case $last in 'Result:'*[![:space:]]*) stage=settled result=$last ;; 'Needs owner:'*[![:space:]]*) question=$last ;; esac
     else stage=at-rest; fi
   else
     case $(jq -r .pr.state <<<"$obs") in
@@ -214,11 +220,14 @@ while IFS= read -r entry; do
   fi
   stall='' stalls=$(jq -r '.stalls // 0' <<<"$entry")
   # no stall is counted for an owner-run entry, nor for an interactive one (it waits on the owner)
-  case $owner_run$interactive:$stage in falsefalse:running|falsefalse:at-rest) reconcile_judge ;; esac
+  # nor for a task asking the owner (`Needs owner:`), which is no stall
+  case $owner_run$interactive:$stage in falsefalse:running|falsefalse:at-rest) [ -n "$question" ] || reconcile_judge ;; esac
   # an end owes the super agent its cleanup, and a merged ship PR a criteria check;
   # each stays owed until the super agent clears it (`ledger set <key> <field> false`)
-  doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
+  doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" --arg res "$result" --arg q "$question" \
     '.entries[$k] |= (.stage = $s | .observed = $o | .error = null | .updated_at = $now | del(.resumed)
+      | if $res != "" then .result = ($res | sub("^Result:\\s*"; "")) else . end
+      | if $q != "" then .needs_owner = ($q | sub("^Needs owner:\\s*"; "")) | .rest_since = null | .judged_run = $o.run_count else .needs_owner = null end
       | if $s == "settled" or $s == "closed" then .settled_at = $now | if .owner_run != true then .cleanup_owed = true else . end else . end
       | if (.kind // "ship") == "ship" and ($s == "merged" or $s == "settled") and $o.pr.state == "merged" and .verify_owed == null
         then .verify_owed = true else . end)' <<<"$doc")

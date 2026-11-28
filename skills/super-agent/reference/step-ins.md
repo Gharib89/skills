@@ -8,7 +8,7 @@
 - [The owner steps in](#the-owner-steps-in)
 
 A supervised thread hears from you through its **launch message**, then only
-through a **step-in** when it reaches one of five situations. Nothing else is
+through a **step-in** when it reaches one of six situations. Nothing else is
 sent into it: no reminder, no ruling it has not reached, no broadcast to running
 threads (ADR 0020).
 
@@ -23,7 +23,9 @@ launch message: no waiver, ruling or merge allowance. The one exception is a
 `/triage` message, which carries a contract line after the invocation (and
 before the note): a turn that only waits on its own background work ends on the
 waiting line, and the final message is the triage outcome. The triage skill is
-upstream, so no `SKILL.md` this repo owns can say it; ship's does.
+upstream, so no `SKILL.md` this repo owns can say it; ship's does. A one-off
+task's message (`launch.sh task`) is its ask, then the task contract line as
+its last line ([tasks](tasks.md#how-a-task-ends)).
 
 ## Sending the launch
 
@@ -40,7 +42,7 @@ machine.
 ## The step-ins
 
 Post with `t3_thread_send`, after reading the thread's last messages in a small
-slice. Each carries only what its moment needs, and these five are the only
+slice. Each carries only what its moment needs, and these six are the only
 ones:
 
 1. **Stall 1, the nudge** ([stall ladder](stall-ladder.md#the-ladder) rung 1):
@@ -86,6 +88,9 @@ ones:
    gave it, into the thread whose need it settles.
 5. **A hard finding from verification**: the verified acceptance-criterion gap
    you send back to the thread ([stall ladder](stall-ladder.md#the-ladder)).
+6. **The adoption step-in**: the `step_in` `ledger.sh adopt` answers for a new
+   one-off task thread, the task contract line, sent once
+   ([tasks](tasks.md#an-adopted-task-thread)).
 
 The run acts on a step-in and writes none of it into its PR body, except a
 waiver that passed the gate, which the body names.

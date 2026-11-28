@@ -1,7 +1,7 @@
 ### Super agent: the status block and needs
 
 **Status block**:
-The one report the owner reads, printed by every reconcile from the ledger alone and posted as printed in chat: the needs-you message first, then the rows `Merged`, `Running`, `Yours`, `Waiting` and `Reviewer limit`, an empty row left out, each ticket a link and each task or adopted entry marked as one, ending on the provider instance the super agent itself runs on. A wake that changed nothing and raised no need posts none; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
+The one report the owner reads, printed by every reconcile from the ledger alone and posted as printed in chat: the needs-you message first, then the rows `Merged`, `Finished` (each one-off task settled on its `Result:` line, listed once), `Running`, `Yours`, `Waiting` and `Reviewer limit`, an empty row left out, each ticket a link and each task or adopted entry marked as one, ending on the provider instance the super agent itself runs on. A wake that changed nothing and raised no need posts none; a digest prints the whole block on the owner's "status", at the morning report and when the waiting list empties.
 _Avoid_: report (prose written fresh on each wake), summary, dashboard
 
 **Needs-you message**:

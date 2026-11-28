@@ -92,7 +92,7 @@ ledger_add() {
       --environment) sa_flag_value "$usage" "${2:-}"; environment=$2 ;;
       --instance) sa_flag_value "$usage" "${2:-}"; instance=$2 ;;
       --kind) sa_flag_value "$usage" "${2:-}"; case $2 in ship|triage) kind=$2 ;; *) sa_tooling "$usage" ;; esac ;;
-      --task) sa_flag_value "$usage" "${2:-}"; case $2 in *[!A-Za-z0-9._-]*) sa_tooling "$usage" ;; esac; task=$2 ;;
+      --task) sa_flag_value "$usage" "${2:-}"; sa_task_slug_ok "$2" || sa_tooling "$usage"; task=$2 ;;
       --model) sa_flag_value "$usage" "${2:-}"; model=$2 ;;
       --effort) sa_flag_value "$usage" "${2:-}"; effort=$2 ;;
       *) sa_tooling "$usage" ;;
@@ -157,5 +157,9 @@ ledger_add() {
       + (if $adopted then {held_since: $now} else {} end)')
   sa_update "$ledger" "$sa_jq_norm"'del(.entries[$old]) | .entries[$k] = $e | .waiting = ((.waiting // []) | map(select((.key | norm_repo) != ($k | norm_repo))))' \
     --arg k "$key" --arg old "$old" --argjson e "$entry"
-  jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$entry" --argjson c "$claim" '{ledger: $l, key: $k, entry: $e} + (if $c == null then {} else {claim: $c} end)'
+  # a one-off task thread adopted new never got the contract line: its one adoption step-in carries it
+  step=''
+  ! $adopted || [ "$kind" != task ] || $interactive || step=$sa_task_contract
+  jq -cn --arg l "$ledger" --arg k "$key" --argjson e "$entry" --argjson c "$claim" --arg st "$step" '{ledger: $l, key: $k, entry: $e}
+    + (if $c == null then {} else {claim: $c} end) + (if $st == "" then {} else {step_in: $st} end)'
 }

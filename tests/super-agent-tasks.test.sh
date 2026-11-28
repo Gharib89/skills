@@ -80,9 +80,9 @@ sa_thread t-r running 1 0 /wt/r review/x
 out=$(R)
 check "a running task thread stays open with its branch's PR merged" "running" "$(jq -r '.entries[0].stage' <<<"$out")"
 check "and nothing settled" "0" "$(jq '.settled | length' <<<"$out")"
-sa_thread t-r idle 1 0 /wt/r review/x
+sa_thread t-r idle 1 0 /wt/r review/x "Result: reviewed https://github.com/Gharib89/skills/pull/7"
 out=$(R)
-check "a task whose thread has run and rests is settled" "task:review-x task" "$(jq -r '.settled[] | "\(.key) \(.kind)"' <<<"$out")"
+check "a task whose thread has run and rests on a Result: line is settled" "task:review-x task" "$(jq -r '.settled[] | "\(.key) \(.kind)"' <<<"$out")"
 check "the ledger holds it settled" settled "$(L get task:review-x | jq -r .stage)"
 check "no issue was read for it" 0 "$(grep -c 'repos/.*/issues/' "$SA_FAKE/calls")"
 fresh

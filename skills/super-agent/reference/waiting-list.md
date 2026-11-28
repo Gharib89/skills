@@ -7,7 +7,7 @@
 
 The owner's word "queue" is the ledger's waiting list. It holds tickets with no
 thread yet: the ones placement could not place (a machine or the ship cap was
-in the way) and the ones the owner queued.
+in the way) and the ones the owner queued, and one-off tasks nothing fit.
 
 ## Recording
 
@@ -41,6 +41,9 @@ reconcile, since a row whose issue closed stays on it until then.
   Launch each through the loop's launch step, which still places it: a row
   that comes back `waiting` stays on the list. A row placement wrote becomes
   ready the same way.
+- A `task:<slug>` row is a one-off task nothing fit: it is ready on every
+  wake, and relaunches with `launch.sh task` and the row's `ask`, `repo`,
+  `skill` and place flags ([tasks](tasks.md#launching-a-task)).
 - `dropped`: a row whose issue closed, already removed from the ledger.
 - A row whose issue or blocker cannot be read stays, is not ready and is in
   `errors` as `issue-unreadable`, its `detail.key` the issue that failed. Run

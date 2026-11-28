@@ -107,6 +107,8 @@ if [ -s "$work/required" ]; then
           if (rm[r] != m) continue
           sel = rsel[r]; base = 1
           if (sel != "") {
+            # a form picked by a flag (it has no verb) skips a call that names the verb of another form
+            if (sel ~ /^--/ && isverb(m, toks[2])) continue
             np = split(sel, q, "|"); hit = 0
             for (s = 1; s <= np; s++) if (has(padded, q[s])) { hit = 1; lw = q[s]; sub(/.* /, "", lw); if (q[s] !~ /^--/) for (kt = 1; kt <= nt; kt++) if (toks[kt] == lw) base = kt }
             if (!hit) continue

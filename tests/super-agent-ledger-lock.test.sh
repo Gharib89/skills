@@ -134,7 +134,7 @@ check "and the re-spelled row is dropped with it" 0 "$(jq '.waiting | length' "$
 printf '%s\n' '{"entries":{},"rulings":[],"status":{"merged_ack":"x"}}' > "$led"
 out=$(bash "$s/status.sh" --ledger "$led" --digest 2>/dev/null); rc=$?
 check_rc "status refuses a merged_ack that is no array" 2 "$rc"
-check "and names the field" "$led: status is not an object with a merged_ack array" "$(jq -r .error <<<"$out")"
+check "and names the field" "$led: status is not an object with merged_ack and finished_ack arrays" "$(jq -r .error <<<"$out")"
 
 # --- no script writes the ledger but sa_update -----------------------------------
 # sa_write is the bare write; outside lib/ledger-io.sh it may name only the fleet and

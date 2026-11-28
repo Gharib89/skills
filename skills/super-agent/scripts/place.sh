@@ -5,9 +5,9 @@
 # candidates, and nothing here links, unlinks or places on a machine except
 # through its T3 environment id.
 #
-#   place --fleet <file> --ledger <file> --repo <owner/name> [--own <key>]
+#   place --fleet <file> --ledger <file> [--repo <owner/name>] [--own <key>]
 #         [--gpu] [--account <login>] [--area <path>]... [--blocked-by <n>]...
-#         [--exclude <key>]... [--readings <file>] [--number <n>]
+#         [--exclude <key>]... [--readings <file>] [--number <n> | --key <ledger key>]
 #
 # --own is the fleet key of the machine the ledger is on (`hostname` when
 # omitted). --gpu wants a machine with a GPU, --account a machine whose `gh`
@@ -22,8 +22,11 @@
 # only on that machine: every other one is `skipped:pinned`, and a pinned machine that
 # is down or full means the ticket waits, never that another machine takes it. A pin
 # naming a machine the fleet file lacks is refused.
+# With no --repo (a task that has none) no pin applies and no repo is checked.
 # --number records the outcome in the ledger: a ticket nothing fits is `wait`ed
-# (the morning report lists it), a placed one is `unwait`ed.
+# (the morning report lists it), a placed one is `unwait`ed. Each leaves its own open
+# entry out of the slot count (a relaunch at the stall ladder's rung 3), as --key does for
+# a task's `task:<slug>`, which records nothing.
 #
 # stdout: {placed, waiting, reason, need_reading, considered}: `placed`
 #         {machine, environment_id, local} or null; `environment_id` is what a
@@ -42,26 +45,29 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: place --fleet <file> --ledger <file> --repo <owner/name> [--own <key>] [--gpu] [--account <login>] [--area <path>]... [--blocked-by <n>]... [--exclude <key>]... [--readings <file>] [--number <n>]'
+usage='usage: place --fleet <file> --ledger <file> [--repo <owner/name>] [--own <key>] [--gpu] [--account <login>] [--area <path>]... [--blocked-by <n>]... [--exclude <key>]... [--readings <file>] [--number <n> | --key <ledger key>]'
 sa_help "$usage" "$@"
 here=$(dirname "${BASH_SOURCE[0]}")
-fleet='' ledger='' repo='' own='' gpu=false account='' readings='' number='' excluded='[]'
+fleet='' ledger='' repo='' own='' gpu=false account='' readings='' number='' key='' excluded='[]'
 check_args=()
 while [ $# -gt 0 ]; do
   case $1 in
     --gpu) gpu=true; shift; continue ;;
-    --fleet|--ledger|--repo|--own|--account|--readings|--number|--area|--blocked-by|--exclude) sa_flag_value "$usage" "${2:-}" ;;
+    --fleet|--ledger|--repo|--own|--account|--readings|--number|--key|--area|--blocked-by|--exclude) sa_flag_value "$usage" "${2:-}" ;;
     *) sa_tooling "$usage" ;;
   esac
   case $1 in
     --fleet) fleet=$2 ;; --ledger) ledger=$2 ;; --repo) repo=$2 ;; --own) own=$2 ;;
     --account) account=$2 ;; --readings) readings=$2 ;; --exclude) excluded=$(jq -c --arg e "$2" '. + [$e]' <<<"$excluded") ;;
     --number) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; number=$2 ;;
+    --key) key=$2 ;;
     --area|--blocked-by) check_args+=("$1" "$2") ;;
   esac
   shift 2
 done
-[ -n "$fleet" ] && [ -n "$ledger" ] && [ -n "$repo" ] || sa_tooling "$usage"
+# a task with no repo places with no pin and no repo check, and a waiting row only a ticket's number names
+[ -n "$fleet" ] && [ -n "$ledger" ] && { [ -n "$repo" ] || [ -z "$number" ]; } && { [ -z "$number" ] || [ -z "$key" ]; } || sa_tooling "$usage"
+[ -z "$number" ] || key="$repo#$number"
 [ -f "$fleet" ] || sa_tooling "$fleet: no such file"
 jq -e '(.machines | type) == "object"' "$fleet" >/dev/null 2>&1 || sa_tooling "$fleet: not a fleet file (machines must be an object)"
 pinned=$(jq -r --arg r "$repo" "$sa_jq_norm"'[(.repos // {}) | to_entries[] | select(.key | norm_repo == ($r | norm_repo)) | .value.machine // empty] | first // empty' "$fleet" 2>/dev/null) \
@@ -103,8 +109,8 @@ while IFS= read -r m; do
       need=$(jq -cn --arg m "$m" --arg i "$id" '{machine: $m, environment_id: $i}'); break
     fi
   fi
-  rc=0; res=$(bash "$here/launch-check.sh" --fleet "$fleet" --ledger "$ledger" --machine "$m" --own "$own" ${number:+--key "$repo#$number"} \
-    --load "$(jq -r .load1 <<<"$reading")" --free-gb "$(jq -r .free_gb <<<"$reading")" --repo "$repo" ${check_args[@]+"${check_args[@]}"} 2>/dev/null) || rc=$?
+  rc=0; res=$(bash "$here/launch-check.sh" --fleet "$fleet" --ledger "$ledger" --machine "$m" --own "$own" ${key:+--key "$key"} \
+    --load "$(jq -r .load1 <<<"$reading")" --free-gb "$(jq -r .free_gb <<<"$reading")" ${repo:+--repo "$repo"} ${check_args[@]+"${check_args[@]}"} 2>/dev/null) || rc=$?
   case $rc in 0|1) ;; *) sa_tooling "launch-check failed for $m: $res" ;; esac
   if [ "$rc" = 0 ]; then
     placed=$(jq -cn --arg m "$m" --arg i "$id" --argjson l "$([ "$m" = "$own" ] && echo true || echo false)" \

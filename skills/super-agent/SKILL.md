@@ -89,17 +89,11 @@ Steps for all three: [reference/claims.md](reference/claims.md).
 
 Record your own thread first: `scripts/ledger.sh --ledger <ledger> self`.
 Every launched thread runs the same five steps: launch, record, watch, wake,
-reconcile. An owner ask that is not routing work (rotating a secret, editing
-dotfiles) is launched as a `task:<slug>` thread, never done inline; only an
-asked machine check runs inline. A thread that is no ticket's (a grill, a
-deploy, decks, a review: anything the owner asks you to launch) skips
-`launch.sh`'s claim, route and place, and takes `t3_thread_launch` directly,
-naming its skill from `scripts/skills.sh`; step 2 then records it with
-`launch.sh record --ledger <ledger> --task <slug> --thread <id>`
-(`--branch` and `--repo` when it opens a PR you should wake on; on a linked
-machine `--machine <key>` with `--environment`, and `--worktree`). A thread the
-owner asks you to watch that you did not launch is adopted in place of steps 1
-and 2 ([handing over](reference/handing-over.md#watch-thread)).
+reconcile. Answer here only what your record holds (the ledger, the status
+block, its entries' GitHub state); any other ask is a **task**, launched with
+`launch.sh task` ([tasks](reference/tasks.md)). A thread the owner asks you to
+watch that you did not launch is adopted in place of steps 1 and 2
+([handing over](reference/handing-over.md#watch-thread)).
 
 1. **Launch.** The owner names a ticket as `<owner/name>#<n>`. Run
    `scripts/launch.sh <owner/name>#<n> --fleet <fleet> --ledger <ledger> --quota
@@ -178,7 +172,7 @@ carries a supervised thread's transcript.
 ## The launch message and the step-ins
 
 Send the **launch message** `launch.sh` writes into `args.message` unedited.
-After it you post into a supervised thread only at one of the five
+After it you post into a supervised thread only at one of the six
 **step-ins**, never a broadcast. What each carries:
 [reference/step-ins.md](reference/step-ins.md).
 
@@ -232,9 +226,7 @@ any thread the owner names, by its id.
   (`no_skill` when it is in neither); one only this machine holds keeps the
   thread here. A skill other than ship or triage records a
   `task:<name>-<repo name>-<n>` entry; a grill's is **interactive**: no stall,
-  and it leaves only on `drop`. A grill thread you record as a task takes
-  `--interactive` the same way: `launch.sh record --task <slug> --thread <id>
-  --ledger <ledger> --interactive`.
+  and it leaves only on `drop`.
 - "Watch <thread>", "I'll take <thread>", "Drop <thread>", "Tell <thread> X":
   echo the phrase in one line, then run it
   ([handing over](reference/handing-over.md)). The call guard refuses a send
@@ -331,7 +323,7 @@ the successor (your first message carries a `Handover:` line).
 
 ## Hard rules
 
-- **Every thread you launch is watched until it is at rest, whatever its
+- **Every thread you launch is watched until it ends, whatever its
   kind**: record it before your turn ends (The loop). The exceptions are a
   probe or scratch thread you read and settle within the same turn, and a
   thread a supervised thread started, which you settle once at rest and do

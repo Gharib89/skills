@@ -86,6 +86,14 @@ check "and only the unmarked lines are named" "$sa/zz.md:1: \`ledger wait k --af
 $sa/zz.md:1: \`ledger wait k --after j\` lacks --ledger from ledger's usage line
 $sa/zz.md:7: \`quota.sh --save f --wake w\` lacks --fleet from quota's usage line" "$out"
 
+# launch's ticket form has no verb, so it is picked by its first flag, --fleet, which its
+# `task` form also takes: a `launch task` call is held to the task form alone (#1388).
+cat > "$sa/zz.md" <<'EOT'
+`launch.sh task s --ask a --fleet f --ledger l --quota q --machine m` and `launch.sh o/n#1 --fleet f --ledger l --quota q --machine m`.
+EOT
+run "$sa/scripts" "$sa"
+check "a verb form's call is not held to the verbless form its flag also selects" "$sa/zz.md:1: \`launch.sh o/n#1 --fleet f --ledger l --quota q --machine m\` lacks --thread from launch's usage line" "$out"
+
 cat > "$sa/zz.md" <<'EOT'
 By name: `quota.sh --fleet f --save f --wake w` and `scripts/quota.sh --fleet f --save f --wake w`.
 By verb: `ledger.sh --ledger l wait k --reason r --after j`.

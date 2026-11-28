@@ -20,7 +20,8 @@ Climb the **stall ladder**, keyed on the entry's `stalls` after reconcile:
 3. Start a fresh thread on a raised tier: run the loop's steps 1 and 2 again
    with the first launch's flags plus `--raise` set to the rungs the entry's
    model and effort sit above its size default, plus one, and `record
-   --rethread` to point the entry at the new thread. The owner is asked only
+   --rethread` to point the entry at the new thread (a task's launch is
+   `launch.sh task`, [tasks](tasks.md#how-a-task-ends)). The owner is asked only
    when route's `ask` is true (Routing). Escalate instead when the ticket's
    premise or scope, not the thread, is the problem.
 

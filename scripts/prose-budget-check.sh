@@ -3,7 +3,7 @@
 # at load, so a file that outgrows its budget buries the pipeline behind its own
 # reference material, and a reference file long enough to scroll needs a map at
 # the top rather than at the point a reader gives up. The thresholds and the
-# paths, whole: `skills/*/SKILL.md` at most 3500 words (super-agent's 3000), ship's always-read set at
+# paths, whole: `skills/*/SKILL.md` at most 3500 words (super-agent's 2621), ship's always-read set at
 # most 16000 words in sum, and every `skills/*/reference/*.md` over 100 lines
 # opening with a `## Contents` heading inside its first 15 lines whose list
 # matches the file's `## ` headings.
@@ -14,9 +14,9 @@
 # in 184 lines under the old 350-line cap. 3500 is ship's SKILL.md at 3,330 words
 # (#606), rounded up to the next 500: a ratchet, so prose that regrows fails here
 # instead of accumulating again. super-agent's SKILL.md has a cap of its own, 3000
-# (#1385): every call of the pinned thread reads it, and each later slice that
-# deletes its prose lowers the cap to its after-count, never raising it, down to
-# 2,200 (#1372).
+# at #1385, 2621 after #1388 moved the task rules to reference/tasks.md: every call
+# of the pinned thread reads it, and each later slice that deletes its prose lowers
+# the cap to its after-count, never raising it, down to 2,200 (#1372).
 #
 # Ship's always-read set has a word budget of its own, 16000: `skills/ship-run/SKILL.md`
 # plus every `skills/ship-run/reference/*.md` but the files a run reads only on their
@@ -165,7 +165,7 @@ rc=0
 for f in "$root"/skills/*/SKILL.md; do
   n=$(words "$f") || { printf 'cannot read %s\n' "$f" >&2; exit 2; }
   cap=3500
-  case $f in */skills/super-agent/SKILL.md) cap=3000 ;; esac
+  case $f in */skills/super-agent/SKILL.md) cap=2621 ;; esac
   [ "$n" -le "$cap" ] \
     || { printf '%s: %s words, over the %s-word budget\n' "${f#"$root"/}" "$n" "$cap"; rc=1; }
 done

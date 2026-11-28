@@ -41,7 +41,8 @@ else
   jq -e '.launch == true and (.record | type) == "object"' "$launchf" >/dev/null 2>&1 || sa_tooling "$launchf: not a launch answer that launched"
   rec=$(jq -c .record "$launchf")
   env=$(jq -r '.environment_id // empty' <<<"$rec")
-  if [ -z "$worktree" ]; then
+  # a task with no repo runs in a scratch folder and holds no worktree, so its thread is not read
+  if [ -z "$worktree" ] && ! jq -e '.kind == "task" and .repo == null' <<<"$rec" >/dev/null; then
     [ -z "$env" ] || sa_tooling "a launch on a linked machine needs --worktree"
     raw=$(t3 thread show "$thread" --json 2>/dev/null </dev/null) || sa_tooling "cannot read thread $thread: pass --worktree"
     worktree=$(grep '^{"' <<<"$raw" | tail -1 | jq -r '.thread.worktreePath // empty' 2>/dev/null)
@@ -51,7 +52,7 @@ else
   if [ -n "$rethread" ]; then
     # rethread keeps the entry's machine, so a thread on another machine sets it after.
     rec_fields "$rec"
-    sub ledger --ledger "$ledger" rethread "$key" --kind "$(jq -r .kind <<<"$rec")" --thread "$thread" --worktree "$worktree" "${fields[@]}"
+    sub ledger --ledger "$ledger" rethread "$key" --kind "$(jq -r .kind <<<"$rec")" --thread "$thread" ${worktree:+--worktree "$worktree"} "${fields[@]}"
     if [ "$rc" = 0 ]; then sub ledger --ledger "$ledger" set "$key" machine "$(jq -c .machine <<<"$rec")"; fi
     if [ "$rc" = 0 ]; then
       sub ledger --ledger "$ledger" get "$key"
@@ -59,7 +60,7 @@ else
       out=$(jq -c '{entry: .}' <<<"$out") || sa_tooling "cannot read entry $key"
     fi
   else
-    rec_add "$rec" --thread "$thread" --worktree "$worktree"
+    rec_add "$rec" --thread "$thread" ${worktree:+--worktree "$worktree"}
   fi
 fi
 [ "$rc" = 0 ] || { printf '%s\n' "$out"; exit 1; }
