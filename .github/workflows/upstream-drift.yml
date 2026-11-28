@@ -36,10 +36,8 @@ jobs:
       # Its Kind is the title type update-skills gives the run that ships it:
       # `enhancement` where a skill ship composes drifted (`feat(ship-run)`),
       # `chore` where only `others` rows moved (`chore(skills)`).
-      # Skills installed from heygen-com/hyperframes (hyperframes,
-      # hyperframes-cli, media-use) are dropped from the heads before the plan:
-      # that upstream lands 40 to 49 commits a day (26 to 28 Nov 2026), so its
-      # rows rewrote the issue daily. Their pins move on a hand refresh.
+      # heads skips heygen-com/hyperframes (hyperframes, hyperframes-cli,
+      # media-use): its header says why. Their pins move on a hand refresh.
       # A bot-filed issue alone reaches no one's notifications; the mention
       # does. It posts with gh: comment-issue's create-then-verify reads
       # GET /user, which a workflow token is refused (403).
@@ -53,19 +51,10 @@ jobs:
           U=skills/update-skills/scripts S=skills/ship-run/scripts t=$RUNNER_TEMP
           title='Upstream drift: composed skills'
           rc=0
-          "$U/heads.sh" . > "$t/heads.json" || rc=$?
-          jq --slurpfile lock skills-lock.json 'def kept: $lock[0].skills[.].source != "heygen-com/hyperframes";
-            .heads |= ((. // {}) | with_entries(select(.key | kept)))
-            | .unreachable |= ((. // []) | map(select(.skill | kept)))' \
-            "$t/heads.json" > "$t/kept.json"
-          jq -r '.unreachable[]? | "- drift not checked: \(.skill): \(.error)"' "$t/kept.json" >> "$GITHUB_STEP_SUMMARY"
+          "$U/heads.sh" . --skip-source heygen-com/hyperframes > "$t/heads.json" || rc=$?
+          jq -r '.unreachable[]? | "- drift not checked: \(.skill): \(.error)"' "$t/heads.json" >> "$GITHUB_STEP_SUMMARY"
           [ "$rc" -eq 0 ] || exit "$rc"
-          # heads judged every read failed before the filter: with no kept head
-          # and a kept upstream unreachable, nothing was checked.
-          if ! jq -e '(.heads | length) > 0 or (.unreachable | length) == 0' "$t/kept.json" >/dev/null; then
-            echo "No kept upstream answered: drift not checked." | tee -a "$GITHUB_STEP_SUMMARY" >&2; exit 1
-          fi
-          "$U/plan.sh" . "$t/kept.json" > "$t/plan.json"
+          "$U/plan.sh" . "$t/heads.json" > "$t/plan.json"
           n=$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100" \
             --jq ".[] | select(.pull_request == null and .title == \"$title\") | .number")
           n=${n%%$'\n'*}

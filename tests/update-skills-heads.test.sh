@@ -8,7 +8,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 2
 source tests/lib.sh
 
 heads=skills/update-skills/scripts/heads.sh
-usage='usage: heads <checkout>'
+usage='usage: heads <checkout> [--skip-source <owner/repo>]...'
 A=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; H=1111111111111111111111111111111111111111
 X=2222222222222222222222222222222222222222
 
@@ -106,6 +106,31 @@ env -u GH_TOKEN -u GITHUB_TOKEN bash "$heads" "$repo" >/dev/null 2>&1
 check "with no token, no argv names an Authorization header or a config" 0 "$(grep -cE 'Authorization|-K' "$tmp/log.args")"
 check "with no token, curl gets no stdin config" "" "$(cat "$tmp/log.stdin" 2>/dev/null)"
 
+# --skip-source leaves an upstream unread: its skills are neither a head nor an
+# unreachable row, so the plan never moves them. Repeatable.
+rm -f "$tmp"/log*
+out=$(bash "$heads" "$repo" --skip-source w/w --skip-source z/z 2>/dev/null); rc=$?
+check_rc "skipping two sources exits 0" 0 "$rc"
+check "a skipped source's skills have no head" \
+  '{"code-review":"'$A'","find-docs":"'$H'","grilling":"'$A'","research":"'$H'","solo":"'$H'","tdd":"'$H'"}' "$(jq -cS .heads <<<"$out")"
+check "a skipped source's skills are no unreachable row" '[]' "$(jq -c .unreachable <<<"$out")"
+check "a skipped source is never asked for" 0 "$(grep -cE 'repos/(w/w|z/z)/' "$tmp/log")"
+out=$(bash "$heads" "$repo" --skip-source 2>/dev/null); rc=$?
+check_rc "--skip-source with no value exits 2" 2 "$rc"
+out=$(bash "$heads" "$repo" --other 2>/dev/null); rc=$?
+check_rc "an unknown flag exits 2" 2 "$rc"
+# A malformed or unmatched value would silently skip nothing, so it refuses.
+for bad in invalid 'a b/c' a/b/c /r o/ 'o/r '; do
+  out=$(bash "$heads" "$repo" --skip-source "$bad" 2>/dev/null); rc=$?
+  check_rc "--skip-source '$bad', no owner/repo, exits 2" 2 "$rc"
+  check "--skip-source '$bad' is refused by the usage check" "$usage" "$(jq -r .error <<<"$out")"
+done
+rm -f "$tmp"/log*
+out=$(bash "$heads" "$repo" --skip-source w/ww 2>/dev/null); rc=$?
+check_rc "--skip-source naming no lock source exits 2" 2 "$rc"
+check "that refusal names the value" "--skip-source matches no lock source: w/ww" "$(jq -r .error <<<"$out")"
+check "that refusal reads nothing" "" "$(cat "$tmp/log" 2>/dev/null)"
+
 # A GET that fails is tried again: a flaky route must not empty `heads`. A curl
 # that fails the first attempts at each URL, then answers, gives the same result.
 real_curl=$tmp/bin/curl; mv "$real_curl" "$tmp/curl.real"
@@ -144,6 +169,12 @@ check "stdout still carries the unreachable rows" 2 "$(jq '.unreachable | length
 rm -f "$tmp"/log*
 out=$(FAKE_CURL_FLAKY=1 bash "$heads" "$one" 2>/dev/null); rc=$?
 check_rc "every read answering on its second attempt keeps exit 0" 0 "$rc"
+# The skip happens before the reads, so a skipped source that would have
+# answered cannot hide that every kept one failed.
+rm -f "$tmp"/log*
+out=$(FAKE_CURL_FLAKY=99 bash "$heads" "$one" --skip-source o/r 2>"$tmp/err"); rc=$?
+check_rc "every kept upstream failing exits 1 with the rest skipped" 1 "$rc"
+check "that exit counts only the kept skills" "every upstream read failed: 1 skills unreachable" "$(cat "$tmp/err")"
 
 echo '[' > "$repo/skills-lock.json"
 out=$(bash "$heads" "$repo" 2>/dev/null); rc=$?

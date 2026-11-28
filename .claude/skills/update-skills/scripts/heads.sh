@@ -3,7 +3,14 @@
 # checkout's lock that the source repo does not own, the commit a refresh
 # would move it to.
 #
-#   heads <checkout>
+#   heads <checkout> [--skip-source <owner/repo>]...
+#
+# --skip-source leaves that upstream unread: its skills get no head and no
+# `unreachable` row, so a plan never moves them. A value that is no
+# `owner/repo`, or names no lock entry's source, exits 2. The daily upstream-drift
+# check and a Ship run on its issue skip heygen-com/hyperframes, whose 40 to 49
+# commits a day would rewrite the drift issue daily; a hand refresh skips
+# nothing.
 #
 # A skill's base is its pin on the checkout's composes lines (ship's and
 # setup-skills'), else the lock's recorded ref. Its head is the upstream
@@ -29,14 +36,25 @@ set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../../ship-run/scripts/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || ship_tooling "cannot source update-skills' _lib.sh"
 
-usage='usage: heads <checkout>'
+usage='usage: heads <checkout> [--skip-source <owner/repo>]...'
 ship_help "$usage" "$@"
-[ -n "${1:-}" ] && [ $# -eq 1 ] || ship_tooling "$usage"
-root=$1
+[ -n "${1:-}" ] || ship_tooling "$usage"
+root=$1; shift
 case $root in -*) ship_tooling "$usage" ;; esac
+skip='[]'
+while [ $# -gt 0 ]; do
+  case $1 in
+    --skip-source) [[ ${2:-} =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || ship_tooling "$usage"
+      skip=$(jq -c --arg s "$2" '. + [$s]' <<<"$skip"); shift 2 ;;
+    *) ship_tooling "unknown flag: $1" ;;
+  esac
+done
 command -v curl >/dev/null || ship_tooling "curl not installed"
 
 lock=$(jq -ce 'select(type == "object")' "$root/skills-lock.json" 2>/dev/null) || ship_fail "cannot read lock: $root/skills-lock.json"
+# A skip that matches no lock source, a typo most likely, would skip nothing.
+unmatched=$(jq -r --argjson skip "$skip" '[.skills[]?.source] as $s | $skip[] | select(. as $k | $s | index([$k]) | not)' <<<"$lock" | head -n1)
+[ -z "$unmatched" ] || ship_tooling "--skip-source matches no lock source: $unmatched"
 token=${GH_TOKEN:-${GITHUB_TOKEN:-}}
 
 api=https://api.github.com
@@ -64,10 +82,11 @@ get() {
 # One `<skill> <source> <folder> <base>` row per skill to look up, joined by
 # the unit separator: tab is whitespace to `read`, which would collapse a root
 # skill's empty folder into the next field.
-rows=$(jq -r --argjson composed "$(us_composed "$root")" "$us_source_repo"'
+rows=$(jq -r --argjson composed "$(us_composed "$root")" --argjson skip "$skip" "$us_source_repo"'
   ($composed | map({key: .skill, value: .pin}) | from_entries) as $pins
   | .skills | to_entries | sort_by(.key)[]
   | select(.value.sourceType == "github" and (.value | source_repo | not))
+  | select(.value.source as $s | $skip | index([$s]) | not)
   | [.key, .value.source, ((.value.skillPath // "") | sub("/?SKILL\\.md$"; "")), ($pins[.key] // .value.ref // "")] | join("\u001f")' <<<"$lock")
 
 # seen maps a source to its HEAD, or to "!<error>" once it failed to answer.

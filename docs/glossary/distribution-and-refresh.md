@@ -21,7 +21,7 @@ The upstream commit of a composed skill that the source repo tested Ship against
 _Avoid_: tested version, locked version, hash (the lock's `computedHash` is the folder's content hash, not the ref)
 
 **Upstream drift**:
-A composed skill whose upstream has moved past its pinned ref. Reported to the source repo, never acted on in any other consumer repo: one that installed the new upstream would run Ship against a version nobody tested. In the source repo the drift issue also lists every other upstream skill whose upstream moved past its lock ref, except those installed from `heygen-com/hyperframes`, whose daily commits the daily check leaves out.
+A composed skill whose upstream has moved past its pinned ref. Reported to the source repo, never acted on in any other consumer repo: one that installed the new upstream would run Ship against a version nobody tested. In the source repo the drift issue also lists every other upstream skill whose upstream moved past its lock ref, except those installed from `heygen-com/hyperframes`, whose daily commits the daily check and a Ship run on its issue leave out: those pins move only on a hand refresh.
 _Avoid_: outdated skill, stale dependency
 
 **Refresh**:

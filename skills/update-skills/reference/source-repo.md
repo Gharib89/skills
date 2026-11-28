@@ -64,8 +64,10 @@ mode moves every `others` row.
 
 1. `<old>`: `git rev-parse HEAD` in the worktree, before the first edit.
 2. Step 2's source-repo refresh line, from the source repo's CLAUDE.md.
-3. Step 3, with its source-repo token. A `heads` exit 1 is retried once, then
-   stops the run `red-after-retry: heads`.
+3. Step 3, with its source-repo token and `heads`' `--skip-source
+   heygen-com/hyperframes`, as the daily check runs it: those pins move only
+   on a hand refresh. A `heads` exit 1 is retried once, then stops the run
+   `red-after-retry: heads`.
 4. Step 4: the composed install lines at their pins, then its preflight.
 5. Step 6, its `/setup-skills` re-run replaced by the record in the table
    below; the source repo has no retired terms to sweep.
