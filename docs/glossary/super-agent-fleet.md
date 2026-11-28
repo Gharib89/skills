@@ -17,11 +17,11 @@ One T3 provider the super agent may launch on, named by T3's instance id: two Cl
 _Avoid_: account, provider (that is the driver), subscription
 
 **Slot**:
-One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling, less the slots it keeps for the owner's messages (`reserve`, 1 on the super agent's own machine); a launch still checks the machine's free memory and load before it takes a slot. A probe thread and an interactive task take none. The `fleet` script sets it. A slot bounds a machine; the **ship cap** bounds a repo.
+One supervised thread a machine may run at once. The fleet file sets each machine's slot count as a ceiling, less the slots it keeps for the owner's messages (`reserve`, 1 on the super agent's own machine); a launch still checks the machine's free memory and load before it takes a slot. An interactive task takes none. The `fleet` script sets it. A slot bounds a machine; the **ship cap** bounds a repo.
 _Avoid_: worker, lane, seat
 
 **Placement**:
-Choosing the machine a launch runs on: the super agent's own machine first, a GPU machine for GPU work, the next reachable linked machine that fits when one is down, and a row in the ledger's waiting list when none does, a launch over its repo's ship cap included. A repo the fleet file pins to a machine (a **machine pin**) is placed there alone, and waits when that machine is down or full. Work is placed on a machine only through its T3 environment id, and only if the owner already linked it (ADR 0023).
+Choosing the machine a launch runs on: the super agent's own machine first, a GPU machine for GPU work, the next reachable linked machine that fits when one is down, and a row in the ledger's waiting list when none does, a launch over its repo's ship cap included. A repo the fleet file pins to a machine (a **machine pin**) is placed there alone, and waits when that machine is down or full. A linked machine's live load is read by running the probe over its `ssh` string, and one that cannot be read is skipped. Work is placed on a machine only through its T3 environment id, and only if the owner already linked it (ADR 0023).
 _Avoid_: scheduling, load balancing
 
 **Ship cap**:

@@ -26,7 +26,7 @@
 set -uo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 state=${XDG_STATE_HOME:-$HOME/.local/state}/super-agent
-ledger=$state/ledger.json fleet=${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json
+ledger=$state/ledger.json
 source "$here/lib/hook-log.sh" || exit 0
 log=$(sa_hook_log_file watch-guard "$@")
 log() { sa_hook_log "$log" "$@"; }
@@ -34,6 +34,7 @@ unjudged() { log unjudged "$1"; exit 0; }
 
 command -v jq >/dev/null 2>&1 || unjudged "no jq"
 source "$here/_lib.sh" || unjudged "cannot source _lib.sh"
+fleet=$sa_default_fleet
 usage='usage: watch-guard [--ledger <file>] [--fleet <file>]'
 sa_help "$usage" "$@"
 while [ $# -gt 0 ]; do
@@ -59,7 +60,7 @@ if [ "$active" = true ]; then log pass; exit 0; fi
 
 watcher="bash $(sa_shq "$here/watch.sh") --ledger $(sa_shq "$ledger") --fleet $(sa_shq "$fleet") --timeout 7000"
 if [ "$owed" = reconcile ]; then
-  what="$open open entries have no observed state yet. Run \`bash $(sa_shq "$here/reconcile.sh") --ledger $(sa_shq "$ledger") --fleet $(sa_shq "$fleet")\`, then start the watcher with \`$watcher\` (each remote entry also takes reconcile's \`--remote <environment id>=<dir>\`, as SKILL.md says)"
+  what="$open open entries have no observed state yet. Run \`bash $(sa_shq "$here/reconcile.sh") --ledger $(sa_shq "$ledger") --fleet $(sa_shq "$fleet")\`, then start the watcher with \`$watcher\`"
 else
   what="$open open entries and no watcher is running. Start it with \`$watcher\`"
 fi

@@ -6,9 +6,8 @@
 # reads it and confirms first; --write then writes it.
 #
 #   setup (--propose | --write) [--fleet <file>] [--name <machine>]
-#         [--probe <environment id>=<reply file>]... [--instances <file>]
-#         [--settings <file>] [--ssh <machine>=<ssh string>]...
-#         [--check-only <machine>=<ssh string>]...
+#         [--instances <file>] [--settings <file>]
+#         [--ssh <machine>=<ssh string>]... [--check-only <machine>=<ssh string>]...
 #
 # --fleet defaults to `super-agent/fleet.json` under $XDG_CONFIG_HOME
 # (`~/.config` when unset), the user-scope path the owner keeps in their
@@ -25,17 +24,16 @@
 # and T3 no longer lists is kept. A machine's slots are the lesser of half
 # its cores and its RAM over the per-thread floor, at least 1, and this
 # machine keeps 1 slot (`reserve`) for the owner's messages. This machine is
-# measured by `probe.sh`. A linked machine is measured by the same probe run in
-# a scratch thread there: setup cannot launch one, so the first call lists the
-# reachable linked machines in `to_probe`, the caller runs the probe on each
-# and saves each thread's reply to a file, and a second call passes each as
-# `--probe <environment id>=<file>`. The reply's one JSON line is merged under
-# that machine (cores, RAM, GPU, `clis`, `gh_logins`), and its slots, load
+# measured by `probe.sh`. A reachable linked machine whose ssh test passed is
+# measured by the same probe run over that ssh (its text on stdin, since the
+# machine has no checkout). The probe's one JSON line is merged under that
+# machine (cores, RAM, GPU, `clis`, `gh_logins`), and its slots, load
 # threshold and `proposed_slots` are computed from it. A machine probed before
 # keeps the file's slots and load threshold (the owner's edits) and only
 # `proposed_slots` moves; one never probed takes the computed ones, since
-# nobody could have chosen them. A machine that is unreachable keeps its
-# previous facts and is probed on the next run that finds it reachable.
+# nobody could have chosen them. A machine that is unreachable, or whose probe
+# fails, keeps its previous facts and is probed on the next run that finds it
+# reachable.
 #
 # Every linked machine also carries a tested `ssh` string, and --check-only adds a
 # check-only machine: setup.d/machines.sh says how.
@@ -74,11 +72,10 @@
 # probed by its CLI. Without --instances the providers are the three CLIs, as
 # before.
 #
-# stdout: {fleet_file, written, fleet, warnings, to_probe, ssh_refused, instances, home}: `fleet` the merged
+# stdout: {fleet_file, written, fleet, warnings, ssh_refused, instances, home}: `fleet` the merged
 #         file as it is or would be written, `warnings` one string per probe
-#         that failed (T3 environments, GitHub accounts, a reply that is no
-#         probe); `to_probe` one {machine, environment_id} per reachable linked
-#         machine no `--probe` covered; `ssh_refused` one {machine, ssh, reason}
+#         that failed (T3 environments, GitHub accounts, a linked machine's probe
+#         over ssh); `ssh_refused` one {machine, ssh, reason}
 #         per machine whose ssh test failed; a provider whose quota command
 #         fails is `unavailable` with a `reason` in `fleet.providers` (a `cursor` or `grok` one is `unknown`: no usage read exists), not a
 #         warning; `instances` one {instance_id, driver, quota_source, auth,
@@ -103,16 +100,14 @@ set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 source "$(dirname "${BASH_SOURCE[0]}")/lib/ssh.sh" || { printf '{"error":"cannot source lib/ssh.sh"}\n'; exit 2; }
 
-usage='usage: setup (--propose | --write) [--fleet <file>] [--name <machine>] [--probe <environment id>=<reply file>]... [--instances <file>] [--settings <file>] [--ssh <machine>=<ssh string>]... [--check-only <machine>=<ssh string>]...'
+usage='usage: setup (--propose | --write) [--fleet <file>] [--name <machine>] [--instances <file>] [--settings <file>] [--ssh <machine>=<ssh string>]... [--check-only <machine>=<ssh string>]...'
 sa_help "$usage" "$@"
-fleet_file="${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json"
-name='' write=false mode='' replies='{}' instances_file='' settings_file='' ssh_given='{}' check_only='{}'
+fleet_file=$sa_default_fleet
+name='' write=false mode='' instances_file='' settings_file='' ssh_given='{}' check_only='{}'
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet_file=$2; shift 2 ;;
     --name) sa_flag_value "$usage" "${2:-}"; name=$2; shift 2 ;;
-    --probe) sa_flag_value "$usage" "${2:-}"; case $2 in *=?*) ;; *) sa_tooling "$usage" ;; esac
-      replies=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$replies"); shift 2 ;;
     --ssh|--check-only) sa_flag_value "$usage" "${2:-}"; case $2 in ?*=?*) ;; *) sa_tooling "$usage" ;; esac
       if [ "$1" = --ssh ]; then ssh_given=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$ssh_given")
       else check_only=$(jq -c --arg k "${2%%=*}" --arg v "${2#*=}" '.[$k] = $v' <<<"$check_only"); fi
@@ -253,8 +248,8 @@ merged=$(jq -cn --argjson p "$proposed" --argjson e "$existing" --argjson f "$fa
 
 if $write; then sa_write "$fleet_file" "$merged"; fi
 sa_home "$write"
-jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjson warn "$warnings" --argjson p "$to_probe" --argjson sr "$ssh_refused" --argjson rows "$rows" --argjson home "$home" \
-  '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn, to_probe: $p, ssh_refused: $sr, home: $home,
+jq -cn --arg f "$fleet_file" --argjson w "$write" --argjson m "$merged" --argjson warn "$warnings" --argjson sr "$ssh_refused" --argjson rows "$rows" --argjson home "$home" \
+  '{fleet_file: $f, written: $w, fleet: $m, warnings: $warn, ssh_refused: $sr, home: $home,
     instances: [$rows[] | .providerInstanceId as $k | $m.providers[$k] as $v
       | {instance_id: $k, driver: $v.driver,
          weekly_weight: ($v.weekly_weight // 1),

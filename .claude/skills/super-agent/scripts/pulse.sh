@@ -4,8 +4,8 @@
 # date, as on any wake, `--reads` included) and reads the watcher's lock, `<ledger>.watch`: the watcher
 # is alive when the pid the lock holds is a live `watch.sh`.
 #
-#   pulse --ledger <file> [--fleet <file>] [--stall-window <s>] [--remote <environment id>=<dir>]...
-#         [--reads <dir>] [--quota <file>] [--instance <id>]
+#   pulse --ledger <file> [--fleet <file>] [--stall-window <s>] [--reads <dir>]
+#         [--quota <file>] [--instance <id>]
 #
 # A backstop turn that finds `alive` true and `changed` false ends there: no
 # transcript read, no status block, no further call. `changed` is true when the
@@ -25,14 +25,13 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: pulse --ledger <file> [--fleet <file>] [--stall-window <s>] [--remote <environment id>=<dir>]... [--reads <dir>] [--quota <file>] [--instance <id>]'
+usage='usage: pulse --ledger <file> [--fleet <file>] [--stall-window <s>] [--reads <dir>] [--quota <file>] [--instance <id>]'
 sa_help "$usage" "$@"
 ledger='' pass=()
 while [ $# -gt 0 ]; do
   case $1 in
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2 ;;
     --fleet|--quota|--instance|--reads) sa_flag_value "$usage" "${2:-}" ;;
-    --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2" ;;
     --stall-window) sa_flag_value "$usage" "${2:-}"; sa_window_flag "$usage" "$2" ;;
     *) sa_tooling "$usage" ;;
   esac

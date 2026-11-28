@@ -9,7 +9,7 @@
 #
 # `pin` writes `repos.<owner/name>.machine`, which `place` honours: the repo's tickets
 # run only on that machine and wait while it is down or full. Run a readiness check on
-# the machine first (a probe thread, setup.md step 2), since a pin never falls back to
+# the machine first (setup's probe over SSH, setup.md step 2), since a pin never falls back to
 # another one. `unpin` removes it, and drops a repo entry left with no other key.
 # `slots` sets `machines.<machine>.slots`, a whole number of 1 or more that stays above
 # the machine's `reserve`, since a ceiling of none launches nothing. A repo name is

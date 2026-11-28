@@ -39,7 +39,8 @@
 # records the directory it was run in and that directory's git common dir, a line of
 # `agy-cwd`. `sleep` runs
 # the one-shot script `on-sleep` first, to change what the fakes answer while a
-# script waits. `ssh` answers per target from `ssh/<target>.*` (sa_ssh).
+# script waits. `ssh` answers per target from `ssh/<target>.*` (sa_ssh), or runs the command
+# on a machine (`machines/<target>/`, tests/super-agent-on-machine-lib.sh) when it has no fixed answer.
 
 sa_fake_install() { # <dir>
   cat > "$1/t3" <<'FAKE'
@@ -187,6 +188,10 @@ while [ $# -gt 0 ]; do case $1 in -o) shift 2 ;; -*) shift ;; *) break ;; esac; 
 target=$1; shift
 printf '%s\t%s\n' "$target" "$*" >> "$SA_FAKE/ssh-calls"
 f=$SA_FAKE/ssh/$target
+# a machine (sa_on_machine) with no fixed answer runs the command there, its fakes
+# answering from machines/<target>/
+m=$SA_FAKE/machines/$target
+if [ -d "$m" ] && [ ! -f "$f.rc" ]; then SA_FAKE=$m PATH=$m/bin:$PATH exec bash -c "$*"; fi
 [ ! -f "$f.out" ] || cat "$f.out"
 [ ! -f "$f.err" ] || cat "$f.err" >&2
 exit "$(cat "$f.rc" 2>/dev/null || echo 0)"
@@ -313,18 +318,6 @@ sa_thread() {
        + (if $u == "" then {} else {updatedAt: $u} end)),
       messages: (if $m == "" then [] else [{role: "assistant", runId: "r", text: $m}] end)}' \
     > "$SA_FAKE/threads/$1.json"
-}
-
-# sa_remote_thread <environment id> <id> <status> <runCount> <pending> <worktree> <branch> [<last message>]:
-# the reply file the super agent saves after reading a thread on a linked machine
-# with `t3_thread_read`, `<dir>/<id>.json` under `remote/<environment id>`, the
-# shape of `sa_thread`'s answer without the CLI's warning. The fake `t3` does not
-# know the thread: a script that asks it has not taken the file route.
-sa_remote_thread() {
-  local env=$1; shift
-  mkdir -p "$SA_FAKE/remote/$env"
-  sa_thread "$@"
-  mv "$SA_FAKE/threads/$1.json" "$SA_FAKE/remote/$env/$1.json"
 }
 
 sa_route() { # <endpoint> <json>: what `gh api <endpoint>` answers

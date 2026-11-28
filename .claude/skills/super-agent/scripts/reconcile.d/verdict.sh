@@ -2,22 +2,20 @@
 # in it, sourced by it: the verdict of a run or a rest on the stall count (`reconcile_judge`),
 # whether the owner spoke last in a thread (`steered`), and the one reminder for an entry the
 # owner took 3 days ago (`owner-run`). They read and write the caller's $doc, $key, $entry,
-# $obs, $now, $now_s, $window, $active, $reads and $sa_remote_dirs, and set $stalls and
+# $obs, $now, $now_s, $window, $active and $reads, and set $stalls and
 # $stall and append to $reminders and $steered_due.
 
-# shellcheck disable=SC2154,SC2034  # stalls and stall are read by reconcile.sh; doc, key, entry, obs, now, now_s, window, active, reads, reminders, steered_due and sa_remote_dirs come from reconcile.sh and _lib.sh
+# shellcheck disable=SC2154,SC2034  # stalls and stall are read by reconcile.sh; doc, key, entry, obs, now, now_s, window, active, reads, reminders and steered_due come from reconcile.sh
 
-# reconcile_steered <entry>: `true` when the entry's reply file (`reply.sh`: `owner_at`,
+# reconcile_steered <entry>: `true` when the entry's owner read (`owner-read.sh`: `owner_at`,
 # when the owner's message was the newest from outside the thread) names a message newer
 # than `held_since`, else `launched_at`, so a thread the owner started and then handed over
-# is not steered by its own first message; `false` when it does not. An entry with no reply
-# file to read, or a reply file with no `owner_at` (no user message on the page), keeps the
-# mark it has. A local entry's file is in `--reads`, a remote one's
-# in its `--remote`.
+# is not steered by its own first message; `false` when it does not. An entry with no owner
+# read in `--reads`, or one with no `owner_at` (no user message on the page), keeps the
+# mark it has.
 reconcile_steered() {
-  local t env d
-  t=$(jq -r .thread <<<"$1") env=$(jq -r '.environment_id // empty' <<<"$1")
-  if [ -n "$env" ]; then d=$(jq -r --arg e "$env" '.[$e] // empty' <<<"$sa_remote_dirs"); else d=$reads; fi
+  local t d=$reads
+  t=$(jq -r .thread <<<"$1")
   if [ -n "$d" ] && sa_thread_file_ok "$t" && [ -f "$d/$t.json" ]; then
     jq -r --argjson e "$1" 'def at: sub("[.][0-9]+Z$"; "Z") | fromdateiso8601;
       (.owner_at // null) as $o | ($e.held_since // $e.launched_at) as $h

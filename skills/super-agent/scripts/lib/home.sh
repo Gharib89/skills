@@ -126,7 +126,8 @@ sa_timer_units() {
   # The systemd user manager need not carry this shell's XDG dirs, so the
   # ledger and fleet paths resolved here go on the command line.
   l=${XDG_STATE_HOME:-$HOME/.local/state}/super-agent/ledger.json
-  f=${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json
+  # shellcheck disable=SC2154  # sa_default_fleet is set in _lib.sh, which sources this file
+  f=$sa_default_fleet
   jq -cn --arg d "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user" --arg path "$PATH" \
     --arg x "/usr/bin/env bash $(sa_shq "$p") --ledger $(sa_shq "$l") --fleet $(sa_shq "$f")" '{dir: $d,
     service: "[Unit]\nDescription=Super agent wake timer tick\n\n[Service]\nType=oneshot\nEnvironment=\"PATH=\($path)\"\nExecStart=\($x)\n",

@@ -44,7 +44,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: wake-timer [--ledger <file>] [--fleet <file>]'
 sa_help "$usage" "$@"
 ledger=${XDG_STATE_HOME:-$HOME/.local/state}/super-agent/ledger.json
-fleet=${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json
+fleet=$sa_default_fleet
 while [ $# -gt 0 ]; do
   case $1 in
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2 ;;

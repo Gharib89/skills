@@ -7,7 +7,7 @@ The one agent the owner talks to about every open ticket in every repo: a pinned
 _Avoid_: router, orchestrator, chief of staff, dispatcher
 
 **Supervised thread**:
-One T3 thread the super agent launched, in its own worktree (a scratch folder for a task with no repo) on whichever machine runs it, recorded as an entry of the ledger: for a ticket (kind `ship` or `triage`) or for any other job the owner asked for (kind **task**: a grill, a deploy, decks, a review). A thread someone else launched that the owner asks it to watch is **adopted**, with the same entry. Every one is watched until it ends, whatever its kind (a ticket's on its PR or issue, a one-off task's on its `Result:` line, an interactive task's on the owner's drop), unless the owner takes it over: that thread is **owner-run**, still holding its machine's slot, its thread neither read nor nudged and its PR not merged by the super agent (only its PR and issue are read, on GitHub), until the owner says "Watch <thread>" (watching restarts from the thread's state then), its ticket closes or merges (it then settles with nothing for the super agent to clean up), or, for a task, the owner drops it. A thread that waits on the owner by design, such as a grill, is an **interactive task**; the super agent touches no thread the ledger does not hold, except the probe threads it launches and, to settle them once at rest, the helper and review threads a supervised thread started.
+One T3 thread the super agent launched, in its own worktree (a scratch folder for a task with no repo) on whichever machine runs it, recorded as an entry of the ledger: for a ticket (kind `ship` or `triage`) or for any other job the owner asked for (kind **task**: a grill, a deploy, decks, a review). A thread someone else launched that the owner asks it to watch is **adopted**, with the same entry. Every one is watched until it ends, whatever its kind (a ticket's on its PR or issue, a one-off task's on its `Result:` line, an interactive task's on the owner's drop), unless the owner takes it over: that thread is **owner-run**, still holding its machine's slot, its thread neither read nor nudged and its PR not merged by the super agent (only its PR and issue are read, on GitHub), until the owner says "Watch <thread>" (watching restarts from the thread's state then), its ticket closes or merges (it then settles with nothing for the super agent to clean up), or, for a task, the owner drops it. A thread that waits on the owner by design, such as a grill, is an **interactive task**; the super agent touches no thread the ledger does not hold, except the scratch threads it launches and, to settle them once at rest, the helper and review threads a supervised thread started.
 _Avoid_: worker, worker thread, child thread, held thread (held is a permission-held call or a gate-held ticket), taken thread (taken is a won claim)
 
 **Owner-run**:
@@ -15,7 +15,7 @@ A supervised thread the owner took ("I'll take <thread>"): the entry is marked `
 _Avoid_: paused, given back (the owner ends it with "Watch <thread>")
 
 **Owner-steered**:
-A supervised thread whose newest message from outside it is the owner's, newer than the entry's `held_since` (else `launched_at`). Reconcile marks the entry `steered` from the reply file's `owner_at`: it counts no stall and gets no nudge, its `Running` row ends `(you spoke last)`, the call guard refuses a send into it, and after the stall window at rest an escalate row asks the owner "watch or take?" until a need is recorded.
+A supervised thread whose newest message from outside it is the owner's, newer than the entry's `held_since` (else `launched_at`). Reconcile marks the entry `steered` from the owner read's `owner_at`: it counts no stall and gets no nudge, its `Running` row ends `(you spoke last)`, the call guard refuses a send into it, and after the stall window at rest an escalate row asks the owner "watch or take?" until a need is recorded.
 _Avoid_: owner-active, hijacked
 
 **Call guard**:
@@ -39,7 +39,7 @@ The ledger's `waiting` rows, in order: the owner's queue. A row is a ticket with
 _Avoid_: backlog, pending list, a queue kept in a scratch file
 
 **Watcher**:
-The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent; a thread on a linked machine is woken from GitHub alone (its PR opening, its checks finishing, a merge or a close) and read itself only on a wake. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
+The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent; a thread on a linked machine is read with the T3 CLI there over SSH, one call per machine per poll, and wakes it for every reason a local thread does. A machine it cannot read is watched from GitHub alone (its PR opening, its checks finishing, a merge or a close), and after 5 minutes unread the watcher exits once, on which the super agent makes one offer naming the machine. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
 _Avoid_: watchdog, poller, monitor
 
 **State guard**:
@@ -121,10 +121,6 @@ _Avoid_: digest, auto-pickup, queue
 **Unqueued issue**:
 An open issue in an active repo, created since a batch began, that no ledger entry, waiting row or claim holds: a follow-up a run opened, say. Reconcile lists each once and the super agent offers it to the owner; it launches only on the owner's go.
 _Avoid_: backlog, orphan issue
-
-**Probe thread**:
-A scratch thread the super agent launches on a linked machine to run the fixed probe there (cores, RAM, GPU, provider CLIs, gh logins) and reply with one JSON line, which setup merges into the fleet file. It is settled once its reply is read and is no ledger entry.
-_Avoid_: health check, ping
 
 **Recurring find**:
 One class of mistake or gap seen in two or more tickets. It is filed once as an issue in the repo it hits and ordered before the work it would hit, never fixed per ticket; a find that holds across repos is proposed to the owner as a global rule instead.

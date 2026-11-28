@@ -82,16 +82,16 @@ refusal is a fact: report it, never work around it, never send by another route.
 ## Owner-steered
 
 A message of the owner's in a supervised thread leaves its entry in the ledger:
-never unwatch, settle or rethread it for that. `reply.sh` reads who spoke last
-(`owner_at`), and `reconcile.sh --ledger <ledger> --reads <dir>` (the directory
-of those reply files) marks the entry `steered` when the owner's message is the
-newest from outside the thread and newer than `held_since` (else `launched_at`).
-A steered entry counts no stall and gets no nudge; its `Running` row ends `(you
-spoke last)`, and the call guard refuses your sends into it. After the stall
-window at rest, and not at a merge-gate summary, one `owner-steered` escalate
-row asks "watch or take?" on every reconcile, and the watcher wakes once per
-stall window, until you record its need: answer it as [wake
-actions](wake-actions.md#escalate) says, and record a need (`--reason
+never unwatch, settle or rethread it for that. `owner-read.sh` reads who spoke
+last (`owner_at`), and `reconcile.sh --ledger <ledger> --reads <dir>` (the
+directory of those owner reads) marks the entry `steered` when the owner's
+message is the newest from outside the thread and newer than `held_since` (else
+`launched_at`). A steered entry counts no stall and gets no nudge; its `Running`
+row ends `(you spoke last)`, and the call guard refuses your sends into it.
+After the stall window at rest, and not at a merge-gate summary, one
+`owner-steered` escalate row asks "watch or take?" on every reconcile, and the
+watcher wakes once per stall window, until you record its need: answer it as
+[wake actions](wake-actions.md#escalate) says, and record a need (`--reason
 owner-steered`) so the row and the watcher's wake stay quiet. The owner's answer
 decides: "I'll take <thread>" makes it owner-run, "Watch <thread>" watches it
 again and clears that need, so the next steer is asked about afresh. The loop's

@@ -7,7 +7,7 @@
 #
 #   place --fleet <file> --ledger <file> [--repo <owner/name>] [--own <key>]
 #         [--gpu] [--account <login>] [--area <path>]... [--blocked-by <n>]...
-#         [--exclude <key>]... [--readings <file>] [--number <n> | --key <ledger key>]
+#         [--exclude <key>]... [--number <n> | --key <ledger key>]
 #
 # --own is the fleet key of the machine the ledger is on (`hostname` when
 # omitted). --gpu wants a machine with a GPU, --account a machine whose `gh`
@@ -15,9 +15,9 @@
 # drops a machine the caller found unusable, say one with no T3 project for the
 # repo. Reachability is read now from `t3 environment list`; this machine is
 # always reachable. Live load and free RAM come from `probe.sh` here, and for a
-# linked machine from --readings, a file of `{<key>: {load1, free_gb}}` taken
-# from a probe thread run there: when the next candidate has no reading, the
-# answer is `need_reading` for it, and the caller probes it and asks again.
+# linked machine from the same probe run over the `ssh` string its fleet entry
+# holds (lib/ssh.sh); a machine with no `ssh` string, or whose probe fails, is
+# `skipped:no-reading`.
 # A repo pinned in the fleet file (`repos.<owner/name>.machine`, set by `fleet pin`) runs
 # only on that machine: every other one is `skipped:pinned`, and a pinned machine that
 # is down or full means the ticket waits, never that another machine takes it. A pin
@@ -28,14 +28,15 @@
 # entry out of the slot count (a relaunch at the stall ladder's rung 3), as --key does for
 # a task's `task:<slug>`, which records nothing.
 #
-# stdout: {placed, waiting, reason, need_reading, considered}: `placed`
+# stdout: {placed, waiting, reason, considered}: `placed`
 #         {machine, environment_id, local} or null; `environment_id` is what a
 #         remote launch passes to `t3_thread_launch` (null for this machine);
 #         `waiting` true when nothing fits now, `reason` then one line, starting
 #         `gpu` when the work wanted a GPU and no machine with one is up;
-#         `need_reading` {machine, environment_id} or null; `considered` one
+#         `considered` one
 #         {machine, outcome} per candidate looked at, `outcome` skipped:<why>
-#         (excluded, pinned, no-environment, unreachable, unknown, no-gpu, account, unmeasured)
+#         (excluded, pinned, no-environment, unreachable, unknown, no-gpu, account, unmeasured,
+#         no-reading)
 #         or the refusals of `launch-check` (slots, load, ram, repo, cap); a `repo` or
 #         `cap` refusal ends the search with `waiting`, `reason` starting `same repo` or
 #         `ship cap`
@@ -44,21 +45,22 @@
 #       nothing placed (nothing is recorded), or a ledger write that failed
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
+source "$(dirname "${BASH_SOURCE[0]}")/lib/ssh.sh" || { printf '{"error":"cannot source lib/ssh.sh"}\n'; exit 2; }
 
-usage='usage: place --fleet <file> --ledger <file> [--repo <owner/name>] [--own <key>] [--gpu] [--account <login>] [--area <path>]... [--blocked-by <n>]... [--exclude <key>]... [--readings <file>] [--number <n> | --key <ledger key>]'
+usage='usage: place --fleet <file> --ledger <file> [--repo <owner/name>] [--own <key>] [--gpu] [--account <login>] [--area <path>]... [--blocked-by <n>]... [--exclude <key>]... [--number <n> | --key <ledger key>]'
 sa_help "$usage" "$@"
 here=$(dirname "${BASH_SOURCE[0]}")
-fleet='' ledger='' repo='' own='' gpu=false account='' readings='' number='' key='' excluded='[]'
+fleet='' ledger='' repo='' own='' gpu=false account='' number='' key='' excluded='[]'
 check_args=()
 while [ $# -gt 0 ]; do
   case $1 in
     --gpu) gpu=true; shift; continue ;;
-    --fleet|--ledger|--repo|--own|--account|--readings|--number|--key|--area|--blocked-by|--exclude) sa_flag_value "$usage" "${2:-}" ;;
+    --fleet|--ledger|--repo|--own|--account|--number|--key|--area|--blocked-by|--exclude) sa_flag_value "$usage" "${2:-}" ;;
     *) sa_tooling "$usage" ;;
   esac
   case $1 in
     --fleet) fleet=$2 ;; --ledger) ledger=$2 ;; --repo) repo=$2 ;; --own) own=$2 ;;
-    --account) account=$2 ;; --readings) readings=$2 ;; --exclude) excluded=$(jq -c --arg e "$2" '. + [$e]' <<<"$excluded") ;;
+    --account) account=$2 ;; --exclude) excluded=$(jq -c --arg e "$2" '. + [$e]' <<<"$excluded") ;;
     --number) case $2 in *[!0-9]*) sa_tooling "$usage" ;; esac; number=$2 ;;
     --key) key=$2 ;;
     --area|--blocked-by) check_args+=("$1" "$2") ;;
@@ -73,7 +75,6 @@ jq -e '(.machines | type) == "object"' "$fleet" >/dev/null 2>&1 || sa_tooling "$
 pinned=$(jq -r --arg r "$repo" "$sa_jq_norm"'[(.repos // {}) | to_entries[] | select(.key | norm_repo == ($r | norm_repo)) | .value.machine // empty] | first // empty' "$fleet" 2>/dev/null) \
   || sa_tooling "$fleet: repos must be an object"
 [ -z "$pinned" ] || jq -e --arg m "$pinned" '.machines | has($m)' "$fleet" >/dev/null || sa_tooling "$fleet: $repo is pinned to $pinned, which is not in machines"
-[ -z "$readings" ] || jq -e 'type == "object"' "$readings" >/dev/null 2>&1 || sa_tooling "$readings: not a JSON object"
 [ -n "$own" ] || own=$(hostname 2>/dev/null) || sa_tooling "cannot read this machine's name: pass --own"
 sa_read "$ledger"
 
@@ -85,7 +86,7 @@ if raw=$(t3 environment list --json 2>/dev/null </dev/null) && envs=$(grep '^\['
   reach=$(jq -c '[.[] | {key: .environmentId, value: (.status == "reachable")}] | from_entries' <<<"$envs") && reach_known=true
 fi
 
-considered='[]' placed=null need=null wait_reason='' eligible=0
+considered='[]' placed=null wait_reason='' eligible=0
 note() { considered=$(jq -c --arg m "$1" --arg o "$2" '. + [{machine: $m, outcome: $o}]' <<<"$considered"); }
 while IFS= read -r m; do
   mj=$(jq -c --arg m "$m" '.machines[$m]' "$fleet")
@@ -104,10 +105,10 @@ while IFS= read -r m; do
     reading=$(bash "$here/probe.sh" --json 2>/dev/null </dev/null) && jq -e '(.load1 | type) == "number"' <<<"$reading" >/dev/null 2>&1 \
       || { note "$m" skipped:unmeasured; continue; }
   else
-    reading=$(jq -c --arg m "$m" '.[$m] // empty' "${readings:-/dev/null}" 2>/dev/null)
-    if ! jq -e '(.load1 | type) == "number" and (.free_gb | type) == "number"' <<<"$reading" >/dev/null 2>&1; then
-      need=$(jq -cn --arg m "$m" --arg i "$id" '{machine: $m, environment_id: $i}'); break
-    fi
+    target=$(jq -r '.ssh // empty' <<<"$mj")
+    reading=$([ -z "$target" ] || sa_ssh_probe "$target" 2>/dev/null)
+    jq -e '(.load1 | type) == "number" and (.free_gb | type) == "number"' <<<"$reading" >/dev/null 2>&1 \
+      || { note "$m" skipped:no-reading; continue; }
   fi
   rc=0; res=$(bash "$here/launch-check.sh" --fleet "$fleet" --ledger "$ledger" --machine "$m" --own "$own" ${key:+--key "$key"} \
     --load "$(jq -r .load1 <<<"$reading")" --free-gb "$(jq -r .free_gb <<<"$reading")" ${repo:+--repo "$repo"} ${check_args[@]+"${check_args[@]}"} 2>/dev/null) || rc=$?
@@ -129,7 +130,7 @@ while IFS= read -r m; do
 done < <(jq -r --arg own "$own" '.machines | keys as $k | ($k | map(select(. != $own))) as $rest | (if $k | index($own) then [$own] else [] end) + $rest | .[]' "$fleet")
 
 waiting=false
-if [ "$placed" = null ] && [ "$need" = null ]; then
+if [ "$placed" = null ]; then
   ! jq -e 'any(.[]; .outcome == "skipped:unknown")' >/dev/null <<<"$considered" \
     || sa_tooling "t3 environment list failed: reachability unknown, nothing placed and nothing recorded"
   waiting=true
@@ -145,5 +146,5 @@ if [ -n "$number" ]; then
     out=$(bash "$here/ledger.sh" --ledger "$ledger" unwait "$repo#$number") || sa_tooling "ledger unwait failed: $out"
   fi
 fi
-jq -cn --argjson p "$placed" --argjson w "$waiting" --arg r "$wait_reason" --argjson n "$need" --argjson c "$considered" \
-  '{placed: $p, waiting: $w, reason: (if $r == "" then null else $r end), need_reading: $n, considered: $c}'
+jq -cn --argjson p "$placed" --argjson w "$waiting" --arg r "$wait_reason" --argjson c "$considered" \
+  '{placed: $p, waiting: $w, reason: (if $r == "" then null else $r end), considered: $c}'

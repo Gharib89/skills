@@ -3,6 +3,7 @@
   "questions.with_write": {"max": 0},
   "guards.watch.passes": {"max": 0},
   "timer.worst_minutes": {"max": 15},
+  "remote.worst_minutes": {"max": 2},
   "tokens.per_open": {"max": 316380, "slice": 15},
   "floor.fresh": {"max": 32000},
   "floor.compacted": {"max": 42000, "slice": 15}

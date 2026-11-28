@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # Measure the machine it runs on and print one JSON line: the fixed probe. Setup
-# runs it here, and a scratch thread runs it on each linked machine, where the
-# script text arrives in the thread's message because that machine has no
-# checkout of this repo; placement runs it here for this machine's live load.
-# Nothing in it reads or prints a host name, user, key or quota: a machine is
-# known by its T3 environment id.
+# and placement run it here, and over SSH on a linked machine (`lib/ssh.sh`,
+# `sa_ssh_probe`), where the script text arrives on stdin through `bash -s`
+# because that machine has no checkout of this repo. Nothing in it reads or
+# prints a host name, user, key or quota: a machine is known by its fleet key.
 #
 #   probe --json
 #
@@ -21,7 +20,7 @@
 set -uo pipefail
 usage='usage: probe --json'
 fail() { printf '{"error":"%s"}\n' "$1"; printf '%s\n' "$1" >&2; exit 2; }
-# Self-contained, since the script text travels to a machine with no checkout:
+# Self-contained, since the script text travels over ssh to a machine with no checkout:
 # it cannot source _lib.sh for its help.
 if [ "${1:-}" = --help ] && [ $# -eq 1 ]; then
   printf '%s\n' "$usage"

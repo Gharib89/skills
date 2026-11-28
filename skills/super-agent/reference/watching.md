@@ -3,6 +3,16 @@
 What `watch.sh` and `reconcile.sh` count as a change or a stall. Their `--help`
 lists the fields; this file holds the rules behind them.
 
+## Contents
+
+- [Watch](#watch)
+- [The wake timer](#the-wake-timer)
+- [The wake's actions](#the-wakes-actions)
+- [Settling a triage entry](#settling-a-triage-entry)
+- [Settling a task entry](#settling-a-task-entry)
+- [Unqueued issues](#unqueued-issues)
+- [Stalls](#stalls)
+
 ## Watch
 
 - A finished run is reported only if it is still at rest `--recheck` seconds
@@ -11,10 +21,13 @@ lists the fields; this file holds the rules behind them.
   seconds (default 900).
 - It re-reads the ledger each poll, and skips an entry `reconcile` has not
   observed yet (`unobserved`).
-- A remote entry (an `environment_id`) is read from GitHub alone, found by its
-  branch: `pr-opened`, `checks-finished` (the checks on its head went from none
-  or pending to done), `pr-merged` and `pr-closed`. Its thread fields stay the
-  last reconcile's, so the thread's own finish is read on a wake.
+- A remote entry (an `environment_id`) is read on its machine over SSH, one
+  call per machine per poll, and wakes for every reason a local entry does.
+  While its machine cannot be read, it is watched from GitHub alone, found by
+  its branch: `pr-opened`, `checks-finished` (the checks on its head went from
+  none or pending to done), `pr-merged` and `pr-closed`. Past 5 minutes unread
+  the watcher exits once with `machine-unreadable`
+  ([remote](remote.md#errors)).
 - A thread at rest whose last message ends on the waiting line
   (`Waiting on my own background work.`, set by ship's run contract, or for a
   triage thread by the contract line its launch message carries) is still
@@ -30,8 +43,8 @@ lists the fields; this file holds the rules behind them.
   one `pr-merged` event, when the thread rests or `--stall-window` seconds have
   passed since the merge, whichever comes first. Past the window with the
   thread still working, its later rest raises `run-finished` once more, which
-  settles the entry. A remote entry's `pr-merged` is not held: its thread read
-  is stale.
+  settles the entry. A `pr-merged` read from GitHub alone, its machine
+  unreadable, is not held: its thread fields are stale.
 - One watcher runs per ledger: a second start exits 1 with `running`, and the
   first is left alone.
 

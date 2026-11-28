@@ -21,3 +21,6 @@ here in the same diff. A cell holds no `|`.
 | 0.47.0 | pushed mark | alert mark |
 | 0.47.0 | unpushed need | raised need |
 | 0.47.0 | Needs you row | needs-you message |
+| 0.51.0 | probe thread | None. |
+| 0.51.0 | reply file | None. |
+| 0.51.0 | reply.sh | owner-read.sh |

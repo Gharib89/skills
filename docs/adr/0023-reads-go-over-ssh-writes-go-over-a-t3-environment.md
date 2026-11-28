@@ -16,3 +16,7 @@ The super agent reached every machine through its T3 environment id alone, and t
 - The call guard refuses a direct `ssh`, `scp` or `rsync` call, so the script is the only route. It reads the command's text, a speed bump against a slip rather than a sandbox.
 - Launching, steering and anything that writes (a worktree removal included) stay on T3 environments.
 - An asked machine check runs inline in the super agent's own thread, the one exception to launching an owner's non-routing ask as a task thread.
+
+## Amended by #1383
+
+Scripts now make two more fixed SSH reads beside the machine check, with the same batch-mode options and never a command the model writes. The watcher, reconcile and `launch record` read a linked machine's threads with `t3 thread show` on that machine (`lib/remote.sh`), one call per machine; setup and placement read its load with `probe.sh` (`sa_ssh_probe` in `lib/ssh.sh`). `t3 thread show` has no environment flag, so no T3 environment route can answer the thread read. The machine check stays the only read the super agent asks for, and the call guard still refuses a direct `ssh` call.
