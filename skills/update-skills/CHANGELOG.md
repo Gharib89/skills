@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.15.0 (2026-11-28)
+
+### Features
+
+- **update-skills**: Heads takes --skip-source, and a Ship run on the drift issue skips
+  heygen-com/hyperframes ([#1435](https://github.com/Gharib89/skills/pull/1435),
+  [`71c0497`](https://github.com/Gharib89/skills/commit/71c049725c36b1777bd7e2843ff39764fc9862b9))
+
+
 ## v0.14.0 (2026-11-24)
 
 ### Features
