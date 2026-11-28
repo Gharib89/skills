@@ -119,6 +119,16 @@ out=$(bash "$heads" "$repo" --skip-source 2>/dev/null); rc=$?
 check_rc "--skip-source with no value exits 2" 2 "$rc"
 out=$(bash "$heads" "$repo" --other 2>/dev/null); rc=$?
 check_rc "an unknown flag exits 2" 2 "$rc"
+# A malformed or unmatched value would silently skip nothing, so it refuses.
+for bad in invalid 'a b/c' a/b/c /r o/ 'o/r '; do
+  out=$(bash "$heads" "$repo" --skip-source "$bad" 2>/dev/null); rc=$?
+  check_rc "--skip-source '$bad', no owner/repo, exits 2" 2 "$rc"
+done
+rm -f "$tmp"/log*
+out=$(bash "$heads" "$repo" --skip-source w/ww 2>/dev/null); rc=$?
+check_rc "--skip-source naming no lock source exits 2" 2 "$rc"
+check "that refusal names the value" "--skip-source matches no lock source: w/ww" "$(jq -r .error <<<"$out")"
+check "that refusal reads nothing" "" "$(cat "$tmp/log" 2>/dev/null)"
 
 # A GET that fails is tried again: a flaky route must not empty `heads`. A curl
 # that fails the first attempts at each URL, then answers, gives the same result.
