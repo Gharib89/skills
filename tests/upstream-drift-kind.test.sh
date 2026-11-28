@@ -24,7 +24,8 @@ work=$(mktemp -d) || exit 2
 trap 'rm -rf "$work"' EXIT
 U=$work/cwd/skills/update-skills/scripts
 mkdir -p "$U" "$work/bin" "$work/tmp"
-printf '#!/usr/bin/env bash\necho %s\n' "'{\"heads\":{\"hyperframes\":\"h\",\"media-use\":\"h\",\"tdd\":\"t\"},\"unreachable\":[]}'" > "$U/heads.sh"
+printf '#!/usr/bin/env bash\ncat "$WORK/heads-in"\n' > "$U/heads.sh"
+printf '%s\n' '{"heads":{"hyperframes":"h","media-use":"h","tdd":"t"},"unreachable":[]}' > "$work/heads-in"
 printf '#!/usr/bin/env bash\njq -c . "$2" > "$WORK/heads-seen"\ncat "$PLAN"\n' > "$U/plan.sh"
 printf '%s\n' '{"version":2,"skills":{"hyperframes":{"source":"heygen-com/hyperframes"},"media-use":{"source":"heygen-com/hyperframes"},"tdd":{"source":"mattpocock/skills"}}}' > "$work/cwd/skills-lock.json"
 printf '#!/usr/bin/env bash\necho %s\n' "'{\"rows\":1,\"table\":\"| x |\",\"changed\":true}'" > "$U/drift-body.sh"
@@ -58,5 +59,15 @@ check "a drift row files the issue as enhancement" "--label enhancement" "$(grep
 check "a drift row files no chore" "" "$(grep -o -- '--label chore' <<<"$out")"
 out=$(create_call '{"mode":"source","others":'"$others"'}')
 check "a plan with no drift array fails the step, filing nothing" "step failed" "$out"
+
+# Once the filter leaves no head while a kept upstream was unreachable, nothing
+# was checked: the step fails rather than report no drift.
+printf '%s\n' '{"heads":{"hyperframes":"h"},"unreachable":[{"skill":"tdd","error":"x"}]}' > "$work/heads-in"
+out=$(create_call '{"mode":"source","drift":[],"others":[]}')
+check "only hyperframes heads with a kept upstream unreachable fails the step" "step failed" "$out"
+printf '%s\n' '{"heads":{"tdd":"t"},"unreachable":[{"skill":"media-use","error":"x"}]}' > "$work/heads-in"
+: > "$work/summary"
+create_call '{"mode":"source","drift":[],"others":[]}' >/dev/null
+check "an unreachable hyperframes skill is not named in the summary" "" "$(grep -o 'media-use' "$work/summary")"
 
 finish

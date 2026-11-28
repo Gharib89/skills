@@ -54,10 +54,14 @@ jobs:
           title='Upstream drift: composed skills'
           rc=0
           "$U/heads.sh" . > "$t/heads.json" || rc=$?
-          jq -r '.unreachable[]? | "- drift not checked: \(.skill): \(.error)"' "$t/heads.json" >> "$GITHUB_STEP_SUMMARY"
+          jq --slurpfile lock skills-lock.json 'def kept: $lock[0].skills[.].source != "heygen-com/hyperframes";
+            .heads |= with_entries(select(.key | kept)) | .unreachable |= map(select(.skill | kept))' \
+            "$t/heads.json" > "$t/kept.json"
+          jq -r '.unreachable[]? | "- drift not checked: \(.skill): \(.error)"' "$t/kept.json" >> "$GITHUB_STEP_SUMMARY"
           [ "$rc" -eq 0 ] || exit "$rc"
-          jq --slurpfile lock skills-lock.json '.heads |= with_entries(select(
-            $lock[0].skills[.key].source != "heygen-com/hyperframes"))' "$t/heads.json" > "$t/kept.json"
+          # heads judged every read failed before the filter: with no kept head
+          # and a kept upstream unreachable, nothing was checked.
+          jq -e '(.heads | length) > 0 or (.unreachable | length) == 0' "$t/kept.json" >/dev/null || exit 1
           "$U/plan.sh" . "$t/kept.json" > "$t/plan.json"
           n=$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100" \
             --jq ".[] | select(.pull_request == null and .title == \"$title\") | .number")
