@@ -63,8 +63,10 @@ check "a plan with no drift array fails the step, filing nothing" "step failed" 
 # Once the filter leaves no head while a kept upstream was unreachable, nothing
 # was checked: the step fails rather than report no drift.
 printf '%s\n' '{"heads":{"hyperframes":"h"},"unreachable":[{"skill":"tdd","error":"x"}]}' > "$work/heads-in"
+: > "$work/summary"
 out=$(create_call '{"mode":"source","drift":[],"others":[]}')
 check "only hyperframes heads with a kept upstream unreachable fails the step" "step failed" "$out"
+check "that failure is the no-kept-head guard's" "No kept upstream answered: drift not checked." "$(grep -o 'No kept upstream answered: drift not checked\.' "$work/summary")"
 printf '%s\n' '{"heads":{"tdd":"t"},"unreachable":[{"skill":"media-use","error":"x"}]}' > "$work/heads-in"
 : > "$work/summary"
 create_call '{"mode":"source","drift":[],"others":[]}' >/dev/null

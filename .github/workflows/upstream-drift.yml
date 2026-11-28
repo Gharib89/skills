@@ -61,7 +61,9 @@ jobs:
           [ "$rc" -eq 0 ] || exit "$rc"
           # heads judged every read failed before the filter: with no kept head
           # and a kept upstream unreachable, nothing was checked.
-          jq -e '(.heads | length) > 0 or (.unreachable | length) == 0' "$t/kept.json" >/dev/null || exit 1
+          if ! jq -e '(.heads | length) > 0 or (.unreachable | length) == 0' "$t/kept.json" >/dev/null; then
+            echo "No kept upstream answered: drift not checked." | tee -a "$GITHUB_STEP_SUMMARY" >&2; exit 1
+          fi
           "$U/plan.sh" . "$t/kept.json" > "$t/plan.json"
           n=$(gh api --paginate "repos/$REPO/issues?state=open&per_page=100" \
             --jq ".[] | select(.pull_request == null and .title == \"$title\") | .number")
