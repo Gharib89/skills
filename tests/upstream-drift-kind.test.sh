@@ -24,7 +24,7 @@ work=$(mktemp -d) || exit 2
 trap 'rm -rf "$work"' EXIT
 U=$work/cwd/skills/update-skills/scripts
 mkdir -p "$U" "$work/bin" "$work/tmp"
-printf '#!/usr/bin/env bash\ncat "$WORK/heads-in"\n' > "$U/heads.sh"
+printf '#!/usr/bin/env bash\ncat "$WORK/heads-in"\nexit "${HEADS_RC:-0}"\n' > "$U/heads.sh"
 printf '%s\n' '{"heads":{"hyperframes":"h","media-use":"h","tdd":"t"},"unreachable":[]}' > "$work/heads-in"
 printf '#!/usr/bin/env bash\njq -c . "$2" > "$WORK/heads-seen"\ncat "$PLAN"\n' > "$U/plan.sh"
 printf '%s\n' '{"version":2,"skills":{"hyperframes":{"source":"heygen-com/hyperframes"},"media-use":{"source":"heygen-com/hyperframes"},"tdd":{"source":"mattpocock/skills"}}}' > "$work/cwd/skills-lock.json"
@@ -71,5 +71,15 @@ printf '%s\n' '{"heads":{"tdd":"t"},"unreachable":[{"skill":"media-use","error":
 : > "$work/summary"
 create_call '{"mode":"source","drift":[],"others":[]}' >/dev/null
 check "an unreachable hyperframes skill is not named in the summary" "" "$(grep -o 'media-use' "$work/summary")"
+
+# heads' own failure, an object with no heads key, exits with heads' code
+# rather than a jq error from the filter.
+printf '%s\n' '{"error":"cannot read lock"}' > "$work/heads-in"
+rc=0
+(cd "$work/cwd" && export PATH="$work/bin:$PATH" WORK="$work" PLAN="$work/plan.json" HEADS_RC=3 \
+   RUNNER_TEMP="$work/tmp" GITHUB_STEP_SUMMARY="$work/summary" OWNER=o REPO=o/r
+ bash -e -o pipefail -c "$script" >/dev/null 2>"$work/err") || rc=$?
+check "a failed heads with no heads key exits with heads' code" 3 "$rc"
+check "that failure carries no jq error" "" "$(grep -o 'has no keys' "$work/err")"
 
 finish

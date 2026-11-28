@@ -55,7 +55,8 @@ jobs:
           rc=0
           "$U/heads.sh" . > "$t/heads.json" || rc=$?
           jq --slurpfile lock skills-lock.json 'def kept: $lock[0].skills[.].source != "heygen-com/hyperframes";
-            .heads |= with_entries(select(.key | kept)) | .unreachable |= map(select(.skill | kept))' \
+            .heads |= ((. // {}) | with_entries(select(.key | kept)))
+            | .unreachable |= ((. // []) | map(select(.skill | kept)))' \
             "$t/heads.json" > "$t/kept.json"
           jq -r '.unreachable[]? | "- drift not checked: \(.skill): \(.error)"' "$t/kept.json" >> "$GITHUB_STEP_SUMMARY"
           [ "$rc" -eq 0 ] || exit "$rc"
