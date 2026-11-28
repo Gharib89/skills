@@ -103,7 +103,8 @@ R >/dev/null 2>&1
 rm -f "$SA_FAKE/ssh-calls"
 L take "$repo#8" >/dev/null
 W --timeout 0 >/dev/null
-check "an owner-run entry's thread is not read over SSH" "" "$(grep 't-8' "$SA_FAKE/ssh-calls")"
+check "an owner-run entry's thread is not read over SSH, its machine's others are" "0 1" \
+  "$(grep -c 't-8' "$SA_FAKE/ssh-calls") $(grep -c 't-6' "$SA_FAKE/ssh-calls")"
 
 # --- the recheck reads the finished thread again, and the poll's read stands for the rest
 fixture

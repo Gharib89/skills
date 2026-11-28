@@ -5,9 +5,9 @@
 # shellcheck disable=SC2034  # read by the scripts that source this
 sa_ssh_opts=(-o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=6)
 
-# sa_ssh_reason <ssh's stderr>: why a call that exited 255 failed, `unknown-host-key`
-# when the host key is not known (the owner connects once by hand), else ssh's last
-# error line.
+# sa_ssh_reason <ssh's stderr>: why a call failed, `unknown-host-key` when the host
+# key is not known (the owner connects once by hand), else the last error line (ssh's,
+# or the remote command's own, such as a missing `t3`).
 sa_ssh_reason() {
   if grep -q 'Host key verification failed' <<<"$1"; then echo unknown-host-key
   else sa_last_line "$1"; fi

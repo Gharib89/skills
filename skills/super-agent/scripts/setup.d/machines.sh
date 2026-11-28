@@ -19,7 +19,7 @@
 # ssh_ok <machine> <ssh string>: the key-only test; a failure is named in $ssh_refused
 ssh_ok() {
   local err='not a destination: starts with -'
-  ! sa_ssh_target_ok "$2" || { err=$(ssh "${sa_ssh_opts[@]}" "$2" true 2>&1 >/dev/null </dev/null) && return 0; }
+  if sa_ssh_target_ok "$2"; then err=$(ssh "${sa_ssh_opts[@]}" "$2" true 2>&1 >/dev/null </dev/null) && return 0; fi
   ssh_refused=$(jq -c --arg m "$1" --arg s "$2" --arg r "$(sa_ssh_reason "$err")" '. + [{machine: $m, ssh: $s, reason: (if $r == "" then "ssh failed" else $r end)}]' <<<"$ssh_refused")
   return 1
 }

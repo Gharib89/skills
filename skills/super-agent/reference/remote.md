@@ -55,13 +55,14 @@ In `reconcile.sh`, a machine that cannot be read gives `thread-unreadable` for
 its entries alone; local entries and other machines are still read. Its detail
 holds the `environment_id`, the `machine` and a `reason`, each with its action:
 
-- `ssh`: the call failed, SSH's own reason in `ssh` (a machine with no `t3`
-  fails here too). Run `machine-check.sh <machine> up` and post its line.
+- `ssh`: the call failed, its reason in `ssh`. Run `machine-check.sh <machine>
+  up`, or `t3` when the reason is `t3: command not found`, and post its line.
 - `no-ssh`: no fleet machine with that environment has an `ssh` string. Add
   it, as [setup](setup.md) says.
-- `shape`: the machine's `t3` answered no thread JSON, so the thread is gone
-  from that machine. Escalate it, as the
-  [stall ladder](stall-ladder.md#errors) says for an unreadable entry.
+- `shape`: the machine's `t3` answered no thread JSON: the thread is gone
+  from that machine, or its `t3` fails. Run `machine-check.sh <machine> t3`;
+  with `t3` active, escalate the entry as the
+  [stall ladder](stall-ladder.md#errors) says for an unreadable one.
 
 `watch.sh` raises `thread-unreadable` only for `shape`. While a machine fails
 (`ssh` or `no-ssh`), it watches that machine's entries from GitHub alone (a PR

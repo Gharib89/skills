@@ -16,8 +16,8 @@
 # line (`sa_waiting_line`, `_lib.sh`) is still working: no `run-finished`, and its
 # `stall-window` runs from when it rested (`rest_at`) while it waits. A PR that
 # merged while its thread still runs raises `pr-merged` once, when the thread
-# rests or `--stall-window` seconds after the merge, whichever comes first (a
-# remote entry's is not held). A run that finished is looked at
+# rests or `--stall-window` seconds after the merge, whichever comes first (not
+# held for a remote entry whose machine this poll could not read). A run that finished is looked at
 # again `--recheck` seconds later (default 90) and reported only if the thread
 # is still at rest, since a run that waits on its own background subagent starts
 # again within about a minute (measured 2026-11-06). `stall-window` is an entry
@@ -269,8 +269,9 @@ while :; do
           sa_remote_read "$fleet" "[$entry]"
           ! jq -e --arg e "$env" 'has($e)' <<<"$sa_remote_down" >/dev/null || recheck_down=true
         fi
-        if $recheck_down; then :
-        elif sa_observe "$entry"; then event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs"); else read_ok=false; fi
+        if ! $recheck_down; then
+          if sa_observe "$entry"; then event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs"); else read_ok=false; fi
+        fi
         sa_remote_lines=$saved_lines sa_remote_down=$saved_down
       fi
     fi
