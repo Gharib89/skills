@@ -2,8 +2,8 @@
 # On a wake, compare the ledger with T3 and GitHub and report what changed, so
 # the super agent judges from one JSON answer and not from child transcripts.
 #
-#   reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]...
-#             [--reads <dir>] [--fleet <file>] [--quota <file>] [--instance <id>]
+#   reconcile --ledger <file> [--stall-window <s>] [--reads <dir>] [--fleet <file>]
+#             [--quota <file>] [--instance <id>]
 #
 # Looks at every open entry's thread and PR (the same look `watch` takes),
 # writes it into the entry as `observed`, the baseline the next `watch`
@@ -32,8 +32,8 @@
 # escalate row asks "watch or take?", on every reconcile until a need for the key with that reason, or with none, is
 # recorded (the standard `escalate` silencing), which also quiets `watch`; `watch` wakes
 # once per `--stall-window` after the last reconcile that found it due (`steered_asked_at`). The author comes from `owner_at`
-# in the thread's reply file (`reply.sh`): `<dir>/<thread id>.json` of `--reads` for a local
-# entry, of its `--remote` for a remote one; a thread with no such file keeps its mark.
+# in the thread's owner read (`owner-read.sh`), `<dir>/<thread id>.json` of `--reads`; a
+# thread with no such file keeps its mark.
 # Settling the
 # thread in T3 is the super agent's act, on each entry `settled` names, and it
 # never archives. It keeps each entry's stall count: +1 for a stall (a run that
@@ -54,12 +54,14 @@
 # left in its stage. An entry at `launching` (`launch` wrote it, `record` has not bound
 # a thread to it) has no thread to read: it is listed in `launching`, not checked. The ledger is written once, after the last entry, by
 # applying what this run changed to the ledger as it stands then
-# (reconcile.d/write.sh), so a write made meanwhile is kept. An entry with an `environment_id` lives on a linked machine,
-# where `t3 thread show` cannot reach: it is read from `<dir>/<thread id>.json`
-# of the `--remote` for its environment, a file the super agent saved from
-# `t3_thread_read`, and matched by id and worktree path like a local one. An
-# environment with no `--remote`, a missing file or one that is not the
-# thread's JSON is `thread-unreadable` for that environment's entries alone.
+# (reconcile.d/write.sh), so a write made meanwhile is kept. An entry with an `environment_id` lives on a linked machine:
+# its thread is read with the `t3` CLI there over SSH, one call per machine
+# (`sa_remote_read`, lib/remote.sh), over the machine's `ssh` string in the fleet
+# file (`--fleet`, else `super-agent/fleet.json` under $XDG_CONFIG_HOME), and matched
+# by id and worktree path like a local one. A machine with no `ssh` string (reason
+# `no-ssh`), a failed call (`ssh`) or an answer that is not the thread's JSON
+# (`shape`) is `thread-unreadable` for that machine's entries alone, its detail
+# naming the `environment_id`, the `machine` and the `reason`.
 # It also reads the waiting list, the owner's queue (`ledger wait`): a row whose
 # issue closed is dropped from the ledger and named in `dropped`, and the rows
 # that could launch now are `ready`, in the list's order: no `--after` blocker or
@@ -133,14 +135,13 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: reconcile --ledger <file> [--stall-window <s>] [--remote <environment id>=<dir>]... [--reads <dir>] [--fleet <file>] [--quota <file>] [--instance <id>]'
+usage='usage: reconcile --ledger <file> [--stall-window <s>] [--reads <dir>] [--fleet <file>] [--quota <file>] [--instance <id>]'
 sa_help "$usage" "$@"
 # shellcheck disable=SC2034  # reads is read by reconcile.d/verdict.sh
 ledger='' window=$sa_stall_window fleet='' quota='' reads='' status_flags=()
 while [ $# -gt 0 ]; do
   case $1 in
     --fleet) sa_flag_value "$usage" "${2:-}"; fleet=$2; status_flags+=("$1" "$2"); shift 2 ;;
-    --remote) sa_flag_value "$usage" "${2:-}"; sa_remote_flag "$usage" "$2"; shift 2 ;;
     --reads) sa_flag_value "$usage" "${2:-}"; reads=$2; shift 2 ;;
     --ledger) sa_flag_value "$usage" "${2:-}"; ledger=$2; shift 2 ;;
     --quota|--instance) sa_flag_value "$usage" "${2:-}"; status_flags+=("$1" "$2"); [ "$1" = --instance ] || quota=$2; shift 2 ;;
@@ -164,6 +165,9 @@ read_doc=$doc
 batch_since=$(jq -r "$sa_jq_open"'[.entries[] | select(is_open) | .launched_at] | min // empty' <<<"$doc")
 now_s=$(sa_now_s) now=$(date -u -d "@$now_s" +%Y-%m-%dT%H:%M:%SZ)
 checked=0 entries='[]' errors='[]' stalled='[]' reminders='[]' steered_due='[]'
+# A linked machine's threads, read over SSH: one call per machine for every open entry there.
+remote_fleet=${fleet:-${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json}
+sa_remote_read "$remote_fleet" "$(jq -c "$sa_jq_open"'[.entries[] | select(is_open and .stage != "launching")]' <<<"$doc")"
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/verdict.sh" || sa_tooling "cannot source reconcile.d/verdict.sh"
 fail() { # <kind> <detail>: record the error of the entry in $key
   errors=$(jq -c --arg k "$key" --arg kind "$1" --argjson d "$2" '. + [{key: $k, kind: $kind, detail: $d}]' <<<"$errors")

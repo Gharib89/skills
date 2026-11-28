@@ -139,7 +139,7 @@ sa_jq_waiting='def waiting_list: (.waiting // []) | sort_by([(.order // 1e18), .
 # case, else <key> itself.
 sa_key() { jq -r --arg k "$2" "$sa_jq_norm"'(first(.entries | keys[] | select(norm_repo == ($k | norm_repo))) // $k)' <<<"$1"; }
 
-# `--remote` reads of the threads on a linked machine.
+# A linked machine's threads, read over SSH.
 source "$(dirname "${BASH_SOURCE[0]}")/lib/remote.sh" || { printf '{"error":"cannot source lib/remote.sh"}\n'; exit 2; }
 
 # The last line a supervised run writes when it ends a turn only to wait on its own
@@ -183,20 +183,19 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/task.sh" || { printf '{"error":"canno
 sa_jq_active='def active($w; $now): .status == "running" or (.waiting == true and ($now - .rest_at) < $w)
   or (.limit_reset != null and $now < .limit_reset + $w);'
 
-# `thread_shape` for a `t3 thread show --json` answer or a reply file: the thread
-# fields `sa_observe` needs, with their types. Defined once so `reply.sh` refuses
-# exactly what `sa_observe` would call `shape`.
-# shellcheck disable=SC2034  # read by sa_observe and reply.sh
+# `thread_shape` for a `t3 thread show --json` answer: the thread fields `sa_observe`
+# needs, with their types.
+# shellcheck disable=SC2034  # read by sa_observe and owner-read.sh
 sa_jq_thread_shape='def thread_shape: (.thread | type) == "object"
   and (.thread.threadId | type) == "string" and (.thread.status | type) == "string"
   and (.thread.runCount | type) == "number" and (.thread.pendingRequestCount | type) == "number";'
 
-# sa_thread_file_ok <thread id>: a thread id that names a file inside a reply
-# directory, never one with a `/` that would reach outside it.
+# sa_thread_file_ok <thread id>: a thread id that names a file inside an owner-read
+# directory (owner-read.sh), never one with a `/` that would reach outside it.
 sa_thread_file_ok() { case $1 in */*) return 1 ;; esac; }
 
 # sa_observe <entry>: one look at an entry's thread (through the `t3` CLI, or for
-# an entry with an `environment_id` through its reply file) and
+# an entry with an `environment_id` through the read `sa_remote_read` took, lib/remote.sh) and
 # its PR (through `gh` REST) as a snapshot in $obs:
 # {status, run_count, pending, gate, waiting, last, rest_at, pr: {number, state}}, `state`
 # one of none, open, merged, closed (a merged PR adds its `merged_at`), `last` the last
@@ -215,21 +214,17 @@ sa_thread_file_ok() { case $1 in */*) return 1 ;; esac; }
 # {status, run_count, pending}, and the PR is not looked up.
 # shellcheck disable=SC2034  # obs, obs_kind and obs_detail are read by the callers
 sa_observe() {
-  local thread worktree raw line found env dir reason file
+  local thread worktree raw line found env reason down=''
   thread=$(jq -r .thread <<<"$1") worktree=$(jq -r '.worktree // ""' <<<"$1")
   obs_detail=$(jq -cn --arg t "$thread" '{thread: $t}')
-  env=$(jq -r '.environment_id // empty' <<<"$1") reason='' file=''
+  env=$(jq -r '.environment_id // empty' <<<"$1") reason=''
   if [ -n "$env" ]; then
-    dir=$(jq -r --arg e "$env" '.[$e] // empty' <<<"$sa_remote_dirs")
-    sa_thread_file_ok "$thread" || dir=''
-    if [ -z "$dir" ]; then reason=no-remote
+    # read by `sa_remote_read`, which the caller ran over its open entries this look
+    reason=$(jq -r --arg e "$env" '.[$e].reason // empty' <<<"$sa_remote_down")
+    if [ -n "$reason" ]; then
+      down=$(jq -c --arg e "$env" '.[$e]' <<<"$sa_remote_down")
     else
-      file=$dir/$thread.json
-      if [ ! -f "$file" ]; then reason=missing
-      else
-        line=$(jq -c . "$file" 2>/dev/null </dev/null | tail -1)
-        [ -n "$line" ] || reason=not-json
-      fi
+      line=$(jq -r --arg t "$thread" '.[$t] // empty' <<<"$sa_remote_lines")
     fi
   else
     raw=$(t3 thread show "$thread" --json --messages 1 2>/dev/null </dev/null) || { obs_kind='thread-unreadable'; return 1; }
@@ -238,9 +233,9 @@ sa_observe() {
   if [ -z "$reason" ] && ! jq -e "$sa_jq_thread_shape"'thread_shape' <<<"$line" >/dev/null 2>&1; then reason=shape; fi
   if [ -n "$reason" ]; then
     obs_kind='thread-unreadable'
-    # a remote read names why and which file, so a missing --remote reads apart from a wrong-shaped save
-    [ -z "$env" ] || obs_detail=$(jq -cn --arg t "$thread" --arg e "$env" --arg r "$reason" --arg f "$file" \
-      '{thread: $t, environment_id: $e, reason: $r} + (if $f == "" then {} else {file: $f} end)')
+    # a remote read names its machine and why: no ssh string, a failed call, or no thread in the answer
+    [ -z "$env" ] || obs_detail=$(jq -c --arg t "$thread" --arg e "$env" --arg r "$reason" --argjson d "${down:-null}" \
+      '{thread: $t, environment_id: $e, machine: ($d.machine // .machine), reason: $r} + (if $d == null then {} else {ssh: $d.detail} end)' <<<"$1")
     return 1
   fi
   found=$(jq -c '{thread: .thread.threadId, worktree: .thread.worktreePath}' <<<"$line")
@@ -273,7 +268,7 @@ sa_observe() {
 # {number, state} in $pr_obs, `state` one of none, open, merged, closed. An entry
 # with no repo or no branch (a `task` entry) has no PR: state none. A remote entry
 # (an `environment_id`) also carries `checks` for its head commit, `none` (no check
-# run yet), `pending` or `done`, since `watch` wakes a remote entry on GitHub alone.
+# run yet), `pending` or `done`, since `watch` wakes a remote entry whose machine it cannot read on GitHub alone.
 # On failure it returns 1 with $obs_kind `pr-unreadable` and $obs_detail.
 # shellcheck disable=SC2034  # pr_obs, obs_kind and obs_detail are read by the callers
 sa_pr_of() {

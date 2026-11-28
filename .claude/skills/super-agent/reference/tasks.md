@@ -33,11 +33,10 @@ file>`, `<slug>` a short name in letters, digits, `.`, `_` and `-`. Add `--repo
 <owner/name>` when the work belongs to a repo, `--skill <name>` when a skill
 runs it (`scripts/skills.sh` lists them), `--interactive` for a grill
 (`--skill` naming a grill skill sets it), and the placement flags a ticket
-takes (`--gpu`, `--account`, `--area` with a repo, `--exclude`,
-`--readings`). It claims
+takes (`--gpu`, `--account`, `--area` with a repo, `--exclude`). It claims
 nothing and reads no issue, routes the task as an M and records it at
-`launching`. Act on its answer as on a ticket's (step 1 of the loop): `ask`,
-`no_instance` and `need_reading` the same way; `launch: true` goes to
+`launching`. Act on its answer as on a ticket's (step 1 of the loop): `ask`
+and `no_instance` the same way; `launch: true` goes to
 `t3_thread_launch` and `launch.sh record --launch <launch file> --thread <id>
 --ledger <ledger>`.
 

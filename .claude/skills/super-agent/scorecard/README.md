@@ -1,10 +1,11 @@
 # Scorecard
 
 `scripts/scorecard.sh` counts one row a day from the ledger and its archive, the
-guard and timer logs, and the super agent's transcripts; its header gives the
-usage and output. `scorecard.jsonl`, beside the ledger, holds the rows. The
-daily handover appends the previous day's row and, at the first handover of a
-week, runs the weekly review, whose rows join the bearings file's Needs you.
+guard, timer and linked-machine logs, and the super agent's transcripts; its
+header gives the usage and output. `scorecard.jsonl`, beside the ledger, holds
+the rows. The daily handover appends the previous day's row and, at the first
+handover of a week, runs the weekly review, whose rows join the bearings file's
+Needs you.
 
 ## What a row counts
 
@@ -82,8 +83,15 @@ writes `wake-timer.jsonl`, one line per outage step,
 `{at, event: "opened" | "wake" | "notify" | "closed"}`; the row's `timer` counts
 the day's `closed` lines and their `minutes`. A limit stop the timer holds until
 its reset opens no outage and closes one already open, so an outage counts only
-up to the hold. A log not written yet is `null` in the row, never an error; a
-log with a line that is not JSON is refused by name. A row for a thread with no
+up to the hold. The watcher writes `remote-watch.jsonl`, its linked-machine log:
+`{at, event: "rest", key, machine, rest_at}` once per rest it reads over SSH,
+`{at, event: "wake", key, machine, rest_at, reported}` when a wake reports that
+rest, and `{at, event: "unreadable", machine, environment_id, reason}` per
+failed read (`ssh`, `no-ssh` or `shape`). The row's `remote` counts the day's
+`wake` lines and their minutes from `rest_at` to `at` (`wakes`,
+`median_minutes`, `worst_minutes`), and `unreadable`, the day's failed reads by
+reason. A log not written yet is `null` in the row, never an error; a log with
+a line that is not JSON is refused by name. A row for a thread with no
 transcript that loaded this skill is refused too, rather than counted as an
 empty day.
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The scorecard: one row per day counted by `jq` from the ledger and its
-# archive, the guard and timer logs, and the pinned thread's transcript, so a
+# archive, the guard, timer and linked-machine logs, and the pinned thread's transcript, so a
 # new super-agent version is judged by counts and not by a model. `row` appends
 # a day's row to `scorecard.jsonl` beside the ledger, replacing that day's row
 # if one is there; `review` reads a week of rows against the targets.
@@ -155,7 +155,7 @@ slim=$(for i in ${files[@]+"${!files[@]}"}; do
 done | jq -sc .) || sa_tooling "cannot read the transcripts"
 
 row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq -Rsc 'split("\n") | map(select(length > 0))')" \
-  --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" --argjson qlog "$qlog" --argjson cglog "$cglog" --argjson nlog "$nlog" --argjson cut "$cut" \
+  --arg thread "${thread:-}" --arg nc "$patterns" --argjson logs "$logs" --argjson timer "$timer" --argjson rlog "$rlog" --argjson qlog "$qlog" --argjson cglog "$cglog" --argjson nlog "$nlog" --argjson cut "$cut" \
   --slurpfile led <(printf '%s\n' "$doc") --slurpfile archive <(cat "$ledger.archive.jsonl" 2>/dev/null) "$sa_jq_norm$sa_jq_open$sa_jq_changing$sa_jq_floor"'
   def wsum: reduce .[] as $t ({in: 0, cw: 0, cr: 0, out: 0}; .in += $t.in | .cw += $t.cw | .cr += $t.cr | .out += $t.out);
   def total: .in + .cw + .cr + .out;
@@ -246,6 +246,11 @@ row=$(jq -c --arg day "$day" --argjson v "$(printf '%s\n' "${versions[@]}" | jq 
    timer: (if $timer == null then null
      else [$timer[] | select(.event == "closed" and (.at // "" | startswith($day))) | .minutes] as $m
        | {outages: ($m | length), median_minutes: ($m | median), worst_minutes: ($m | max)} end),
+   remote: (if $rlog == null then null
+     else [$rlog[] | select(.at // "" | startswith($day))] as $r
+       | [$r[] | select(.event == "wake") | ((.at | fromdate) - (.rest_at | fromdate)) / 60 | . * 10 | round / 10] as $m
+       | {wakes: ($m | length), median_minutes: ($m | median), worst_minutes: ($m | max),
+          unreadable: ($r | map(select(.event == "unreadable")) | group_by(.reason) | map({key: .[0].reason, value: length}) | from_entries)} end),
    questions: (if $qlog == null then null
      else [$qlog[] | select(.event == "changing")] as $ch
        | [$qlog[] | select(.event == "flag" and (.at // "" | startswith($day)))] as $fl
