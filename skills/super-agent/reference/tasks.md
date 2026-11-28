@@ -38,7 +38,8 @@ takes (`--gpu`, `--account`, `--area` with a repo, `--exclude`,
 nothing and reads no issue, routes the task as an M and records it at
 `launching`. Act on its answer as on a ticket's (step 1 of the loop): `ask`,
 `no_instance` and `need_reading` the same way; `launch: true` goes to
-`t3_thread_launch` and `launch.sh record --launch <launch file>`.
+`t3_thread_launch` and `launch.sh record --launch <launch file> --thread <id>
+--ledger <ledger>`.
 
 - A one-off task is placed as a ticket is: it takes a slot and honours pins.
   When nothing fits it answers `waiting`, and the ledger holds a `task:<slug>`
@@ -68,7 +69,8 @@ Reconcile reads that line once the thread has run and rests:
   goes into the thread as the need's step-in.
 - Any other last line is a rest like a ticket's, and counts a stall: climb the
   stall ladder. Its rung 3 is `launch.sh task` with the first launch's flags
-  plus `--raise`, then `launch.sh record --launch <launch file> --rethread`.
+  plus `--raise`, then `launch.sh record --launch <launch file> --rethread
+  --thread <id> --ledger <ledger>`.
 
 An interactive task carries no contract line: it is never settled on its rest
 and counts no stall.
