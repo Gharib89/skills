@@ -123,6 +123,7 @@ check_rc "an unknown flag exits 2" 2 "$rc"
 for bad in invalid 'a b/c' a/b/c /r o/ 'o/r '; do
   out=$(bash "$heads" "$repo" --skip-source "$bad" 2>/dev/null); rc=$?
   check_rc "--skip-source '$bad', no owner/repo, exits 2" 2 "$rc"
+  check "--skip-source '$bad' is refused by the usage check" "$usage" "$(jq -r .error <<<"$out")"
 done
 rm -f "$tmp"/log*
 out=$(bash "$heads" "$repo" --skip-source w/ww 2>/dev/null); rc=$?
