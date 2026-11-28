@@ -60,8 +60,8 @@ holds the `environment_id`, the `machine` and a `reason`, each with its action:
 - `no-ssh`: no fleet machine with that environment has an `ssh` string. Add
   it, as [setup](setup.md) says.
 - `shape`: the machine's `t3` answered no thread JSON: the thread is gone
-  from that machine, or its `t3` fails. Run `machine-check.sh <machine> t3`;
-  with `t3` active, escalate the entry as the
+  from that machine, or its `t3` fails. Run `machine-check.sh <machine> t3`
+  and post its line; with `t3` active, escalate the entry as the
   [stall ladder](stall-ladder.md#errors) says for an unreadable one.
 
 `watch.sh` raises `thread-unreadable` only for `shape`. While a machine fails
