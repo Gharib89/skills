@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.50.0 (2026-11-28)
+
+### Features
+
+- **super-agent**: One-off and interactive tasks end on a Result or Needs owner line
+  ([#1433](https://github.com/Gharib89/skills/pull/1433),
+  [`37082c5`](https://github.com/Gharib89/skills/commit/37082c53ce02d9e63d8a15a14a2b6bc925dda1fa))
+
+
 ## v0.49.0 (2026-11-27)
 
 ### Features
