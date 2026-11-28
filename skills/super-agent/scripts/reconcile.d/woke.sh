@@ -7,10 +7,14 @@
 # reconcile). An owner-run entry is the owner's and is not read. It moves $doc and
 # appends to $woke.
 
-# shellcheck disable=SC2154  # doc, now, now_s, woke and sa_jq_settled_before come from reconcile.sh and _lib.sh
+# shellcheck disable=SC2154  # doc, now, now_s, woke, remote_fleet and sa_jq_settled_before come from reconcile.sh and _lib.sh
 
 reconcile_woke() {
-  local entry key stage
+  local entry key stage cands
+  cands=$(jq -c --argjson cut "$((now_s - sa_settled_days * 86400))" "$sa_jq_settled_before"'[.entries[]
+    | select(.stage == "settled" and .kind == "triage" and .owner_run != true and (settled_before($cut) | not))]' <<<"$doc")
+  # a linked machine's threads, one SSH call per machine (lib/remote.sh)
+  sa_remote_read "$remote_fleet" "$cands"
   while IFS= read -r entry; do
     key=$(jq -r .key <<<"$entry")
     sa_thread_only=1 sa_observe "$entry" || continue
@@ -19,6 +23,5 @@ reconcile_woke() {
     doc=$(jq -c --arg k "$key" --arg s "$stage" --argjson o "$obs" --arg now "$now" \
       '.entries[$k] |= (.stage = $s | .observed += $o | .rest_since = null | .updated_at = $now)' <<<"$doc")
     woke=$(jq -c --argjson e "$entry" '. + [{key: $e.key, thread: $e.thread, kind: $e.kind}]' <<<"$woke")
-  done < <(jq -c --argjson cut "$((now_s - sa_settled_days * 86400))" "$sa_jq_settled_before"'.entries[]
-    | select(.stage == "settled" and .kind == "triage" and .owner_run != true and (settled_before($cut) | not))' <<<"$doc")
+  done < <(jq -c '.[]' <<<"$cands")
 }

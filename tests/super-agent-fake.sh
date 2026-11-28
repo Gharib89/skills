@@ -187,6 +187,9 @@ while [ $# -gt 0 ]; do case $1 in -o) shift 2 ;; -*) shift ;; *) break ;; esac; 
 target=$1; shift
 printf '%s\t%s\n' "$target" "$*" >> "$SA_FAKE/ssh-calls"
 f=$SA_FAKE/ssh/$target
+# a machine (sa_machine_thread) with no fixed answer runs the command there, its fakes
+# answering from machines/<target>/
+if [ -d "$SA_FAKE/machines/$target" ] && [ ! -f "$f.rc" ]; then SA_FAKE=$SA_FAKE/machines/$target exec bash -c "$*"; fi
 [ ! -f "$f.out" ] || cat "$f.out"
 [ ! -f "$f.err" ] || cat "$f.err" >&2
 exit "$(cat "$f.rc" 2>/dev/null || echo 0)"
@@ -315,16 +318,13 @@ sa_thread() {
     > "$SA_FAKE/threads/$1.json"
 }
 
-# sa_remote_thread <environment id> <id> <status> <runCount> <pending> <worktree> <branch> [<last message>]:
-# the reply file the super agent saves after reading a thread on a linked machine
-# with `t3_thread_read`, `<dir>/<id>.json` under `remote/<environment id>`, the
-# shape of `sa_thread`'s answer without the CLI's warning. The fake `t3` does not
-# know the thread: a script that asks it has not taken the file route.
-sa_remote_thread() {
-  local env=$1; shift
-  mkdir -p "$SA_FAKE/remote/$env"
-  sa_thread "$@"
-  mv "$SA_FAKE/threads/$1.json" "$SA_FAKE/remote/$env/$1.json"
+# sa_machine_thread <ssh target> <sa_thread's arguments>: a thread on a linked machine,
+# known to the `t3` that machine runs, never to this one's. `ssh <target> <command>`
+# runs the command with the fakes answering from `machines/<target>/` (its own
+# `threads/`, `probe/` and `calls`), unless sa_ssh fixed an answer for the target.
+sa_machine_thread() {
+  local target=$1; shift
+  (SA_FAKE=$SA_FAKE/machines/$target; mkdir -p "$SA_FAKE/threads" "$SA_FAKE/probe"; sa_thread "$@")
 }
 
 sa_route() { # <endpoint> <json>: what `gh api <endpoint>` answers
