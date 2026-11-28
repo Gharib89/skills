@@ -9,8 +9,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/ssh.sh" || { printf '{"error":"cannot sou
 # `environment_id` in the fleet file's `machines`, over that machine's `ssh` string
 # (lib/ssh.sh). Sets $sa_remote_lines, {<thread id>: <the `t3 thread show --json`
 # line>}, and $sa_remote_down, {<environment id>: {machine, reason, detail}}: reason
-# `no-ssh` for an environment no fleet machine with an `ssh` string holds, `ssh` for
-# a call that failed (`t3` missing on the machine included), `detail` its reason.
+# `no-ssh` for an environment no fleet machine holds, or whose machine has no usable
+# `ssh` string, `ssh` for a call that failed (`t3` missing on the machine included),
+# `detail` its reason.
 # A fleet file it cannot read holds no machine.
 sa_remote_lines='{}' sa_remote_down='{}'
 sa_remote_read() {
@@ -21,8 +22,9 @@ sa_remote_read() {
   err=$(mktemp) || return 1
   trap 'rm -f "$err"; trap - RETURN' RETURN
   while IFS= read -r env; do
-    machine=$(jq -r --arg e "$env" 'first((.machines // {}) | to_entries[] | select(.value.environment_id == $e and (.value.ssh | type) == "string") | .key) // empty' "$fleet" 2>/dev/null </dev/null)
-    target=$(jq -r --arg m "$machine" '.machines[$m].ssh // empty' "$fleet" 2>/dev/null </dev/null)
+    # the machine is found by its environment alone, so a no-ssh outage still names its fleet key
+    machine=$(jq -r --arg e "$env" 'first((.machines // {}) | to_entries[] | select(.value.environment_id == $e) | .key) // empty' "$fleet" 2>/dev/null </dev/null)
+    target=$(jq -r --arg m "$machine" '.machines[$m].ssh | strings' "$fleet" 2>/dev/null </dev/null)
     if [ -z "$machine" ] || [ -z "$target" ] || ! sa_ssh_target_ok "$target"; then
       sa_remote_down=$(jq -c --arg e "$env" --arg m "$machine" '.[$e] = {machine: (if $m == "" then null else $m end), reason: "no-ssh", detail: null}' <<<"$sa_remote_down")
       continue

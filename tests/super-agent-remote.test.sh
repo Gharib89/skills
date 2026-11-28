@@ -156,6 +156,13 @@ check "and offered once more past 300 s" machine-unreadable "$(SA_NOW=$((t0 + 13
 L rethread "$repo#7" --thread t-7b --worktree /wt/7b --branch feat/x-7 >/dev/null
 SA_NOW=$((t0 + 1400)) W --timeout 0 >/dev/null
 check "a machine with no open entry left is dropped from the outage state" false "$([ -e "$led.ssh-down" ] && echo true || echo false)"
+fixture
+R >/dev/null
+jq -c '.machines.beta |= del(.ssh)' "$fleet" > "$fleet.new" && mv "$fleet.new" "$fleet"
+SA_NOW=$t0 W --timeout 0 >/dev/null
+check "a no-ssh outage offers the fleet's machine key, not the environment" "machine-unreadable beta no-ssh" \
+  "$(SA_NOW=$((t0 + 300)) W --timeout 0 | jq -r '"\(.event) \(.machine) \(.reason)"')"
+jq -c '.machines.beta.ssh = "me@beta"' "$fleet" > "$fleet.new" && mv "$fleet.new" "$fleet"
 
 # --- usage -----------------------------------------------------------------------
 out=$(R --remote env-a=dir 2>/dev/null); rc=$?

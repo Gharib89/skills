@@ -7,12 +7,12 @@
 
 # shellcheck disable=SC2154  # usage, out, rc and fields come from launch.sh and its sub
 
-launchf='' thread='' ledger='' worktree='' rethread='' task='' tbranch='' trepo='' tmachine='' tenv='' ia=()
+launchf='' thread='' ledger='' fleet='' worktree='' rethread='' task='' tbranch='' trepo='' tmachine='' tenv='' ia=()
 while [ $# -gt 0 ]; do
   case $1 in --rethread) rethread=1; shift; continue ;; --interactive) ia=(--interactive); shift; continue ;; esac
   sa_flag_value "$usage" "${2:-}"
   case $1 in
-    --launch) launchf=$2 ;; --thread) thread=$2 ;; --ledger) ledger=$2 ;; --worktree) worktree=$2 ;;
+    --launch) launchf=$2 ;; --thread) thread=$2 ;; --ledger) ledger=$2 ;; --fleet) fleet=$2 ;; --worktree) worktree=$2 ;;
     --task) task=$2 ;; --branch) tbranch=$2 ;; --repo) trepo=$2 ;; --machine) tmachine=$2 ;; --environment) tenv=$2 ;;
     *) sa_tooling "$usage" ;;
   esac
@@ -43,8 +43,9 @@ else
   # a task with no repo runs in a scratch folder and holds no worktree, so its thread is not read
   if [ -z "$worktree" ] && ! jq -e '.kind == "task" and .repo == null' <<<"$rec" >/dev/null; then
     if [ -n "$env" ]; then
-      # a thread on a linked machine is read with the t3 there, over the fleet's ssh string
-      sa_remote_read "${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json" "$(jq -cn --arg t "$thread" --arg e "$env" '[{thread: $t, environment_id: $e}]')"
+      # a thread on a linked machine is read with the t3 there, over the ssh string in the
+      # fleet the launch read (--fleet, or reconcile's default), as the baseline reconcile reads it
+      sa_remote_read "${fleet:-${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json}" "$(jq -cn --arg t "$thread" --arg e "$env" '[{thread: $t, environment_id: $e}]')"
       raw=$(jq -r --arg t "$thread" '.[$t] // empty' <<<"$sa_remote_lines")
       [ -n "$raw" ] || sa_tooling "cannot read thread $thread on its machine over SSH: pass --worktree"
     else
@@ -80,7 +81,7 @@ if [ -n "$launchf" ] && jq -e '.record.owner_go == true' "$launchf" >/dev/null 2
   sub ledger --ledger "$ledger" ruling "Owner go: $key launched with --owner-go, past the 5 hour floor and the weekly reserve."
   [ "$rc" = 0 ] || sa_tooling "cannot record the owner-go ruling for $key"
 fi
-sub reconcile --ledger "$ledger"
+sub reconcile --ledger "$ledger" ${fleet:+--fleet "$fleet"}
 [ "$rc" = 0 ] && jq -e '.checked != null' >/dev/null <<<"$out" || sa_tooling "reconcile gave no answer"
 jq -cn --argjson e "$entry" --argjson r "$out" '{key: $e.key, entry: $e, reconcile: {checked: $r.checked, errors: $r.errors}, status: $r.status}'
 exit 0

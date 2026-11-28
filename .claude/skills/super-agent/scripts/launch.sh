@@ -18,9 +18,9 @@
 #          [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]...
 #          [--instance <id>] [--raise <n>] [--wanted yes|no]
 #          [--owner-go] [--out <file>]
-#   launch record --launch <file> --thread <id> --ledger <file> [--rethread]
-#          [--worktree <path>]
-#   launch record --task <slug> --thread <id> --ledger <file> [--worktree <path>]
+#   launch record --launch <file> --thread <id> --ledger <file> [--fleet <file>]
+#          [--rethread] [--worktree <path>]
+#   launch record --task <slug> --thread <id> --ledger <file> [--fleet <file>] [--worktree <path>]
 #          [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>]
 #          [--interactive]
 #
@@ -55,7 +55,9 @@
 # The fleet file's `merge_gate_ruler` is checked here, `owner` (the default) or
 # `super-agent`, so a fleet the super agent cannot rule a hold from launches nothing.
 # `record` reads the worktree from `t3 thread show` when --worktree is omitted,
-# on a linked machine with the `t3` there over SSH (lib/remote.sh). --rethread points the ticket's open entry at the
+# on a linked machine with the `t3` there over SSH (lib/remote.sh), by the ssh string
+# in --fleet (default `super-agent/fleet.json` under $XDG_CONFIG_HOME), which its
+# baseline reconcile reads too. --rethread points the ticket's open entry at the
 # new thread (the stall ladder's rung 3) instead of adding one. Every thread the
 # super agent launches is recorded, whatever its kind: `record --task <slug>` is for
 # one that is no ticket's (a grill, a deploy, a review), from no launch answer, as a
@@ -98,7 +100,7 @@
 set -uo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot source _lib.sh"}\n'; exit 2; }
 
-usage='usage: launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file> --machine <key> --thread <id> [--area <path>]... [--gpu] [--account <login>] [--blocked-by <n>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--exclude <key>]... [--owner-go] [--skill <name>] [--note <text>] [--out <file>] | launch task <slug> --ask <text> --fleet <file> --ledger <file> --quota <file> --machine <key> [--repo <owner/name>] [--skill <name>] [--interactive] [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--owner-go] [--out <file>] | launch record (--launch <file> [--rethread] | --task <slug> [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>] [--interactive]) --thread <id> --ledger <file> [--worktree <path>]'
+usage='usage: launch <owner/name>#<n> --fleet <file> --ledger <file> --quota <file> --machine <key> --thread <id> [--area <path>]... [--gpu] [--account <login>] [--blocked-by <n>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--exclude <key>]... [--owner-go] [--skill <name>] [--note <text>] [--out <file>] | launch task <slug> --ask <text> --fleet <file> --ledger <file> --quota <file> --machine <key> [--repo <owner/name>] [--skill <name>] [--interactive] [--gpu] [--account <login>] [--area <path>]... [--exclude <key>]... [--instance <id>] [--raise <n>] [--wanted yes|no] [--owner-go] [--out <file>] | launch record (--launch <file> [--rethread] | --task <slug> [--branch <name>] [--repo <owner/name>] [--machine <key>] [--environment <id>] [--interactive]) --thread <id> --ledger <file> [--fleet <file>] [--worktree <path>]'
 sa_help "$usage" "$@"
 here=$(dirname "${BASH_SOURCE[0]}")
 source "$here/launch.d/steps.sh" || sa_tooling "cannot source launch.d/steps.sh"

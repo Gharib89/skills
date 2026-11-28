@@ -178,6 +178,14 @@ check_rc "a thread its machine knows records" 0 "$rc"
 check "the entry names the fleet's key, the environment and the worktree read over SSH, never local" '["box","env-box","/wt/remote"]' \
   "$(bash "$s/ledger.sh" --ledger "$led" get "$repo#7" | jq -c '[.machine, .environment_id, .worktree]')"
 check "its baseline reconcile read the thread on its machine" '{"checked":1,"errors":[]}' "$(jq -c .reconcile <<<"$out")"
+reset; issue 7 "widgets: add a frobnicator to the pipeline and more" ready-for-agent L bug
+sa_load 9 12288
+L 7 --out "$out_f" >/dev/null
+cp "$fleet" "$tmp/own-fleet.json"
+sa_on_machine box.lan sa_thread t-r running 1 0 /wt/remote fix/add-a-frobnicator-to-the-7; sa_pr $repo fix/add-a-frobnicator-to-the-7 none
+out=$(XDG_CONFIG_HOME=$tmp/none bash "$s/launch.sh" record --launch "$out_f" --thread t-r --ledger "$led" --fleet "$tmp/own-fleet.json"); rc=$?
+check_rc "a launch from a fleet at another path records with that --fleet" 0 "$rc"
+check "and both reads found the machine's ssh string there" '[{"checked":1,"errors":[]},"/wt/remote"]' "$(jq -c '[.reconcile, .entry.worktree]' <<<"$out")"
 
 # --- a rethread: the stall ladder's rung 3 points the open entry at the new thread ----------
 reset; issue 7 "widgets: add a frobnicator to the pipeline and more" ready-for-agent L bug
