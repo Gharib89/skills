@@ -7,6 +7,15 @@ released version. See
 
 <!-- version list -->
 
+## v0.51.0 (2026-11-28)
+
+### Features
+
+- **super-agent**: The watcher reads linked-machine threads over SSH
+  ([#1436](https://github.com/Gharib89/skills/pull/1436),
+  [`c69f7fc`](https://github.com/Gharib89/skills/commit/c69f7fc528a116aebc1f20c5f33204b04b613e89))
+
+
 ## v0.50.0 (2026-11-28)
 
 ### Features
