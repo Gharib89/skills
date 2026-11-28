@@ -102,7 +102,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/ssh.sh" || { printf '{"error":"cannot
 
 usage='usage: setup (--propose | --write) [--fleet <file>] [--name <machine>] [--instances <file>] [--settings <file>] [--ssh <machine>=<ssh string>]... [--check-only <machine>=<ssh string>]...'
 sa_help "$usage" "$@"
-fleet_file="${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json"
+fleet_file=$sa_default_fleet
 name='' write=false mode='' instances_file='' settings_file='' ssh_given='{}' check_only='{}'
 while [ $# -gt 0 ]; do
   case $1 in

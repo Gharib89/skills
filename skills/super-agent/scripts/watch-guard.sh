@@ -26,7 +26,7 @@
 set -uo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 state=${XDG_STATE_HOME:-$HOME/.local/state}/super-agent
-ledger=$state/ledger.json fleet=${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json
+ledger=$state/ledger.json
 source "$here/lib/hook-log.sh" || exit 0
 log=$(sa_hook_log_file watch-guard "$@")
 log() { sa_hook_log "$log" "$@"; }
@@ -34,6 +34,7 @@ unjudged() { log unjudged "$1"; exit 0; }
 
 command -v jq >/dev/null 2>&1 || unjudged "no jq"
 source "$here/_lib.sh" || unjudged "cannot source _lib.sh"
+fleet=$sa_default_fleet
 usage='usage: watch-guard [--ledger <file>] [--fleet <file>]'
 sa_help "$usage" "$@"
 while [ $# -gt 0 ]; do

@@ -134,6 +134,25 @@ sa_checks $repo sha7 "done"
 check "the checks on its head finishing wake watch" "$repo#7 checks-finished" "$(W --timeout 5 | jq -r '[.key, .event] | join(" ")')"
 sa_pr_head $repo feat/x-7 merged sha7
 check "a merge wakes watch, not held for a stale status" "$repo#7 pr-merged" "$(W --timeout 5 | jq -r '[.key, .event] | join(" ")')"
+# the same GitHub-only watching for the rest of a stale entry's PR events
+stale7() { # a baseline of an open PR 7 at <head> with <checks>, then beta goes down
+  fixture; for n in 6 8 9; do sa_pr_head $repo "feat/x-$n" none sha$n; done
+  sa_pr_head $repo feat/x-7 open "$1"; sa_checks $repo "$1" "$2"
+  R >/dev/null; down me@beta
+}
+stale7 sha7 "done"
+sa_pr_head $repo feat/x-7 open sha7b; sa_checks $repo sha7b "done"
+check "a new head whose checks finish wakes watch again" "$repo#7 checks-finished" "$(W --timeout 5 | jq -r '[.key, .event] | join(" ")')"
+stale7 sha7 pending
+sa_pr_head $repo feat/x-7 closed sha7
+check "a close wakes watch" "$repo#7 pr-closed" "$(W --timeout 5 | jq -r '[.key, .event] | join(" ")')"
+stale7 sha7 pending
+sa_gh_fail check-runs 2
+check "a check read that fails is pr-unreadable, not silence" "$repo#7 pr-unreadable" "$(W --timeout 5 | jq -r '[.key, .event] | join(" ")')"
+rm -f "$SA_FAKE/gh-fail"
+stale7 sha7 pending
+sa_route "repos/$repo/commits/sha7/check-runs?per_page=100" "$(jq -cn '{total_count: 100, check_runs: [range(100) | {status: "completed"}]}')"
+check "a full page of check runs is pr-unreadable, not a verdict on the first page" "$repo#7 pr-unreadable" "$(W --timeout 5 | jq -r '[.key, .event] | join(" ")')"
 
 # --- 300 s unreadable: one offer naming the machine, cleared by a good read --------
 fixture

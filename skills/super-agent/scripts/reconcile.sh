@@ -170,7 +170,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/woke.sh" || sa_tooling "canno
 woke='[]' woke_cands=$(reconcile_woke_cands)
 # A linked machine's threads, read over SSH: one call per machine for every open entry
 # there and every settled triage entry read again; an owner-run thread is the owner's.
-remote_fleet=${fleet:-${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json}
+remote_fleet=${fleet:-$sa_default_fleet}
 sa_remote_read "$remote_fleet" "$(jq -c --argjson w "$woke_cands" "$sa_jq_open"'[.entries[] | select(is_open and .stage != "launching" and .owner_run != true)] + $w' <<<"$doc")"
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/verdict.sh" || sa_tooling "cannot source reconcile.d/verdict.sh"
 fail() { # <kind> <detail>: record the error of the entry in $key

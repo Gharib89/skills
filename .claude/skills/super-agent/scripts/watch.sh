@@ -92,7 +92,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/_lib.sh" || { printf '{"error":"cannot so
 usage='usage: watch --ledger <file> [--owed] [--interval <s>] [--timeout <s>] [--recheck <s>] [--stall-window <s>] [--fleet <file>]'
 sa_help "$usage" "$@"
 ledger='' interval=30 timeout='' recheck=90 window=$sa_stall_window owed=false
-fleet="${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json"
+fleet=$sa_default_fleet
 while [ $# -gt 0 ]; do
   case $1 in
     --owed) owed=true; shift ;;

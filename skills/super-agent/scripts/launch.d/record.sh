@@ -45,7 +45,7 @@ else
     if [ -n "$env" ]; then
       # a thread on a linked machine is read with the t3 there, over the ssh string in the
       # fleet the launch read (--fleet, or reconcile's default), as the baseline reconcile reads it
-      sa_remote_read "${fleet:-${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json}" "$(jq -cn --arg t "$thread" --arg e "$env" '[{thread: $t, environment_id: $e}]')"
+      sa_remote_read "${fleet:-$sa_default_fleet}" "$(jq -cn --arg t "$thread" --arg e "$env" '[{thread: $t, environment_id: $e}]')"
       raw=$(jq -r --arg t "$thread" '.[$t] // empty' <<<"$sa_remote_lines")
       [ -n "$raw" ] || sa_tooling "cannot read thread $thread on its machine over SSH: pass --worktree"
     else

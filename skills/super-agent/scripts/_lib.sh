@@ -102,6 +102,10 @@ sa_uri() { jq -rn --arg s "$1" '$s | @uri'; }
 # shellcheck disable=SC2034  # read by watch.sh and reconcile.sh
 sa_stall_window=900
 
+# The fleet file a script reads when it is given no --fleet.
+# shellcheck disable=SC2034  # read by the scripts that source this file
+sa_default_fleet=${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json
+
 # sa_window_flag <usage> <value>: --stall-window, seconds a thread may rest with
 # no new run before the rest is a stall; a positive integer.
 sa_window_flag() { case $2 in ''|0|*[!0-9]*) sa_tooling "$1" ;; esac; }

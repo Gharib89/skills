@@ -36,7 +36,7 @@ source "$here/lib/ssh.sh" || { printf '{"error":"cannot source lib/ssh.sh"}\n'; 
 
 usage='usage: machine-check [--fleet <file>] <machine> (up | load | disk | gpu | t3 | clis | process <name> | log <unit or file> [lines])'
 sa_help "$usage" "$@"
-fleet="${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json"
+fleet=$sa_default_fleet
 if [ "${1:-}" = --fleet ]; then sa_flag_value "$usage" "${2:-}"; fleet=$2; shift 2; fi
 [ $# -ge 2 ] || sa_tooling "$usage"
 machine=$1 check=$2; shift 2
