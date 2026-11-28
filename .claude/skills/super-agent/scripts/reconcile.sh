@@ -165,9 +165,13 @@ read_doc=$doc
 batch_since=$(jq -r "$sa_jq_open"'[.entries[] | select(is_open) | .launched_at] | min // empty' <<<"$doc")
 now_s=$(sa_now_s) now=$(date -u -d "@$now_s" +%Y-%m-%dT%H:%M:%SZ)
 checked=0 entries='[]' errors='[]' stalled='[]' reminders='[]' steered_due='[]'
-# A linked machine's threads, read over SSH: one call per machine for every open entry there.
+# A triage entry settled within the last sa_settled_days is read again (reconcile.d/woke.sh).
+source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/woke.sh" || sa_tooling "cannot source reconcile.d/woke.sh"
+woke='[]' woke_cands=$(reconcile_woke_cands)
+# A linked machine's threads, read over SSH: one call per machine for every open entry
+# there and every settled triage entry read again; an owner-run thread is the owner's.
 remote_fleet=${fleet:-${XDG_CONFIG_HOME:-$HOME/.config}/super-agent/fleet.json}
-sa_remote_read "$remote_fleet" "$(jq -c "$sa_jq_open"'[.entries[] | select(is_open and .stage != "launching")]' <<<"$doc")"
+sa_remote_read "$remote_fleet" "$(jq -c --argjson w "$woke_cands" "$sa_jq_open"'[.entries[] | select(is_open and .stage != "launching" and .owner_run != true)] + $w' <<<"$doc")"
 source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/verdict.sh" || sa_tooling "cannot source reconcile.d/verdict.sh"
 fail() { # <kind> <detail>: record the error of the entry in $key
   errors=$(jq -c --arg k "$key" --arg kind "$1" --argjson d "$2" '. + [{key: $k, kind: $kind, detail: $d}]' <<<"$errors")
@@ -242,9 +246,6 @@ while IFS= read -r entry; do
   entries=$(jq -c --argjson e "$entry" --arg s "$stage" --arg r "$reason" --argjson o "$obs" --argjson n "$stalls" \
     '. + [{key: $e.key, thread: $e.thread, worktree: $e.worktree, kind: ($e.kind // "ship"), from: $e.stage, stage: $s, reason: $r, stalls: $n, observed: $o, owner_run: ($e.owner_run == true)}]' <<<"$entries")
 done < <(jq -c "$sa_jq_open"'.entries[] | select(is_open and .stage != "launching")' <<<"$doc")
-# A triage entry settled within the last sa_settled_days is read again (reconcile.d/woke.sh).
-woke='[]'
-source "$(dirname "${BASH_SOURCE[0]}")/reconcile.d/woke.sh" || sa_tooling "cannot source reconcile.d/woke.sh"
 reconcile_woke
 # Issues filed while a batch runs that nothing holds: offered once, then remembered.
 unqueued='[]'

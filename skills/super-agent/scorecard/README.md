@@ -87,7 +87,8 @@ up to the hold. The watcher writes `remote-watch.jsonl`, its linked-machine log:
 `{at, event: "rest", key, machine, rest_at}` once per rest it reads over SSH,
 `{at, event: "wake", key, machine, rest_at, reported}` when a wake reports that
 rest, and `{at, event: "unreadable", machine, environment_id, reason}` per
-failed read (`ssh`, `no-ssh` or `shape`). The row's `remote` counts the day's
+failed machine read (`ssh` or `no-ssh`; a thread its machine does not know is
+no failed read of the machine). The row's `remote` counts the day's
 `wake` lines and their minutes from `rest_at` to `at` (`wakes`,
 `median_minutes`, `worst_minutes`), and `unreadable`, the day's failed reads by
 reason. A log not written yet is `null` in the row, never an error; a log with

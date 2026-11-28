@@ -16,7 +16,15 @@ sa_ssh_reason() {
 # sa_last_line <text>: its last non-blank line.
 sa_last_line() { grep -v '^[[:space:]]*$' <<<"$1" | tail -n1; }
 
+# sa_ssh_target_ok <ssh string>: false for one starting with -, which ssh would
+# read as an option, never a destination.
+sa_ssh_target_ok() { [[ $1 != -* ]]; }
+
 # sa_ssh_probe <ssh string>: run probe.sh on that machine, its text on stdin
 # through `bash -s` since the machine has no checkout. Prints probe.sh's stdout
-# and returns ssh's exit status; ssh's own stderr is the caller's to keep or drop.
-sa_ssh_probe() { ssh "${sa_ssh_opts[@]}" "$1" bash -s -- --json < "$(dirname "${BASH_SOURCE[0]}")/../probe.sh"; }
+# and returns ssh's exit status (1 for a string sa_ssh_target_ok refuses); ssh's
+# own stderr is the caller's to keep or drop.
+sa_ssh_probe() {
+  sa_ssh_target_ok "$1" || return 1
+  ssh "${sa_ssh_opts[@]}" "$1" bash -s -- --json < "$(dirname "${BASH_SOURCE[0]}")/../probe.sh"
+}

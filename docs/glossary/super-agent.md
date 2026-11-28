@@ -39,7 +39,7 @@ The ledger's `waiting` rows, in order: the owner's queue. A row is a ticket with
 _Avoid_: backlog, pending list, a queue kept in a scratch file
 
 **Watcher**:
-The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent; a thread on a linked machine is read with the T3 CLI there over SSH, one call per machine per poll, and wakes it for every reason a local thread does. A machine it cannot read is watched from GitHub alone (its PR opening, its checks finishing, a merge or a close), and after 5 minutes unread the watcher exits once with one offer naming the machine. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
+The background script the super agent leaves running at the end of each turn: it reads every supervised thread and its PR and exits on the first change, and its exit wakes the super agent; a thread on a linked machine is read with the T3 CLI there over SSH, one call per machine per poll, and wakes it for every reason a local thread does. A machine it cannot read is watched from GitHub alone (its PR opening, its checks finishing, a merge or a close), and after 5 minutes unread the watcher exits once, on which the super agent makes one offer naming the machine. One runs per ledger, and it keeps watching a ticket whose PR merged until the thread rests, which is when the ticket settles. A thread finishing wakes nothing by itself.
 _Avoid_: watchdog, poller, monitor
 
 **State guard**:

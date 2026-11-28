@@ -96,6 +96,26 @@ check "the rest and the wake that reported it are logged" "rest wake $repo#8 alp
 R >/dev/null
 sa_on_machine alpha sa_thread t-9 running 1 1 /wt/9 feat/x-9
 check "a permission hold on a remote thread wakes watch" "$repo#9 pending-approval" "$(W --timeout 5 | jq -r '[.key, .event] | join(" ")')"
+R >/dev/null
+sa_pr_head $repo feat/x-6 open sha6; sa_checks $repo sha6 "done"
+check "a readable remote thread's PR opening wakes nothing, as locally" timeout "$(W --timeout 0 | jq -r .event)"
+R >/dev/null 2>&1
+rm -f "$SA_FAKE/ssh-calls"
+L take "$repo#8" >/dev/null
+W --timeout 0 >/dev/null
+check "an owner-run entry's thread is not read over SSH" "" "$(grep 't-8' "$SA_FAKE/ssh-calls")"
+
+# --- the recheck reads the finished thread again, and the poll's read stands for the rest
+fixture
+R >/dev/null
+WR() { bash "$s/watch.sh" --ledger "$led" --fleet "$fleet" --interval 1 --recheck 1 --timeout 0; }
+on_sleep() { printf 'cd %q && source tests/super-agent-fake.sh && source tests/super-agent-on-machine-lib.sh && %s\n' "$PWD" "$1" > "$SA_FAKE/on-sleep"; }
+sa_on_machine alpha sa_thread t-6 idle 2 0 /wt/6 feat/x-6 "done for now"
+on_sleep 'sa_on_machine alpha sa_thread t-6 running 3 0 /wt/6 feat/x-6'
+check "a remote run that starts again inside the recheck wakes nothing, and the later entries read fine" timeout "$(WR | jq -r .event)"
+sa_on_machine alpha sa_thread t-6 idle 4 0 /wt/6 feat/x-6 "done for now"
+on_sleep 'sa_ssh alpha 255 "" "ssh: connect to host alpha port 22: Connection refused"'
+check "a recheck its machine fails keeps the first look's answer" "$repo#6 run-finished" "$(WR | jq -r '[.key, .event] | join(" ")')"
 
 # --- a machine that cannot be read: GitHub still wakes its entries ------------------
 fixture
@@ -132,6 +152,9 @@ down me@beta
 SA_NOW=$((t0 + 1000)) W --timeout 0 >/dev/null
 check "a later outage is timed afresh" timeout "$(SA_NOW=$((t0 + 1200)) W --timeout 0 | jq -r .event)"
 check "and offered once more past 300 s" machine-unreadable "$(SA_NOW=$((t0 + 1300)) W --timeout 0 | jq -r .event)"
+L rethread "$repo#7" --thread t-7b --worktree /wt/7b --branch feat/x-7 >/dev/null
+SA_NOW=$((t0 + 1400)) W --timeout 0 >/dev/null
+check "a machine with no open entry left is dropped from the outage state" false "$([ -e "$led.ssh-down" ] && echo true || echo false)"
 
 # --- usage -----------------------------------------------------------------------
 out=$(R --remote env-a=dir 2>/dev/null); rc=$?

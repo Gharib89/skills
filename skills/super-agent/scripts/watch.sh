@@ -10,7 +10,8 @@
 # (default 30). A change is a difference from the entry's `observed` baseline,
 # which `reconcile` records: `pr-merged`, `pr-closed`, `pending-approval` (a
 # permission hold, which wakes nothing by itself), `run-finished`, and
-# `stall-window`. A remote entry adds `pr-opened` and `checks-finished`. A run
+# `stall-window`, and for a remote entry whose machine cannot be read (below)
+# `pr-opened` and `checks-finished`. A run
 # starting is no event. A thread at rest whose last message ends on the waiting
 # line (`sa_waiting_line`, `_lib.sh`) is still working: no `run-finished`, and its
 # `stall-window` runs from when it rested (`rest_at`) while it waits. A PR that
@@ -176,12 +177,13 @@ change_of() {
   jq -rn --argjson o "$1" --argjson n "$2" --argjson w "$window" --argjson now "$(sa_now_s)" "$sa_jq_active"'
     (($n.pr.merged_at // null) | if . == null then 0 else (try fromdateiso8601 catch 0) end) as $merged
     # a merge with its thread still working is no wake yet: the thread resting
-    # or the bound passing is the one event (a remote thread is read only on a wake, so its status is stale)
+    # or the bound passing is the one event (a thread on a machine this poll could not read is `stale`, so not held)
     | if $n.pr.state == "merged" and $o.pr.state != "merged" then
         (if ($n.stale != true) and ($n | active($w; $now)) and $now - $merged < $w then empty else "pr-merged" end)
     elif $n.pr.state == "closed" and $o.pr.state != "closed" then "pr-closed"
-    elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "none" then "pr-opened"
-    elif ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "open" and $n.pr.checks == "done" and ($o.pr.checks != "done" or $o.pr.head != $n.pr.head) then "checks-finished"
+    # a readable thread reports its own PR and checks; only a stale one is woken by them
+    elif $n.stale == true and ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "none" then "pr-opened"
+    elif $n.stale == true and ($n.pr | has("checks")) and $n.pr.state == "open" and $o.pr.state == "open" and $n.pr.checks == "done" and ($o.pr.checks != "done" or $o.pr.head != $n.pr.head) then "checks-finished"
     elif $n.pending > $o.pending then "pending-approval"
     elif ($n.waiting | not) and ($n.limit_reset == null) and $n.status != "running" and ($o.status == "running" or $n.run_count > $o.run_count) then "run-finished"
     else empty end'
@@ -204,28 +206,28 @@ stall_window_of() {
 # A linked machine that cannot be read: the 300 s offer's state and the scorecard's log.
 down_file="$ledger.ssh-down" rlog="$(dirname "$ledger")/remote-watch.jsonl"
 down_after=300
-declare -A rest_logged=()
+rest_logged='{}' # {<key>: <rest_at>}, each linked-machine rest logged once (Bash 3.2: no associative array)
 rlog_line() { # <jq filter> [<jq args>...]: one line of the remote log, stamped `at`
   local f=$1; shift
   jq -cn --argjson now "$(sa_now_s)" "$@" "{at: (\$now | todate)} + ($f)" >> "$rlog" 2>/dev/null || true
 }
 
-# remote_poll: read every linked machine once; log and hold each unreadable one, clear
-# a machine read fine, and exit once with `machine-unreadable` past `down_after`.
+# remote_poll: read every linked machine once (an owner-run entry's thread is the owner's,
+# so not read); log and hold each unreadable one, drop every other machine (read fine,
+# or no open entry left on it), and exit once with `machine-unreadable` past `down_after`.
 remote_poll() {
   local state now m
-  sa_remote_read "$fleet" "$open"
-  [ "$(jq -c '[.[] | select(.environment_id != null)] | length' <<<"$open")" != 0 ] || return 0
+  sa_remote_read "$fleet" "$(jq -c '[.[] | select(.owner_run != true)]' <<<"$open")"
   state=$(jq -c 'objects' "$down_file" 2>/dev/null) || state=''
   [ -n "$state" ] || state='{}'
   now=$(sa_now_s)
   while IFS= read -r m; do
     rlog_line '{event: "unreadable", machine: $d.machine, environment_id: $e, reason: $d.reason}' --argjson d "$(jq -c --arg e "$m" '.[$e]' <<<"$sa_remote_down")" --arg e "$m"
   done < <(jq -r 'keys[]' <<<"$sa_remote_down")
-  state=$(jq -c --argjson d "$sa_remote_down" --argjson up "$sa_remote_up" --argjson now "$now" '
-    reduce ($d | to_entries[]) as $x (.; (($x.value.machine // $x.key)) as $m
-      | .[$m] = (.[$m] // {since: $now, offered: false}) + {reason: $x.value.reason})
-    | with_entries(select(.key as $k | $up | index($k) | not))' <<<"$state")
+  state=$(jq -c --argjson d "$sa_remote_down" --argjson now "$now" '
+    [$d | to_entries[] | {key: (.value.machine // .key), value: .value.reason}] as $down
+    | with_entries(select(.key as $k | any($down[]; .key == $k)))
+    | reduce $down[] as $x (.; .[$x.key] = (.[$x.key] // {since: $now, offered: false}) + {reason: $x.value})' <<<"$state")
   m=$(jq -r --argjson now "$now" --argjson a "$down_after" 'first(to_entries[] | select(.value.offered != true and $now - .value.since >= $a) | .key) // empty' <<<"$state")
   [ -z "$m" ] || state=$(jq -c --arg m "$m" '.[$m].offered = true' <<<"$state")
   if [ "$state" = '{}' ]; then rm -f "$down_file"; else printf '%s\n' "$state" > "$down_file"; fi
@@ -259,9 +261,17 @@ while :; do
       event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs")
       if [ "$event" = run-finished ] && [ "$recheck" -gt 0 ]; then
         sleep "$recheck"
-        # a fault in the second look is the answer, not the stale first one
-        [ -z "$env" ] || sa_remote_read "$fleet" "[$entry]"
-        if sa_observe "$entry"; then event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs"); else read_ok=false; fi
+        # a fault in the second look is the answer, not the stale first one; a linked
+        # machine that cannot be read again leaves the first look's answer, and the
+        # poll's read is put back for the entries after this one
+        recheck_down=false saved_lines=$sa_remote_lines saved_down=$sa_remote_down
+        if [ -n "$env" ]; then
+          sa_remote_read "$fleet" "[$entry]"
+          ! jq -e --arg e "$env" 'has($e)' <<<"$sa_remote_down" >/dev/null || recheck_down=true
+        fi
+        if $recheck_down; then :
+        elif sa_observe "$entry"; then event=$(change_of "$(jq -c .observed <<<"$entry")" "$obs"); else read_ok=false; fi
+        sa_remote_lines=$saved_lines sa_remote_down=$saved_down
       fi
     fi
     if $read_ok; then
@@ -269,8 +279,8 @@ while :; do
       at_rest=''
       if [ -n "$env" ] && [ "$owner_run" != true ]; then
         at_rest=$(jq -r 'select(.stale != true and .status != "running" and .rest_at != null) | .rest_at' <<<"$obs")
-        if [ -n "$at_rest" ] && [ "${rest_logged[$key]:-}" != "$at_rest" ]; then
-          rest_logged[$key]=$at_rest
+        if [ -n "$at_rest" ] && [ "$(jq -r --arg k "$key" '.[$k] // empty' <<<"$rest_logged")" != "$at_rest" ]; then
+          rest_logged=$(jq -c --arg k "$key" --arg r "$at_rest" '.[$k] = $r' <<<"$rest_logged")
           rlog_line '{event: "rest", key: $k, machine: $m, rest_at: ($r | tonumber | todate)}' --arg k "$key" --arg m "$(jq -r '.machine // .environment_id' <<<"$entry")" --arg r "$at_rest"
         fi
       fi

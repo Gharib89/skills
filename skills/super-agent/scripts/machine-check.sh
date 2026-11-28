@@ -58,7 +58,7 @@ target=$(jq -r '.ssh // empty | strings' <<<"$mj")
 [ -n "$target" ] || sa_tooling "$machine has no ssh string in $fleet (run setup)"
 jq -e '(.logs // []) | type == "array" and all(.[]; type == "string")' <<<"$mj" >/dev/null \
   || sa_tooling "$fleet: machines.$machine.logs must be an array of strings"
-[[ $target != -* ]] || sa_tooling "$machine: ssh string '$target' starts with -, so ssh would read it as an option"
+sa_ssh_target_ok "$target" || sa_tooling "$machine: ssh string '$target' starts with -, so ssh would read it as an option"
 
 case $check in
   up) cmd='echo up' ;;

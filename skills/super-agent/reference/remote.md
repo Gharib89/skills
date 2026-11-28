@@ -17,9 +17,11 @@ ledger entry with an `environment_id`: its thread runs on a linked machine.
 read a remote thread with the `t3` on its machine, over SSH (`lib/remote.sh`):
 the fleet file's machine whose `environment_id` is the entry's, through its
 `ssh` string. One SSH call reads every open thread on that machine, and
-`reconcile.sh`, `pulse.sh`, `watch.sh` and `launch.sh record` share it. You
-read no remote thread by hand. The PR is found on GitHub by branch, the same
-from any machine.
+`reconcile.sh`, `pulse.sh`, `watch.sh` and `launch.sh record` share it. An
+owner-run entry's thread is the owner's and is not read. Your one read by hand
+is each wake's owner read, `t3_thread_read` with the entry's `environmentId`,
+which `owner-read.sh` converts (SKILL.md). The PR is found on GitHub by branch,
+the same from any machine.
 
 ## Steps
 
@@ -49,21 +51,28 @@ times.
 
 ## Errors
 
-A machine that cannot be read gives `thread-unreadable` for its entries alone;
-local entries and other machines are still read. Its detail holds the
-`environment_id`, the `machine` and a `reason`: `ssh` (the call failed, with
-SSH's own reason as `ssh`), `no-ssh` (no fleet machine with that environment
-has an `ssh` string: add it, as [setup](setup.md) says) or `shape` (the
-machine's `t3` answered no thread JSON, so it does not know the thread).
+In `reconcile.sh`, a machine that cannot be read gives `thread-unreadable` for
+its entries alone; local entries and other machines are still read. Its detail
+holds the `environment_id`, the `machine` and a `reason`, each with its action:
 
-`watch.sh` raises no `thread-unreadable`. While a machine fails, it watches
-that machine's entries from GitHub alone (a PR opening on the branch, its
-checks finishing, a merge, a close) and logs each failed read. After 5 minutes
-unread it exits once with `machine-unreadable`, naming the `machine`, the
-`reason` and `since`: make one offer in chat naming the machine (check it or
-fix its `ssh` string), with no phone alert, and start the watcher again. A
-restarted watcher does not offer the same outage again, and the next good read
-clears it with no wake.
+- `ssh`: the call failed, SSH's own reason in `ssh` (a machine with no `t3`
+  fails here too). Run `machine-check.sh <machine> up` and post its line.
+- `no-ssh`: no fleet machine with that environment has an `ssh` string. Add
+  it, as [setup](setup.md) says.
+- `shape`: the machine's `t3` answered no thread JSON, so the thread is gone
+  from that machine. Escalate it, as the
+  [stall ladder](stall-ladder.md#errors) says for an unreadable entry.
+
+`watch.sh` raises `thread-unreadable` only for `shape`. While a machine fails
+(`ssh` or `no-ssh`), it watches that machine's entries from GitHub alone (a PR
+opening on the branch, its checks finishing, a merge, a close) and logs each
+failed read. After 5 minutes unread it exits once with `machine-unreadable`,
+naming the `machine`, the `reason` and `since`. Reconcile first, as on every
+watcher wake, then make one offer in chat naming the machine (check it or fix
+its `ssh` string), with no phone alert, and start the watcher again. Reconcile's
+`thread-unreadable` for that machine's entries during an outage you already
+offered needs no second offer. A restarted watcher does not offer the same
+outage again, and the next good read clears it with no wake.
 
 ## Machine checks
 

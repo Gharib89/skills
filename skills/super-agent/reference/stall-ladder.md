@@ -51,5 +51,5 @@ thread, PR or issue unreadable, or a thread of another id or worktree
 path) gets no action from you: escalate it. Reconcile records the kind in
 the entry's `error`, and the watcher stays quiet about a recorded fault, so
 start it again after escalating. A `thread-unreadable` naming an
-`environment_id` is its machine's SSH read failing: act on its `reason` as
+`environment_id` is its machine's read failing: act on its `reason` as
 [remote](remote.md#errors) says.

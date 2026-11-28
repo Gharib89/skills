@@ -54,9 +54,8 @@
 # on the task contract line (`sa_task_contract`), after the note, as `launch task` does.
 # The fleet file's `merge_gate_ruler` is checked here, `owner` (the default) or
 # `super-agent`, so a fleet the super agent cannot rule a hold from launches nothing.
-# `record` reads the worktree from `t3 thread show` when --worktree is omitted
-# on a launch to this machine; a remote launch names it, since the read of its
-# thread goes over SSH (lib/remote.sh). --rethread points the ticket's open entry at the
+# `record` reads the worktree from `t3 thread show` when --worktree is omitted,
+# on a linked machine with the `t3` there over SSH (lib/remote.sh). --rethread points the ticket's open entry at the
 # new thread (the stall ladder's rung 3) instead of adding one. Every thread the
 # super agent launches is recorded, whatever its kind: `record --task <slug>` is for
 # one that is no ticket's (a grill, a deploy, a review), from no launch answer, as a
