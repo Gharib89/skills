@@ -234,8 +234,8 @@ sa_observe() {
   if [ -n "$reason" ]; then
     obs_kind='thread-unreadable'
     # a remote read names its machine and why: no ssh string, a failed call, or no thread in the answer
-    [ -z "$env" ] || obs_detail=$(jq -cn --arg t "$thread" --arg e "$env" --arg r "$reason" --argjson d "${down:-null}" \
-      '{thread: $t, environment_id: $e, reason: $r} + (if $d == null then {} else {machine: $d.machine, ssh: $d.detail} end)')
+    [ -z "$env" ] || obs_detail=$(jq -c --arg t "$thread" --arg e "$env" --arg r "$reason" --argjson d "${down:-null}" \
+      '{thread: $t, environment_id: $e, machine: ($d.machine // .machine), reason: $r} + (if $d == null then {} else {ssh: $d.detail} end)' <<<"$1")
     return 1
   fi
   found=$(jq -c '{thread: .thread.threadId, worktree: .thread.worktreePath}' <<<"$line")

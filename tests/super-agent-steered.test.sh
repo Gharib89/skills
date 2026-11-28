@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # An owner-steered thread (#1381): the newest message from outside the thread is the
-# owner's, newer than the entry's `held_since`. `reply.sh` reads the author out of a
+# owner's, newer than the entry's `held_since`. `owner-read.sh` reads the author out of a
 # `t3_thread_read` (`owner_at`), and `reconcile --reads` marks the entry `steered`:
 # its stalls are 0 and no `stalled` row, no nudge, and after the stall window at rest
 # one `owner-steered` escalate row asks "watch or take?". A message from the super
@@ -34,13 +34,13 @@ read_of() {
      hasMore: false}' > "$tmp/read.json"
 }
 
-# --- reply.sh reads who spoke last ---------------------------------------------------------------
+# --- owner-read.sh reads who spoke last ---------------------------------------------------------------
 read_of user 2026-11-18T10:00:00.000Z
-out=$(bash "$s/reply.sh" "$tmp/read.json" --dir "$tmp/reads"); rc=$?
-check "the reply of a thread whose newest user message the owner typed names its time" "0 2026-11-18T10:00:00.000Z" "$rc $(jq -r .owner_at "$tmp/reads/th-1.json")"
-read_of agent 2026-11-18T10:00:00.000Z; bash "$s/reply.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
+out=$(bash "$s/owner-read.sh" "$tmp/read.json" --dir "$tmp/reads"); rc=$?
+check "the owner read of a thread whose newest user message the owner typed names its time" "0 2026-11-18T10:00:00.000Z" "$rc $(jq -r .owner_at "$tmp/reads/th-1.json")"
+read_of agent 2026-11-18T10:00:00.000Z; bash "$s/owner-read.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
 check "a super agent send as the newest message leaves owner_at null" null "$(jq -r .owner_at "$tmp/reads/th-1.json")"
-read_of system 2026-11-18T10:00:00.000Z; bash "$s/reply.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
+read_of system 2026-11-18T10:00:00.000Z; bash "$s/owner-read.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
 check "so does a system message" null "$(jq -r .owner_at "$tmp/reads/th-1.json")"
 
 # --- reconcile marks it steered, counts no stall, then asks once per window ---------------------------
@@ -49,7 +49,7 @@ L set $key launched_at '"2026-11-10T09:00:00Z"' >/dev/null
 L set $key stalls 2 >/dev/null
 sa_pr $repo feat/x-1 none; sa_issue $repo 1 open
 sa_thread th-1 idle 1 0 /wt/1 feat/x-1
-read_of user 2026-11-18T10:00:00.000Z; bash "$s/reply.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
+read_of user 2026-11-18T10:00:00.000Z; bash "$s/owner-read.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
 out=$(R $t0)
 check "the entry is steered and its stalls are reset to 0" "true 0" "$(L get $key | jq -r '"\(.steered) \(.stalls)"')"
 check "no stalled row, no escalate row on the first look" "0 0" "$(jq -r '"\(.stalled | length) \(.escalate | length)"' <<<"$out")"
@@ -83,45 +83,43 @@ out=$(SA_NOW=$t0 bash "$s/status.sh" --ledger "$led" --digest)
 check "a steered entry's Running row ends (you spoke last)" 1 "$(jq -r .block <<<"$out" | grep -c '^Running.*widgets#1.*(you spoke last)$')"
 
 # --- the super agent's own message is the newest: the mark clears ------------------------------------------
-read_of agent 2026-11-18T12:00:00.000Z; bash "$s/reply.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
+read_of agent 2026-11-18T12:00:00.000Z; bash "$s/owner-read.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
 sa_thread th-1 idle 2 0 /wt/1 feat/x-1; sa_stage "$led" $key at-rest
 R $((t0 + 4000)) >/dev/null
 check "no owner message from outside the thread: no longer steered" false "$(L get $key | jq -r .steered)"
 out=$(SA_NOW=$t0 bash "$s/status.sh" --ledger "$led" --digest)
 check "and the Running row loses its mark" 0 "$(jq -r .block <<<"$out" | grep -c 'you spoke last')"
 # a message the owner sent before the adoption is not steering it
-read_of user 2026-11-18T10:00:00.000Z; bash "$s/reply.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
+read_of user 2026-11-18T10:00:00.000Z; bash "$s/owner-read.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
 L set $key held_since '"2026-11-18T10:30:00Z"' >/dev/null
 R $((t0 + 5000)) >/dev/null
 check "a thread whose owner message is older than held_since is not steered" false "$(L get $key | jq -r .steered)"
 
 # --- a page with no user message does not clear the mark (#1381 review S5) ------------------------
 L set $key held_since '"2026-11-10T09:00:00Z"' >/dev/null
-read_of user 2026-11-18T10:00:00.000Z; bash "$s/reply.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
+read_of user 2026-11-18T10:00:00.000Z; bash "$s/owner-read.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
 sa_stage "$led" $key at-rest; R $((t0 + 6000)) >/dev/null
 jq -cn '{thread: {threadId: "th-1", status: "idle", runCount: 2, pendingRequestCount: 0, worktreePath: "/wt/1", branch: "feat/x-1"},
   items: [{position: 8, type: "assistant_message", createdBy: "agent", text: "a"}, {position: 9, type: "assistant_message", createdBy: "agent", text: "b"}],
   hasMore: true}' > "$tmp/nouser.json"
-bash "$s/reply.sh" "$tmp/nouser.json" --dir "$tmp/reads" >/dev/null; rc=$?
+bash "$s/owner-read.sh" "$tmp/nouser.json" --dir "$tmp/reads" >/dev/null; rc=$?
 check "a page with no user message writes no owner_at: unknown, not 'the agent spoke last'" "0 false" "$rc $(jq -r 'has("owner_at")' "$tmp/reads/th-1.json")"
 R $((t0 + 7000)) >/dev/null
 check "so the steered mark it finds stays" true "$(L get $key | jq -r .steered)"
 
 # --- a steered thread at a clean merge gate raises no row ---------------------------------------------
-read_of user 2026-11-18T10:00:00.000Z; bash "$s/reply.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
+read_of user 2026-11-18T10:00:00.000Z; bash "$s/owner-read.sh" "$tmp/read.json" --dir "$tmp/reads" >/dev/null
 sa_thread th-1 idle 2 0 /wt/1 feat/x-1 "$(printf 'ship 0.68.0\nUnmet criteria: none')"
 R $((t0 + 8000)) >/dev/null
 out=$(R $((t0 + 20000)))
 check "at a merge-gate summary the owner-steered row stays out" "0 true" \
   "$(jq '[.escalate[] | select(.reason == "owner-steered")] | length' <<<"$out") $(L get $key | jq -r .steered)"
 
-# --- reply.sh --owner-only: a small read is enough for the owner mark --------------------------------
+# --- owner-read.sh: a read of any size is enough for the owner mark -------------------------------
 read_of user 2026-11-18T10:00:00.000Z
 jq -c '.items[1].textTruncated = true' "$tmp/read.json" > "$tmp/trunc.json"
-bash "$s/reply.sh" "$tmp/trunc.json" --dir "$tmp/own" >/dev/null 2>&1
-check "a truncated last assistant message is refused for a full reply" 1 "$?"
-out=$(bash "$s/reply.sh" "$tmp/trunc.json" --dir "$tmp/own" --owner-only); rc=$?
-check "--owner-only writes the owner mark from it" "0 2026-11-18T10:00:00.000Z" "$rc $(jq -r .owner_at "$tmp/own/th-1.json")"
+out=$(bash "$s/owner-read.sh" "$tmp/trunc.json" --dir "$tmp/own"); rc=$?
+check "a truncated last assistant message still gives the owner mark" "0 2026-11-18T10:00:00.000Z" "$rc $(jq -r .owner_at "$tmp/own/th-1.json")"
 check "and answers the thread's real status, not the string null" "idle" "$(jq -r .status <<<"$out")"
 check "the file holds the thread id and the mark alone" '["owner_at","thread"]' "$(jq -c 'keys' "$tmp/own/th-1.json")"
 
